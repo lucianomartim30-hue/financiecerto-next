@@ -12,10 +12,6 @@ const MOCK_BUILDINGS = [
   { id: '6', name: 'Itaim Bibi Tower', developer: 'Helbor', min_price: 900000, max_price: 1400000, bedrooms_min: 2, bedrooms_max: 4, neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
 ];
 
-function useMock() {
-  return !process.env.ORULO_CLIENT_ID || process.env.NODE_ENV === 'development_mock';
-}
-
 let _tokenCache = { token: null as string | null, expiresAt: 0 };
 
 async function getToken(): Promise<string> {
