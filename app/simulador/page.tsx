@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { descobrir, formatBRL, parcelaPrice, TAXA_MCMV_ANUAL, TAXA_SBPE_ANUAL, TETO_MCMV, type ResultadoDescobrir } from '@/lib/calculos';
+import { descobrir, formatBRL, type ResultadoDescobrir } from '@/lib/calculos';
 import Link from 'next/link';
 
 type Etapa = 'form' | 'resultado';
+type TipoImovel = 'pronto' | 'na_planta';
 
 export default function SimuladorPage() {
   const [etapa, setEtapa] = useState<Etapa>('form');
   const [resultado, setResultado] = useState<ResultadoDescobrir | null>(null);
+  const [tipoImovel, setTipoImovel] = useState<TipoImovel>('pronto');
 
   const [renda, setRenda] = useState('');
   const [fgts, setFgts] = useState('');
@@ -43,7 +45,13 @@ export default function SimuladorPage() {
   }
 
   if (etapa === 'resultado' && resultado) {
-    return <Resultado resultado={resultado} onVoltar={() => setEtapa('form')} />;
+    return (
+      <Resultado
+        resultado={resultado}
+        tipoImovel={tipoImovel}
+        onVoltar={() => setEtapa('form')}
+      />
+    );
   }
 
   return (
@@ -67,6 +75,38 @@ export default function SimuladorPage() {
           border: '1px solid #e7e5e4', padding: '32px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
         }}>
+
+          {/* Tipo de imóvel */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#1c1917', marginBottom: '10px' }}>
+              Qual tipo de imóvel você quer comprar?
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {([
+                { key: 'pronto',    emoji: '🏠', label: 'Pronto',    desc: 'Já construído' },
+                { key: 'na_planta', emoji: '🏗️', label: 'Na Planta', desc: 'Em construção' },
+              ] as { key: TipoImovel; emoji: string; label: string; desc: string }[]).map(({ key, emoji, label, desc }) => (
+                <button
+                  key={key}
+                  onClick={() => setTipoImovel(key)}
+                  style={{
+                    padding: '14px 12px', borderRadius: '12px', cursor: 'pointer',
+                    border: '2px solid',
+                    borderColor: tipoImovel === key ? '#2563eb' : '#e7e5e4',
+                    background:  tipoImovel === key ? '#eff6ff' : '#fff',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div style={{ fontSize: '24px', marginBottom: '4px' }}>{emoji}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: tipoImovel === key ? '#2563eb' : '#1c1917' }}>
+                    {label}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#78716c' }}>{desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Campo
             label="Renda bruta mensal *"
             hint="Soma de todos os rendimentos do comprador"
@@ -75,6 +115,7 @@ export default function SimuladorPage() {
             prefix="R$"
             placeholder="5.000"
           />
+
           <Campo
             label="FGTS disponível"
             hint="Saldo que pode ser usado como parte da entrada"
@@ -83,6 +124,7 @@ export default function SimuladorPage() {
             prefix="R$"
             placeholder="0"
           />
+
           <Campo
             label="Recursos próprios (entrada)"
             hint="Dinheiro em conta, além do FGTS"
@@ -172,9 +214,17 @@ function Campo({ label, hint, value, onChange, prefix, placeholder }: {
 }
 
 // ─── Resultado ─────────────────────────────────────────────────────────────────
-function Resultado({ resultado, onVoltar }: { resultado: ResultadoDescobrir; onVoltar: () => void }) {
+function Resultado({
+  resultado,
+  tipoImovel,
+  onVoltar,
+}: {
+  resultado: ResultadoDescobrir;
+  tipoImovel: TipoImovel;
+  onVoltar: () => void;
+}) {
   const { mcmv, sbpe, oruloMinPrice, oruloMaxPrice } = resultado;
-  const [mostrarNaPlanta, setMostrarNaPlanta] = useState(false);
+  const valorSugerido = mcmv.elegivel ? mcmv.valorMaxImovel : sbpe.valorMaxImovel;
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', padding: '48px 24px' }}>
@@ -247,263 +297,43 @@ function Resultado({ resultado, onVoltar }: { resultado: ResultadoDescobrir; onV
           </Link>
         </div>
 
-        {/* Botão Na Planta */}
-        <button
-          onClick={() => setMostrarNaPlanta(v => !v)}
-          style={{
-            width: '100%', background: mostrarNaPlanta ? '#1c1917' : '#ffffff',
-            color: mostrarNaPlanta ? '#ffffff' : '#1c1917',
-            border: '1.5px solid #1c1917', borderRadius: '12px',
-            padding: '13px', fontSize: '15px', fontWeight: '600',
-            cursor: 'pointer', marginBottom: '8px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          }}
-        >
-          🏗️ {mostrarNaPlanta ? 'Fechar simulador na planta' : 'Simular imóvel na planta (entrada parcelada)'}
-        </button>
-
-        {/* Simulador Na Planta */}
-        {mostrarNaPlanta && (
-          <SimuladorNaPlanta
-            rendaBruta={resultado.rendaBruta}
-            mcmvElegivel={mcmv.elegivel}
-            valorSugerido={mcmv.elegivel ? mcmv.valorMaxImovel : sbpe.valorMaxImovel}
-          />
+        {/* CTA Na Planta — só aparece se o usuário selecionou "na planta" */}
+        {tipoImovel === 'na_planta' && (
+          <div style={{
+            background: '#1c1917', borderRadius: '16px', padding: '24px',
+            marginBottom: '16px', textAlign: 'center',
+          }}>
+            <p style={{ fontSize: '16px', fontWeight: '700', color: '#fff', marginBottom: '6px' }}>
+              🏗️ Simule o pagamento durante a obra
+            </p>
+            <p style={{ fontSize: '13px', color: '#a8a29e', marginBottom: '16px' }}>
+              Configure ato, mensais, sinais, anuais e chaves — e veja se o fluxo cabe no seu orçamento.
+            </p>
+            <Link
+              href={`/simulador/na-planta?renda=${resultado.rendaBruta}&valor=${Math.round(valorSugerido)}`}
+              style={{ textDecoration: 'none' }}
+            >
+              <button style={{
+                background: '#2563eb', color: '#fff', border: 'none',
+                borderRadius: '12px', padding: '12px 28px', fontSize: '15px',
+                fontWeight: '600', cursor: 'pointer',
+              }}>
+                Simular pagamento na planta →
+              </button>
+            </Link>
+          </div>
         )}
 
-        <div style={{ marginTop: '24px' }}>
-          <button
-            onClick={onVoltar}
-            style={{
-              background: 'transparent', color: '#78716c', border: 'none',
-              fontSize: '14px', cursor: 'pointer', textDecoration: 'underline',
-            }}
-          >
-            ← Refazer simulação
-          </button>
-        </div>
+        <button
+          onClick={onVoltar}
+          style={{
+            background: 'transparent', color: '#78716c', border: 'none',
+            fontSize: '14px', cursor: 'pointer', textDecoration: 'underline',
+          }}
+        >
+          ← Refazer simulação
+        </button>
       </div>
-    </div>
-  );
-}
-
-// ─── Simulador Na Planta ───────────────────────────────────────────────────────
-function SimuladorNaPlanta({
-  rendaBruta,
-  mcmvElegivel,
-  valorSugerido,
-}: {
-  rendaBruta: number;
-  mcmvElegivel: boolean;
-  valorSugerido: number;
-}) {
-  function formatarInput(val: string): string {
-    const num = val.replace(/\D/g, '');
-    if (!num) return '';
-    return Number(num).toLocaleString('pt-BR');
-  }
-
-  const [valorRaw, setValorRaw] = useState(
-    Math.round(valorSugerido).toLocaleString('pt-BR')
-  );
-  const [entradaPerc, setEntradaPerc] = useState('20');
-  const [atoPerc, setAtoPerc] = useState('5');
-  const [prazoObras, setPrazoObras] = useState('36');
-
-  const valorImovel = Number(valorRaw.replace(/\D/g, '')) || 0;
-  const entradaPercNum = Number(entradaPerc) / 100;
-  const atoPercNum = Number(atoPerc) / 100;
-  const prazoMeses = Number(prazoObras);
-  const prazoFinanc = 35 * 12;
-
-  const totalEntrada = valorImovel * entradaPercNum;
-  const ato = valorImovel * atoPercNum;
-  const saldoMensais = totalEntrada - ato;
-  const mensalObra = prazoMeses > 0 ? saldoMensais / prazoMeses : 0;
-  const limite30 = rendaBruta * 0.30;
-  const dentroDaLimitre = mensalObra <= limite30;
-
-  const valorFinanciado = Math.max(0, valorImovel - totalEntrada);
-  const isMCMV = valorImovel <= TETO_MCMV;
-  const taxa = isMCMV ? TAXA_MCMV_ANUAL : TAXA_SBPE_ANUAL;
-  const parcelaFinanc = parcelaPrice(valorFinanciado, taxa, prazoFinanc);
-
-  const valido = valorImovel > 0;
-
-  return (
-    <div style={{
-      background: '#ffffff', borderRadius: '16px', border: '1px solid #e7e5e4',
-      padding: '24px', marginBottom: '16px',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-    }}>
-      <span style={{
-        display: 'inline-block', background: '#78716c15',
-        color: '#44403c', fontSize: '11px', fontWeight: '700',
-        padding: '3px 10px', borderRadius: '99px', marginBottom: '16px',
-        letterSpacing: '0.5px',
-      }}>
-        IMÓVEL NA PLANTA
-      </span>
-
-      <p style={{ fontSize: '13px', color: '#78716c', marginBottom: '20px', lineHeight: '1.5' }}>
-        Calcule quanto você vai pagar durante a obra e se a parcela cabe no seu orçamento.
-      </p>
-
-      {/* Inputs */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-
-        {/* Valor do imóvel */}
-        <div style={{ gridColumn: '1 / -1' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1c1917', marginBottom: '4px' }}>
-            Valor do imóvel
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #e7e5e4', borderRadius: '10px', overflow: 'hidden' }}>
-            <span style={{ padding: '10px 12px', fontSize: '14px', color: '#78716c', background: '#fafaf9', borderRight: '1px solid #e7e5e4' }}>R$</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={valorRaw}
-              onChange={e => setValorRaw(formatarInput(e.target.value))}
-              style={{ flex: 1, padding: '10px 12px', border: 'none', outline: 'none', fontSize: '14px', color: '#1c1917', background: 'transparent' }}
-            />
-          </div>
-        </div>
-
-        {/* Entrada durante obras */}
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1c1917', marginBottom: '4px' }}>
-            Entrada durante obras
-          </label>
-          <select
-            value={entradaPerc}
-            onChange={e => setEntradaPerc(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e7e5e4', borderRadius: '10px', fontSize: '14px', background: '#fff', outline: 'none' }}
-          >
-            <option value="10">10% do valor</option>
-            <option value="15">15% do valor</option>
-            <option value="20">20% do valor</option>
-            <option value="25">25% do valor</option>
-            <option value="30">30% do valor</option>
-          </select>
-        </div>
-
-        {/* Ato */}
-        <div>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1c1917', marginBottom: '4px' }}>
-            Ato (assinatura)
-          </label>
-          <select
-            value={atoPerc}
-            onChange={e => setAtoPerc(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e7e5e4', borderRadius: '10px', fontSize: '14px', background: '#fff', outline: 'none' }}
-          >
-            <option value="5">5% do valor</option>
-            <option value="8">8% do valor</option>
-            <option value="10">10% do valor</option>
-            <option value="15">15% do valor</option>
-          </select>
-        </div>
-
-        {/* Prazo de obras */}
-        <div style={{ gridColumn: '1 / -1' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1c1917', marginBottom: '4px' }}>
-            Prazo estimado da obra
-          </label>
-          <select
-            value={prazoObras}
-            onChange={e => setPrazoObras(e.target.value)}
-            style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #e7e5e4', borderRadius: '10px', fontSize: '14px', background: '#fff', outline: 'none' }}
-          >
-            <option value="24">24 meses (2 anos)</option>
-            <option value="30">30 meses (2,5 anos)</option>
-            <option value="36">36 meses (3 anos)</option>
-            <option value="42">42 meses (3,5 anos)</option>
-            <option value="48">48 meses (4 anos)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Resultados */}
-      {valido && (
-        <>
-          <div style={{ borderTop: '1px solid #e7e5e4', paddingTop: '20px' }}>
-
-            {/* Linha: Ato */}
-            <LinhaCalculo
-              label={`Ato (${atoPerc}% — pago na assinatura)`}
-              valor={formatBRL(ato)}
-              destaque
-            />
-
-            {/* Linha: Mensais */}
-            <LinhaCalculo
-              label={`Parcelas mensais na obra (${prazoObras} meses)`}
-              valor={formatBRL(mensalObra) + '/mês'}
-            />
-
-            {/* Alerta 30% */}
-            <div style={{
-              background: dentroDaLimitre ? '#f0fdf4' : '#fef2f2',
-              border: `1px solid ${dentroDaLimitre ? '#bbf7d0' : '#fecaca'}`,
-              borderRadius: '10px', padding: '12px 14px',
-              marginTop: '12px', marginBottom: '12px',
-              display: 'flex', alignItems: 'flex-start', gap: '10px',
-            }}>
-              <span style={{ fontSize: '18px', flexShrink: 0 }}>
-                {dentroDaLimitre ? '✅' : '⚠️'}
-              </span>
-              <div>
-                <p style={{ fontSize: '13px', fontWeight: '600', color: dentroDaLimitre ? '#15803d' : '#dc2626', marginBottom: '2px' }}>
-                  {dentroDaLimitre
-                    ? 'Parcela dentro do limite de renda'
-                    : 'Parcela acima do limite recomendado'}
-                </p>
-                <p style={{ fontSize: '12px', color: '#78716c' }}>
-                  Parcela na obra: {formatBRL(mensalObra)}/mês · Limite 30% da renda: {formatBRL(limite30)}/mês
-                </p>
-              </div>
-            </div>
-
-            {/* Linha: Financiamento */}
-            <LinhaCalculo
-              label="Financiamento após a entrega das chaves"
-              valor={formatBRL(valorFinanciado)}
-            />
-            <LinhaCalculo
-              label={`Parcela do financiamento (${isMCMV ? '7,66%' : '10,5%'} a.a. · 35 anos)`}
-              valor={formatBRL(Math.round(parcelaFinanc)) + '/mês'}
-            />
-
-            {/* Info MCMV vs SBPE */}
-            <div style={{
-              background: isMCMV ? '#f0fdf4' : '#eff6ff',
-              border: `1px solid ${isMCMV ? '#bbf7d0' : '#bfdbfe'}`,
-              borderRadius: '10px', padding: '12px 14px', marginTop: '12px',
-            }}>
-              <p style={{ fontSize: '12px', fontWeight: '600', color: isMCMV ? '#15803d' : '#1d4ed8', marginBottom: '4px' }}>
-                {isMCMV ? '🏠 Minha Casa Minha Vida — Crédito Associativo' : '🏦 SBPE / Mercado'}
-              </p>
-              <p style={{ fontSize: '12px', color: '#78716c', lineHeight: '1.5' }}>
-                {isMCMV
-                  ? 'O contrato de financiamento com a Caixa Econômica é assinado antes do início da obra. Durante a construção, você paga juros evolutivos ao banco (crescem conforme o progresso da obra) + as parcelas mensais à construtora.'
-                  : 'O financiamento bancário é contratado somente após a emissão do Habite-se (entrega das chaves). Durante a obra, você paga as parcelas da entrada diretamente à construtora, com correção pelo INCC.'}
-              </p>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function LinhaCalculo({ label, valor, destaque }: { label: string; valor: string; destaque?: boolean }) {
-  return (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '8px 0', borderBottom: '1px solid #f5f5f4',
-    }}>
-      <span style={{ fontSize: '13px', color: '#78716c', flex: 1, paddingRight: '16px' }}>{label}</span>
-      <span style={{ fontSize: '14px', fontWeight: destaque ? '700' : '600', color: '#1c1917', whiteSpace: 'nowrap' }}>{valor}</span>
     </div>
   );
 }
