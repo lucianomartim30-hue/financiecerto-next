@@ -270,7 +270,7 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
             {quartos && <p style={{ fontSize: '12px', color: '#78716c' }}>{quartos}</p>}
           </div>
           <a
-            href={`https://wa.me/5511999999999?text=${waMsg}`}
+            href={`https://wa.me/5511933661403?text=${waMsg}`}
             target="_blank"
             rel="noopener noreferrer"
             style={{
