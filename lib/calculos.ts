@@ -80,6 +80,7 @@ export function parcelaPrice(pv: number, taxaAnual: number, meses: number): numb
 }
 
 // ─── Capacidade de financiamento (renda → valor máximo financiado) ─────────────
+// Versão básica (usada internamente)
 export function capacidadeFinanciamento(
   rendaBruta: number,
   taxaAnual: number,
@@ -90,6 +91,27 @@ export function capacidadeFinanciamento(
   const i = taxaAnual / 100 / 12;
   if (i === 0) return pmMax * prazoMeses;
   return pmMax * (1 - Math.pow(1 + i, -prazoMeses)) / i;
+}
+
+// Versão com seguros incluídos no limite de 30% (como o banco calcula de verdade).
+// Itera 3x para convergir: seguro depende do financiado, que depende do seguro.
+function capacidadeComSeguros(
+  rendaBruta: number,
+  taxaAnual: number,
+  prazoMeses: number,
+  comprometimentoMax = 0.30,
+): number {
+  const pmMax = rendaBruta * comprometimentoMax;
+  const i = taxaAnual / 100 / 12;
+  const fator = i === 0 ? prazoMeses : (1 - Math.pow(1 + i, -prazoMeses)) / i;
+
+  let cap = pmMax * fator; // estimativa inicial sem seguros
+  for (let iter = 0; iter < 4; iter++) {
+    const seg = calcularSeguros(cap);
+    const pmAjustado = Math.max(0, pmMax - seg.total);
+    cap = pmAjustado * fator;
+  }
+  return cap;
 }
 
 // ─── Seguros e taxa adm ───────────────────────────────────────────────────────
@@ -219,7 +241,7 @@ export function descobrir(
   const taxaMCMV  = faixa?.taxaRef ?? TAXA_MCMV_ANUAL;
   const tetoMCMV  = faixa?.teto   ?? 275000;
 
-  const capacMCMV      = elegivel ? capacidadeFinanciamento(rendaBruta, taxaMCMV, prazoMeses, 0.30) : 0;
+  const capacMCMV      = elegivel ? capacidadeComSeguros(rendaBruta, taxaMCMV, prazoMeses, 0.30) : 0;
   const imovelMaxMCMV  = elegivel ? Math.min(capacMCMV + entradaTotal, tetoMCMV) : 0;
   const financiadoMCMV = elegivel ? Math.max(0, imovelMaxMCMV - entradaTotal) : 0;
   const parcelaMCMV    = parcelaPrice(financiadoMCMV, taxaMCMV, prazoMeses);
@@ -229,7 +251,7 @@ export function descobrir(
   const elegMCMV = elegivel && imovelMaxMCMV >= 80000;
 
   // ── SBPE ────────────────────────────────────────────────────────────────
-  const capacSBPE      = capacidadeFinanciamento(rendaBruta, TAXA_SBPE_ANUAL, prazoMeses, 0.30);
+  const capacSBPE      = capacidadeComSeguros(rendaBruta, TAXA_SBPE_ANUAL, prazoMeses, 0.30);
   const imovelMaxSBPE  = Math.min(capacSBPE + entradaTotal, 2250000);
   const financiadoSBPE = Math.max(0, imovelMaxSBPE - entradaTotal);
   const parcelaSBPE    = parcelaPrice(financiadoSBPE, TAXA_SBPE_ANUAL, prazoMeses);
