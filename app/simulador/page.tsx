@@ -223,8 +223,17 @@ function Resultado({
   tipoImovel: TipoImovel;
   onVoltar: () => void;
 }) {
-  const { mcmv, sbpe, oruloMinPrice, oruloMaxPrice } = resultado;
+  const { mcmv, sbpe, oruloMinPrice, oruloMaxPrice, faixa } = resultado;
   const valorSugerido = mcmv.elegivel ? mcmv.valorMaxImovel : sbpe.valorMaxImovel;
+
+  // Textos dinâmicos por faixa
+  const badgeMCMV = faixa ? `MINHA CASA MINHA VIDA — ${faixa.label.toUpperCase()}` : 'MINHA CASA MINHA VIDA';
+  const taxaMCMVLabel = faixa ? `${faixa.taxaRef.toFixed(2).replace('.', ',')}% a.a. + TR` : '7,66% a.a. + TR';
+  const destaqueMCMV = faixa
+    ? faixa.subsidioMax > 0
+      ? `${faixa.label}: subsídio de até R$ ${faixa.subsidioMax.toLocaleString('pt-BR')} para renda até R$ ${faixa.rendaMax.toLocaleString('pt-BR')}/mês. Taxa de ${faixa.taxaMin.toFixed(2).replace('.', ',')}% a ${faixa.taxaMax.toFixed(2).replace('.', ',')}% a.a. + TR.`
+      : `${faixa.label}: sem subsídio direto. Taxa de ${faixa.taxaMin.toFixed(2).replace('.', ',')}% a ${faixa.taxaMax.toFixed(2).replace('.', ',')}% a.a. + TR. Teto do imóvel: R$ ${faixa.teto.toLocaleString('pt-BR')}.`
+    : 'Menor taxa de juros do mercado.';
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', padding: '48px 24px' }}>
@@ -242,20 +251,20 @@ function Resultado({
           </p>
         </div>
 
-        {/* Card MCMV */}
+        {/* Card MCMV — faixa correta pela renda */}
         {mcmv.elegivel && (
           <CardCenario
-            badge="MINHA CASA MINHA VIDA"
+            badge={badgeMCMV}
             badgeColor="#16a34a"
             titulo="Até"
             valor={formatBRL(mcmv.valorMaxImovel)}
             itens={[
               { label: 'Parcela estimada', valor: formatBRL(mcmv.parcela) + '/mês' },
               { label: 'Comprometimento de renda', valor: mcmv.comprometimento.toFixed(1) + '%' },
-              { label: 'Taxa de juros', valor: '7,66% a.a.' },
+              { label: 'Taxa de juros (referência)', valor: taxaMCMVLabel },
               { label: 'Financiado', valor: formatBRL(mcmv.valorFinanciado) },
             ]}
-            destaque="Menor taxa de juros. Inclui subsídio do governo para renda até R$ 8.000."
+            destaque={destaqueMCMV}
           />
         )}
 
@@ -271,7 +280,7 @@ function Resultado({
             { label: 'Taxa de juros', valor: '10,5% a.a.' },
             { label: 'Financiado', valor: formatBRL(sbpe.valorFinanciado) },
           ]}
-          destaque="Para imóveis acima de R$ 350 mil ou renda acima de R$ 8.000."
+          destaque={faixa ? `Alternativa para imóveis acima de R$ ${faixa.teto.toLocaleString('pt-BR')} ou renda acima de R$ 13.000/mês.` : 'Para imóveis ou renda acima dos limites MCMV.'}
         />
 
         {/* CTA Imóveis */}
@@ -307,10 +316,10 @@ function Resultado({
               🏗️ Simule o pagamento durante a obra
             </p>
             <p style={{ fontSize: '13px', color: '#a8a29e', marginBottom: '16px' }}>
-              Configure ato, mensais, sinais, anuais e chaves — e veja se o fluxo cabe no seu orçamento.
+              Com base no seu financiamento aprovado, veja como estruturar a entrada durante a construção.
             </p>
             <Link
-              href={`/simulador/na-planta?renda=${resultado.rendaBruta}&valor=${Math.round(valorSugerido)}`}
+              href={`/simulador/na-planta?renda=${resultado.rendaBruta}&mcmv=${mcmv.valorFinanciado}&sbpe=${sbpe.valorFinanciado}&fgts=${resultado.fgts}&proprios=${resultado.entrada - resultado.fgts}`}
               style={{ textDecoration: 'none' }}
             >
               <button style={{
@@ -318,7 +327,7 @@ function Resultado({
                 borderRadius: '12px', padding: '12px 28px', fontSize: '15px',
                 fontWeight: '600', cursor: 'pointer',
               }}>
-                Simular pagamento na planta →
+                Simular entrada na planta →
               </button>
             </Link>
           </div>
