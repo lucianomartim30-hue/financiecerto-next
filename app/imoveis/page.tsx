@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatBRL } from '@/lib/calculos';
 
@@ -78,6 +78,7 @@ function SkeletonCard() {
 function CardImovel({ imovel: b }: { imovel: Imovel }) {
   const [imgErr, setImgErr] = useState(false);
   const [hover, setHover] = useState(false);
+  const router = useRouter();
 
   const preco = b.min_price ? `A partir de ${formatBRL(b.min_price)}` : 'Preço sob consulta';
   const statusCfg = getStatusCfg(b.status || '');
@@ -107,13 +108,10 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
   ].filter(Boolean) as { icon: string; label: string }[];
 
   return (
-    <Link
-      href={`/imoveis/${b.id}`}
-      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+    <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-    >
-    <div
+      onClick={() => router.push(`/imoveis/${b.id}`)}
       style={{
         background: 'var(--bg-card)', borderRadius: '14px',
         border: `1.5px solid ${hover ? 'var(--primary)' : 'var(--border)'}`,
@@ -239,7 +237,7 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
           >
             <span>💬</span> WhatsApp
           </a>
-          <Link
+          <a
             href={`/imoveis/${b.id}`}
             onClick={e => e.stopPropagation()}
             style={{
@@ -252,11 +250,10 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
             }}
           >
             Ver detalhes →
-          </Link>
+          </a>
         </div>
       </div>
     </div>
-    </Link>
   );
 }
 
