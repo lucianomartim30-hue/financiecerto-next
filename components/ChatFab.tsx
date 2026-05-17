@@ -94,7 +94,7 @@ function renderMarkdown(text: string): string {
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*?<\/li>\n?)+/gs, m =>
+    .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m =>
       `<ul style="margin:6px 0 6px 16px;padding:0;list-style:disc;">${m}</ul>`,
     )
     .replace(/\n(?![<])/g, '<br/>');
