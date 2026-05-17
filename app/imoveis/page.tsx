@@ -311,6 +311,18 @@ function Pill({
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// BRL input helpers
+// ──────────────────────────────────────────────────────────────────────────────
+function fmtInput(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  return Number(digits).toLocaleString('pt-BR');
+}
+function stripFmt(formatted: string): string {
+  return formatted.replace(/\D/g, '');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Main content (needs Suspense for useSearchParams)
 // ──────────────────────────────────────────────────────────────────────────────
 function ImoveisContent() {
@@ -321,12 +333,14 @@ function ImoveisContent() {
   // Filtros de API
   const [minPrice, setMinPriceRaw] = useState(minParam);
   const [maxPrice, setMaxPriceRaw] = useState(maxParam);
-  const [minInput, setMinInput] = useState(minParam);
-  const [maxInput, setMaxInput] = useState(maxParam);
+  const [minInput, setMinInput] = useState(minParam ? fmtInput(minParam) : '');
+  const [maxInput, setMaxInput] = useState(maxParam ? fmtInput(maxParam) : '');
 
   // Filtros client-side
   const [quartosFilter, setQuartosFilter] = useState<string>('todos');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
+  const [localSearch, setLocalSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'relevancia' | 'menor-preco' | 'maior-preco'>('relevancia');
 
   // Data
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
@@ -370,34 +384,47 @@ function ImoveisContent() {
   useEffect(() => { buscar(1); }, [buscar]);
 
   // Aplicar filtros client-side
-  const imoveisFiltrados = imoveis.filter(b => {
-    if (quartosFilter !== 'todos') {
-      const q = parseInt(quartosFilter);
-      const min = b.bedrooms_min ?? 0;
-      const max = b.bedrooms_max ?? min;
-      if (quartosFilter === '4+') {
-        if (max < 4) return false;
-      } else {
-        if (q < min || q > max) return false;
+  const imoveisFiltrados = imoveis
+    .filter(b => {
+      if (quartosFilter !== 'todos') {
+        const q = parseInt(quartosFilter);
+        const min = b.bedrooms_min ?? 0;
+        const max = b.bedrooms_max ?? min;
+        if (quartosFilter === '4+') {
+          if (max < 4) return false;
+        } else {
+          if (q < min || q > max) return false;
+        }
       }
-    }
-    if (statusFilter !== 'todos') {
-      if ((b.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
-    }
-    return true;
-  });
+      if (statusFilter !== 'todos') {
+        if ((b.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
+      }
+      if (localSearch.trim()) {
+        const q = localSearch.trim().toLowerCase();
+        const haystack = [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      return true;
+    })
+    .sort((a, bx) => {
+      if (sortBy === 'menor-preco') return (a.min_price ?? 0) - (bx.min_price ?? 0);
+      if (sortBy === 'maior-preco') return (bx.min_price ?? 0) - (a.min_price ?? 0);
+      return 0;
+    });
 
-  const filtroAtivo = !!(minPrice || maxPrice || quartosFilter !== 'todos' || statusFilter !== 'todos');
+  const filtroAtivo = !!(minPrice || maxPrice || quartosFilter !== 'todos' || statusFilter !== 'todos' || localSearch.trim() || sortBy !== 'relevancia');
 
   function aplicarPreco() {
-    setMinPriceRaw(minInput);
-    setMaxPriceRaw(maxInput);
+    setMinPriceRaw(stripFmt(minInput));
+    setMaxPriceRaw(stripFmt(maxInput));
   }
   function limparFiltros() {
     setMinPriceRaw(''); setMaxPriceRaw('');
     setMinInput(''); setMaxInput('');
     setQuartosFilter('todos');
     setStatusFilter('todos');
+    setLocalSearch('');
+    setSortBy('relevancia');
   }
 
   const quartosPills = [
@@ -458,45 +485,30 @@ function ImoveisContent() {
       <div style={{
         background: 'var(--bg-card)',
         borderBottom: '1px solid var(--border)',
-        padding: '20px 24px',
+        padding: '16px 24px',
         position: 'sticky', top: 0, zIndex: 10,
         boxShadow: '0 2px 12px rgba(0,0,0,.06)',
       }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-          {/* Linha 1: preço */}
+          {/* Linha 1: busca por bairro + preço + buscar + ordenar */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div>
-                <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
-                  Preço mínimo
-                </p>
+
+            {/* Busca bairro/nome */}
+            <div style={{ flex: '1 1 200px', minWidth: '160px' }}>
+              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
+                Bairro ou empreendimento
+              </p>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
                 <input
-                  type="number"
-                  value={minInput}
-                  onChange={e => setMinInput(e.target.value)}
-                  placeholder="200.000"
+                  type="text"
+                  value={localSearch}
+                  onChange={e => setLocalSearch(e.target.value)}
+                  placeholder="Pinheiros, Vila Olímpia..."
                   style={{
-                    padding: '8px 12px', border: '1.5px solid var(--border)',
-                    borderRadius: '10px', fontSize: '14px', width: '150px',
-                    outline: 'none', background: 'var(--bg)',
-                    color: 'var(--text)', fontFamily: 'inherit',
-                  }}
-                />
-              </div>
-              <span style={{ color: 'var(--text-faint)', paddingBottom: '2px', alignSelf: 'flex-end', marginBottom: '8px' }}>–</span>
-              <div>
-                <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
-                  Preço máximo
-                </p>
-                <input
-                  type="number"
-                  value={maxInput}
-                  onChange={e => setMaxInput(e.target.value)}
-                  placeholder="800.000"
-                  style={{
-                    padding: '8px 12px', border: '1.5px solid var(--border)',
-                    borderRadius: '10px', fontSize: '14px', width: '150px',
+                    padding: '9px 12px 9px 32px', border: '1.5px solid var(--border)',
+                    borderRadius: '10px', fontSize: '13px', width: '100%',
                     outline: 'none', background: 'var(--bg)',
                     color: 'var(--text)', fontFamily: 'inherit',
                   }}
@@ -504,17 +516,99 @@ function ImoveisContent() {
               </div>
             </div>
 
+            {/* Preço mínimo */}
+            <div>
+              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
+                Preço mínimo
+              </p>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <span style={{
+                  position: 'absolute', left: '11px', color: 'var(--text-faint)',
+                  fontSize: '13px', fontWeight: '600', pointerEvents: 'none',
+                }}>R$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={minInput}
+                  onChange={e => setMinInput(fmtInput(e.target.value))}
+                  onKeyDown={e => e.key === 'Enter' && aplicarPreco()}
+                  placeholder="200.000"
+                  style={{
+                    padding: '9px 12px 9px 36px', border: '1.5px solid var(--border)',
+                    borderRadius: '10px', fontSize: '13px', width: '148px',
+                    outline: 'none', background: 'var(--bg)',
+                    color: 'var(--text)', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            </div>
+
+            <span style={{ color: 'var(--text-faint)', fontSize: '16px', alignSelf: 'flex-end', marginBottom: '9px' }}>–</span>
+
+            {/* Preço máximo */}
+            <div>
+              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
+                Preço máximo
+              </p>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <span style={{
+                  position: 'absolute', left: '11px', color: 'var(--text-faint)',
+                  fontSize: '13px', fontWeight: '600', pointerEvents: 'none',
+                }}>R$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={maxInput}
+                  onChange={e => setMaxInput(fmtInput(e.target.value))}
+                  onKeyDown={e => e.key === 'Enter' && aplicarPreco()}
+                  placeholder="800.000"
+                  style={{
+                    padding: '9px 12px 9px 36px', border: '1.5px solid var(--border)',
+                    borderRadius: '10px', fontSize: '13px', width: '148px',
+                    outline: 'none', background: 'var(--bg)',
+                    color: 'var(--text)', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Botão buscar */}
             <button
               onClick={aplicarPreco}
               style={{
                 background: 'linear-gradient(135deg, var(--primary), var(--accent))',
                 color: '#fff', border: 'none', borderRadius: '10px',
                 padding: '9px 20px', fontSize: '13px', fontWeight: '700',
-                cursor: 'pointer', alignSelf: 'flex-end', marginBottom: '0',
+                cursor: 'pointer', alignSelf: 'flex-end', whiteSpace: 'nowrap',
               }}
             >
               Buscar
             </button>
+
+            {/* Ordenar */}
+            <div style={{ marginLeft: 'auto' }}>
+              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
+                Ordenar por
+              </p>
+              <select
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                style={{
+                  padding: '9px 32px 9px 12px', border: '1.5px solid var(--border)',
+                  borderRadius: '10px', fontSize: '13px',
+                  background: 'var(--bg)', color: 'var(--text)',
+                  fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
+                  appearance: 'none',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 10px center',
+                }}
+              >
+                <option value="relevancia">Relevância</option>
+                <option value="menor-preco">Menor preço</option>
+                <option value="maior-preco">Maior preço</option>
+              </select>
+            </div>
 
             {filtroAtivo && (
               <button
@@ -522,11 +616,11 @@ function ImoveisContent() {
                 style={{
                   background: 'transparent', color: 'var(--text-muted)',
                   border: '1.5px solid var(--border)', borderRadius: '10px',
-                  padding: '9px 16px', fontSize: '13px', cursor: 'pointer',
-                  alignSelf: 'flex-end',
+                  padding: '9px 14px', fontSize: '13px', cursor: 'pointer',
+                  alignSelf: 'flex-end', whiteSpace: 'nowrap',
                 }}
               >
-                Limpar filtros
+                ✕ Limpar
               </button>
             )}
           </div>
