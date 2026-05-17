@@ -155,22 +155,43 @@ export interface InputSimulacao {
   prazoAnos: number;
   naPlanta: boolean;
   prazoObraAnos: number;
+  // Qualificações de elegibilidade
+  idadeProponente?: number;   // Idade do proponente mais velho
+  cotista?: boolean;          // Cotista FGTS há 3+ anos
+  primeiroImovel?: boolean;   // Primeiro imóvel financiado
+  jaRecebeuBeneficio?: boolean; // Já recebeu subsídio/benefício habitacional
+  temImovelMunicipio?: boolean; // Possui imóvel no mesmo município
+  dependentes?: number;       // Número de dependentes
 }
 
 // ─── Simular (valor do imóvel informado) ──────────────────────────────────────
 export function simular(input: InputSimulacao): ResultadoSimulacao {
-  const { rendaBruta, fgts, entrada, valorImovel, prazoAnos, naPlanta, prazoObraAnos } = input;
+  const {
+    rendaBruta, fgts, entrada, valorImovel, prazoAnos, naPlanta, prazoObraAnos,
+    idadeProponente, cotista = true, primeiroImovel = true,
+    jaRecebeuBeneficio = false, temImovelMunicipio = false,
+  } = input;
 
-  const prazoMeses     = prazoAnos * 12;
+  // Prazo limitado pela idade: máx 80 anos e 6 meses − idade mais velho
+  const prazoMaxPorIdade = idadeProponente
+    ? Math.max(60, Math.floor((80.5 - idadeProponente) * 12))
+    : PRAZO_MAX_MESES;
+  const prazoMeses     = Math.min(prazoAnos * 12, prazoMaxPorIdade);
   const prazoObraMeses = prazoObraAnos * 12;
 
-  const faixa      = detectarFaixaMCMV(rendaBruta);
-  const isMCMV     = faixa !== null && valorImovel <= faixa.teto;
+  // Elegibilidade MCMV: sem imóvel no município, sem benefício anterior
+  const faixa  = detectarFaixaMCMV(rendaBruta);
+  const mcmvElegivel = faixa !== null && !temImovelMunicipio && !jaRecebeuBeneficio;
+  const isMCMV = mcmvElegivel && valorImovel <= faixa!.teto;
+
+  // FGTS: exige cotista + primeiro imóvel + sem imóvel no município
+  const fgtsElegivel = cotista && primeiroImovel && !temImovelMunicipio;
+  const fgtsUsado    = fgtsElegivel ? fgts : 0;
   const isSFI      = !isMCMV && valorImovel > TETO_SFH;
   const modalidade: 'MCMV' | 'SBPE' | 'SFI' = isMCMV ? 'MCMV' : isSFI ? 'SFI' : 'SBPE';
   const taxaAnual  = isMCMV ? faixa!.taxaRef : isSFI ? TAXA_SFI_ANUAL : TAXA_SBPE_ANUAL;
 
-  const entradaTotal    = entrada + fgts;
+  const entradaTotal    = entrada + fgtsUsado;
   const valorFinanciado = Math.max(0, valorImovel - entradaTotal);
 
   const parcela1    = parcelaPrice(valorFinanciado, taxaAnual, prazoMeses);

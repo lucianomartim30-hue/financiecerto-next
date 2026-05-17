@@ -207,7 +207,41 @@ function ModeSelector({ modo, onChange }: { modo: Modo; onChange: (m: Modo) => v
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// MODO 1 — DESCOBRIR: Form (3 steps)
+// Toggle checkbox
+// ──────────────────────────────────────────────────────────────────────────────
+function CheckItem({
+  label, checked, onChange, aviso,
+}: { label: string; checked: boolean; onChange: (v: boolean) => void; aviso?: string }) {
+  return (
+    <label style={{
+      display: 'flex', alignItems: 'flex-start', gap: '10px',
+      cursor: 'pointer', padding: '10px 0',
+      borderBottom: '1px solid var(--border)',
+    }}>
+      <div
+        onClick={() => onChange(!checked)}
+        style={{
+          width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0,
+          border: `2px solid ${checked ? 'var(--primary)' : 'var(--border)'}`,
+          background: checked ? 'var(--primary)' : 'transparent',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.15s', marginTop: '1px',
+        }}
+      >
+        {checked && <span style={{ color: '#fff', fontSize: '12px', fontWeight: '800' }}>✓</span>}
+      </div>
+      <div>
+        <p style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.4 }}>{label}</p>
+        {aviso && (
+          <p style={{ fontSize: '12px', color: '#d97706', marginTop: '3px' }}>{aviso}</p>
+        )}
+      </div>
+    </label>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// MODO 1 — DESCOBRIR: Form (4 steps)
 // ──────────────────────────────────────────────────────────────────────────────
 function FormDescobrir({ onResult }: { onResult: (r: ResultadoDescobrir) => void }) {
   const [step, setStep] = useState(0);
@@ -215,31 +249,37 @@ function FormDescobrir({ onResult }: { onResult: (r: ResultadoDescobrir) => void
   const [entrada, setEntrada] = useState('');
   const [fgts, setFgts] = useState('');
   const [prazo, setPrazo] = useState('35');
+  const [idade, setIdade] = useState('');
+  // Qualificações
+  const [cotista, setCotista] = useState(true);
+  const [primeiroImovel, setPrimeiroImovel] = useState(true);
+  const [beneficio, setBeneficio] = useState(false);
+  const [temImovel, setTemImovel] = useState(false);
+  const [dependentes, setDependentes] = useState(0);
   const [erro, setErro] = useState('');
+
+  // Prazo máximo calculado pela idade
+  const idadeNum = parseInt(idade) || 0;
+  const prazoMax = idadeNum > 0 ? Math.max(5, Math.min(35, Math.floor(80.5 - idadeNum))) : 35;
 
   function avancar() {
     setErro('');
     if (step === 0) {
       const r = parseMoeda(renda);
-      if (!r || r < 800) {
-        setErro('Informe uma renda válida — mínimo R$ 800.');
-        return;
-      }
+      if (!r || r < 800) { setErro('Informe uma renda válida — mínimo R$ 800.'); return; }
     }
-    if (step < 2) {
-      setStep(s => s + 1);
-      return;
-    }
+    if (step < 3) { setStep(s => s + 1); return; }
     // Calcular
     const r = parseMoeda(renda);
     const e = parseMoeda(entrada);
     const f = parseMoeda(fgts);
-    onResult(descobrir(r, f, e, parseInt(prazo)));
+    const prazoReal = Math.min(parseInt(prazo), prazoMax);
+    onResult(descobrir(r, f, e, prazoReal));
   }
 
   return (
     <div>
-      <Progresso total={3} atual={step} />
+      <Progresso total={4} atual={step} />
 
       {/* Step 0: Renda */}
       {step === 0 && (
@@ -261,8 +301,68 @@ function FormDescobrir({ onResult }: { onResult: (r: ResultadoDescobrir) => void
         </div>
       )}
 
-      {/* Step 1: Entrada */}
+      {/* Step 1: Qualificações */}
       {step === 1 && (
+        <div style={{ animation: 'fadeUp 0.3s ease' }}>
+          <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', lineHeight: 1.2, marginBottom: '10px' }}>
+            Algumas perguntas rápidas
+          </h2>
+          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '24px' }}>
+            Usamos para verificar elegibilidade no Minha Casa Minha Vida e uso do FGTS.
+          </p>
+          <CheckItem
+            label="Sou cotista do FGTS há pelo menos 3 anos (carteira assinada)"
+            checked={cotista}
+            onChange={setCotista}
+          />
+          <CheckItem
+            label="Este é meu primeiro imóvel financiado"
+            checked={primeiroImovel}
+            onChange={setPrimeiroImovel}
+          />
+          <CheckItem
+            label="Já recebi subsídio habitacional (MCMV ou similar)"
+            checked={beneficio}
+            onChange={setBeneficio}
+            aviso={beneficio ? '⚠️ Pode impedir novo subsídio MCMV' : undefined}
+          />
+          <CheckItem
+            label="Possuo imóvel residencial no município onde vou morar"
+            checked={temImovel}
+            onChange={setTemImovel}
+            aviso={temImovel ? '⚠️ Impede uso do FGTS e elegibilidade MCMV' : undefined}
+          />
+          <div style={{ marginTop: '16px' }}>
+            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
+              Dependentes
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {[0, 1, 2, 3, 4].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setDependentes(n)}
+                  style={{
+                    flex: 1, padding: '10px 4px', borderRadius: '10px',
+                    border: `2px solid ${dependentes === n ? 'var(--primary)' : 'var(--border)'}`,
+                    background: dependentes === n ? 'var(--primary-light)' : 'var(--bg)',
+                    color: dependentes === n ? 'var(--primary)' : 'var(--text-muted)',
+                    fontWeight: dependentes === n ? '700' : '500',
+                    fontSize: '14px', cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  {n === 4 ? '4+' : n}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '6px' }}>
+              Filhos, cônjuge dependente ou pais — pode aumentar o subsídio
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Entrada */}
+      {step === 2 && (
         <div style={{ animation: 'fadeUp 0.3s ease' }}>
           <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', lineHeight: 1.2, marginBottom: '10px' }}>
             Quanto você tem para a entrada?
@@ -278,25 +378,69 @@ function FormDescobrir({ onResult }: { onResult: (r: ResultadoDescobrir) => void
             onChange={v => setEntrada(fmtInput(v))}
             hint="Dinheiro em conta, poupança ou investimentos"
           />
-          <CampoGrande
-            label="Saldo do FGTS"
-            prefix="R$"
-            placeholder="0"
-            value={fgts}
-            onChange={v => setFgts(fmtInput(v))}
-            hint="Pode ser usado como entrada em imóveis SFH (até R$ 1,5 mi)"
-          />
+          {cotista && primeiroImovel && !temImovel ? (
+            <CampoGrande
+              label="Saldo do FGTS"
+              prefix="R$"
+              placeholder="0"
+              value={fgts}
+              onChange={v => setFgts(fmtInput(v))}
+              hint="Pode ser usado como entrada em imóveis SFH (até R$ 2,25 mi)"
+            />
+          ) : (
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px 16px', marginBottom: '32px' }}>
+              <p style={{ fontSize: '13px', color: '#92400e', margin: 0, lineHeight: 1.55 }}>
+                ⚠️ FGTS indisponível: {temImovel ? 'você possui imóvel no município' : !cotista ? 'não atende o requisito de cotista 3+ anos' : 'não é seu primeiro imóvel financiado'}.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Step 2: Prazo */}
-      {step === 2 && (
+      {/* Step 3: Prazo + Idade */}
+      {step === 3 && (
         <div style={{ animation: 'fadeUp 0.3s ease' }}>
           <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', lineHeight: 1.2, marginBottom: '10px' }}>
-            Em quantos anos quer pagar?
+            Prazo e idade
           </h2>
-          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '40px' }}>
-            Prazos mais longos = parcelas menores, mas mais juros no total.
+          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '32px' }}>
+            O banco limita o prazo pela idade — máximo 80 anos e 6 meses ao final do contrato.
+          </p>
+
+          {/* Idade */}
+          <div style={{ marginBottom: '28px' }}>
+            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
+              Idade do proponente mais velho
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={idade}
+                onChange={e => setIdade(e.target.value)}
+                placeholder="Ex: 35"
+                min={18}
+                max={79}
+                style={{
+                  width: '120px', padding: '12px 16px', fontSize: '20px', fontWeight: '700',
+                  border: '2px solid var(--border)', borderRadius: '12px',
+                  outline: 'none', background: 'var(--bg)', color: 'var(--text)',
+                  fontFamily: 'inherit',
+                }}
+              />
+              {idadeNum > 0 && (
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                  Prazo máximo: <strong style={{ color: 'var(--primary)' }}>{prazoMax} anos</strong>
+                </p>
+              )}
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '6px' }}>
+              Opcional — informe para calcular o prazo máximo disponível
+            </p>
+          </div>
+
+          <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
+            Prazo desejado
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
             {[
@@ -304,29 +448,33 @@ function FormDescobrir({ onResult }: { onResult: (r: ResultadoDescobrir) => void
               { v: '25', label: '25 anos', desc: 'Equilibrado' },
               { v: '30', label: '30 anos', desc: 'Popular' },
               { v: '35', label: '35 anos', desc: 'Parcela menor' },
-            ].map(({ v, label, desc }) => (
-              <button
-                key={v}
-                onClick={() => setPrazo(v)}
-                style={{
-                  padding: '18px 14px',
-                  borderRadius: '14px',
-                  border: `2px solid ${prazo === v ? 'var(--primary)' : 'var(--border)'}`,
-                  background: prazo === v ? 'var(--primary-light)' : 'var(--bg)',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  textAlign: 'left',
-                }}
-              >
-                <p style={{ fontSize: '16px', fontWeight: '700', color: prazo === v ? 'var(--primary)' : 'var(--text)', margin: 0, marginBottom: '3px' }}>
-                  {label}
-                </p>
-                <p style={{ fontSize: '12px', color: 'var(--text-faint)', margin: 0 }}>{desc}</p>
-              </button>
-            ))}
+            ].map(({ v, label, desc }) => {
+              const bloqueado = parseInt(v) > prazoMax;
+              return (
+                <button
+                  key={v}
+                  onClick={() => !bloqueado && setPrazo(v)}
+                  style={{
+                    padding: '18px 14px', borderRadius: '14px', textAlign: 'left',
+                    border: `2px solid ${prazo === v ? 'var(--primary)' : bloqueado ? 'var(--border)' : 'var(--border)'}`,
+                    background: prazo === v ? 'var(--primary-light)' : bloqueado ? 'var(--bg)' : 'var(--bg)',
+                    cursor: bloqueado ? 'not-allowed' : 'pointer',
+                    opacity: bloqueado ? 0.4 : 1,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <p style={{ fontSize: '16px', fontWeight: '700', color: prazo === v ? 'var(--primary)' : 'var(--text)', margin: 0, marginBottom: '3px' }}>
+                    {label}
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-faint)', margin: 0 }}>
+                    {bloqueado ? 'Indisponível pela idade' : desc}
+                  </p>
+                </button>
+              );
+            })}
           </div>
           <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center' }}>
-            Caixa permite até 35 anos no MCMV
+            Prazo máximo de 35 anos · limitado pela sua idade (80 anos e 6 meses)
           </p>
         </div>
       )}
@@ -339,6 +487,11 @@ function FormDescobrir({ onResult }: { onResult: (r: ResultadoDescobrir) => void
       )}
 
       {/* Navigation */}
+      {erro && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px' }}>
+          <p style={{ fontSize: '13px', color: '#dc2626', margin: 0 }}>{erro}</p>
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
         <button
           onClick={() => { setStep(s => s - 1); setErro(''); }}
@@ -369,7 +522,7 @@ function FormDescobrir({ onResult }: { onResult: (r: ResultadoDescobrir) => void
             e.currentTarget.style.boxShadow = '0 4px 20px rgba(37,99,235,.3)';
           }}
         >
-          {step < 2 ? 'Continuar →' : 'Ver diagnóstico →'}
+          {step < 3 ? 'Continuar →' : 'Ver diagnóstico →'}
         </button>
       </div>
     </div>
@@ -529,14 +682,40 @@ function DiagnosticoDescobrir({
         </div>
       )}
 
-      {/* Se não elegível MCMV */}
+      {/* Se não elegível MCMV → comparativo de bancos */}
       {!mcmv.elegivel && (
-        <div style={{
-          background: '#eff6ff', border: '1px solid #bfdbfe',
-          borderRadius: '14px', padding: '14px 18px', marginBottom: '10px',
-        }}>
-          <p style={{ fontSize: '13px', color: '#1d4ed8', lineHeight: 1.55 }}>
-            ℹ️ Sua renda está acima dos limites do MCMV. O financiamento mais indicado é o <strong>SBPE/SFH</strong> com taxas de mercado (≈10,5% a.a.).
+        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', marginBottom: '10px' }}>
+          <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>
+            Comparativo de taxas — SBPE/SFH (maio 2026)
+          </p>
+          {[
+            { banco: 'Caixa Econômica Federal', taxa: 11.19, destaque: true },
+            { banco: 'BRB', taxa: 11.36, destaque: false },
+            { banco: 'Itaú', taxa: 11.60, destaque: false },
+            { banco: 'Santander', taxa: 11.69, destaque: false },
+            { banco: 'Bradesco', taxa: 11.70, destaque: false },
+          ].map(({ banco, taxa, destaque }) => (
+            <div key={banco} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '9px 0', borderBottom: '1px solid var(--border)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {destaque && (
+                  <span style={{ fontSize: '10px', background: '#dcfce7', color: '#16a34a', padding: '2px 7px', borderRadius: '99px', fontWeight: '700' }}>
+                    Menor taxa
+                  </span>
+                )}
+                <span style={{ fontSize: '13px', color: destaque ? 'var(--text)' : 'var(--text-muted)', fontWeight: destaque ? '700' : '400' }}>
+                  {banco}
+                </span>
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: destaque ? '#16a34a' : 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                {taxa.toFixed(2).replace('.', ',')}% a.a. + TR
+              </span>
+            </div>
+          ))}
+          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '10px', lineHeight: 1.5 }}>
+            Taxas de balcão sujeitas à análise de crédito e relacionamento bancário. Caixa lidera no SFH — busque simulação em cada banco antes de contratar.
           </p>
         </div>
       )}
@@ -949,6 +1128,51 @@ function DiagnosticoImovel({
           </p>
         </div>
       </div>
+
+      {/* Comparativo de bancos (SBPE/SFI) */}
+      {!isMCMV && (
+        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', marginBottom: '10px' }}>
+          <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>
+            Comparativo de taxas — {isSFI ? 'SFI' : 'SBPE/SFH'} (maio 2026)
+          </p>
+          {(isSFI
+            ? [
+                { banco: 'Caixa (SFI)', taxa: 12.5, destaque: true },
+                { banco: 'Itaú (SFI)', taxa: 13.0, destaque: false },
+                { banco: 'Bradesco (SFI)', taxa: 13.2, destaque: false },
+              ]
+            : [
+                { banco: 'Caixa Econômica Federal', taxa: 11.19, destaque: true },
+                { banco: 'BRB', taxa: 11.36, destaque: false },
+                { banco: 'Itaú', taxa: 11.60, destaque: false },
+                { banco: 'Santander', taxa: 11.69, destaque: false },
+                { banco: 'Bradesco', taxa: 11.70, destaque: false },
+              ]
+          ).map(({ banco, taxa, destaque }) => (
+            <div key={banco} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '9px 0', borderBottom: '1px solid var(--border)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {destaque && (
+                  <span style={{ fontSize: '10px', background: '#dcfce7', color: '#16a34a', padding: '2px 7px', borderRadius: '99px', fontWeight: '700' }}>
+                    Menor taxa
+                  </span>
+                )}
+                <span style={{ fontSize: '13px', color: destaque ? 'var(--text)' : 'var(--text-muted)', fontWeight: destaque ? '700' : '400' }}>
+                  {banco}
+                </span>
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: '700', color: destaque ? '#16a34a' : 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+                {taxa.toFixed(2).replace('.', ',')}% a.a. + TR
+              </span>
+            </div>
+          ))}
+          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '10px', lineHeight: 1.5 }}>
+            Taxas sujeitas a análise de crédito. Simule em cada banco antes de contratar.
+          </p>
+        </div>
+      )}
 
       {/* Comprometimento */}
       <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', marginBottom: '10px' }}>
