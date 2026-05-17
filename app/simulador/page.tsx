@@ -420,7 +420,7 @@ function DiagnosticoDescobrir({
     : 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)';
   const taxaLabel = cenario === 'mcmv'
     ? `${mcmv.taxa.toFixed(2).replace('.', ',')}% a.a. + TR`
-    : '10,5% a.a. + TR';
+    : '11,19% a.a. + TR';
   const modalidadeLabel = cenario === 'mcmv' ? `MCMV ${faixa?.label ?? ''}` : 'SBPE';
 
   return (
@@ -586,7 +586,7 @@ function DiagnosticoDescobrir({
               🏗️ Simular imóvel na planta
             </p>
             <p style={{ fontSize: '12px', color: '#64748b' }}>
-              Entrada · evolução de obra · crédito associativo · MCMV
+              Minha Casa Minha Vida · entrada parcelada · juros evolutivos
             </p>
           </div>
           <span style={{ color: '#60a5fa', fontSize: '18px' }}>→</span>
@@ -794,7 +794,12 @@ function DiagnosticoImovel({
   const jurosPrice = totalPrice - valorFinanciado;
 
   const pctEntrada = Math.round((entrada / valorImovel) * 100);
-  const modalidade = isMCMV ? (faixa ? `MCMV ${faixa.label}` : 'MCMV') : 'SBPE / SFH';
+  const isSFI     = resultado.isSFI ?? false;
+  const modalidade = isMCMV
+    ? (faixa ? `Minha Casa Minha Vida — ${faixa.label}` : 'MCMV')
+    : isSFI
+      ? 'SFI — Imóvel acima de R$ 2,25 mi'
+      : 'SBPE / SFH — Mercado';
 
   // ── Injeta contexto para o João ────────────────────────────────────────────
   useEffect(() => {
@@ -828,12 +833,16 @@ function DiagnosticoImovel({
 
   const gradiente  = isMCMV
     ? 'linear-gradient(145deg, #16a34a 0%, #059669 100%)'
-    : 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)';
+    : isSFI
+      ? 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)'
+      : 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)';
 
   const viavel = comprometimento <= 35;
   const taxa   = isMCMV && faixa
     ? `${faixa.taxaRef.toFixed(2).replace('.', ',')}% a.a. + TR`
-    : '10,5% a.a. + TR';
+    : isSFI
+      ? '12,5% a.a. + TR (SFI)'
+      : '11,19% a.a. + TR (SFH)';
 
   return (
     <div style={{ animation: 'fadeUp 0.35s ease' }}>
@@ -981,7 +990,7 @@ function DiagnosticoImovel({
               🏗️ Esse imóvel é na planta?
             </p>
             <p style={{ fontSize: '12px', color: '#64748b' }}>
-              Simule entrada parcelada, evolução de obra e crédito associativo
+              Entrada parcelada · juros evolutivos de obra · MCMV e SBPE
             </p>
           </div>
           <span style={{ color: '#60a5fa', fontSize: '18px' }}>→</span>
@@ -1010,7 +1019,7 @@ function CartaoPlanta() {
     { icon: '📋', text: 'Estágio do empreendimento (pré-lançamento, obra, pronto)' },
     { icon: '📈', text: 'Curva SIOPI/Caixa de evolução física de obra' },
     { icon: '💰', text: 'Juros evolutivos mensais durante a construção' },
-    { icon: '🏦', text: 'Crédito Associativo MCMV Faixas 1–4 e HIS' },
+    { icon: '🏦', text: 'Financiamento Caixa: Minha Casa Minha Vida e SBPE' },
     { icon: '🏗️', text: 'Entrada parcelada + FGTS + recursos próprios' },
     { icon: '📅', text: 'Cronograma físico-financeiro realista' },
   ];
@@ -1053,7 +1062,7 @@ function CartaoPlanta() {
         borderRadius: '12px', padding: '14px 16px',
       }}>
         <p style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.55, margin: 0 }}>
-          💡 <strong>Dica:</strong> Execute primeiro o simulador "Descobrir" para identificar sua faixa MCMV — o resultado é aproveitado automaticamente no simulador de planta.
+          💡 <strong>Dica:</strong> Execute primeiro o simulador "Descobrir" para identificar se você se encaixa no Minha Casa Minha Vida — o resultado é aproveitado automaticamente no simulador de planta.
         </p>
       </div>
     </div>
@@ -1111,7 +1120,7 @@ export default function SimuladorPage() {
               fontSize: '16px', color: 'rgba(255,255,255,.55)',
               lineHeight: 1.7, marginBottom: '40px',
             }}>
-              Simulação personalizada por renda, entrada e perfil financeiro. MCMV, SBPE e crédito associativo.
+              Minha Casa Minha Vida para imóveis até R$ 600 mil · SBPE acima disso · Para todos os perfis de renda.
             </p>
             <ModeSelector modo={modo} onChange={trocarModo} />
           </div>

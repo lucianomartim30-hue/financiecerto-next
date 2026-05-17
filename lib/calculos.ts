@@ -39,9 +39,11 @@ export const FAIXAS_MCMV: FaixaMCMV[] = [
 ];
 
 // ─── Constantes gerais ────────────────────────────────────────────────────────
-export const TAXA_SBPE_ANUAL  = 10.5;   // % a.a. referência mercado 2026
+export const TAXA_SBPE_ANUAL  = 11.19;  // % a.a. Caixa SFH/SBPE 2026 (cotista + TR)
+export const TAXA_SFI_ANUAL   = 12.5;   // % a.a. referência SFI 2026 (acima do teto SFH, sem FGTS)
+export const TETO_SFH         = 2_250_000; // Teto SFH (Caixa 2026) — acima disso é SFI, sem limite
 export const PRAZO_MAX_MESES  = 420;    // 35 anos
-export const TR_MENSAL        = 0.1679; // % ao mês (abril/2026) — atualiza saldo devedor
+export const TR_MENSAL        = 0.1679; // % ao mês (abril/2026)
 
 // Legado — mantidos para não quebrar imports existentes
 export const TETO_MCMV     = 350000;
@@ -127,6 +129,8 @@ export function calcularSeguros(saldoDevedor: number): {
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 export interface ResultadoSimulacao {
   isMCMV: boolean;
+  isSFI: boolean;
+  modalidade: 'MCMV' | 'SBPE' | 'SFI';
   faixa: FaixaMCMV | null;
   valorImovel: number;
   valorFinanciado: number;
@@ -160,9 +164,11 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   const prazoMeses     = prazoAnos * 12;
   const prazoObraMeses = prazoObraAnos * 12;
 
-  const faixa   = detectarFaixaMCMV(rendaBruta);
-  const isMCMV  = faixa !== null && valorImovel <= faixa.teto;
-  const taxaAnual = isMCMV ? faixa!.taxaRef : TAXA_SBPE_ANUAL;
+  const faixa      = detectarFaixaMCMV(rendaBruta);
+  const isMCMV     = faixa !== null && valorImovel <= faixa.teto;
+  const isSFI      = !isMCMV && valorImovel > TETO_SFH;
+  const modalidade: 'MCMV' | 'SBPE' | 'SFI' = isMCMV ? 'MCMV' : isSFI ? 'SFI' : 'SBPE';
+  const taxaAnual  = isMCMV ? faixa!.taxaRef : isSFI ? TAXA_SFI_ANUAL : TAXA_SBPE_ANUAL;
 
   const entradaTotal    = entrada + fgts;
   const valorFinanciado = Math.max(0, valorImovel - entradaTotal);
@@ -179,7 +185,7 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
       const coefMedio    = 0.655;
       const encargaObra  = parcelaPrice(valorFinanciado, taxaAnual, prazoMeses);
       const encObraMedia = Math.round(encargaObra * coefMedio + seguros.total);
-      obraAlerta = `Durante a obra (~${prazoObraMeses} meses), você paga juros evolutivos ao banco. Parcela média estimada: R$ ${encObraMedia.toLocaleString('pt-BR')}/mês (Crédito Associativo MCMV).`;
+      obraAlerta = `Durante a obra (~${prazoObraMeses} meses), você paga juros evolutivos ao banco (Minha Casa Minha Vida). Parcela média estimada: R$ ${encObraMedia.toLocaleString('pt-BR')}/mês.`;
     } else {
       const inccMensal     = 0.006;
       const saldoConstr    = valorImovel * 0.20;
@@ -190,7 +196,7 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   }
 
   return {
-    isMCMV, faixa,
+    isMCMV, isSFI, modalidade, faixa,
     valorImovel, valorFinanciado,
     entrada: entradaTotal, fgts,
     prazoMeses, taxaAnual,
