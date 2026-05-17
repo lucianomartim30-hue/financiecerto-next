@@ -16,6 +16,12 @@ interface Imovel {
   max_price: number | null;
   bedrooms_min: number | null;
   bedrooms_max: number | null;
+  area_min: number | null;
+  area_max: number | null;
+  bathrooms_min: number | null;
+  bathrooms_max: number | null;
+  vagas_min: number | null;
+  vagas_max: number | null;
   neighborhood: string;
   city: string;
   state: string;
@@ -67,41 +73,55 @@ function SkeletonCard() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Card Imóvel
+// Card Imóvel — estilo portal (Apto.vc)
 // ──────────────────────────────────────────────────────────────────────────────
 function CardImovel({ imovel: b }: { imovel: Imovel }) {
   const [imgErr, setImgErr] = useState(false);
   const [hover, setHover] = useState(false);
 
-  const preco = b.min_price ? formatBRL(b.min_price) : 'Consultar';
-  const precoMax = b.max_price && b.max_price !== b.min_price ? ` – ${formatBRL(b.max_price)}` : '';
-  const quartos = b.bedrooms_min
-    ? b.bedrooms_max && b.bedrooms_max !== b.bedrooms_min
-      ? `${b.bedrooms_min}–${b.bedrooms_max} qts`
-      : `${b.bedrooms_min} quarto${b.bedrooms_min > 1 ? 's' : ''}`
-    : null;
-
+  const preco = b.min_price ? `A partir de ${formatBRL(b.min_price)}` : 'Preço sob consulta';
   const statusCfg = getStatusCfg(b.status || '');
   const link = b.sharing_url || b.orulo_url || '#';
 
   const waMsg = encodeURIComponent(
-    `Olá Luciano! Vi o imóvel *${b.name}* no FinancieCerto e quero mais informações.${link !== '#' ? ' Link: ' + link : ''}`
+    `Olá! Vi o imóvel *${b.name}* no FinancieCerto e quero mais informações.${link !== '#' ? ' Link: ' + link : ''}`
   );
+
+  // Helpers para faixas (ex: "62–85 m²" ou "62 m²")
+  function faixa(min: number | null, max: number | null, unit: string) {
+    if (!min) return null;
+    if (max && max !== min) return `${min}–${max} ${unit}`;
+    return `${min} ${unit}`;
+  }
+
+  const areaStr    = faixa(b.area_min, b.area_max, 'm²');
+  const quartosStr = faixa(b.bedrooms_min, b.bedrooms_max, b.bedrooms_min === 1 && !b.bedrooms_max ? 'quarto' : 'qts');
+  const bathStr    = faixa(b.bathrooms_min, b.bathrooms_max, b.bathrooms_min === 1 && !b.bathrooms_max ? 'ban.' : 'ban.');
+  const vagasStr   = faixa(b.vagas_min, b.vagas_max, b.vagas_min === 1 && !b.vagas_max ? 'vaga' : 'vagas');
+
+  const specs = [
+    areaStr    && { icon: '▦',  label: areaStr },
+    quartosStr && { icon: '🛏', label: quartosStr },
+    bathStr    && { icon: '🚿', label: bathStr },
+    vagasStr   && { icon: '🚗', label: vagasStr },
+  ].filter(Boolean) as { icon: string; label: string }[];
 
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        background: 'var(--bg-card)', borderRadius: '18px',
+        background: 'var(--bg-card)', borderRadius: '14px',
         border: `1.5px solid ${hover ? 'var(--primary)' : 'var(--border)'}`,
         overflow: 'hidden', display: 'flex', flexDirection: 'column',
-        transition: 'border-color 0.2s, box-shadow 0.2s',
-        boxShadow: hover ? '0 8px 32px rgba(37,99,235,.12)' : '0 1px 4px rgba(0,0,0,.05)',
+        transition: 'border-color 0.18s, box-shadow 0.18s, transform 0.18s',
+        boxShadow: hover ? '0 6px 24px rgba(37,99,235,.13)' : '0 1px 4px rgba(0,0,0,.05)',
+        transform: hover ? 'translateY(-2px)' : 'none',
+        cursor: 'pointer',
       }}
     >
       {/* Foto */}
-      <div style={{ height: '200px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+      <div style={{ height: '178px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
         {b.photo && !imgErr ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -110,7 +130,7 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
             onError={() => setImgErr(true)}
             style={{
               width: '100%', height: '100%', objectFit: 'cover',
-              transform: hover ? 'scale(1.04)' : 'scale(1)',
+              transform: hover ? 'scale(1.05)' : 'scale(1)',
               transition: 'transform 0.4s cubic-bezier(.4,0,.2,1)',
             }}
           />
@@ -121,40 +141,33 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center', gap: '8px',
           }}>
-            <span style={{ fontSize: '36px' }}>🏙️</span>
-            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,.4)' }}>Sem imagem</span>
+            <span style={{ fontSize: '32px' }}>🏙️</span>
           </div>
         )}
-
         {/* Overlay gradient */}
         <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0,
-          height: '80px',
-          background: 'linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 100%)',
+          position: 'absolute', bottom: 0, left: 0, right: 0, height: '70px',
+          background: 'linear-gradient(to top, rgba(0,0,0,.6) 0%, transparent 100%)',
           pointerEvents: 'none',
         }} />
-
         {/* Status badge */}
         {b.status && (
           <div style={{
-            position: 'absolute', top: '12px', left: '12px',
-            background: statusCfg.bg,
-            backdropFilter: 'blur(8px)',
-            border: `1px solid ${statusCfg.cor}40`,
-            color: statusCfg.cor,
-            fontSize: '10px', fontWeight: '800',
-            padding: '3px 9px', borderRadius: '99px',
-            textTransform: 'uppercase', letterSpacing: '0.5px',
+            position: 'absolute', top: '10px', left: '10px',
+            background: statusCfg.bg, backdropFilter: 'blur(8px)',
+            border: `1px solid ${statusCfg.cor}50`,
+            color: statusCfg.cor, fontSize: '9px', fontWeight: '800',
+            padding: '3px 8px', borderRadius: '99px',
+            textTransform: 'uppercase', letterSpacing: '0.6px',
           }}>
             {statusCfg.label}
           </div>
         )}
-
         {/* Bairro no overlay */}
         {(b.neighborhood || b.city) && (
           <p style={{
-            position: 'absolute', bottom: '10px', left: '12px',
-            fontSize: '11px', color: 'rgba(255,255,255,.85)',
+            position: 'absolute', bottom: '9px', left: '10px',
+            fontSize: '10px', color: 'rgba(255,255,255,.9)',
             fontWeight: '600', margin: 0,
           }}>
             📍 {b.neighborhood || b.city}
@@ -163,69 +176,61 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
       </div>
 
       {/* Conteúdo */}
-      <div style={{ padding: '18px 18px 14px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '14px 14px 12px', flex: 1, display: 'flex', flexDirection: 'column' }}>
         {b.developer && (
           <p style={{
-            fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)',
-            textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px',
+            fontSize: '9px', fontWeight: '700', color: 'var(--text-faint)',
+            textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '4px',
           }}>
             {b.developer}
           </p>
         )}
         <h3 style={{
-          fontSize: '15px', fontWeight: '700', color: 'var(--text)',
-          lineHeight: 1.35, marginBottom: '14px', flex: 1,
+          fontSize: '13px', fontWeight: '700', color: 'var(--text)',
+          lineHeight: 1.35, marginBottom: '10px', flex: 1,
         }}>
           {b.name}
         </h3>
 
-        {/* Preço + quartos */}
-        <div style={{
-          display: 'flex', alignItems: 'flex-end',
-          justifyContent: 'space-between',
-          borderTop: '1px solid var(--border)', paddingTop: '12px',
-        }}>
-          <div>
-            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>
-              A partir de
-            </p>
-            <p style={{
-              fontSize: '18px', fontWeight: '800', color: 'var(--text)',
-              fontVariantNumeric: 'tabular-nums', lineHeight: 1,
-            }}>
-              {preco}
-            </p>
-            {precoMax && (
-              <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '2px' }}>
-                até{precoMax}
-              </p>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-            {quartos && (
-              <span style={{
-                background: 'var(--primary-light)', color: 'var(--primary)',
-                fontSize: '11px', fontWeight: '700',
-                padding: '3px 9px', borderRadius: '99px',
+        {/* Specs: m² / quartos / banheiros / vagas */}
+        {specs.length > 0 && (
+          <div style={{
+            display: 'flex', gap: '10px', flexWrap: 'wrap',
+            marginBottom: '10px', paddingBottom: '10px',
+            borderBottom: '1px solid var(--border)',
+          }}>
+            {specs.map(({ icon, label }, i) => (
+              <span key={i} style={{
+                display: 'flex', alignItems: 'center', gap: '3px',
+                fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600',
               }}>
-                🛏 {quartos}
+                <span style={{ fontSize: '12px' }}>{icon}</span>
+                {label}
               </span>
-            )}
+            ))}
           </div>
-        </div>
+        )}
+
+        {/* Preço */}
+        <p style={{
+          fontSize: '14px', fontWeight: '800', color: 'var(--text)',
+          fontVariantNumeric: 'tabular-nums', marginBottom: '10px',
+        }}>
+          {preco}
+        </p>
 
         {/* CTAs */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+        <div style={{ display: 'flex', gap: '6px' }}>
           <a
             href={`https://wa.me/5511933661403?text=${waMsg}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
             style={{
               flex: 1, textAlign: 'center', background: '#25D366', color: '#fff',
-              textDecoration: 'none', fontSize: '12px', fontWeight: '700',
-              padding: '9px 12px', borderRadius: '10px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+              textDecoration: 'none', fontSize: '11px', fontWeight: '700',
+              padding: '8px 10px', borderRadius: '9px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
             }}
           >
             <span>💬</span> WhatsApp
@@ -235,13 +240,14 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
               href={link}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
               style={{
                 flex: 1, textAlign: 'center',
                 background: 'var(--primary-light)', color: 'var(--primary)',
                 border: '1.5px solid var(--primary)',
-                textDecoration: 'none', fontSize: '12px', fontWeight: '700',
-                padding: '9px 12px', borderRadius: '10px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                textDecoration: 'none', fontSize: '11px', fontWeight: '700',
+                padding: '8px 10px', borderRadius: '9px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
               Ver detalhes →
@@ -684,10 +690,10 @@ function ImoveisContent() {
         {loading && (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: '20px',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+            gap: '16px',
           }}>
-            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+            {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         )}
 
@@ -695,8 +701,8 @@ function ImoveisContent() {
         {!loading && imoveisFiltrados.length > 0 && (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: '20px',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+            gap: '16px',
             marginBottom: '40px',
           }}>
             {imoveisFiltrados.map(b => <CardImovel key={b.id} imovel={b} />)}
@@ -755,6 +761,86 @@ function ImoveisContent() {
             </Link>
           </div>
         )}
+
+        {/* ── SEO: Bairros populares ───────────────────────────────────────── */}
+        <div style={{ marginTop: '64px', borderTop: '1px solid var(--border)', paddingTop: '48px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text)', marginBottom: '8px' }}>
+            Encontre imóveis por bairro em São Paulo
+          </h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.65 }}>
+            Explore apartamentos à venda nos bairros mais buscados da capital paulista.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '48px' }}>
+            {['Pinheiros','Vila Olímpia','Moema','Brooklin','Itaim Bibi','Vila Madalena',
+              'Lapa','Perdizes','Jardins','Consolação','Bela Vista','Santana',
+              'Tatuapé','Vila Mariana','Campo Belo','Santo André','São Bernardo','Guarulhos',
+            ].map(bairro => (
+              <button
+                key={bairro}
+                onClick={() => setLocalSearch(bairro)}
+                style={{
+                  padding: '6px 14px', borderRadius: '99px', fontSize: '12px',
+                  fontWeight: '600', cursor: 'pointer',
+                  border: '1.5px solid var(--border)',
+                  background: 'var(--bg-card)', color: 'var(--text-muted)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {bairro}
+              </button>
+            ))}
+          </div>
+
+          {/* SEO editorial */}
+          <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text)', marginBottom: '12px' }}>
+            Morar em São Paulo
+          </h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.8, marginBottom: '20px', maxWidth: '720px' }}>
+            São Paulo concentra o maior volume de lançamentos imobiliários do Brasil. A cidade oferece
+            opções para todos os perfis: do Minha Casa Minha Vida (MCMV) até imóveis de altíssimo padrão
+            no SFI. Bairros como Pinheiros, Itaim Bibi e Jardins lideram em valorização; já regiões como
+            Tatuapé, Vila Mariana e Brooklin atraem compradores que buscam custo-benefício.
+          </p>
+
+          {/* FAQ */}
+          <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text)', marginBottom: '20px' }}>
+            Perguntas frequentes
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '720px' }}>
+            {[
+              {
+                q: 'Com renda de R$ 3.000 consigo comprar um apartamento em São Paulo?',
+                a: 'Sim! Com R$ 3.000 de renda você se enquadra no Minha Casa Minha Vida Faixa 1 (até R$ 3.200). Pelo programa, juros são subsidiados e a parcela pode caber no seu bolso. Use o simulador FinancieCerto para calcular o valor exato que você pode financiar.',
+              },
+              {
+                q: 'Qual o valor do metro quadrado em São Paulo?',
+                a: 'O m² varia muito por bairro. Em 2025, a média em São Paulo é de R$ 9.000–11.000/m². Bairros premium como Jardins e Itaim Bibi chegam a R$ 15.000/m², enquanto regiões periféricas ficam entre R$ 4.000–6.000/m².',
+              },
+              {
+                q: 'O que é melhor: comprar na planta ou pronto?',
+                a: 'Na planta oferece preço de lançamento (menor) e entrada parcelada durante a obra. Pronto permite financiamento imediato e mudança imediata. Na planta tem risco de obra e prazo; pronto tem liquidez maior. Use o simulador para comparar parcelas.',
+              },
+              {
+                q: 'Posso usar o FGTS para comprar apartamento em SP?',
+                a: 'Sim, desde que você seja cotista há pelo menos 3 anos, seja o primeiro imóvel financiado e não possua outro imóvel no município onde reside ou trabalha. O FGTS pode ser usado como entrada em imóveis de até R$ 2,25 milhões (SFH).',
+              },
+            ].map(({ q, a }, i) => (
+              <div key={i} style={{
+                padding: '16px 18px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+              }}>
+                <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>
+                  {q}
+                </p>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.7, margin: 0 }}>
+                  {a}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

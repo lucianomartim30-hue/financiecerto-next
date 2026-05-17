@@ -4,12 +4,12 @@ const ORULO_BASE = 'https://www.orulo.com.br';
 
 // ── Mock para desenvolvimento local ──────────────────────────────────────────
 const MOCK_BUILDINGS = [
-  { id: '1', name: 'Residencial Vila Madalena', developer: 'Construtora ABC', min_price: 320000, max_price: 450000, bedrooms_min: 2, bedrooms_max: 3, neighborhood: 'Vila Madalena', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
-  { id: '2', name: 'Jardins Exclusive', developer: 'MRV Engenharia', min_price: 280000, max_price: 380000, bedrooms_min: 1, bedrooms_max: 2, neighborhood: 'Jardins', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
-  { id: '3', name: 'Moema Garden', developer: 'Cyrela', min_price: 650000, max_price: 900000, bedrooms_min: 2, bedrooms_max: 4, neighborhood: 'Moema', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
-  { id: '4', name: 'Pinheiros Living', developer: 'Even', min_price: 480000, max_price: 620000, bedrooms_min: 1, bedrooms_max: 3, neighborhood: 'Pinheiros', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Em Obras' },
-  { id: '5', name: 'Brooklin Smart', developer: 'Trisul', min_price: 350000, max_price: 500000, bedrooms_min: 2, bedrooms_max: 2, neighborhood: 'Brooklin', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
-  { id: '6', name: 'Itaim Bibi Tower', developer: 'Helbor', min_price: 900000, max_price: 1400000, bedrooms_min: 2, bedrooms_max: 4, neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
+  { id: '1', name: 'Residencial Vila Madalena', developer: 'Construtora ABC', min_price: 320000, max_price: 450000, bedrooms_min: 2, bedrooms_max: 3, area_min: 62, area_max: 85, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Vila Madalena', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
+  { id: '2', name: 'Jardins Exclusive', developer: 'MRV Engenharia', min_price: 280000, max_price: 380000, bedrooms_min: 1, bedrooms_max: 2, area_min: 38, area_max: 58, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jardins', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
+  { id: '3', name: 'Moema Garden', developer: 'Cyrela', min_price: 650000, max_price: 900000, bedrooms_min: 2, bedrooms_max: 4, area_min: 80, area_max: 140, bathrooms_min: 2, bathrooms_max: 3, vagas_min: 2, vagas_max: 2, neighborhood: 'Moema', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
+  { id: '4', name: 'Pinheiros Living', developer: 'Even', min_price: 480000, max_price: 620000, bedrooms_min: 1, bedrooms_max: 3, area_min: 45, area_max: 90, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Pinheiros', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Em Obras' },
+  { id: '5', name: 'Brooklin Smart', developer: 'Trisul', min_price: 350000, max_price: 500000, bedrooms_min: 2, bedrooms_max: 2, area_min: 55, area_max: 70, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Brooklin', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
+  { id: '6', name: 'Itaim Bibi Tower', developer: 'Helbor', min_price: 900000, max_price: 1400000, bedrooms_min: 2, bedrooms_max: 4, area_min: 95, area_max: 200, bathrooms_min: 2, bathrooms_max: 4, vagas_min: 2, vagas_max: 3, neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
 ];
 
 let _tokenCache = { token: null as string | null, expiresAt: 0 };
@@ -65,6 +65,12 @@ function normalizeBuilding(b: Record<string, unknown>) {
     max_price: (b.max_price as number) ?? null,
     bedrooms_min: (b.min_bedrooms as number) ?? null,
     bedrooms_max: (b.max_bedrooms as number) ?? null,
+    area_min: (b.min_area as number) ?? (b.area_min as number) ?? null,
+    area_max: (b.max_area as number) ?? (b.area_max as number) ?? null,
+    bathrooms_min: (b.min_bathrooms as number) ?? (b.bathrooms_min as number) ?? null,
+    bathrooms_max: (b.max_bathrooms as number) ?? (b.bathrooms_max as number) ?? null,
+    vagas_min: (b.min_parking_spots as number) ?? (b.min_garages as number) ?? (b.vagas_min as number) ?? null,
+    vagas_max: (b.max_parking_spots as number) ?? (b.max_garages as number) ?? (b.vagas_max as number) ?? null,
     neighborhood: address.area || address.neighborhood || '',
     city: address.city || '',
     state: address.state || '',
