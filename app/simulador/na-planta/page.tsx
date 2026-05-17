@@ -1,56 +1,261 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { formatBRL, parcelaPrice, calcularSeguros, TAXA_SBPE_ANUAL, detectarFaixaMCMV } from '@/lib/calculos';
+import {
+  formatBRL, parcelaPrice, calcularSeguros,
+  TAXA_SBPE_ANUAL, detectarFaixaMCMV, progCurva,
+} from '@/lib/calculos';
 import Link from 'next/link';
 
-type Modo = 'basico' | 'intermediario' | 'completo';
+// ──────────────────────────────────────────────────────────────────────────────
+// Types
+// ──────────────────────────────────────────────────────────────────────────────
+type Modo    = 'basico' | 'intermediario' | 'completo';
+type Estagio = 'pre' | 'lancamento' | 'obra25' | 'obra50' | 'obra75' | 'pronto';
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────────────
 function p(s: string): number { return Number(s.replace(/\D/g, '')) || 0; }
-function f(s: string): string { const n = s.replace(/\D/g, ''); return n ? Number(n).toLocaleString('pt-BR') : ''; }
+function fi(s: string): string { const n = s.replace(/\D/g, ''); return n ? Number(n).toLocaleString('pt-BR') : ''; }
 
+/** SIOPI progress already done at purchase moment, by estágio */
+const SIOPI_INICIAL: Record<Estagio, number> = {
+  pre:        0,
+  lancamento: 0.229,   // KP[0] — obra ainda não iniciou, mas Caixa já libera ~23% no contrato
+  obra25:     0.495,   // ~25% temporal → SIOPI ≈ 49.5%
+  obra50:     0.709,   // ~47% temporal → SIOPI ≈ 70.9%
+  obra75:     0.846,   // ~64% temporal → SIOPI ≈ 84.6%
+  pronto:     1.0,
+};
+
+/** Juros evolutivos do 1º mês após assinatura */
+function calcJurosEvo(financiado: number, taxaAnual: number, siopiFrac: number): number {
+  return Math.round(financiado * (taxaAnual / 100 / 12) * siopiFrac);
+}
+
+/** saveSimContext — escreve no sessionStorage para o João */
+function salvarContexto(data: Record<string, unknown>) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem('fc_sim_context', JSON.stringify(data));
+  } catch { /* ignore */ }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Shared UI components
+// ──────────────────────────────────────────────────────────────────────────────
+
+function CampoValor({
+  label, hint, value, onChange, placeholder,
+}: {
+  label: string; hint?: string; value: string;
+  onChange: (v: string) => void; placeholder?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div style={{ marginBottom: '24px' }}>
+      <label style={{
+        display: 'block', fontSize: '11px', fontWeight: '700',
+        color: 'var(--text-faint)', textTransform: 'uppercase',
+        letterSpacing: '0.8px', marginBottom: '8px',
+      }}>
+        {label}
+      </label>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '6px',
+        paddingBottom: '8px',
+        borderBottom: `2px solid ${focused ? 'var(--primary)' : 'var(--border)'}`,
+        transition: 'border-color 0.2s',
+      }}>
+        <span style={{
+          fontSize: '22px', fontWeight: '300', lineHeight: 1,
+          color: focused ? 'var(--primary)' : 'var(--text-faint)',
+          transition: 'color 0.2s', flexShrink: 0,
+        }}>R$</span>
+        <input
+          type="text" inputMode="numeric"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder ?? '0'}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{
+            flex: 1, border: 'none', outline: 'none',
+            fontSize: '26px', fontWeight: '700', color: 'var(--text)',
+            background: 'transparent', padding: 0,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        />
+      </div>
+      {hint && <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginTop: '6px' }}>{hint}</p>}
+    </div>
+  );
+}
+
+function CampoCompacto({
+  value, onChange, placeholder,
+}: {
+  value: string; onChange: (v: string) => void; placeholder: string;
+}) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center',
+      border: '1.5px solid var(--border)', borderRadius: '10px', overflow: 'hidden',
+    }}>
+      <span style={{ padding: '9px 11px', fontSize: '13px', color: 'var(--text-muted)', background: 'var(--bg)', borderRight: '1px solid var(--border)', flexShrink: 0 }}>
+        R$
+      </span>
+      <input
+        type="text" inputMode="numeric"
+        value={value} onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          flex: 1, padding: '9px 12px', border: 'none', outline: 'none',
+          fontSize: '14px', color: 'var(--text)', background: 'transparent',
+        }}
+      />
+    </div>
+  );
+}
+
+function Select({ value, onChange, children }: {
+  value: string | number; onChange: (v: string) => void; children: React.ReactNode;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      style={{
+        padding: '9px 10px', border: '1.5px solid var(--border)',
+        borderRadius: '10px', fontSize: '13px',
+        background: 'var(--bg-card)', color: 'var(--text)', outline: 'none',
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </select>
+  );
+}
+
+function LinhaDetalhe({ label, valor, sub, destaque }: {
+  label: string; valor: string; sub?: string; destaque?: boolean;
+}) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+      padding: '10px 0', borderBottom: '1px solid var(--border)',
+    }}>
+      <div style={{ flex: 1, paddingRight: '14px' }}>
+        <p style={{ fontSize: '13px', color: destaque ? 'var(--text)' : 'var(--text-muted)', fontWeight: destaque ? '600' : '400' }}>
+          {label}
+        </p>
+        {sub && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '2px' }}>{sub}</p>}
+      </div>
+      <span style={{
+        fontSize: destaque ? '15px' : '14px', fontWeight: '700',
+        color: 'var(--text)', whiteSpace: 'nowrap',
+      }}>
+        {valor}
+      </span>
+    </div>
+  );
+}
+
+function BlocoFluxo({ emoji, titulo, cor, children, ultimo }: {
+  emoji: string; titulo: string; cor: string;
+  children: React.ReactNode; ultimo?: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', gap: '14px', marginBottom: ultimo ? 0 : '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{
+          width: '40px', height: '40px', borderRadius: '50%',
+          background: cor + '18', border: `1.5px solid ${cor}30`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '18px',
+        }}>
+          {emoji}
+        </div>
+        {!ultimo && (
+          <div style={{ width: '2px', flex: 1, background: 'var(--border)', marginTop: '6px', minHeight: '24px' }} />
+        )}
+      </div>
+      <div style={{ flex: 1, paddingBottom: ultimo ? 0 : '10px' }}>
+        <p style={{
+          fontSize: '11px', fontWeight: '700', color: cor,
+          textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '12px',
+        }}>
+          {titulo}
+        </p>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Main content
+// ──────────────────────────────────────────────────────────────────────────────
 function NaPlantaContent() {
   const sp = useSearchParams();
 
-  // ── Perfil vindo do simulador principal ────────────────────────────────────
-  const renda         = Number(sp.get('renda')    || 0);
-  const maxFinMcmv    = Number(sp.get('mcmv')     || 0);   // max financiamento MCMV pelo perfil
-  const maxFinSbpe    = Number(sp.get('sbpe')     || 0);   // max financiamento SBPE pelo perfil
-  const fgts          = Number(sp.get('fgts')     || 0);
-  const proprios      = Number(sp.get('proprios') || 0);
+  // ── Perfil vindo do simulador principal (URL params) ────────────────────────
+  const rendaUrl      = Number(sp.get('renda')    || 0);
+  const maxFinMcmv    = Number(sp.get('mcmv')     || 0);
+  const maxFinSbpe    = Number(sp.get('sbpe')     || 0);
+  const fgtsUrl       = Number(sp.get('fgts')     || 0);
+  const propriosUrl   = Number(sp.get('proprios') || 0);
+
+  // ── Modo standalone: sem parâmetros, pede renda diretamente ────────────────
+  const [rendaRaw, setRendaRaw] = useState('');
+  const rendaDigitada = p(rendaRaw);
+  const renda = rendaUrl > 0 ? rendaUrl : rendaDigitada;
+  const temPerfil = renda > 0;
+
+  const fgts          = fgtsUrl;
+  const proprios      = propriosUrl;
   const recursosTotal = fgts + proprios;
 
-  // ── Valor do imóvel (o cliente digita após ver a tabela da construtora) ────
+  // ── Estágio do empreendimento ────────────────────────────────────────────────
+  const [estagio, setEstagio] = useState<Estagio>('lancamento');
+
+  // ── Valor do imóvel ─────────────────────────────────────────────────────────
   const [valorRaw, setValorRaw] = useState('');
   const valor = p(valorRaw);
 
-  // ── Financiamento e entrada ─────────────────────────────────────────────────
-  // O banco aprova o financiamento com base na renda (já calculado no simulador).
-  // A entrada é o que sobra: valor do imóvel − financiamento aprovado.
-  const faixaRenda  = detectarFaixaMCMV(renda);
-  const isMCMV      = faixaRenda !== null && valor > 0 && valor <= faixaRenda.teto;
-  const maxFin      = isMCMV ? maxFinMcmv : maxFinSbpe;
-  // Financiamento não pode ultrapassar valor do imóvel nem o limite aprovado
-  const financiado  = Math.min(maxFin, Math.max(0, valor * 0.9));
-  const entradaNecessaria = Math.max(0, valor - financiado);
-  const temRecursos       = recursosTotal >= entradaNecessaria;
-  const faltaRecursos     = Math.max(0, entradaNecessaria - recursosTotal);
+  // ── Prazo de obra ───────────────────────────────────────────────────────────
+  const [qtdMensais, setQtdMensais] = useState(36);
 
-  // ── Modo: estrutura de pagamento da entrada ─────────────────────────────────
+  // ── Modo da estrutura de entrada ────────────────────────────────────────────
   const [modo, setModo] = useState<Modo>('basico');
 
-  // Componentes em R$ (valores exatos da tabela da construtora)
+  // Componentes de entrada
   const [atoRaw,      setAtoRaw]      = useState('');
   const [iniciaisRaw, setIniciaisRaw] = useState('');
   const [qtdIniciais, setQtdIniciais] = useState(2);
   const [mensalRaw,   setMensalRaw]   = useState('');
-  const [qtdMensais,  setQtdMensais]  = useState(36);
   const [anuaisRaw,   setAnuaisRaw]   = useState('');
   const [qtdAnuais,   setQtdAnuais]   = useState(2);
   const [unicaRaw,    setUnicaRaw]    = useState('');
 
-  // Totais de cada componente
+  // ── Cálculos de financiamento ────────────────────────────────────────────────
+  const faixaRenda  = detectarFaixaMCMV(renda);
+  const isMCMV      = faixaRenda !== null && valor > 0 && valor <= faixaRenda.teto;
+  const taxa        = isMCMV && faixaRenda ? faixaRenda.taxaRef : TAXA_SBPE_ANUAL;
+
+  // Financiamento aprovado pelo perfil; se standalone, usa 90% do valor
+  const maxFinPerfil = isMCMV ? maxFinMcmv : maxFinSbpe;
+  const maxFinAuto   = valor > 0 ? Math.round(valor * 0.90) : 0;
+  const financiado   = maxFinPerfil > 0
+    ? Math.min(maxFinPerfil, Math.max(0, valor * (isMCMV ? 0.90 : 0.80)))
+    : maxFinAuto;
+  const entradaNecessaria = Math.max(0, valor - financiado);
+  const temRecursos       = recursosTotal > 0 && recursosTotal >= entradaNecessaria;
+  const faltaRecursos     = Math.max(0, entradaNecessaria - recursosTotal);
+
+  // ── Totais da estrutura de entrada ──────────────────────────────────────────
   const ato          = p(atoRaw);
   const iniciais     = p(iniciaisRaw) * (modo !== 'basico' ? qtdIniciais : 0);
   const mensalUnit   = p(mensalRaw);
@@ -58,354 +263,582 @@ function NaPlantaContent() {
   const anuaisUnit   = p(anuaisRaw);
   const totalAnuais  = anuaisUnit * (modo !== 'basico' ? qtdAnuais : 0);
   const unica        = p(unicaRaw) * (modo === 'completo' ? 1 : 0);
+  const totalEstrutura = ato + iniciais + totalMensais + totalAnuais + unica;
+  const diferenca      = totalEstrutura - entradaNecessaria;
+  const estruturaOk    = entradaNecessaria > 0 && Math.abs(diferenca) < entradaNecessaria * 0.05;
 
-  const totalEstruturaEntrada = ato + iniciais + totalMensais + totalAnuais + unica;
-  const diferenca             = totalEstruturaEntrada - entradaNecessaria; // + = excesso, - = falta
-  const estruturaOk           = entradaNecessaria > 0 && Math.abs(diferenca) < entradaNecessaria * 0.05; // tolerância 5%
+  // ── Juros evolutivos ─────────────────────────────────────────────────────────
+  const siopiInicial  = SIOPI_INICIAL[estagio] || 0;
+  const seguros       = calcularSeguros(financiado);
+  const parcelaFin    = parcelaPrice(financiado, taxa, 35 * 12);
+  const jurosEvo1     = isMCMV && financiado > 0 ? calcJurosEvo(financiado, taxa, siopiInicial) : 0;
+  const jurosEvoMedio = isMCMV && financiado > 0 ? Math.round(parcelaFin * 0.655 + seguros.total) : 0;
 
-  // ── Juros evolutivos MCMV e limite de 30% ──────────────────────────────────
-  const taxa      = isMCMV && faixaRenda ? faixaRenda.taxaRef : TAXA_SBPE_ANUAL;
-  const seguros   = calcularSeguros(financiado);
-  const parcelaFin = parcelaPrice(financiado, taxa, 35 * 12);
-  const jurosEvo  = isMCMV && financiado > 0
-    ? Math.round(parcelaFin * 0.655 + seguros.total) : 0;
-  const limite30  = renda * 0.30;
-  const burden    = mensalUnit + jurosEvo;
-  const ok30      = burden <= limite30 || mensalUnit === 0;
+  // SIOPI curve para o gráfico (5 pontos)
+  const obraTotal     = qtdMensais;
+  const siopiPontos   = [0, 0.25, 0.5, 0.75, 1.0].map(frac => {
+    const mes = Math.round(frac * obraTotal);
+    return { pct: Math.round(progCurva(mes, obraTotal) * 100), mes };
+  });
 
-  const saldoAposAto   = entradaNecessaria - ato;
-  const saldoNaEntrega = Math.max(0, entradaNecessaria - ato - iniciais - totalMensais - totalAnuais);
-  const valido = valor > 0 && renda > 0 && ato > 0 && mensalUnit > 0;
+  // ── 30% rule ─────────────────────────────────────────────────────────────────
+  const limite30 = renda * 0.30;
+  const burden   = mensalUnit + jurosEvo1;
+  const ok30     = burden <= limite30 || mensalUnit === 0;
+
+  // Saldos
+  const saldoAposAto    = entradaNecessaria - ato;
+  const saldoNaEntrega  = Math.max(0, entradaNecessaria - ato - iniciais - totalMensais - totalAnuais);
+  const valido          = valor > 0 && renda > 0 && ato > 0 && mensalUnit > 0;
+
+  // ── saveSimContext para o João ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!valido) return;
+    salvarContexto({
+      page: '/simulador/na-planta',
+      renda,
+      fgts,
+      planta: {
+        valorImovel:    valor,
+        prazoObraMeses: qtdMensais,
+        estagio:        estagio === 'pre' ? 'Pré-lançamento' :
+                        estagio === 'lancamento' ? 'Lançamento' :
+                        estagio === 'obra25' ? 'Em obra — 25%' :
+                        estagio === 'obra50' ? 'Em obra — 50%' :
+                        estagio === 'obra75' ? 'Em obra — 75%' : 'Pronto',
+        modalidade: isMCMV ? 'MCMV Crédito Associativo' : 'SBPE',
+      },
+      resultado: {
+        valorImovel:    valor,
+        valorFinanciado: financiado,
+        taxaAnual:      taxa,
+        parcela:        Math.round(parcelaFin + seguros.total),
+      },
+    });
+  }, [valido, valor, renda, estagio, isMCMV, financiado, taxa, fgts, qtdMensais, parcelaFin, seguros.total]);
+
+  // ──────────────────────────────────────────────────────────────────────────────
+  // Render
+  // ──────────────────────────────────────────────────────────────────────────────
+
+  const estagioConfig: Record<Estagio, { label: string; desc: string; color: string; aviso?: string }> = {
+    pre:        { label: 'Pré-lançamento', desc: 'Sem RI', color: '#94a3b8', aviso: 'Sem Registro de Incorporação — não é possível assinar financiamento ainda. Apenas reserva/proposta.' },
+    lancamento: { label: 'Lançamento', desc: 'RI emitido', color: '#2563eb' },
+    obra25:     { label: 'Em obra — 25%', desc: 'Medições ativas', color: '#d97706' },
+    obra50:     { label: 'Em obra — 50%', desc: 'Medições ativas', color: '#ea580c' },
+    obra75:     { label: 'Em obra — 75%', desc: 'Quase pronto', color: '#dc2626' },
+    pronto:     { label: 'Pronto / Habite-se', desc: 'Financiamento normal', color: '#16a34a', aviso: 'Imóvel entregue — use o Simulador padrão (não é mais "na planta").' },
+  };
 
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh', padding: '32px 24px' }}>
-      <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
 
-        {/* Header */}
-        <div style={{ marginBottom: '24px' }}>
-          <Link href="/simulador" style={{ color: '#78716c', fontSize: '13px', textDecoration: 'none' }}>
-            ← Voltar ao simulador
-          </Link>
-          <h1 style={{ fontSize: '26px', fontWeight: '700', color: '#1c1917', marginTop: '12px', marginBottom: '4px' }}>
-            🏗️ Simulador de Imóvel Na Planta
-          </h1>
-          <p style={{ color: '#78716c', fontSize: '14px' }}>
-            Seu financiamento já foi aprovado pelo perfil. Agora veja como estruturar a entrada durante a obra.
-          </p>
-        </div>
-
-        {/* ── PRÉ-ANÁLISE (financiamento aprovado pelo perfil) ─────────────── */}
-        {renda > 0 && (
-          <div style={{
-            background: '#fff', borderRadius: '14px',
-            border: '1px solid #e7e5e4', padding: '20px 24px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.06)', marginBottom: '20px',
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <section style={{
+        background: 'linear-gradient(160deg, #0f172a 0%, #1a2e4a 55%, #0f172a 100%)',
+        padding: '64px 24px 80px',
+        textAlign: 'center',
+      }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <Link href="/simulador" style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            color: 'rgba(255,255,255,.45)', fontSize: '12px', textDecoration: 'none',
+            marginBottom: '24px',
           }}>
-            <p style={{ fontSize: '12px', fontWeight: '700', color: '#2563eb', letterSpacing: '0.5px', marginBottom: '12px' }}>
-              SUA PRÉ-ANÁLISE BANCÁRIA
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              {maxFinMcmv > 0 && (
-                <div style={{ background: '#f0fdf4', borderRadius: '10px', padding: '12px' }}>
-                  <p style={{ fontSize: '11px', fontWeight: '700', color: '#16a34a', marginBottom: '4px' }}>MCMV (até R$ 350 mil)</p>
-                  <p style={{ fontSize: '18px', fontWeight: '700', color: '#1c1917' }}>{formatBRL(maxFinMcmv)}</p>
-                  <p style={{ fontSize: '11px', color: '#78716c' }}>financiamento aprovado · {faixaRenda ? `${faixaRenda.taxaMin.toFixed(2).replace('.', ',')}–${faixaRenda.taxaMax.toFixed(2).replace('.', ',')}% a.a. + TR (${faixaRenda.label})` : 'MCMV'}</p>
-                </div>
-              )}
-              {maxFinSbpe > 0 && (
-                <div style={{ background: '#eff6ff', borderRadius: '10px', padding: '12px' }}>
-                  <p style={{ fontSize: '11px', fontWeight: '700', color: '#2563eb', marginBottom: '4px' }}>SBPE (acima de R$ 350 mil)</p>
-                  <p style={{ fontSize: '18px', fontWeight: '700', color: '#1c1917' }}>{formatBRL(maxFinSbpe)}</p>
-                  <p style={{ fontSize: '11px', color: '#78716c' }}>financiamento aprovado · 10,5% a.a.</p>
-                </div>
-              )}
-            </div>
-            <div style={{ marginTop: '12px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '12px', color: '#78716c' }}>
-                <strong>Renda:</strong> {formatBRL(renda)}/mês
+            ← Simulador principal
+          </Link>
+
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            background: 'rgba(234,88,12,.15)', border: '1px solid rgba(234,88,12,.3)',
+            borderRadius: '99px', padding: '5px 14px', marginBottom: '20px',
+          }}>
+            <span style={{ fontSize: '14px' }}>🏗️</span>
+            <span style={{ fontSize: '11px', fontWeight: '700', color: '#fb923c', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+              Imóvel na planta
+            </span>
+          </div>
+
+          <h1 style={{
+            fontSize: 'clamp(24px, 5vw, 38px)', fontWeight: '800',
+            color: '#fff', lineHeight: 1.2, marginBottom: '14px',
+          }}>
+            Simule o fluxo real<br />da construtora
+          </h1>
+          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.55)', lineHeight: 1.7 }}>
+            Entrada parcelada · evolução de obra · juros evolutivos MCMV · crédito associativo
+          </p>
+
+          {/* Perfil resumido se veio do simulador */}
+          {rendaUrl > 0 && (
+            <div style={{
+              display: 'inline-flex', gap: '16px', marginTop: '24px',
+              background: 'rgba(255,255,255,.08)', borderRadius: '12px',
+              padding: '12px 20px', flexWrap: 'wrap', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,.7)' }}>
+                <strong style={{ color: '#fff' }}>Renda:</strong> {formatBRL(rendaUrl)}/mês
               </span>
-              {recursosTotal > 0 && (
-                <span style={{ fontSize: '12px', color: '#78716c' }}>
-                  <strong>Recursos disponíveis (FGTS + próprios):</strong> {formatBRL(recursosTotal)}
+              {faixaRenda && (
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,.7)' }}>
+                  <strong style={{ color: '#4ade80' }}>MCMV {faixaRenda.label}</strong>
                 </span>
               )}
-              <span style={{ fontSize: '12px', color: '#78716c' }}>
-                <strong>Limite mensal obras (30%):</strong> {formatBRL(limite30)}/mês
-              </span>
+              {maxFinMcmv > 0 && (
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,.7)' }}>
+                  <strong style={{ color: '#fff' }}>Fin. aprovado:</strong> {formatBRL(maxFinMcmv)}
+                </span>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      </section>
 
-        {/* ── VALOR DO IMÓVEL + ENTRADA CALCULADA ─────────────────────────── */}
+      {/* ── Content ───────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: '680px', margin: '-40px auto 0', padding: '0 16px 80px', position: 'relative', zIndex: 1 }}>
+
+        {/* ── CARD PRINCIPAL ──────────────────────────────────────────────── */}
         <div style={{
-          background: '#fff', borderRadius: '16px',
-          border: '1px solid #e7e5e4', padding: '28px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: '20px',
+          background: 'var(--bg-card)', borderRadius: '20px',
+          border: '1px solid var(--border)',
+          padding: '32px 28px',
+          boxShadow: '0 4px 40px rgba(0,0,0,.10)',
+          marginBottom: '16px',
         }}>
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={lbl}>Valor do imóvel (conforme tabela da construtora)</label>
-            <InputBRL value={valorRaw} onChange={v => setValorRaw(f(v))} placeholder="350.000" />
-            {valor > 0 && (
-              <p style={{ fontSize: '12px', color: isMCMV ? '#16a34a' : '#2563eb', marginTop: '4px' }}>
-                {isMCMV ? '✓ MCMV — Crédito Associativo (7,66% a.a.)' : '✓ SBPE / Mercado (10,5% a.a.)'}
+          {/* Standalone: renda input */}
+          {rendaUrl === 0 && (
+            <div style={{ marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '16px' }}>
+                Seu perfil financeiro
               </p>
+              <CampoValor
+                label="Renda familiar bruta"
+                placeholder="6.000"
+                value={rendaRaw}
+                onChange={v => setRendaRaw(fi(v))}
+                hint="Para calcular a modalidade (MCMV ou SBPE) e o comprometimento de 30%"
+              />
+              {rendaDigitada > 0 && faixaRenda && (
+                <div style={{
+                  background: '#f0fdf4', border: '1px solid #bbf7d0',
+                  borderRadius: '10px', padding: '10px 14px', marginTop: '-8px',
+                }}>
+                  <p style={{ fontSize: '13px', color: '#15803d' }}>
+                    ✅ <strong>MCMV {faixaRenda.label}</strong> — taxa {faixaRenda.taxaRef.toFixed(2).replace('.', ',')}% a.a. · teto {formatBRL(faixaRenda.teto)}
+                  </p>
+                </div>
+              )}
+              {rendaDigitada > 0 && !faixaRenda && (
+                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 14px', marginTop: '-8px' }}>
+                  <p style={{ fontSize: '13px', color: '#1d4ed8' }}>
+                    ℹ️ Renda acima dos limites MCMV — modalidade <strong>SBPE</strong> (10,5% a.a.)
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Estágio do empreendimento */}
+          <div style={{ marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid var(--border)' }}>
+            <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>
+              Estágio do empreendimento
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              {(Object.entries(estagioConfig) as [Estagio, typeof estagioConfig[Estagio]][]).map(([key, cfg]) => (
+                <button
+                  key={key}
+                  onClick={() => setEstagio(key)}
+                  style={{
+                    padding: '12px 8px', borderRadius: '12px', cursor: 'pointer',
+                    border: `2px solid ${estagio === key ? cfg.color : 'var(--border)'}`,
+                    background: estagio === key ? cfg.color + '12' : 'var(--bg)',
+                    textAlign: 'center', transition: 'all 0.15s',
+                  }}
+                >
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: estagio === key ? cfg.color : 'var(--text)', marginBottom: '2px' }}>
+                    {cfg.label}
+                  </p>
+                  <p style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{cfg.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Aviso para estágios bloqueantes */}
+            {estagioConfig[estagio].aviso && (
+              <div style={{
+                marginTop: '12px', background: '#fffbeb',
+                border: '1px solid #fde68a', borderRadius: '10px', padding: '10px 14px',
+              }}>
+                <p style={{ fontSize: '12px', color: '#92400e', lineHeight: 1.55 }}>
+                  ⚠️ {estagioConfig[estagio].aviso}
+                </p>
+              </div>
+            )}
+
+            {/* Juros evolutivos iniciais baseados no estágio */}
+            {estagio !== 'pre' && estagio !== 'pronto' && temPerfil && (
+              <div style={{ marginTop: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 14px' }}>
+                <p style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.55 }}>
+                  📊 Neste estágio, <strong>{Math.round(siopiInicial * 100)}%</strong> do financiamento já foi liberado ao comprador anterior.
+                  {valor > 0 && isMCMV && financiado > 0 && (
+                    <> Os juros evolutivos na assinatura serão de <strong>~{formatBRL(jurosEvo1)}/mês</strong> — crescendo até o habite-se.</>
+                  )}
+                </p>
+              </div>
             )}
           </div>
 
+          {/* Valor do imóvel */}
+          <CampoValor
+            label="Valor do imóvel (tabela da construtora)"
+            placeholder="350.000"
+            value={valorRaw}
+            onChange={v => setValorRaw(fi(v))}
+          />
+
+          {valor > 0 && (
+            <div style={{ marginBottom: '8px' }}>
+              <span style={{
+                fontSize: '12px', fontWeight: '700', padding: '3px 10px',
+                borderRadius: '99px',
+                background: isMCMV ? '#f0fdf4' : '#eff6ff',
+                color: isMCMV ? '#16a34a' : '#2563eb',
+                border: `1px solid ${isMCMV ? '#bbf7d0' : '#bfdbfe'}`,
+              }}>
+                {isMCMV
+                  ? `✅ MCMV ${faixaRenda?.label} — ${faixaRenda?.taxaRef.toFixed(2).replace('.', ',')}% a.a.`
+                  : '✅ SBPE / Mercado — 10,5% a.a.'}
+              </span>
+            </div>
+          )}
+
           {/* Resumo financeiro */}
-          {valor > 0 && maxFin > 0 && (
+          {valor > 0 && financiado > 0 && (
             <div style={{
-              background: '#fafaf9', borderRadius: '12px',
-              border: '1px solid #e7e5e4', padding: '16px', marginBottom: '24px',
+              background: 'var(--bg)', borderRadius: '14px',
+              border: '1px solid var(--border)', padding: '18px', margin: '20px 0',
             }}>
-              <p style={{ fontSize: '12px', fontWeight: '700', color: '#78716c', marginBottom: '10px', letterSpacing: '0.5px' }}>
-                COMPOSIÇÃO DO PAGAMENTO
+              <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>
+                Composição do pagamento
               </p>
-              <Resumo label="Valor do imóvel"        valor={formatBRL(valor)} />
-              <Resumo label={`Financiamento aprovado (${isMCMV ? 'MCMV' : 'SBPE'})`} valor={`− ${formatBRL(financiado)}`} cor="#16a34a" />
-              <div style={{ borderTop: '1.5px solid #e7e5e4', marginTop: '8px', paddingTop: '8px' }}>
-                <Resumo
+              <LinhaDetalhe label="Valor do imóvel" valor={formatBRL(valor)} />
+              <LinhaDetalhe
+                label={`Financiamento aprovado (${isMCMV ? 'MCMV' : 'SBPE'})`}
+                valor={`− ${formatBRL(financiado)}`}
+                sub={`${((financiado / valor) * 100).toFixed(0)}% do valor · LTV`}
+              />
+              <div style={{ borderTop: '2px solid var(--border)', paddingTop: '10px', marginTop: '4px' }}>
+                <LinhaDetalhe
                   label="Entrada necessária (paga durante a obra)"
                   valor={formatBRL(entradaNecessaria)}
-                  cor="#1c1917"
-                  negrito
+                  destaque
                 />
               </div>
               {recursosTotal > 0 && (
                 <div style={{
-                  marginTop: '8px', padding: '8px 10px', borderRadius: '8px',
+                  marginTop: '10px', padding: '10px 12px', borderRadius: '10px',
                   background: temRecursos ? '#f0fdf4' : '#fef2f2',
                   border: `1px solid ${temRecursos ? '#bbf7d0' : '#fecaca'}`,
                 }}>
-                  <p style={{ fontSize: '12px', color: temRecursos ? '#15803d' : '#dc2626' }}>
+                  <p style={{ fontSize: '12px', color: temRecursos ? '#15803d' : '#dc2626', margin: 0 }}>
                     {temRecursos
-                      ? `✅ Você tem ${formatBRL(recursosTotal)} disponíveis — cobre a entrada`
+                      ? `✅ Seus recursos (${formatBRL(recursosTotal)}) cobrem a entrada`
                       : `⚠️ Faltam ${formatBRL(faltaRecursos)} para cobrir a entrada`}
                   </p>
                 </div>
               )}
             </div>
           )}
-
-          {/* ── ESTRUTURA DE PAGAMENTO DA ENTRADA ─────────────────────────── */}
-          {valor > 0 && entradaNecessaria > 0 && (
-            <>
-              <div style={{ marginBottom: '16px' }}>
-                <p style={{ fontSize: '13px', fontWeight: '600', color: '#1c1917', marginBottom: '4px' }}>
-                  Como a entrada será paga durante a obra?
-                </p>
-                <p style={{ fontSize: '12px', color: '#78716c', marginBottom: '10px' }}>
-                  Informe os valores exatos da tabela da construtora. O total deve fechar com a entrada de {formatBRL(entradaNecessaria)}.
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                  {([
-                    { key: 'basico',        label: 'Ato + Mensais',       desc: 'Ex: MRV, Econ' },
-                    { key: 'intermediario', label: '+ Iniciais + Anuais', desc: 'Ex: Kallas, Trisul' },
-                    { key: 'completo',      label: '+ Única FD',          desc: 'Ex: Mitre, Bay' },
-                  ] as { key: Modo; label: string; desc: string }[]).map(({ key, label, desc }) => (
-                    <button key={key} onClick={() => setModo(key)} style={{
-                      padding: '10px 8px', borderRadius: '10px', fontSize: '12px', fontWeight: '600',
-                      cursor: 'pointer', border: '1.5px solid', textAlign: 'center',
-                      borderColor: modo === key ? '#2563eb' : '#e7e5e4',
-                      background:  modo === key ? '#eff6ff' : '#fff',
-                      color:       modo === key ? '#2563eb' : '#78716c',
-                    }}>
-                      <div style={{ marginBottom: '2px' }}>{label}</div>
-                      <div style={{ fontSize: '10px', fontWeight: '400', color: '#a8a29e' }}>{desc}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* ATO */}
-              <LinhaForm numero="1" label="Ato" hint="Valor pago na assinatura do contrato (uma única vez)">
-                <InputBRL value={atoRaw} onChange={v => setAtoRaw(f(v))} placeholder="14.000" />
-              </LinhaForm>
-
-              {/* PARCELAS INICIAIS */}
-              {modo !== 'basico' && (
-                <LinhaForm numero="2" label="Parcelas Iniciais / Complementos" hint="Pagamentos nos primeiros meses após o ato">
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
-                    <InputBRL value={iniciaisRaw} onChange={v => setIniciaisRaw(f(v))} placeholder="10.000" />
-                    <select value={qtdIniciais} onChange={e => setQtdIniciais(Number(e.target.value))} style={selSm}>
-                      {[2,3,4,5,6].map(n => <option key={n} value={n}>× {n}</option>)}
-                    </select>
-                  </div>
-                  {p(iniciaisRaw) > 0 && <p style={hint11}>Total: {formatBRL(p(iniciaisRaw) * qtdIniciais)}</p>}
-                </LinhaForm>
-              )}
-
-              {/* MENSAIS */}
-              <LinhaForm
-                numero={modo === 'basico' ? '2' : '3'}
-                label="Mensais"
-                hint="Valor de cada parcela mensal paga à construtora durante a obra"
-              >
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px', alignItems: 'center' }}>
-                  <InputBRL value={mensalRaw} onChange={v => setMensalRaw(f(v))} placeholder="1.900" />
-                  <span style={{ fontSize: '12px', color: '#78716c', whiteSpace: 'nowrap' }}>/mês ×</span>
-                  <select value={qtdMensais} onChange={e => setQtdMensais(Number(e.target.value))} style={selSm}>
-                    {[24,26,28,30,36,40,43,48].map(n => <option key={n} value={n}>{n}</option>)}
-                  </select>
-                </div>
-                {mensalUnit > 0 && <p style={hint11}>Total: {formatBRL(totalMensais)}</p>}
-              </LinhaForm>
-
-              {/* ANUAIS */}
-              {modo !== 'basico' && (
-                <LinhaForm
-                  numero="4"
-                  label="Anuais / Semestrais"
-                  hint="Reforços periódicos maiores conforme tabela"
-                >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
-                    <InputBRL value={anuaisRaw} onChange={v => setAnuaisRaw(f(v))} placeholder="13.000" />
-                    <select value={qtdAnuais} onChange={e => setQtdAnuais(Number(e.target.value))} style={selSm}>
-                      {[1,2,3,4,6,8].map(n => <option key={n} value={n}>× {n}</option>)}
-                    </select>
-                  </div>
-                  {p(anuaisRaw) > 0 && <p style={hint11}>Total: {formatBRL(totalAnuais)}</p>}
-                </LinhaForm>
-              )}
-
-              {/* ÚNICA */}
-              {modo === 'completo' && (
-                <LinhaForm
-                  numero="5"
-                  label="Parcela Única (antes das chaves)"
-                  hint="Pagamento pontual maior próximo à entrega"
-                >
-                  <InputBRL value={unicaRaw} onChange={v => setUnicaRaw(f(v))} placeholder="23.000" />
-                </LinhaForm>
-              )}
-
-              {/* Verificador de fechamento */}
-              {(ato > 0 || mensalUnit > 0) && (
-                <div style={{
-                  borderRadius: '12px', padding: '14px 16px',
-                  background: estruturaOk ? '#f0fdf4' : diferenca > 0 ? '#fef2f2' : '#fffbeb',
-                  border: `1px solid ${estruturaOk ? '#bbf7d0' : diferenca > 0 ? '#fecaca' : '#fde68a'}`,
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '13px', color: '#78716c' }}>Total da estrutura de pagamento</span>
-                    <strong style={{ fontSize: '13px', color: '#1c1917' }}>{formatBRL(totalEstruturaEntrada)}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '13px', color: '#78716c' }}>Entrada necessária</span>
-                    <strong style={{ fontSize: '13px', color: '#1c1917' }}>{formatBRL(entradaNecessaria)}</strong>
-                  </div>
-                  <p style={{ fontSize: '12px', marginTop: '8px', fontWeight: '600', color: estruturaOk ? '#15803d' : diferenca > 0 ? '#dc2626' : '#b45309' }}>
-                    {estruturaOk
-                      ? '✅ Estrutura fecha com a entrada necessária'
-                      : diferenca > 0
-                        ? `⚠️ Excede a entrada em ${formatBRL(diferenca)} — reduza algum componente`
-                        : `⚠️ Faltam ${formatBRL(Math.abs(diferenca))} para fechar a entrada — adicione mais um componente`}
-                  </p>
-                </div>
-              )}
-            </>
-          )}
         </div>
 
-        {/* ── FLUXO DE PAGAMENTO ─────────────────────────────────────────────── */}
+        {/* ── ESTRUTURA DE PAGAMENTO DA ENTRADA ───────────────────────────── */}
+        {valor > 0 && entradaNecessaria > 0 && estagio !== 'pre' && estagio !== 'pronto' && (
+          <div style={{
+            background: 'var(--bg-card)', borderRadius: '20px',
+            border: '1px solid var(--border)', padding: '28px',
+            boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px',
+          }}>
+            <p style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>
+              Estrutura de pagamento da entrada
+            </p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+              Informe os valores da tabela da construtora. O total deve fechar em {formatBRL(entradaNecessaria)}.
+            </p>
+
+            {/* Seletor de modo */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '24px' }}>
+              {([
+                { key: 'basico',        label: 'Ato + Mensais', desc: 'MRV, Econ' },
+                { key: 'intermediario', label: '+ Iniciais / Anuais', desc: 'Kallas, Trisul' },
+                { key: 'completo',      label: '+ Parcela Única', desc: 'Mitre, Cyrela' },
+              ] as { key: Modo; label: string; desc: string }[]).map(({ key, label, desc }) => (
+                <button key={key} onClick={() => setModo(key)} style={{
+                  padding: '11px 8px', borderRadius: '12px', cursor: 'pointer',
+                  border: `2px solid ${modo === key ? 'var(--primary)' : 'var(--border)'}`,
+                  background: modo === key ? 'var(--primary-light)' : 'var(--bg)',
+                  textAlign: 'center', transition: 'all 0.15s',
+                }}>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: modo === key ? 'var(--primary)' : 'var(--text)', marginBottom: '2px' }}>
+                    {label}
+                  </p>
+                  <p style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{desc}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Campos */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+              {/* Ato */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--text)', color: '#fff', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>1</div>
+                  <div>
+                    <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>Ato</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Pagamento único na assinatura do contrato</p>
+                  </div>
+                </div>
+                <CampoCompacto value={atoRaw} onChange={v => setAtoRaw(fi(v))} placeholder="14.000" />
+              </div>
+
+              {/* Iniciais */}
+              {modo !== 'basico' && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--text)', color: '#fff', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>2</div>
+                    <div>
+                      <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>Parcelas iniciais / complementos</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Primeiros meses após o ato</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                    <CampoCompacto value={iniciaisRaw} onChange={v => setIniciaisRaw(fi(v))} placeholder="10.000" />
+                    <Select value={qtdIniciais} onChange={v => setQtdIniciais(Number(v))}>
+                      {[2,3,4,5,6].map(n => <option key={n} value={n}>× {n}</option>)}
+                    </Select>
+                  </div>
+                  {p(iniciaisRaw) > 0 && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '5px' }}>Total: {formatBRL(p(iniciaisRaw) * qtdIniciais)}</p>}
+                </div>
+              )}
+
+              {/* Mensais */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--text)', color: '#fff', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {modo === 'basico' ? '2' : '3'}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>Mensais durante a obra</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Valor de cada parcela mensal à construtora</p>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px', alignItems: 'center' }}>
+                  <CampoCompacto value={mensalRaw} onChange={v => setMensalRaw(fi(v))} placeholder="1.900" />
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>/mês ×</span>
+                  <Select value={qtdMensais} onChange={v => setQtdMensais(Number(v))}>
+                    {[24,26,28,30,36,40,43,48].map(n => <option key={n} value={n}>{n}</option>)}
+                  </Select>
+                </div>
+                {mensalUnit > 0 && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '5px' }}>Total mensais: {formatBRL(totalMensais)}</p>}
+              </div>
+
+              {/* Anuais */}
+              {modo !== 'basico' && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--text)', color: '#fff', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>4</div>
+                    <div>
+                      <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>Anuais / semestrais</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Reforços periódicos conforme tabela</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                    <CampoCompacto value={anuaisRaw} onChange={v => setAnuaisRaw(fi(v))} placeholder="13.000" />
+                    <Select value={qtdAnuais} onChange={v => setQtdAnuais(Number(v))}>
+                      {[1,2,3,4,6,8].map(n => <option key={n} value={n}>× {n}</option>)}
+                    </Select>
+                  </div>
+                  {p(anuaisRaw) > 0 && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '5px' }}>Total anuais: {formatBRL(totalAnuais)}</p>}
+                </div>
+              )}
+
+              {/* Única */}
+              {modo === 'completo' && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--text)', color: '#fff', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>5</div>
+                    <div>
+                      <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>Parcela única (antes das chaves)</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Pagamento pontual próximo à entrega</p>
+                    </div>
+                  </div>
+                  <CampoCompacto value={unicaRaw} onChange={v => setUnicaRaw(fi(v))} placeholder="23.000" />
+                </div>
+              )}
+            </div>
+
+            {/* Verificador de fechamento */}
+            {(ato > 0 || mensalUnit > 0) && (
+              <div style={{
+                marginTop: '20px', borderRadius: '12px', padding: '16px',
+                background: estruturaOk ? '#f0fdf4' : diferenca > 0 ? '#fef2f2' : '#fffbeb',
+                border: `1px solid ${estruturaOk ? '#bbf7d0' : diferenca > 0 ? '#fecaca' : '#fde68a'}`,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Total da estrutura</span>
+                  <strong style={{ fontSize: '13px', color: 'var(--text)' }}>{formatBRL(totalEstrutura)}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Entrada necessária</span>
+                  <strong style={{ fontSize: '13px', color: 'var(--text)' }}>{formatBRL(entradaNecessaria)}</strong>
+                </div>
+                <p style={{
+                  fontSize: '12px', fontWeight: '700',
+                  color: estruturaOk ? '#15803d' : diferenca > 0 ? '#dc2626' : '#b45309',
+                  margin: 0,
+                }}>
+                  {estruturaOk
+                    ? '✅ Estrutura fecha com a entrada necessária'
+                    : diferenca > 0
+                      ? `⚠️ Excede em ${formatBRL(diferenca)} — reduza algum componente`
+                      : `⚠️ Faltam ${formatBRL(Math.abs(diferenca))} — adicione mais um componente`}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── FLUXO DE PAGAMENTO ───────────────────────────────────────────── */}
         {valido && (
           <div style={{
-            background: '#fff', borderRadius: '16px',
-            border: '1px solid #e7e5e4', padding: '28px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: '24px',
+            background: 'var(--bg-card)', borderRadius: '20px',
+            border: '1px solid var(--border)', padding: '28px',
+            boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px',
           }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1c1917', marginBottom: '24px' }}>
+            <p style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', marginBottom: '24px' }}>
               Fluxo de pagamento
-            </h2>
+            </p>
 
-            {/* 1 — Assinatura */}
-            <Bloco emoji="📋" titulo="Na Assinatura" cor="#44403c">
-              <Linha label="Ato" valor={formatBRL(ato)} sublabel="Pagamento único na assinatura do contrato" destaque />
-              <InfoSaldo
-                label="Saldo da entrada ainda a pagar à construtora"
-                valor={formatBRL(saldoAposAto)}
-                aviso="⚠️ Este saldo sofre reajuste mensal pelo INCC (FGV) até a entrega das chaves."
-              />
-            </Bloco>
+            {/* Assinatura */}
+            <BlocoFluxo emoji="📋" titulo="Na assinatura" cor="#44403c">
+              <LinhaDetalhe label="Ato" valor={formatBRL(ato)} sub="Pagamento único na assinatura do contrato" destaque />
+              <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '10px 12px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Saldo da entrada ainda a pagar</p>
+                  <strong style={{ fontSize: '13px' }}>{formatBRL(saldoAposAto)}</strong>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '3px' }}>
+                  ⚠️ Sofre reajuste mensal pelo INCC (FGV) até a entrega das chaves
+                </p>
+              </div>
+            </BlocoFluxo>
 
-            {/* 2 — Parcelas iniciais */}
+            {/* Iniciais */}
             {modo !== 'basico' && p(iniciaisRaw) > 0 && (
-              <Bloco emoji="📌" titulo={`Primeiros ${qtdIniciais} meses`} cor="#7c3aed">
-                <Linha
+              <BlocoFluxo emoji="📌" titulo={`Primeiros ${qtdIniciais} meses`} cor="#7c3aed">
+                <LinhaDetalhe
                   label={`Parcelas iniciais × ${qtdIniciais}`}
                   valor={`${formatBRL(p(iniciaisRaw))} cada`}
-                  sublabel={`Total: ${formatBRL(iniciais)}`}
+                  sub={`Total: ${formatBRL(iniciais)}`}
                 />
-              </Bloco>
+              </BlocoFluxo>
             )}
 
-            {/* 3 — Durante a obra */}
-            <Bloco emoji="🏗️" titulo={`Durante a Obra — ${qtdMensais} meses`} cor="#d97706">
-
-              <Linha
+            {/* Durante a obra */}
+            <BlocoFluxo emoji="🏗️" titulo={`Durante a obra — ${qtdMensais} meses`} cor="#d97706">
+              <LinhaDetalhe
                 label={`Mensais × ${qtdMensais}`}
                 valor={`${formatBRL(mensalUnit)}/mês`}
-                sublabel={`Total: ${formatBRL(totalMensais)}`}
+                sub={`Total: ${formatBRL(totalMensais)}`}
               />
-
               {modo !== 'basico' && anuaisUnit > 0 && (
-                <Linha
-                  label={`Anuais / Semestrais × ${qtdAnuais}`}
+                <LinhaDetalhe
+                  label={`Anuais × ${qtdAnuais}`}
                   valor={`${formatBRL(anuaisUnit)} cada`}
-                  sublabel={`Total: ${formatBRL(totalAnuais)}`}
+                  sub={`Total: ${formatBRL(totalAnuais)}`}
                 />
               )}
 
               {/* Juros evolutivos MCMV */}
-              {isMCMV && jurosEvo > 0 && (
-                <Linha
-                  label="Juros evolutivos ao banco (MCMV Crédito Associativo)"
-                  valor={`~${formatBRL(jurosEvo)}/mês`}
-                  sublabel="Crescem conforme o progresso da obra — pagos ao banco, não à construtora"
-                />
+              {isMCMV && jurosEvo1 > 0 && (
+                <>
+                  <LinhaDetalhe
+                    label="Juros evolutivos — 1º mês (ao banco)"
+                    valor={`~${formatBRL(jurosEvo1)}/mês`}
+                    sub={`${Math.round(siopiInicial * 100)}% do financiamento já liberado`}
+                  />
+                  <LinhaDetalhe
+                    label="Juros evolutivos — média estimada"
+                    valor={`~${formatBRL(jurosEvoMedio)}/mês`}
+                    sub="Cresce conforme o progresso da obra (curva SIOPI)"
+                  />
+
+                  {/* Mini visualização curva SIOPI */}
+                  <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 14px', marginTop: '10px' }}>
+                    <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                      Evolução SIOPI — % financiamento liberado
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '48px' }}>
+                      {siopiPontos.map(({ pct, mes }, i) => (
+                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+                          <span style={{ fontSize: '9px', color: 'var(--text-faint)' }}>{pct}%</span>
+                          <div style={{
+                            width: '100%', borderRadius: '3px 3px 0 0',
+                            background: i === 0 ? '#94a3b8' : 'var(--primary)',
+                            height: `${(pct / 100) * 32}px`,
+                            opacity: i === 0 ? 0.5 : 0.3 + (i / siopiPontos.length) * 0.7,
+                          }} />
+                          <span style={{ fontSize: '9px', color: 'var(--text-faint)' }}>m{mes}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
               )}
 
-              {/* Alerta 30% */}
+              {/* 30% rule */}
               <div style={{
                 background: ok30 ? '#f0fdf4' : '#fef2f2',
                 border: `1px solid ${ok30 ? '#bbf7d0' : '#fecaca'}`,
-                borderRadius: '10px', padding: '10px 14px', marginTop: '12px',
+                borderRadius: '10px', padding: '12px 14px', marginTop: '12px',
                 display: 'flex', gap: '10px',
               }}>
                 <span style={{ fontSize: '16px', flexShrink: 0 }}>{ok30 ? '✅' : '⚠️'}</span>
                 <div>
-                  <p style={{ fontSize: '12px', fontWeight: '600', color: ok30 ? '#15803d' : '#dc2626', marginBottom: '2px' }}>
-                    {ok30 ? 'Comprometimento dentro do limite (30% da renda)' : 'Comprometimento acima do limite recomendado'}
+                  <p style={{ fontSize: '12px', fontWeight: '600', color: ok30 ? '#15803d' : '#dc2626', marginBottom: '3px' }}>
+                    {ok30
+                      ? 'Comprometimento dentro do limite (30% da renda)'
+                      : 'Comprometimento acima do limite recomendado'}
                   </p>
-                  {isMCMV && jurosEvo > 0 ? (
-                    <p style={{ fontSize: '11px', color: '#78716c' }}>
-                      Mensais construtora: {formatBRL(mensalUnit)} + Juros banco: ~{formatBRL(jurosEvo)} = <strong>{formatBRL(burden)}/mês</strong> · Limite 30%: {formatBRL(limite30)}/mês
-                    </p>
-                  ) : (
-                    <p style={{ fontSize: '11px', color: '#78716c' }}>
-                      Mensais: {formatBRL(mensalUnit)}/mês · Limite 30%: {formatBRL(limite30)}/mês
-                    </p>
-                  )}
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {isMCMV && jurosEvo1 > 0
+                      ? `Mensais: ${formatBRL(mensalUnit)} + Juros banco (1º mês): ~${formatBRL(jurosEvo1)} = ${formatBRL(burden)}/mês · Limite 30%: ${formatBRL(limite30)}/mês`
+                      : `Mensais: ${formatBRL(mensalUnit)}/mês · Limite 30%: ${formatBRL(limite30)}/mês`}
+                  </p>
                 </div>
               </div>
 
-              <InfoSaldo
-                label="Saldo da entrada restante na entrega das chaves"
-                valor={formatBRL(saldoNaEntrega)}
-                aviso="⚠️ Todos os valores pagos à construtora sofrem reajuste pelo INCC (FGV)."
-              />
-            </Bloco>
+              <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '10px 12px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Saldo restante na entrega</p>
+                  <strong style={{ fontSize: '13px' }}>{formatBRL(saldoNaEntrega)}</strong>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '3px' }}>
+                  ⚠️ Todos os valores pagos à construtora sofrem correção pelo INCC
+                </p>
+              </div>
+            </BlocoFluxo>
 
-            {/* 4 — Na entrega */}
-            <Bloco emoji="🔑" titulo="Na Entrega das Chaves (Habite-se)" cor="#2563eb">
+            {/* Entrega */}
+            <BlocoFluxo emoji="🔑" titulo="Na entrega das chaves (habite-se)" cor="#2563eb">
               {modo === 'completo' && unica > 0 && (
-                <Linha label="Parcela Única (antes das chaves)" valor={formatBRL(unica)} sublabel="Pagamento pontual na entrega" />
+                <LinhaDetalhe label="Parcela única" valor={formatBRL(unica)} sub="Pagamento pontual na entrega" />
               )}
-              <Linha
-                label={`Financiamento ${isMCMV ? 'MCMV' : 'SBPE'} (aprovado pela pré-análise)`}
-                valor={formatBRL(Math.round(financiado))}
-                sublabel={`${((financiado / valor) * 100).toFixed(0)}% do valor — contratado com o banco`}
+              <LinhaDetalhe
+                label={`Financiamento ${isMCMV ? 'MCMV' : 'SBPE'}`}
+                valor={formatBRL(financiado)}
+                sub={`${((financiado / valor) * 100).toFixed(0)}% do valor — Caixa / banco`}
                 destaque
               />
               <div style={{
@@ -414,128 +847,74 @@ function NaPlantaContent() {
                 borderRadius: '10px', padding: '12px 14px', marginTop: '10px',
               }}>
                 <p style={{ fontSize: '12px', fontWeight: '600', color: isMCMV ? '#15803d' : '#1d4ed8', marginBottom: '4px' }}>
-                  {isMCMV ? '🏠 Minha Casa Minha Vida — Crédito Associativo' : '🏦 SBPE / Mercado'}
+                  {isMCMV ? '🏠 Minha Casa, Minha Vida — Crédito Associativo' : '🏦 SBPE / Mercado'}
                 </p>
-                <p style={{ fontSize: '12px', color: '#78716c', lineHeight: '1.6' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
                   {isMCMV
-                    ? 'O contrato com a Caixa Econômica Federal é assinado 1 a 6 meses após o contrato de compra e venda, antes da obra começar. Durante a construção, além das mensais à construtora, você paga ao banco juros evolutivos que crescem conforme o andamento da obra.'
-                    : 'O financiamento bancário é contratado somente na emissão do Habite-se. Durante toda a obra, você paga apenas à construtora — o banco entra somente na entrega das chaves.'}
+                    ? 'O contrato com a Caixa Econômica Federal é assinado antes da obra começar. Durante a construção, você paga mensais à construtora + juros evolutivos ao banco. Após o habite-se, inicia a parcela definitiva de amortização.'
+                    : 'O financiamento bancário é contratado somente na emissão do habite-se. Durante toda a obra, você paga apenas à construtora — o banco entra somente na entrega das chaves.'}
                 </p>
               </div>
-            </Bloco>
+            </BlocoFluxo>
 
-            {/* 5 — Pós-entrega */}
-            <Bloco emoji="📅" titulo="Pós-entrega — Parcela do Financiamento" cor="#16a34a" ultimo>
-              <Linha
-                label={`${isMCMV && faixaRenda ? faixaRenda.taxaRef.toFixed(2).replace('.', ',') : '10,5'}% a.a. + TR · Sistema Price · 35 anos`}
+            {/* Pós-entrega */}
+            <BlocoFluxo emoji="📅" titulo="Pós-entrega — parcela do financiamento" cor="#16a34a" ultimo>
+              <LinhaDetalhe
+                label={`${taxa.toFixed(2).replace('.', ',')}% a.a. + TR · Price · 35 anos`}
                 valor={`${formatBRL(Math.round(parcelaFin + seguros.total))}/mês`}
-                sublabel="1ª parcela — decresce ao longo do financiamento"
+                sub="1ª parcela — decresce ao longo dos anos (SAC) ou fixo (Price)"
                 destaque
               />
-            </Bloco>
+              <div style={{ marginTop: '10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {[
+                  { label: 'MIP (seguro de vida)', valor: formatBRL(seguros.mip) },
+                  { label: 'DFI (seguro imóvel)', valor: formatBRL(seguros.dfi) },
+                ].map(({ label, valor: v }) => (
+                  <div key={label} style={{ background: 'var(--bg)', borderRadius: '10px', padding: '10px 12px' }}>
+                    <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>{label}</p>
+                    <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>{v}/mês</p>
+                  </div>
+                ))}
+              </div>
+            </BlocoFluxo>
           </div>
         )}
 
+        {/* ── CTA final ───────────────────────────────────────────────────── */}
         {valido && (
-          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <Link href="/imoveis" style={{
-              display: 'inline-block', background: '#2563eb', color: '#fff',
-              textDecoration: 'none', borderRadius: '12px',
-              padding: '13px 32px', fontSize: '15px', fontWeight: '600',
+          <Link href="/imoveis" style={{ textDecoration: 'none', display: 'block' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+              borderRadius: '16px', padding: '20px 24px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: 'pointer',
             }}>
-              Ver imóveis na planta compatíveis →
-            </Link>
-          </div>
+              <div>
+                <p style={{ fontSize: '15px', fontWeight: '800', color: '#fff', marginBottom: '3px' }}>
+                  🏘️ Ver imóveis na planta compatíveis
+                </p>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.7)' }}>
+                  Filtro automático por faixa de valor e modalidade
+                </p>
+              </div>
+              <span style={{ color: '#fff', fontSize: '20px' }}>→</span>
+            </div>
+          </Link>
         )}
       </div>
     </div>
   );
 }
 
-// ─── Estilos ──────────────────────────────────────────────────────────────────
-const lbl: React.CSSProperties  = { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1c1917', marginBottom: '6px' };
-const selSm: React.CSSProperties = { padding: '10px 8px', border: '1.5px solid #e7e5e4', borderRadius: '10px', fontSize: '13px', background: '#fff', outline: 'none' };
-const hint11: React.CSSProperties = { fontSize: '11px', color: '#78716c', marginTop: '4px' };
-
-// ─── Componentes ─────────────────────────────────────────────────────────────
-function InputBRL({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #e7e5e4', borderRadius: '10px', overflow: 'hidden' }}>
-      <span style={{ padding: '10px 12px', fontSize: '14px', color: '#78716c', background: '#fafaf9', borderRight: '1px solid #e7e5e4' }}>R$</span>
-      <input type="text" inputMode="numeric" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        style={{ flex: 1, padding: '10px 12px', border: 'none', outline: 'none', fontSize: '14px', color: '#1c1917', background: 'transparent' }} />
-    </div>
-  );
-}
-
-function LinhaForm({ numero, label, hint, children }: { numero: string; label: string; hint: string; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr', gap: '12px', marginBottom: '20px', alignItems: 'start' }}>
-      <div style={{
-        width: '24px', height: '24px', borderRadius: '50%', background: '#1c1917',
-        color: '#fff', fontSize: '11px', fontWeight: '700',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '2px',
-      }}>{numero}</div>
-      <div>
-        <p style={{ fontSize: '13px', fontWeight: '600', color: '#1c1917', marginBottom: '2px' }}>{label}</p>
-        <p style={{ fontSize: '11px', color: '#78716c', marginBottom: '6px' }}>{hint}</p>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Resumo({ label, valor, cor, negrito }: { label: string; valor: string; cor?: string; negrito?: boolean }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-      <span style={{ fontSize: '13px', color: '#78716c' }}>{label}</span>
-      <strong style={{ fontSize: '13px', color: cor || '#1c1917', fontWeight: negrito ? '700' : '600' }}>{valor}</strong>
-    </div>
-  );
-}
-
-function Bloco({ emoji, titulo, cor, children, ultimo }: { emoji: string; titulo: string; cor: string; children: React.ReactNode; ultimo?: boolean }) {
-  return (
-    <div style={{ display: 'flex', gap: '14px', marginBottom: ultimo ? 0 : '24px' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: cor + '15', border: `1.5px solid ${cor}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px' }}>{emoji}</div>
-        {!ultimo && <div style={{ width: '2px', flex: 1, background: '#e7e5e4', marginTop: '6px', minHeight: '24px' }} />}
-      </div>
-      <div style={{ flex: 1, paddingBottom: ultimo ? 0 : '8px' }}>
-        <p style={{ fontSize: '12px', fontWeight: '700', color: cor, marginBottom: '10px', letterSpacing: '0.3px' }}>{titulo.toUpperCase()}</p>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function Linha({ label, valor, sublabel, destaque }: { label: string; valor: string; sublabel?: string; destaque?: boolean }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '8px 0', borderBottom: '1px solid #f5f5f4' }}>
-      <div style={{ flex: 1, paddingRight: '16px' }}>
-        <p style={{ fontSize: '13px', color: destaque ? '#1c1917' : '#78716c', fontWeight: destaque ? '600' : '400' }}>{label}</p>
-        {sublabel && <p style={{ fontSize: '11px', color: '#a8a29e', marginTop: '2px' }}>{sublabel}</p>}
-      </div>
-      <span style={{ fontSize: destaque ? '15px' : '14px', fontWeight: '700', color: '#1c1917', whiteSpace: 'nowrap' }}>{valor}</span>
-    </div>
-  );
-}
-
-function InfoSaldo({ label, valor, aviso }: { label: string; valor: string; aviso: string }) {
-  return (
-    <div style={{ background: '#fafaf9', borderRadius: '8px', padding: '10px 12px', marginTop: '10px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-        <p style={{ fontSize: '12px', color: '#78716c' }}>{label}</p>
-        <strong style={{ fontSize: '13px', color: '#1c1917' }}>{valor}</strong>
-      </div>
-      <p style={{ fontSize: '11px', color: '#a8a29e' }}>{aviso}</p>
-    </div>
-  );
-}
-
+// ──────────────────────────────────────────────────────────────────────────────
 export default function NaPlantaPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '48px', textAlign: 'center', color: '#78716c' }}>Carregando...</div>}>
+    <Suspense fallback={
+      <div style={{ padding: '80px', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: '32px', marginBottom: '12px' }}>🏗️</div>
+        <p>Carregando simulador...</p>
+      </div>
+    }>
       <NaPlantaContent />
     </Suspense>
   );

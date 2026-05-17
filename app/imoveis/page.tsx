@@ -2,8 +2,12 @@
 
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { formatBRL } from '@/lib/calculos';
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Types
+// ──────────────────────────────────────────────────────────────────────────────
 interface Imovel {
   id: string;
   name: string;
@@ -17,27 +21,325 @@ interface Imovel {
   state: string;
   photo: string | null;
   orulo_url: string | null;
+  sharing_url: string | null;
   status: string;
 }
 
+type StatusKey = 'Na Planta' | 'Em Obras' | 'Pronto' | 'Lançamento' | string;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Status config
+// ──────────────────────────────────────────────────────────────────────────────
+const STATUS_CFG: Record<string, { cor: string; bg: string; label: string }> = {
+  'na planta':   { cor: '#2563eb', bg: 'rgba(37,99,235,.12)',  label: 'Na Planta' },
+  'lançamento':  { cor: '#7c3aed', bg: 'rgba(124,58,237,.12)', label: 'Lançamento' },
+  'em obras':    { cor: '#d97706', bg: 'rgba(217,119,6,.12)',   label: 'Em Obras' },
+  'pronto':      { cor: '#16a34a', bg: 'rgba(22,163,74,.12)',   label: 'Pronto' },
+};
+
+function getStatusCfg(status: StatusKey) {
+  return STATUS_CFG[status.toLowerCase()] ?? { cor: '#64748b', bg: 'rgba(100,116,139,.12)', label: status };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Skeleton card
+// ──────────────────────────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div style={{
+      background: 'var(--bg-card)', borderRadius: '18px',
+      border: '1px solid var(--border)', overflow: 'hidden',
+    }}>
+      <div style={{ height: '200px', background: 'var(--border)', animation: 'pulse 1.4s ease infinite' }} />
+      <div style={{ padding: '18px' }}>
+        {[80, 60, 50, 90].map((w, i) => (
+          <div key={i} style={{
+            height: i === 0 ? '14px' : i === 1 ? '18px' : '12px',
+            width: `${w}%`, background: 'var(--border)',
+            borderRadius: '6px', marginBottom: i < 3 ? '10px' : '0',
+            animation: 'pulse 1.4s ease infinite',
+          }} />
+        ))}
+      </div>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }`}</style>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Card Imóvel
+// ──────────────────────────────────────────────────────────────────────────────
+function CardImovel({ imovel: b }: { imovel: Imovel }) {
+  const [imgErr, setImgErr] = useState(false);
+  const [hover, setHover] = useState(false);
+
+  const preco = b.min_price ? formatBRL(b.min_price) : 'Consultar';
+  const precoMax = b.max_price && b.max_price !== b.min_price ? ` – ${formatBRL(b.max_price)}` : '';
+  const quartos = b.bedrooms_min
+    ? b.bedrooms_max && b.bedrooms_max !== b.bedrooms_min
+      ? `${b.bedrooms_min}–${b.bedrooms_max} qts`
+      : `${b.bedrooms_min} quarto${b.bedrooms_min > 1 ? 's' : ''}`
+    : null;
+
+  const statusCfg = getStatusCfg(b.status || '');
+  const link = b.sharing_url || b.orulo_url || '#';
+
+  const waMsg = encodeURIComponent(
+    `Olá Luciano! Vi o imóvel *${b.name}* no FinancieCerto e quero mais informações.${link !== '#' ? ' Link: ' + link : ''}`
+  );
+
+  return (
+    <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        background: 'var(--bg-card)', borderRadius: '18px',
+        border: `1.5px solid ${hover ? 'var(--primary)' : 'var(--border)'}`,
+        overflow: 'hidden', display: 'flex', flexDirection: 'column',
+        transition: 'border-color 0.2s, box-shadow 0.2s',
+        boxShadow: hover ? '0 8px 32px rgba(37,99,235,.12)' : '0 1px 4px rgba(0,0,0,.05)',
+      }}
+    >
+      {/* Foto */}
+      <div style={{ height: '200px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+        {b.photo && !imgErr ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={b.photo}
+            alt={b.name}
+            onError={() => setImgErr(true)}
+            style={{
+              width: '100%', height: '100%', objectFit: 'cover',
+              transform: hover ? 'scale(1.04)' : 'scale(1)',
+              transition: 'transform 0.4s cubic-bezier(.4,0,.2,1)',
+            }}
+          />
+        ) : (
+          <div style={{
+            width: '100%', height: '100%',
+            background: 'linear-gradient(145deg, #1e3a5f 0%, #0f2744 100%)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '8px',
+          }}>
+            <span style={{ fontSize: '36px' }}>🏙️</span>
+            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,.4)' }}>Sem imagem</span>
+          </div>
+        )}
+
+        {/* Overlay gradient */}
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          height: '80px',
+          background: 'linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 100%)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* Status badge */}
+        {b.status && (
+          <div style={{
+            position: 'absolute', top: '12px', left: '12px',
+            background: statusCfg.bg,
+            backdropFilter: 'blur(8px)',
+            border: `1px solid ${statusCfg.cor}40`,
+            color: statusCfg.cor,
+            fontSize: '10px', fontWeight: '800',
+            padding: '3px 9px', borderRadius: '99px',
+            textTransform: 'uppercase', letterSpacing: '0.5px',
+          }}>
+            {statusCfg.label}
+          </div>
+        )}
+
+        {/* Bairro no overlay */}
+        {(b.neighborhood || b.city) && (
+          <p style={{
+            position: 'absolute', bottom: '10px', left: '12px',
+            fontSize: '11px', color: 'rgba(255,255,255,.85)',
+            fontWeight: '600', margin: 0,
+          }}>
+            📍 {b.neighborhood || b.city}
+          </p>
+        )}
+      </div>
+
+      {/* Conteúdo */}
+      <div style={{ padding: '18px 18px 14px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {b.developer && (
+          <p style={{
+            fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)',
+            textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px',
+          }}>
+            {b.developer}
+          </p>
+        )}
+        <h3 style={{
+          fontSize: '15px', fontWeight: '700', color: 'var(--text)',
+          lineHeight: 1.35, marginBottom: '14px', flex: 1,
+        }}>
+          {b.name}
+        </h3>
+
+        {/* Preço + quartos */}
+        <div style={{
+          display: 'flex', alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          borderTop: '1px solid var(--border)', paddingTop: '12px',
+        }}>
+          <div>
+            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>
+              A partir de
+            </p>
+            <p style={{
+              fontSize: '18px', fontWeight: '800', color: 'var(--text)',
+              fontVariantNumeric: 'tabular-nums', lineHeight: 1,
+            }}>
+              {preco}
+            </p>
+            {precoMax && (
+              <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '2px' }}>
+                até{precoMax}
+              </p>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+            {quartos && (
+              <span style={{
+                background: 'var(--primary-light)', color: 'var(--primary)',
+                fontSize: '11px', fontWeight: '700',
+                padding: '3px 9px', borderRadius: '99px',
+              }}>
+                🛏 {quartos}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* CTAs */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+          <a
+            href={`https://wa.me/5511933661403?text=${waMsg}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              flex: 1, textAlign: 'center', background: '#25D366', color: '#fff',
+              textDecoration: 'none', fontSize: '12px', fontWeight: '700',
+              padding: '9px 12px', borderRadius: '10px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+            }}
+          >
+            <span>💬</span> WhatsApp
+          </a>
+          {link !== '#' && (
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flex: 1, textAlign: 'center',
+                background: 'var(--primary-light)', color: 'var(--primary)',
+                border: '1.5px solid var(--primary)',
+                textDecoration: 'none', fontSize: '12px', fontWeight: '700',
+                padding: '9px 12px', borderRadius: '10px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+              }}
+            >
+              Ver detalhes →
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Empty state
+// ──────────────────────────────────────────────────────────────────────────────
+function EmptyState({ filtroAtivo }: { filtroAtivo: boolean }) {
+  return (
+    <div style={{
+      textAlign: 'center', padding: '80px 24px',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
+    }}>
+      <span style={{ fontSize: '56px' }}>🏚️</span>
+      <div>
+        <p style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>
+          {filtroAtivo ? 'Nenhum imóvel com esses filtros' : 'Nenhum imóvel encontrado'}
+        </p>
+        <p style={{ fontSize: '14px', color: 'var(--text-muted)', maxWidth: '360px', lineHeight: 1.65 }}>
+          {filtroAtivo
+            ? 'Tente ajustar o faixa de preço ou remover os filtros de quartos e estágio.'
+            : 'A integração com Órulo pode estar configurando. Tente novamente em instantes.'}
+        </p>
+      </div>
+      <Link href="/simulador" style={{
+        background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+        color: '#fff', textDecoration: 'none',
+        fontSize: '14px', fontWeight: '700',
+        padding: '12px 28px', borderRadius: '12px',
+        boxShadow: '0 4px 16px rgba(37,99,235,.3)',
+        marginTop: '8px',
+      }}>
+        Calcular meu perfil →
+      </Link>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Pill button helper
+// ──────────────────────────────────────────────────────────────────────────────
+function Pill({
+  label, active, onClick,
+}: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '7px 16px', borderRadius: '99px', fontSize: '13px',
+        fontWeight: active ? '700' : '500', cursor: 'pointer', border: '1.5px solid',
+        borderColor: active ? 'var(--primary)' : 'var(--border)',
+        background: active ? 'var(--primary-light)' : 'var(--bg-card)',
+        color: active ? 'var(--primary)' : 'var(--text-muted)',
+        transition: 'all 0.15s', whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Main content (needs Suspense for useSearchParams)
+// ──────────────────────────────────────────────────────────────────────────────
 function ImoveisContent() {
   const searchParams = useSearchParams();
-  const minParam = searchParams.get('min');
-  const maxParam = searchParams.get('max');
+  const minParam = searchParams.get('min') || '';
+  const maxParam = searchParams.get('max') || '';
 
+  // Filtros de API
+  const [minPrice, setMinPriceRaw] = useState(minParam);
+  const [maxPrice, setMaxPriceRaw] = useState(maxParam);
+  const [minInput, setMinInput] = useState(minParam);
+  const [maxInput, setMaxInput] = useState(maxParam);
+
+  // Filtros client-side
+  const [quartosFilter, setQuartosFilter] = useState<string>('todos');
+  const [statusFilter, setStatusFilter] = useState<string>('todos');
+
+  // Data
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [erro, setErro] = useState('');
-
-  // Filtros
-  const [minPrice, setMinPrice] = useState(minParam || '');
-  const [maxPrice, setMaxPrice] = useState(maxParam || '');
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const buscar = useCallback(async (p = 1, append = false) => {
-    setLoading(true);
+    if (p === 1) setLoading(true);
+    else setLoadingMore(true);
     setErro('');
     try {
       const params = new URLSearchParams();
@@ -48,248 +350,332 @@ function ImoveisContent() {
       if (maxPrice) params.set('max_price', maxPrice);
 
       const res = await fetch(`/api/orulo?${params}`);
-      if (!res.ok) throw new Error('Erro ao buscar imóveis');
+      if (!res.ok) throw new Error('Erro');
       const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
 
       setTotal(data.total || 0);
       setPages(data.pages || 1);
       setPage(p);
-
-      if (append) {
-        setImoveis(prev => [...prev, ...(data.buildings || [])]);
-      } else {
-        setImoveis(data.buildings || []);
-      }
-    } catch (e) {
-      setErro('Não foi possível carregar os imóveis. Tente novamente.');
+      setImoveis(prev => append ? [...prev, ...(data.buildings || [])] : (data.buildings || []));
+    } catch {
+      setErro('Não foi possível carregar os imóveis. Verifique a integração Órulo ou tente novamente.');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }, [minPrice, maxPrice]);
 
-  useEffect(() => {
-    buscar(1);
-  }, []);
+  useEffect(() => { buscar(1); }, [buscar]);
 
-  const temFiltro = minParam || maxParam;
+  // Aplicar filtros client-side
+  const imoveisFiltrados = imoveis.filter(b => {
+    if (quartosFilter !== 'todos') {
+      const q = parseInt(quartosFilter);
+      const min = b.bedrooms_min ?? 0;
+      const max = b.bedrooms_max ?? min;
+      if (quartosFilter === '4+') {
+        if (max < 4) return false;
+      } else {
+        if (q < min || q > max) return false;
+      }
+    }
+    if (statusFilter !== 'todos') {
+      if ((b.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
+    }
+    return true;
+  });
+
+  const filtroAtivo = !!(minPrice || maxPrice || quartosFilter !== 'todos' || statusFilter !== 'todos');
+
+  function aplicarPreco() {
+    setMinPriceRaw(minInput);
+    setMaxPriceRaw(maxInput);
+  }
+  function limparFiltros() {
+    setMinPriceRaw(''); setMaxPriceRaw('');
+    setMinInput(''); setMaxInput('');
+    setQuartosFilter('todos');
+    setStatusFilter('todos');
+  }
+
+  const quartosPills = [
+    { key: 'todos', label: 'Todos' },
+    { key: '1', label: '1 quarto' },
+    { key: '2', label: '2 quartos' },
+    { key: '3', label: '3 quartos' },
+    { key: '4+', label: '4+ quartos' },
+  ];
+  const statusPills = [
+    { key: 'todos', label: 'Qualquer estágio' },
+    { key: 'na planta', label: 'Na Planta' },
+    { key: 'lançamento', label: 'Lançamento' },
+    { key: 'em obras', label: 'Em Obras' },
+    { key: 'pronto', label: 'Pronto' },
+  ];
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
 
-      {/* Header da página */}
-      <div style={{
-        background: '#ffffff', borderBottom: '1px solid #e7e5e4',
-        padding: '32px 24px',
+      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+      <section style={{
+        background: 'linear-gradient(160deg, #0f172a 0%, #1a2e4a 60%, #0f172a 100%)',
+        padding: '64px 24px 80px',
       }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1c1917', marginBottom: '4px' }}>
-            {temFiltro ? 'Imóveis compatíveis com seu perfil' : 'Imóveis disponíveis'}
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <p style={{
+            fontSize: '11px', fontWeight: '700', color: '#475569',
+            letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '14px',
+          }}>
+            Empreendimentos · São Paulo
+          </p>
+          <h1 style={{
+            fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: '800',
+            color: '#fff', lineHeight: 1.2, marginBottom: '10px',
+          }}>
+            {minParam || maxParam
+              ? 'Imóveis compatíveis com seu perfil'
+              : 'Imóveis disponíveis'}
           </h1>
-          {temFiltro && (
-            <p style={{ color: '#78716c', fontSize: '14px' }}>
-              Filtrados entre {minPrice ? formatBRL(Number(minPrice)) : '—'} e {maxPrice ? formatBRL(Number(maxPrice)) : '—'}
+          {(minParam || maxParam) && (
+            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.5)', marginBottom: '12px' }}>
+              Filtrados entre{' '}
+              <strong style={{ color: 'rgba(255,255,255,.8)' }}>
+                {minParam ? formatBRL(Number(minParam)) : 'sem mínimo'}
+              </strong>
+              {' '}e{' '}
+              <strong style={{ color: 'rgba(255,255,255,.8)' }}>
+                {maxParam ? formatBRL(Number(maxParam)) : 'sem máximo'}
+              </strong>
+              {' '}— resultado da sua simulação
             </p>
           )}
+        </div>
+      </section>
 
-          {/* Filtros */}
-          <div style={{
-            display: 'flex', gap: '12px', marginTop: '20px', flexWrap: 'wrap', alignItems: 'flex-end',
-          }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#78716c', marginBottom: '4px' }}>
-                PREÇO MÍNIMO
-              </label>
-              <input
-                type="number"
-                value={minPrice}
-                onChange={e => setMinPrice(e.target.value)}
-                placeholder="Ex: 200000"
-                style={{
-                  padding: '8px 12px', border: '1.5px solid #e7e5e4', borderRadius: '8px',
-                  fontSize: '14px', width: '160px', outline: 'none',
-                }}
-              />
+      {/* ── Painel de filtros ────────────────────────────────────────────────── */}
+      <div style={{
+        background: 'var(--bg-card)',
+        borderBottom: '1px solid var(--border)',
+        padding: '20px 24px',
+        position: 'sticky', top: 0, zIndex: 10,
+        boxShadow: '0 2px 12px rgba(0,0,0,.06)',
+      }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+          {/* Linha 1: preço */}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div>
+                <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
+                  Preço mínimo
+                </p>
+                <input
+                  type="number"
+                  value={minInput}
+                  onChange={e => setMinInput(e.target.value)}
+                  placeholder="200.000"
+                  style={{
+                    padding: '8px 12px', border: '1.5px solid var(--border)',
+                    borderRadius: '10px', fontSize: '14px', width: '150px',
+                    outline: 'none', background: 'var(--bg)',
+                    color: 'var(--text)', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+              <span style={{ color: 'var(--text-faint)', paddingBottom: '2px', alignSelf: 'flex-end', marginBottom: '8px' }}>–</span>
+              <div>
+                <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
+                  Preço máximo
+                </p>
+                <input
+                  type="number"
+                  value={maxInput}
+                  onChange={e => setMaxInput(e.target.value)}
+                  placeholder="800.000"
+                  style={{
+                    padding: '8px 12px', border: '1.5px solid var(--border)',
+                    borderRadius: '10px', fontSize: '14px', width: '150px',
+                    outline: 'none', background: 'var(--bg)',
+                    color: 'var(--text)', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#78716c', marginBottom: '4px' }}>
-                PREÇO MÁXIMO
-              </label>
-              <input
-                type="number"
-                value={maxPrice}
-                onChange={e => setMaxPrice(e.target.value)}
-                placeholder="Ex: 500000"
-                style={{
-                  padding: '8px 12px', border: '1.5px solid #e7e5e4', borderRadius: '8px',
-                  fontSize: '14px', width: '160px', outline: 'none',
-                }}
-              />
-            </div>
+
             <button
-              onClick={() => buscar(1)}
+              onClick={aplicarPreco}
               style={{
-                background: '#2563eb', color: '#fff', border: 'none',
-                borderRadius: '8px', padding: '9px 20px', fontSize: '14px',
-                fontWeight: '600', cursor: 'pointer',
+                background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                color: '#fff', border: 'none', borderRadius: '10px',
+                padding: '9px 20px', fontSize: '13px', fontWeight: '700',
+                cursor: 'pointer', alignSelf: 'flex-end', marginBottom: '0',
               }}
             >
               Buscar
             </button>
-            {(minPrice || maxPrice) && (
+
+            {filtroAtivo && (
               <button
-                onClick={() => { setMinPrice(''); setMaxPrice(''); }}
+                onClick={limparFiltros}
                 style={{
-                  background: 'transparent', color: '#78716c', border: '1px solid #e7e5e4',
-                  borderRadius: '8px', padding: '9px 16px', fontSize: '14px', cursor: 'pointer',
+                  background: 'transparent', color: 'var(--text-muted)',
+                  border: '1.5px solid var(--border)', borderRadius: '10px',
+                  padding: '9px 16px', fontSize: '13px', cursor: 'pointer',
+                  alignSelf: 'flex-end',
                 }}
               >
                 Limpar filtros
               </button>
             )}
           </div>
+
+          {/* Linha 2: quartos + estágio */}
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '7px' }}>
+                Quartos
+              </p>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {quartosPills.map(({ key, label }) => (
+                  <Pill key={key} label={label} active={quartosFilter === key} onClick={() => setQuartosFilter(key)} />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '7px' }}>
+                Estágio
+              </p>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {statusPills.map(({ key, label }) => (
+                  <Pill key={key} label={label} active={statusFilter === key} onClick={() => setStatusFilter(key)} />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Conteúdo */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
+      {/* ── Conteúdo ─────────────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px 80px' }}>
 
-        {erro && (
-          <div style={{ background: '#fef2f2', color: '#dc2626', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
-            {erro}
+        {/* Contagem + erro */}
+        {erro ? (
+          <div style={{
+            background: '#fef2f2', border: '1px solid #fecaca',
+            borderRadius: '12px', padding: '16px 18px', marginBottom: '24px',
+          }}>
+            <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>⚠️ {erro}</p>
+          </div>
+        ) : !loading && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+              {imoveisFiltrados.length > 0
+                ? <><strong style={{ color: 'var(--text)' }}>{imoveisFiltrados.length}</strong> de {total} empreendimento{total !== 1 ? 's' : ''}</>
+                : 'Nenhum imóvel com esses filtros'}
+            </p>
+            {(statusFilter !== 'todos' || quartosFilter !== 'todos') && imoveisFiltrados.length > 0 && (
+              <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>
+                {statusFilter !== 'todos' && <span style={{ color: getStatusCfg(statusFilter).cor }}>● {getStatusCfg(statusFilter).label}</span>}
+                {statusFilter !== 'todos' && quartosFilter !== 'todos' && '  '}
+                {quartosFilter !== 'todos' && <span>🛏 {quartosPills.find(p => p.key === quartosFilter)?.label}</span>}
+              </p>
+            )}
           </div>
         )}
 
-        {!loading && !erro && (
-          <p style={{ color: '#78716c', fontSize: '14px', marginBottom: '24px' }}>
-            {total > 0 ? `${total} empreendimento${total !== 1 ? 's' : ''} encontrado${total !== 1 ? 's' : ''}` : 'Nenhum imóvel encontrado com esses filtros.'}
-          </p>
-        )}
-
-        {/* Grid de cards */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '20px',
-          marginBottom: '32px',
-        }}>
-          {imoveis.map(b => (
-            <CardImovel key={b.id} imovel={b} />
-          ))}
-        </div>
-
-        {/* Loading */}
+        {/* Skeletons */}
         {loading && (
-          <div style={{ textAlign: 'center', padding: '48px', color: '#78716c' }}>
-            Carregando imóveis...
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '20px',
+          }}>
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
+        )}
+
+        {/* Grid */}
+        {!loading && imoveisFiltrados.length > 0 && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '20px',
+            marginBottom: '40px',
+          }}>
+            {imoveisFiltrados.map(b => <CardImovel key={b.id} imovel={b} />)}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && !erro && imoveisFiltrados.length === 0 && (
+          <EmptyState filtroAtivo={filtroAtivo} />
         )}
 
         {/* Ver mais */}
-        {!loading && page < pages && (
-          <div style={{ textAlign: 'center' }}>
+        {!loading && page < pages && imoveisFiltrados.length > 0 && (
+          <div style={{ textAlign: 'center', marginTop: '8px' }}>
             <button
               onClick={() => buscar(page + 1, true)}
+              disabled={loadingMore}
               style={{
-                background: 'transparent', color: '#2563eb',
-                border: '1.5px solid #2563eb', borderRadius: '10px',
-                padding: '10px 28px', fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+                background: 'transparent', color: 'var(--primary)',
+                border: '1.5px solid var(--primary)', borderRadius: '12px',
+                padding: '12px 32px', fontSize: '14px', fontWeight: '700',
+                cursor: loadingMore ? 'default' : 'pointer',
+                opacity: loadingMore ? 0.6 : 1,
+                transition: 'all 0.15s',
               }}
             >
-              Ver mais imóveis
+              {loadingMore ? 'Carregando...' : 'Ver mais imóveis →'}
             </button>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
 
-function CardImovel({ imovel: b }: { imovel: Imovel }) {
-  const preco = b.min_price ? formatBRL(b.min_price) : 'Consultar';
-  const quartos = b.bedrooms_min
-    ? b.bedrooms_max && b.bedrooms_max !== b.bedrooms_min
-      ? `${b.bedrooms_min}–${b.bedrooms_max} quartos`
-      : `${b.bedrooms_min} quarto${b.bedrooms_min > 1 ? 's' : ''}`
-    : null;
-
-  const waMsg = encodeURIComponent(
-    `Olá Luciano! Vi o imóvel *${b.name}* no FinancieCerto e quero mais informações.${b.orulo_url ? ' Segue o link: ' + b.orulo_url : ''}`
-  );
-
-  return (
-    <div style={{
-      background: '#ffffff', borderRadius: '16px',
-      border: '1px solid #e7e5e4', overflow: 'hidden',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-      display: 'flex', flexDirection: 'column',
-    }}>
-      {/* Foto */}
-      <div style={{
-        height: '180px', background: '#f5f5f4', overflow: 'hidden',
-        position: 'relative',
-      }}>
-        {b.photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={b.photo} alt={b.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
+        {/* CTA para simulador */}
+        {!loading && !erro && (
           <div style={{
-            width: '100%', height: '100%', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-            color: '#a8a29e', fontSize: '13px',
+            marginTop: '48px',
+            background: 'linear-gradient(145deg, #1e3a5f 0%, #0f172a 100%)',
+            borderRadius: '20px', padding: '32px 28px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexWrap: 'wrap', gap: '16px',
           }}>
-            Sem foto
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: '800', color: '#fff', marginBottom: '5px' }}>
+                Não sabe qual imóvel cabe no seu bolso?
+              </p>
+              <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                Calcule seu poder de compra, faixa MCMV e valor de parcelas em 2 minutos.
+              </p>
+            </div>
+            <Link href="/simulador" style={{
+              background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+              color: '#fff', textDecoration: 'none', fontSize: '14px',
+              fontWeight: '700', padding: '13px 28px', borderRadius: '12px',
+              whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(37,99,235,.4)',
+            }}>
+              Calcular meu perfil →
+            </Link>
           </div>
         )}
-        {b.status && (
-          <span style={{
-            position: 'absolute', top: '10px', left: '10px',
-            background: 'rgba(0,0,0,0.6)', color: '#fff',
-            fontSize: '11px', fontWeight: '600', padding: '3px 8px',
-            borderRadius: '6px', textTransform: 'uppercase',
-          }}>
-            {b.status}
-          </span>
-        )}
-      </div>
-
-      {/* Conteúdo */}
-      <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <p style={{ fontSize: '13px', color: '#78716c', marginBottom: '4px' }}>
-          {b.neighborhood || b.city}
-        </p>
-        <h3 style={{ fontSize: '15px', fontWeight: '600', color: '#1c1917', marginBottom: '4px', lineHeight: '1.4' }}>
-          {b.name}
-        </h3>
-        {b.developer && (
-          <p style={{ fontSize: '12px', color: '#a8a29e', marginBottom: '8px' }}>{b.developer}</p>
-        )}
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #f5f5f4' }}>
-          <div>
-            <p style={{ fontSize: '18px', fontWeight: '700', color: '#1c1917' }}>{preco}</p>
-            {quartos && <p style={{ fontSize: '12px', color: '#78716c' }}>{quartos}</p>}
-          </div>
-          <a
-            href={`https://wa.me/5511933661403?text=${waMsg}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: '#25D366', color: '#fff', textDecoration: 'none',
-              fontSize: '13px', fontWeight: '600', padding: '7px 14px',
-              borderRadius: '8px', whiteSpace: 'nowrap',
-            }}
-          >
-            Falar
-          </a>
-        </div>
       </div>
     </div>
   );
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Export (Suspense boundary for useSearchParams)
+// ──────────────────────────────────────────────────────────────────────────────
 export default function ImoveisPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '48px', textAlign: 'center', color: '#78716c' }}>Carregando...</div>}>
+    <Suspense fallback={
+      <div style={{ padding: '80px 24px', textAlign: 'center', color: 'var(--text-faint)' }}>
+        Carregando imóveis...
+      </div>
+    }>
       <ImoveisContent />
     </Suspense>
   );
