@@ -107,9 +107,13 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
   ].filter(Boolean) as { icon: string; label: string }[];
 
   return (
-    <div
+    <Link
+      href={`/imoveis/${b.id}`}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+    >
+    <div
       style={{
         background: 'var(--bg-card)', borderRadius: '14px',
         border: `1.5px solid ${hover ? 'var(--primary)' : 'var(--border)'}`,
@@ -235,27 +239,24 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
           >
             <span>💬</span> WhatsApp
           </a>
-          {link !== '#' && (
-            <a
-              href={link}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              style={{
-                flex: 1, textAlign: 'center',
-                background: 'var(--primary-light)', color: 'var(--primary)',
-                border: '1.5px solid var(--primary)',
-                textDecoration: 'none', fontSize: '11px', fontWeight: '700',
-                padding: '8px 10px', borderRadius: '9px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              Ver detalhes →
-            </a>
-          )}
+          <Link
+            href={`/imoveis/${b.id}`}
+            onClick={e => e.stopPropagation()}
+            style={{
+              flex: 1, textAlign: 'center',
+              background: 'var(--primary-light)', color: 'var(--primary)',
+              border: '1.5px solid var(--primary)',
+              textDecoration: 'none', fontSize: '11px', fontWeight: '700',
+              padding: '8px 10px', borderRadius: '9px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            Ver detalhes →
+          </Link>
         </div>
       </div>
     </div>
+    </Link>
   );
 }
 
