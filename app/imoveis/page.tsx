@@ -286,7 +286,8 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Empty state
 // ──────────────────────────────────────────────────────────────────────────────
-function EmptyState({ filtroAtivo }: { filtroAtivo: boolean }) {
+function EmptyState({ filtroAtivo, localSearch }: { filtroAtivo: boolean; localSearch?: string }) {
+  const localName = localSearch?.replace(/,.*$/, '').trim(); // pega só "Guarulhos" de "Guarulhos – SP"
   return (
     <div style={{
       textAlign: 'center', padding: '80px 24px',
@@ -295,12 +296,16 @@ function EmptyState({ filtroAtivo }: { filtroAtivo: boolean }) {
       <span style={{ fontSize: '56px' }}>🏚️</span>
       <div>
         <p style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>
-          {filtroAtivo ? 'Nenhum imóvel com esses filtros' : 'Nenhum imóvel encontrado'}
+          {localName
+            ? `Nenhum empreendimento disponível em ${localName}`
+            : filtroAtivo ? 'Nenhum imóvel com esses filtros' : 'Nenhum imóvel encontrado'}
         </p>
-        <p style={{ fontSize: '14px', color: 'var(--text-muted)', maxWidth: '360px', lineHeight: 1.65 }}>
-          {filtroAtivo
-            ? 'Tente ajustar o faixa de preço ou remover os filtros de quartos e estágio.'
-            : 'A integração com Órulo pode estar configurando. Tente novamente em instantes.'}
+        <p style={{ fontSize: '14px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: 1.65 }}>
+          {localName
+            ? `A Orulo ainda não tem lançamentos cadastrados em ${localName}. Tente uma região próxima ou busque por nome do empreendimento.`
+            : filtroAtivo
+              ? 'Tente ajustar a faixa de preço, quartos ou estágio da obra.'
+              : 'A integração com Órulo pode estar configurando. Tente novamente em instantes.'}
         </p>
       </div>
       <Link href="/simulador" style={{
@@ -375,6 +380,7 @@ function ImoveisContent() {
 
   // UI state do painel
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
 
   // Data
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
@@ -392,8 +398,7 @@ function ImoveisContent() {
     try {
       const params = new URLSearchParams();
       params.set('page', String(p));
-      params.set('city', 'São Paulo');
-      params.set('state', 'SP');
+      params.set('state', 'SP'); // busca em todo o estado SP; city vem do q
       if (minPrice) params.set('min_price', minPrice);
       if (maxPrice) params.set('max_price', maxPrice);
 
@@ -433,6 +438,16 @@ function ImoveisContent() {
 
   // Re-fetch sempre que qualquer filtro de API mudar
   useEffect(() => { buscar(1); }, [buscar]);
+
+  // Carrega sugestões de localização da API
+  useEffect(() => {
+    fetch('/api/orulo/bairros')
+      .then(r => r.json())
+      .then(d => {
+        if (d.locations) setLocationSuggestions(d.locations.map((l: { label: string }) => l.label));
+      })
+      .catch(() => {});
+  }, []);
 
   // Ordenação local (não precisa re-fetch)
   const imoveisFiltrados = [...imoveis].sort((a, bx) => {
@@ -543,10 +558,11 @@ function ImoveisContent() {
               <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
               <input
                 type="text"
+                list="location-suggestions"
                 value={localSearchInput}
                 onChange={e => setLocalSearchInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && (aplicarPreco(), aplicarBusca())}
-                placeholder="Buscar bairro, empreendimento..."
+                placeholder="Bairro, cidade ou empreendimento..."
                 style={{
                   padding: '10px 12px 10px 34px', border: '1.5px solid var(--border)',
                   borderRadius: '10px', fontSize: '13px', width: '100%',
@@ -554,6 +570,11 @@ function ImoveisContent() {
                   color: 'var(--text)', fontFamily: 'inherit',
                 }}
               />
+              {locationSuggestions.length > 0 && (
+                <datalist id="location-suggestions">
+                  {locationSuggestions.map(s => <option key={s} value={s} />)}
+                </datalist>
+              )}
             </div>
 
             {/* Buscar */}
@@ -817,7 +838,7 @@ function ImoveisContent() {
 
         {/* Empty state */}
         {!loading && !erro && imoveisFiltrados.length === 0 && (
-          <EmptyState filtroAtivo={filtroAtivo} />
+          <EmptyState filtroAtivo={filtroAtivo} localSearch={localSearch} />
         )}
 
         {/* Ver mais */}
@@ -871,31 +892,66 @@ function ImoveisContent() {
         {/* ── SEO: Bairros populares ───────────────────────────────────────── */}
         <div style={{ marginTop: '64px', borderTop: '1px solid var(--border)', paddingTop: '48px' }}>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text)', marginBottom: '8px' }}>
-            Encontre imóveis por bairro em São Paulo
+            Buscar imóveis por região em São Paulo e Grande SP
           </h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.65 }}>
-            Explore apartamentos à venda nos bairros mais buscados da capital paulista.
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.65 }}>
+            Explore apartamentos à venda em toda a Região Metropolitana — capital, ABC Paulista, Guarulhos, Osasco e mais.
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '48px' }}>
-            {['Pinheiros','Vila Olímpia','Moema','Brooklin','Itaim Bibi','Vila Madalena',
-              'Lapa','Perdizes','Jardins','Consolação','Bela Vista','Santana',
-              'Tatuapé','Vila Mariana','Campo Belo','Santo André','São Bernardo','Guarulhos',
-            ].map(bairro => (
-              <button
-                key={bairro}
-                onClick={() => { setLocalSearchInput(bairro); setLocalSearch(bairro); }}
-                style={{
-                  padding: '6px 14px', borderRadius: '99px', fontSize: '12px',
-                  fontWeight: '600', cursor: 'pointer',
-                  border: '1.5px solid var(--border)',
-                  background: 'var(--bg-card)', color: 'var(--text-muted)',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {bairro}
-              </button>
-            ))}
-          </div>
+
+          {/* Grupos de regiões */}
+          {[
+            {
+              titulo: 'São Paulo – Zona Sul & Oeste',
+              bairros: ['Moema','Itaim Bibi','Brooklin','Campo Belo','Vila Olímpia',
+                'Pinheiros','Vila Madalena','Perdizes','Lapa','Santo Amaro','Vila Mariana'],
+            },
+            {
+              titulo: 'São Paulo – Zona Norte & Leste',
+              bairros: ['Santana','Tatuapé','Mooca','Penha','Vila Maria',
+                'Casa Verde','Tucuruvi','Aricanduva','Vila Prudente','Itaquera'],
+            },
+            {
+              titulo: 'São Paulo – Centro',
+              bairros: ['Consolação','Bela Vista','Jardins','Higienópolis',
+                'República','Liberdade','Santa Cecília','Cerqueira César','Paraíso'],
+            },
+            {
+              titulo: 'Grande ABC',
+              bairros: ['Santo André','São Bernardo do Campo','São Caetano do Sul',
+                'Diadema','Mauá','Ribeirão Pires'],
+            },
+            {
+              titulo: 'Outros municípios da RMSP',
+              bairros: ['Guarulhos','Osasco','Barueri','Alphaville','Santana de Parnaíba',
+                'Cotia','Taboão da Serra','Carapicuíba','Mogi das Cruzes','Suzano',
+                'Itaquaquecetuba','Embu das Artes','Mairiporã','Caieiras'],
+            },
+          ].map(({ titulo, bairros }) => (
+            <div key={titulo} style={{ marginBottom: '20px' }}>
+              <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)',
+                textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>
+                {titulo}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+                {bairros.map(bairro => (
+                  <button
+                    key={bairro}
+                    onClick={() => { setLocalSearchInput(bairro); setLocalSearch(bairro); }}
+                    style={{
+                      padding: '5px 13px', borderRadius: '99px', fontSize: '12px',
+                      fontWeight: '600', cursor: 'pointer',
+                      border: '1.5px solid var(--border)',
+                      background: 'var(--bg-card)', color: 'var(--text-muted)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {bairro}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div style={{ marginBottom: '24px' }} />
 
           {/* SEO editorial */}
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text)', marginBottom: '12px' }}>

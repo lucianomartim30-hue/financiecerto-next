@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     const page        = Math.max(1, parseInt(searchParams.get('page') || '1'));
     const minPrice    = searchParams.get('min_price');
     const maxPrice    = searchParams.get('max_price');
-    const city        = searchParams.get('city')  || 'São Paulo';
+    const city        = searchParams.get('city')  || '';
     const state       = searchParams.get('state') || 'SP';
     const bedroomsMin = searchParams.get('bedrooms_min');
     const bedroomsMax = searchParams.get('bedrooms_max');
