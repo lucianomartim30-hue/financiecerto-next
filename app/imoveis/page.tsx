@@ -360,17 +360,21 @@ function ImoveisContent() {
   const minParam = searchParams.get('min') || '';
   const maxParam = searchParams.get('max') || '';
 
-  // Filtros de API
+  // Filtros de API (todos acionam re-fetch)
   const [minPrice, setMinPriceRaw] = useState(minParam);
   const [maxPrice, setMaxPriceRaw] = useState(maxParam);
   const [minInput, setMinInput] = useState(minParam ? fmtInput(minParam) : '');
   const [maxInput, setMaxInput] = useState(maxParam ? fmtInput(maxParam) : '');
-
-  // Filtros client-side
   const [quartosFilter, setQuartosFilter] = useState<string>('todos');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [localSearch, setLocalSearch] = useState('');
+  const [localSearchInput, setLocalSearchInput] = useState('');
+
+  // Filtro local apenas (ordenação)
   const [sortBy, setSortBy] = useState<'relevancia' | 'menor-preco' | 'maior-preco'>('relevancia');
+
+  // UI state do painel
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Data
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
@@ -393,10 +397,26 @@ function ImoveisContent() {
       if (minPrice) params.set('min_price', minPrice);
       if (maxPrice) params.set('max_price', maxPrice);
 
+      // Filtros de quartos → API
+      if (quartosFilter !== 'todos') {
+        if (quartosFilter === '4+') {
+          params.set('bedrooms_min', '4');
+          params.set('bedrooms_max', '99');
+        } else {
+          params.set('bedrooms_min', quartosFilter);
+          params.set('bedrooms_max', quartosFilter);
+        }
+      }
+
+      // Filtro de estágio → API
+      if (statusFilter !== 'todos') params.set('status', statusFilter);
+
+      // Busca textual → API
+      if (localSearch.trim()) params.set('q', localSearch.trim());
+
       const res = await fetch(`/api/orulo?${params}`);
       if (!res.ok) throw new Error('Erro');
       const data = await res.json();
-
       if (data.error) throw new Error(data.error);
 
       setTotal(data.total || 0);
@@ -409,52 +429,46 @@ function ImoveisContent() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [minPrice, maxPrice]);
+  }, [minPrice, maxPrice, quartosFilter, statusFilter, localSearch]);
 
+  // Re-fetch sempre que qualquer filtro de API mudar
   useEffect(() => { buscar(1); }, [buscar]);
 
-  // Aplicar filtros client-side
-  const imoveisFiltrados = imoveis
-    .filter(b => {
-      if (quartosFilter !== 'todos') {
-        const q = parseInt(quartosFilter);
-        const min = b.bedrooms_min ?? 0;
-        const max = b.bedrooms_max ?? min;
-        if (quartosFilter === '4+') {
-          if (max < 4) return false;
-        } else {
-          if (q < min || q > max) return false;
-        }
-      }
-      if (statusFilter !== 'todos') {
-        if ((b.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
-      }
-      if (localSearch.trim()) {
-        const q = localSearch.trim().toLowerCase();
-        const haystack = [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
-    })
-    .sort((a, bx) => {
-      if (sortBy === 'menor-preco') return (a.min_price ?? 0) - (bx.min_price ?? 0);
-      if (sortBy === 'maior-preco') return (bx.min_price ?? 0) - (a.min_price ?? 0);
-      return 0;
-    });
+  // Ordenação local (não precisa re-fetch)
+  const imoveisFiltrados = [...imoveis].sort((a, bx) => {
+    if (sortBy === 'menor-preco') return (a.min_price ?? 0) - (bx.min_price ?? 0);
+    if (sortBy === 'maior-preco') return (bx.min_price ?? 0) - (a.min_price ?? 0);
+    return 0;
+  });
 
-  const filtroAtivo = !!(minPrice || maxPrice || quartosFilter !== 'todos' || statusFilter !== 'todos' || localSearch.trim() || sortBy !== 'relevancia');
+  const filtroAtivo = !!(minPrice || maxPrice || quartosFilter !== 'todos' || statusFilter !== 'todos' || localSearch.trim());
 
   function aplicarPreco() {
     setMinPriceRaw(stripFmt(minInput));
     setMaxPriceRaw(stripFmt(maxInput));
   }
+
+  function aplicarBusca() {
+    setLocalSearch(localSearchInput);
+  }
+
   function limparFiltros() {
     setMinPriceRaw(''); setMaxPriceRaw('');
     setMinInput(''); setMaxInput('');
     setQuartosFilter('todos');
     setStatusFilter('todos');
-    setLocalSearch('');
+    setLocalSearch(''); setLocalSearchInput('');
     setSortBy('relevancia');
+  }
+
+  // Pills de quartos acionam re-fetch direto
+  function handleQuartos(key: string) {
+    setQuartosFilter(key);
+  }
+
+  // Pills de estágio acionam re-fetch direto
+  function handleStatus(key: string) {
+    setStatusFilter(key);
   }
 
   const quartosPills = [
@@ -515,139 +529,100 @@ function ImoveisContent() {
       <div style={{
         background: 'var(--bg-card)',
         borderBottom: '1px solid var(--border)',
-        padding: '16px 24px',
+        padding: '14px 24px',
         position: 'sticky', top: 0, zIndex: 10,
         boxShadow: '0 2px 12px rgba(0,0,0,.06)',
       }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0' }}>
 
-          {/* Linha 1: busca por bairro + preço + buscar + ordenar */}
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          {/* ── Linha principal (sempre visível) ─────────────────────────────── */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
 
             {/* Busca bairro/nome */}
-            <div style={{ flex: '1 1 200px', minWidth: '160px' }}>
-              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
-                Bairro ou empreendimento
-              </p>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
-                <input
-                  type="text"
-                  value={localSearch}
-                  onChange={e => setLocalSearch(e.target.value)}
-                  placeholder="Pinheiros, Vila Olímpia..."
-                  style={{
-                    padding: '9px 12px 9px 32px', border: '1.5px solid var(--border)',
-                    borderRadius: '10px', fontSize: '13px', width: '100%',
-                    outline: 'none', background: 'var(--bg)',
-                    color: 'var(--text)', fontFamily: 'inherit',
-                  }}
-                />
-              </div>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: '1 1 220px', minWidth: '180px' }}>
+              <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
+              <input
+                type="text"
+                value={localSearchInput}
+                onChange={e => setLocalSearchInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && (aplicarPreco(), aplicarBusca())}
+                placeholder="Buscar bairro, empreendimento..."
+                style={{
+                  padding: '10px 12px 10px 34px', border: '1.5px solid var(--border)',
+                  borderRadius: '10px', fontSize: '13px', width: '100%',
+                  outline: 'none', background: 'var(--bg)',
+                  color: 'var(--text)', fontFamily: 'inherit',
+                }}
+              />
             </div>
 
-            {/* Preço mínimo */}
-            <div>
-              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
-                Preço mínimo
-              </p>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <span style={{
-                  position: 'absolute', left: '11px', color: 'var(--text-faint)',
-                  fontSize: '13px', fontWeight: '600', pointerEvents: 'none',
-                }}>R$</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={minInput}
-                  onChange={e => setMinInput(fmtInput(e.target.value))}
-                  onKeyDown={e => e.key === 'Enter' && aplicarPreco()}
-                  placeholder="200.000"
-                  style={{
-                    padding: '9px 12px 9px 36px', border: '1.5px solid var(--border)',
-                    borderRadius: '10px', fontSize: '13px', width: '148px',
-                    outline: 'none', background: 'var(--bg)',
-                    color: 'var(--text)', fontFamily: 'inherit',
-                  }}
-                />
-              </div>
-            </div>
-
-            <span style={{ color: 'var(--text-faint)', fontSize: '16px', alignSelf: 'flex-end', marginBottom: '9px' }}>–</span>
-
-            {/* Preço máximo */}
-            <div>
-              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
-                Preço máximo
-              </p>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                <span style={{
-                  position: 'absolute', left: '11px', color: 'var(--text-faint)',
-                  fontSize: '13px', fontWeight: '600', pointerEvents: 'none',
-                }}>R$</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={maxInput}
-                  onChange={e => setMaxInput(fmtInput(e.target.value))}
-                  onKeyDown={e => e.key === 'Enter' && aplicarPreco()}
-                  placeholder="800.000"
-                  style={{
-                    padding: '9px 12px 9px 36px', border: '1.5px solid var(--border)',
-                    borderRadius: '10px', fontSize: '13px', width: '148px',
-                    outline: 'none', background: 'var(--bg)',
-                    color: 'var(--text)', fontFamily: 'inherit',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Botão buscar */}
+            {/* Buscar */}
             <button
-              onClick={aplicarPreco}
+              onClick={() => { aplicarPreco(); aplicarBusca(); }}
               style={{
                 background: 'linear-gradient(135deg, var(--primary), var(--accent))',
                 color: '#fff', border: 'none', borderRadius: '10px',
-                padding: '9px 20px', fontSize: '13px', fontWeight: '700',
-                cursor: 'pointer', alignSelf: 'flex-end', whiteSpace: 'nowrap',
+                padding: '10px 22px', fontSize: '13px', fontWeight: '700',
+                cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
               }}
             >
               Buscar
             </button>
 
-            {/* Ordenar */}
-            <div style={{ marginLeft: 'auto' }}>
-              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
-                Ordenar por
-              </p>
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                style={{
-                  padding: '9px 32px 9px 12px', border: '1.5px solid var(--border)',
-                  borderRadius: '10px', fontSize: '13px',
-                  background: 'var(--bg)', color: 'var(--text)',
-                  fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
-                  appearance: 'none',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 10px center',
-                }}
-              >
-                <option value="relevancia">Relevância</option>
-                <option value="menor-preco">Menor preço</option>
-                <option value="maior-preco">Maior preço</option>
-              </select>
-            </div>
+            {/* Filtros avançados toggle */}
+            <button
+              onClick={() => setShowAdvanced(v => !v)}
+              style={{
+                background: showAdvanced ? 'var(--primary-light)' : 'var(--bg)',
+                color: showAdvanced ? 'var(--primary)' : 'var(--text-muted)',
+                border: `1.5px solid ${showAdvanced ? 'var(--primary)' : 'var(--border)'}`,
+                borderRadius: '10px', padding: '10px 16px',
+                fontSize: '13px', fontWeight: '600',
+                cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                display: 'flex', alignItems: 'center', gap: '6px',
+                transition: 'all 0.15s',
+              }}
+            >
+              <span>⚙️</span>
+              Filtros avançados
+              <span style={{
+                display: 'inline-block',
+                transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s',
+                fontSize: '10px',
+              }}>▼</span>
+            </button>
 
+            {/* Ordenar por */}
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as typeof sortBy)}
+              title="Ordenar por"
+              style={{
+                padding: '10px 30px 10px 12px', border: '1.5px solid var(--border)',
+                borderRadius: '10px', fontSize: '13px',
+                background: 'var(--bg)', color: 'var(--text)',
+                fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
+                appearance: 'none', flexShrink: 0,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 10px center',
+              }}
+            >
+              <option value="relevancia">Relevância</option>
+              <option value="menor-preco">Menor preço</option>
+              <option value="maior-preco">Maior preço</option>
+            </select>
+
+            {/* Limpar filtros */}
             {filtroAtivo && (
               <button
                 onClick={limparFiltros}
                 style={{
                   background: 'transparent', color: 'var(--text-muted)',
                   border: '1.5px solid var(--border)', borderRadius: '10px',
-                  padding: '9px 14px', fontSize: '13px', cursor: 'pointer',
-                  alignSelf: 'flex-end', whiteSpace: 'nowrap',
+                  padding: '10px 14px', fontSize: '13px', cursor: 'pointer',
+                  whiteSpace: 'nowrap', flexShrink: 0,
                 }}
               >
                 ✕ Limpar
@@ -655,30 +630,133 @@ function ImoveisContent() {
             )}
           </div>
 
-          {/* Linha 2: quartos + estágio */}
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            <div>
-              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '7px' }}>
-                Quartos
-              </p>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {quartosPills.map(({ key, label }) => (
-                  <Pill key={key} label={label} active={quartosFilter === key} onClick={() => setQuartosFilter(key)} />
-                ))}
-              </div>
+          {/* ── Chips de filtros ativos (quando avançados fechados) ───────────── */}
+          {!showAdvanced && (quartosFilter !== 'todos' || statusFilter !== 'todos' || minPrice || maxPrice) && (
+            <div style={{
+              display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center',
+              marginTop: '10px',
+            }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-faint)', fontWeight: '600' }}>Filtros:</span>
+              {minPrice && (
+                <span style={{
+                  padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '700',
+                  background: 'rgba(37,99,235,.1)', color: 'var(--primary)', border: '1px solid rgba(37,99,235,.2)',
+                }}>
+                  A partir de R$ {Number(minPrice).toLocaleString('pt-BR')}
+                </span>
+              )}
+              {maxPrice && (
+                <span style={{
+                  padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '700',
+                  background: 'rgba(37,99,235,.1)', color: 'var(--primary)', border: '1px solid rgba(37,99,235,.2)',
+                }}>
+                  Até R$ {Number(maxPrice).toLocaleString('pt-BR')}
+                </span>
+              )}
+              {quartosFilter !== 'todos' && (
+                <span style={{
+                  padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '700',
+                  background: 'rgba(37,99,235,.1)', color: 'var(--primary)', border: '1px solid rgba(37,99,235,.2)',
+                }}>
+                  🛏 {quartosPills.find(p => p.key === quartosFilter)?.label}
+                </span>
+              )}
+              {statusFilter !== 'todos' && (
+                <span style={{
+                  padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '700',
+                  background: `${getStatusCfg(statusFilter).bg}`, color: getStatusCfg(statusFilter).cor,
+                  border: `1px solid ${getStatusCfg(statusFilter).cor}40`,
+                }}>
+                  {getStatusCfg(statusFilter).label}
+                </span>
+              )}
             </div>
+          )}
 
-            <div>
-              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '7px' }}>
-                Estágio
-              </p>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {statusPills.map(({ key, label }) => (
-                  <Pill key={key} label={label} active={statusFilter === key} onClick={() => setStatusFilter(key)} />
-                ))}
+          {/* ── Seção de filtros avançados (colapsável) ──────────────────────── */}
+          {showAdvanced && (
+            <div style={{
+              marginTop: '14px', paddingTop: '14px',
+              borderTop: '1px solid var(--border)',
+              display: 'flex', flexDirection: 'column', gap: '14px',
+            }}>
+
+              {/* Linha: faixa de preço */}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div>
+                  <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
+                    Preço mínimo
+                  </p>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '13px', fontWeight: '600', pointerEvents: 'none' }}>R$</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={minInput}
+                      onChange={e => setMinInput(fmtInput(e.target.value))}
+                      onKeyDown={e => e.key === 'Enter' && (aplicarPreco(), aplicarBusca())}
+                      placeholder="200.000"
+                      style={{
+                        padding: '9px 12px 9px 36px', border: '1.5px solid var(--border)',
+                        borderRadius: '10px', fontSize: '13px', width: '148px',
+                        outline: 'none', background: 'var(--bg)',
+                        color: 'var(--text)', fontFamily: 'inherit',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <span style={{ color: 'var(--text-faint)', fontSize: '16px', marginBottom: '9px' }}>–</span>
+
+                <div>
+                  <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
+                    Preço máximo
+                  </p>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '13px', fontWeight: '600', pointerEvents: 'none' }}>R$</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={maxInput}
+                      onChange={e => setMaxInput(fmtInput(e.target.value))}
+                      onKeyDown={e => e.key === 'Enter' && (aplicarPreco(), aplicarBusca())}
+                      placeholder="800.000"
+                      style={{
+                        padding: '9px 12px 9px 36px', border: '1.5px solid var(--border)',
+                        borderRadius: '10px', fontSize: '13px', width: '148px',
+                        outline: 'none', background: 'var(--bg)',
+                        color: 'var(--text)', fontFamily: 'inherit',
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Linha: quartos */}
+              <div>
+                <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '7px' }}>
+                  Quartos
+                </p>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {quartosPills.map(({ key, label }) => (
+                    <Pill key={key} label={label} active={quartosFilter === key} onClick={() => handleQuartos(key)} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Linha: estágio */}
+              <div>
+                <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '7px' }}>
+                  Estágio da obra
+                </p>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {statusPills.map(({ key, label }) => (
+                    <Pill key={key} label={label} active={statusFilter === key} onClick={() => handleStatus(key)} />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -805,7 +883,7 @@ function ImoveisContent() {
             ].map(bairro => (
               <button
                 key={bairro}
-                onClick={() => setLocalSearch(bairro)}
+                onClick={() => { setLocalSearchInput(bairro); setLocalSearch(bairro); }}
                 style={{
                   padding: '6px 14px', borderRadius: '99px', fontSize: '12px',
                   fontWeight: '600', cursor: 'pointer',
@@ -881,7 +959,7 @@ export default function ImoveisPage() {
   return (
     <Suspense fallback={
       <div style={{ padding: '80px 24px', textAlign: 'center', color: 'var(--text-faint)' }}>
-        Carregando imóveis...
+        Carregando imoveis...
       </div>
     }>
       <ImoveisContent />

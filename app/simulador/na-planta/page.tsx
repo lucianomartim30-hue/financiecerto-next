@@ -569,9 +569,9 @@ function NaPlantaContent() {
             {/* Seletor de modo */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '24px' }}>
               {([
-                { key: 'basico',        label: 'Ato + Mensais', desc: 'MRV, Econ' },
-                { key: 'intermediario', label: '+ Iniciais / Anuais', desc: 'Kallas, Trisul' },
-                { key: 'completo',      label: '+ Parcela Única', desc: 'Mitre, Cyrela' },
+                { key: 'basico',        label: 'Ato + Mensais', desc: 'Parcelas mensais na obra' },
+                { key: 'intermediario', label: '+ Iniciais / Anuais', desc: 'Com reforços periódicos' },
+                { key: 'completo',      label: '+ Parcela Única', desc: 'Com balão na entrega' },
               ] as { key: Modo; label: string; desc: string }[]).map(({ key, label, desc }) => (
                 <button key={key} onClick={() => setModo(key)} style={{
                   padding: '11px 8px', borderRadius: '12px', cursor: 'pointer',
