@@ -6,11 +6,8 @@ const MOCK_BUILDINGS = [
   { id: '1', name: 'Residencial Vila Madalena', developer: 'Construtora ABC', min_price: 320000, max_price: 450000, bedrooms_min: 2, bedrooms_max: 3, area_min: 62, area_max: 85, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Vila Madalena', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
   { id: '2', name: 'Jardins Exclusive', developer: 'MRV Engenharia', min_price: 280000, max_price: 380000, bedrooms_min: 1, bedrooms_max: 2, area_min: 38, area_max: 58, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jardins', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
   { id: '3', name: 'Moema Garden', developer: 'Cyrela', min_price: 650000, max_price: 900000, bedrooms_min: 2, bedrooms_max: 4, area_min: 80, area_max: 140, bathrooms_min: 2, bathrooms_max: 3, vagas_min: 2, vagas_max: 2, neighborhood: 'Moema', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
-  { id: '4', name: 'Pinheiros Living', developer: 'Even', min_price: 480000, max_price: 620000, bedrooms_min: 1, bedrooms_max: 3, area_min: 45, area_max: 90, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Pinheiros', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Em Obras' },
-  { id: '5', name: 'Brooklin Smart', developer: 'Trisul', min_price: 350000, max_price: 500000, bedrooms_min: 2, bedrooms_max: 2, area_min: 55, area_max: 70, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Brooklin', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
-  { id: '6', name: 'Itaim Bibi Tower', developer: 'Helbor', min_price: 900000, max_price: 1400000, bedrooms_min: 2, bedrooms_max: 4, area_min: 95, area_max: 200, bathrooms_min: 2, bathrooms_max: 4, vagas_min: 2, vagas_max: 3, neighborhood: 'Itaim Bibi', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
-  { id: '7', name: 'Studio Consolação', developer: 'Kallas', min_price: 220000, max_price: 280000, bedrooms_min: 1, bedrooms_max: 1, area_min: 28, area_max: 35, bathrooms_min: 1, bathrooms_max: 1, vagas_min: 0, vagas_max: 1, neighborhood: 'Consolação', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
-  { id: '8', name: 'Tatuapé Residences', developer: 'Even', min_price: 380000, max_price: 520000, bedrooms_min: 2, bedrooms_max: 3, area_min: 60, area_max: 85, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 2, neighborhood: 'Tatuapé', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Lançamento' },
+  { id: '4', name: 'Vila Mariana Park', developer: 'Even', min_price: 480000, max_price: 620000, bedrooms_min: 1, bedrooms_max: 3, area_min: 45, area_max: 90, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Vila Mariana', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Em Obras' },
+  { id: '5', name: 'Jabaquara Residences', developer: 'Trisul', min_price: 250000, max_price: 350000, bedrooms_min: 2, bedrooms_max: 2, area_min: 55, area_max: 70, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jabaquara', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
 ];
 
 let _tokenCache = { token: null as string | null, expiresAt: 0 };
@@ -75,35 +72,112 @@ function normalizeBuilding(b: Record<string, unknown>) {
   };
 }
 
-// Mapa de status canônico → valores aceitos pela Orulo API (situation param)
-function toOruloSituation(status: string): string {
-  const s = status.toLowerCase();
-  if (s === 'na planta' || s === 'lançamento' || s === 'lancamento') return 'planta';
-  if (s === 'em obras')   return 'construcao';
-  if (s === 'pronto')     return 'pronto';
-  return '';
+type NormalizedBuilding = ReturnType<typeof normalizeBuilding>;
+
+// ── Cache completo de imóveis SP ──────────────────────────────────────────────
+// Busca TODAS as páginas da Orulo em paralelo para permitir filtro real por bairro.
+// O campo address.neighborhood de cada building é o que usamos para filtrar —
+// a API não suporta neighborhood= como parâmetro de query.
+
+const CATALOG_CACHE: {
+  buildings: NormalizedBuilding[];
+  fetchedAt: number;
+  building: boolean;
+} = { buildings: [], fetchedAt: 0, building: false };
+
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
+
+async function fetchOnePage(token: string, qs: URLSearchParams, page: number): Promise<NormalizedBuilding[]> {
+  const params = new URLSearchParams(qs);
+  params.set('page', String(page));
+  try {
+    const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return [];
+    const raw = await resp.json();
+    const list = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
+    return list.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
+  } catch {
+    return [];
+  }
 }
+
+async function getOrBuildCatalog(token: string): Promise<NormalizedBuilding[]> {
+  const now = Date.now();
+
+  // Cache válido — retorna direto
+  if (CATALOG_CACHE.buildings.length > 0 && now - CATALOG_CACHE.fetchedAt < CACHE_TTL) {
+    return CATALOG_CACHE.buildings;
+  }
+
+  // Já está sendo construído — retorna o que tem (pode ser parcial)
+  if (CATALOG_CACHE.building) return CATALOG_CACHE.buildings;
+
+  CATALOG_CACHE.building = true;
+
+  try {
+    // 1. Descobrir total de páginas
+    const probe = await fetch(
+      `${ORULO_BASE}/api/v2/buildings?state=SP&city=S%C3%A3o+Paulo&per_page=1&page=1`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const probeData = await probe.json();
+    const totalPages = Math.min(probeData.total_pages ?? probeData.pages ?? 1, 30);
+
+    // 2. Busca todos em paralelo, em lotes de 10
+    const BASE_QS = new URLSearchParams({ state: 'SP', city: 'São Paulo', per_page: '200' });
+    const allBuildings: NormalizedBuilding[] = [];
+    const BATCH = 10;
+
+    for (let start = 1; start <= totalPages; start += BATCH) {
+      const batch = Array.from(
+        { length: Math.min(BATCH, totalPages - start + 1) },
+        (_, i) => start + i
+      );
+      const results = await Promise.all(batch.map(p => fetchOnePage(token, BASE_QS, p)));
+      allBuildings.push(...results.flat());
+    }
+
+    CATALOG_CACHE.buildings = allBuildings;
+    CATALOG_CACHE.fetchedAt = now;
+    CATALOG_CACHE.building = false;
+    return allBuildings;
+
+  } catch {
+    CATALOG_CACHE.building = false;
+    return CATALOG_CACHE.buildings;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const page        = Math.max(1, parseInt(searchParams.get('page') || '1'));
-    const minPrice    = searchParams.get('min_price');
-    const maxPrice    = searchParams.get('max_price');
-    const state       = searchParams.get('state') || 'SP';
-    const bedroomsMin = searchParams.get('bedrooms_min');
-    const bedroomsMax = searchParams.get('bedrooms_max');
-    const statusReq   = searchParams.get('status');
-    const q           = searchParams.get('q');
+    const page         = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const minPrice     = searchParams.get('min_price');
+    const maxPrice     = searchParams.get('max_price');
+    const state        = searchParams.get('state') || 'SP';
+    const city         = searchParams.get('city')  || '';
+    const neighborhood = searchParams.get('neighborhood') || '';
+    const bedroomsMin  = searchParams.get('bedrooms_min');
+    const bedroomsMax  = searchParams.get('bedrooms_max');
+    const statusReq    = searchParams.get('status');
+    const q            = searchParams.get('q');
 
+    // ── Mock ──────────────────────────────────────────────────────────────────
     if (process.env.USE_MOCK === 'true') {
       let buildings = MOCK_BUILDINGS.map(b => ({ ...b, status_norm: normalizeStatus(b.status) }));
-      if (minPrice)                          buildings = buildings.filter(b => (b.min_price ?? 0) >= Number(minPrice));
-      if (maxPrice)                          buildings = buildings.filter(b => (b.min_price ?? 0) <= Number(maxPrice));
-      if (bedroomsMin)                       buildings = buildings.filter(b => (b.bedrooms_max ?? 0) >= Number(bedroomsMin));
+      if (minPrice)                            buildings = buildings.filter(b => (b.min_price ?? 0) >= Number(minPrice));
+      if (maxPrice)                            buildings = buildings.filter(b => (b.min_price ?? 0) <= Number(maxPrice));
+      if (bedroomsMin)                         buildings = buildings.filter(b => (b.bedrooms_max ?? 0) >= Number(bedroomsMin));
       if (bedroomsMax && bedroomsMax !== '99') buildings = buildings.filter(b => (b.bedrooms_min ?? 0) <= Number(bedroomsMax));
-      if (statusReq) buildings = buildings.filter(b => b.status_norm === statusReq);
-      if (q) {
+      if (statusReq)    buildings = buildings.filter(b => b.status_norm === statusReq);
+      if (neighborhood) {
+        const nl = neighborhood.toLowerCase();
+        buildings = buildings.filter(b => (b.neighborhood || '').toLowerCase().includes(nl));
+      } else if (q) {
         const ql = q.toLowerCase();
         buildings = buildings.filter(b => [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase().includes(ql));
       }
@@ -111,17 +185,48 @@ export async function GET(req: NextRequest) {
     }
 
     const token = await getToken();
+
+    // ── Busca por bairro: usa catálogo completo ───────────────────────────────
+    if (neighborhood) {
+      const catalog = await getOrBuildCatalog(token);
+
+      const nb = neighborhood.toLowerCase();
+      let filtered = catalog.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
+
+      // Aplica filtros adicionais do catálogo
+      if (minPrice)    filtered = filtered.filter(b => (b.min_price  ?? 0)  >= Number(minPrice));
+      if (maxPrice)    filtered = filtered.filter(b => (b.min_price  ?? 0)  <= Number(maxPrice));
+      if (bedroomsMin) filtered = filtered.filter(b => (b.bedrooms_max ?? 99) >= Number(bedroomsMin));
+      if (bedroomsMax && bedroomsMax !== '99')
+                       filtered = filtered.filter(b => (b.bedrooms_min ?? 0)  <= Number(bedroomsMax));
+      if (statusReq) {
+        const byStatus = filtered.filter(b => b.status_norm === statusReq);
+        if (byStatus.length > 0) filtered = byStatus;
+      }
+
+      // Paginação server-side
+      const PER_PAGE = 20;
+      const start    = (page - 1) * PER_PAGE;
+      const paginated = filtered.slice(start, start + PER_PAGE);
+
+      return NextResponse.json({
+        buildings: paginated,
+        total:     filtered.length,
+        page,
+        pages:     Math.ceil(filtered.length / PER_PAGE) || 1,
+        source:    'catalog',
+      });
+    }
+
+    // ── Busca normal (sem bairro): query direta à Orulo ───────────────────────
     const qs = new URLSearchParams();
     qs.set('page', String(page));
-    // Aumenta per_page quando filtro de status ativo (precisamos de amostra maior para filtrar server-side)
     qs.set('per_page', statusReq ? '200' : '50');
 
-    // Params confirmados e suportados pela Orulo API v2.
-    // NÃO passamos neighborhood/situation/area — parâmetros não documentados
-    // que retornam 0 resultados. Filtro de status é aplicado server-side.
     if (minPrice)                            qs.set('min_price',    minPrice);
     if (maxPrice)                            qs.set('max_price',    maxPrice);
     if (state)                               qs.set('state',        state);
+    if (city)                                qs.set('city',         city);
     if (bedroomsMin)                         qs.set('min_bedrooms', bedroomsMin);
     if (bedroomsMax && bedroomsMax !== '99') qs.set('max_bedrooms', bedroomsMax);
     if (q)                                   qs.set('q',            q);
@@ -135,13 +240,9 @@ export async function GET(req: NextRequest) {
     const rawList = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
     let buildings = rawList.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
 
-    // ── Filtro de status server-side ─────────────────────────────────────────
-    // Aplicado sobre a amostra retornada pela Orulo (per_page=200 quando ativo).
-    // Se o filtro zerar os resultados (status raro na amostra), mantemos todos.
     if (statusReq) {
       const filtered = buildings.filter(b => b.status_norm === statusReq);
       if (filtered.length > 0) buildings = filtered;
-      // Se filtered=0: mantém todos (evita tela vazia por sub-amostragem)
     }
 
     return NextResponse.json({
