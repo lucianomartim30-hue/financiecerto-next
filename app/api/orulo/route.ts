@@ -61,6 +61,9 @@ function normalizeBuilding(b: Record<string, unknown>) {
     vagas_min:     (b.min_parking_spots as number) ?? (b.min_garages as number) ?? (b.vagas_min as number) ?? null,
     vagas_max:     (b.max_parking_spots as number) ?? (b.max_garages as number) ?? (b.vagas_max as number) ?? null,
     neighborhood:  address.area || address.neighborhood || '',
+    address_full:  [address.street, address.number].filter(Boolean).join(', ') || '',
+    street:        (address.street as string) || '',
+    number:        (address.number as string) || '',
     city:          address.city  || '',
     state:         address.state || '',
     photo:         img['520x280'] || img['840x560'] || img['200x140'] || null,
@@ -84,6 +87,7 @@ export async function GET(req: NextRequest) {
     const bedroomsMax = searchParams.get('bedrooms_max');
     const statusReq   = searchParams.get('status');
     const q           = searchParams.get('q');
+    const neighborhood = searchParams.get('neighborhood');
 
     if (process.env.USE_MOCK === 'true') {
       let buildings = MOCK_BUILDINGS.map(b => ({ ...b, status_norm: normalizeStatus(b.status) }));
@@ -110,6 +114,7 @@ export async function GET(req: NextRequest) {
     if (bedroomsMin)                       qs.set('min_bedrooms', bedroomsMin);
     if (bedroomsMax && bedroomsMax !== '99') qs.set('max_bedrooms', bedroomsMax);
     if (q)                                 qs.set('q',            q);
+    if (neighborhood)                       qs.set('neighborhood',  neighborhood);
 
     const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },

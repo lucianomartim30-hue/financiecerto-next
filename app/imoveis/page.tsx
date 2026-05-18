@@ -29,6 +29,9 @@ interface Imovel {
   orulo_url: string | null;
   sharing_url: string | null;
   status: string;
+  address_full: string;
+  street: string;
+  number: string;
 }
 
 type StatusKey = 'Na Planta' | 'Em Obras' | 'Pronto' | 'Lançamento' | string;
@@ -215,10 +218,21 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
         )}
         <h3 style={{
           fontSize: '13px', fontWeight: '700', color: 'var(--text)',
-          lineHeight: 1.35, marginBottom: '10px', flex: 1,
+          lineHeight: 1.35, marginBottom: b.address_full ? '4px' : '10px', flex: b.address_full ? 0 : 1,
         }}>
           {b.name}
         </h3>
+
+        {/* Endereço */}
+        {b.address_full && (
+          <p style={{
+            fontSize: '10px', color: 'var(--text-faint)', fontWeight: '500',
+            marginBottom: '10px', flex: 1,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            📍 {b.address_full}
+          </p>
+        )}
 
         {/* Specs: m² / quartos / banheiros / vagas */}
         {specs.length > 0 && (
@@ -360,6 +374,18 @@ function stripFmt(formatted: string): string {
 // ──────────────────────────────────────────────────────────────────────────────
 // Main content (needs Suspense for useSearchParams)
 // ──────────────────────────────────────────────────────────────────────────────
+// Parse "Bairro, Cidade – SP" or "Cidade – SP" from datalist selection
+function parseLocation(search: string): { neighborhood: string; city: string; state: string } | null {
+  const s = search.trim();
+  // "Moema, São Paulo – SP"
+  const nbMatch = s.match(/^(.+?),\s*(.+?)\s*[–\-]\s*([A-Z]{2})$/);
+  if (nbMatch) return { neighborhood: nbMatch[1].trim(), city: nbMatch[2].trim(), state: nbMatch[3].trim() };
+  // "Guarulhos – SP"
+  const cityMatch = s.match(/^(.+?)\s*[–\-]\s*([A-Z]{2})$/);
+  if (cityMatch) return { neighborhood: '', city: cityMatch[1].trim(), state: cityMatch[2].trim() };
+  return null;
+}
+
 function ImoveisContent() {
   const searchParams = useSearchParams();
   const minParam = searchParams.get('min') || '';
@@ -398,7 +424,18 @@ function ImoveisContent() {
     try {
       const params = new URLSearchParams();
       params.set('page', String(p));
-      params.set('state', 'SP'); // busca em todo o estado SP; city vem do q
+      // Parse localização estruturada do datalist ("Bairro, Cidade – SP")
+      const parsed = localSearch.trim() ? parseLocation(localSearch) : null;
+      if (parsed) {
+        if (parsed.state)        params.set('state', parsed.state);
+        if (parsed.city)         params.set('city', parsed.city);
+        if (parsed.neighborhood) params.set('neighborhood', parsed.neighborhood);
+        // q não necessário quando parsed — evita full-text que ignora localização
+      } else {
+        params.set('state', 'SP');
+        // localSearch livre vai como q (ex: nome do empreendimento, bairro sem cidade)
+        if (localSearch.trim()) params.set('q', localSearch.trim());
+      }
       if (minPrice) params.set('min_price', minPrice);
       if (maxPrice) params.set('max_price', maxPrice);
 
