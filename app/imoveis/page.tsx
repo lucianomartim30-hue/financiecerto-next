@@ -846,4 +846,45 @@ function ImoveisContent() {
               },
               {
                 q: 'O que é melhor: comprar na planta ou pronto?',
-                a: 'Na planta oferece preço de lança
+                a: 'Na planta oferece preço de lançamento (menor) e entrada parcelada durante a obra. Pronto permite financiamento imediato e mudança imediata. Na planta tem risco de obra e prazo; pronto tem liquidez maior. Use o simulador para comparar parcelas.',
+              },
+              {
+                q: 'Posso usar o FGTS para comprar apartamento em SP?',
+                a: 'Sim, desde que você seja cotista há pelo menos 3 anos, seja o primeiro imóvel financiado e não possua outro imóvel no município onde reside ou trabalha. O FGTS pode ser usado como entrada em imóveis de até R$ 2,25 milhões (SFH).',
+              },
+            ].map(({ q, a }, i) => (
+              <div key={i} style={{
+                padding: '16px 18px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+              }}>
+                <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>
+                  {q}
+                </p>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.7, margin: 0 }}>
+                  {a}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Export (Suspense boundary for useSearchParams)
+// ──────────────────────────────────────────────────────────────────────────────
+export default function ImoveisPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: '80px 24px', textAlign: 'center', color: 'var(--text-faint)' }}>
+        Carregando imóveis...
+      </div>
+    }>
+      <ImoveisContent />
+    </Suspense>
+  );
+}

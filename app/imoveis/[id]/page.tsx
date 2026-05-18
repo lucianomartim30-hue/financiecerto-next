@@ -486,4 +486,141 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
                       <tr>
                         {[
                           'Tipo',
-                          imovel.typologies.some(t
+                          imovel.typologies.some(t => t.bedrooms) && '🛏 Quartos',
+                          hasSuites && '🛁 Suítes',
+                          imovel.typologies.some(t => t.bathrooms) && '🚿 Ban.',
+                          hasVagas && '🚗 Vagas',
+                          'Área',
+                          hasPrivate && 'Área Priv.',
+                          hasTotal && 'Área Total',
+                          'Preço',
+                        ].filter(Boolean).map(h => (
+                          <th key={h as string} style={{ textAlign: 'left', padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', whiteSpace: 'nowrap' }}>
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {imovel.typologies.map((t, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-card)' }}>
+                          <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: '600', whiteSpace: 'nowrap' }}>{t.type}</td>
+                          {imovel.typologies.some(x => x.bedrooms) && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'center' }}>{t.bedrooms ?? '—'}</td>}
+                          {hasSuites && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'center' }}>{t.suites ?? '—'}</td>}
+                          {imovel.typologies.some(x => x.bathrooms) && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'center' }}>{t.bathrooms ?? '—'}</td>}
+                          {hasVagas && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'center' }}>{t.vagas ?? '—'}</td>}
+                          <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>{t.area || '—'}</td>
+                          {hasPrivate && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>{t.private_area || '—'}</td>}
+                          {hasTotal && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>{t.total_area || '—'}</td>}
+                          <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--primary)', fontWeight: '700', whiteSpace: 'nowrap' }}>{t.price}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Plantas */}
+            {imovel.blueprints.length > 0 && (
+              <div style={{ marginBottom: '28px' }}>
+                <SectionTitle>Plantas</SectionTitle>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                  {imovel.blueprints.map((bp, i) => (
+                    <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={bp.url} alt={bp.name || `Planta ${i + 1}`} style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
+                      {bp.name && (
+                        <p style={{ padding: '8px 12px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>{bp.name}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Mapa */}
+            {imovel.latitude && imovel.longitude && (
+              <div style={{ marginBottom: '28px' }}>
+                <SectionTitle>Localização</SectionTitle>
+                <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', height: '280px' }}>
+                  <iframe
+                    title="Localização do imóvel"
+                    width="100%"
+                    height="280"
+                    style={{ border: 0, display: 'block' }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://maps.google.com/maps?q=${imovel.latitude},${imovel.longitude}&z=16&output=embed`}
+                  />
+                </div>
+                {imovel.address_full && (
+                  <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginTop: '8px' }}>📍 {imovel.address_full}</p>
+                )}
+              </div>
+            )}
+
+            {/* Incorporadora */}
+            {(imovel.developer_logo || imovel.developer) && (
+              <div style={{ marginBottom: '28px', padding: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                {imovel.developer_logo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imovel.developer_logo} alt={imovel.developer} style={{ height: '48px', objectFit: 'contain', maxWidth: '120px' }} />
+                )}
+                <div>
+                  <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '4px' }}>Incorporadora</p>
+                  <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)' }}>{imovel.developer}</p>
+                  {imovel.developer_website && (
+                    <a href={imovel.developer_website} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}>
+                      Ver site ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Coluna direita: preço + CTAs + simulador ─────────────────────── */}
+          <div style={{ position: 'sticky', top: '80px' }}>
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginBottom: '4px' }}>A partir de</p>
+              <p style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text)', fontVariantNumeric: 'tabular-nums', lineHeight: 1, marginBottom: '4px' }}>
+                {imovel.min_price ? formatBRL(imovel.min_price) : 'Consultar'}
+              </p>
+              {imovel.max_price && imovel.max_price !== imovel.min_price && (
+                <p style={{ fontSize: '13px', color: 'var(--text-faint)', marginBottom: '8px' }}>até {formatBRL(imovel.max_price)}</p>
+              )}
+              {specs.length > 0 && (
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', padding: '12px 0', margin: '8px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                  {specs.map(({ icon, label }, i) => (
+                    <span key={i} style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>{icon} {label}</span>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
+                <a
+                  href={`https://wa.me/5511933661403?text=${waMsg}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#25D366', color: '#fff', textDecoration: 'none', fontSize: '14px', fontWeight: '800', padding: '13px', borderRadius: '12px', boxShadow: '0 4px 16px rgba(37,211,102,.3)' }}
+                >
+                  💬 Falar com corretor
+                </a>
+                {imovel.sharing_url && (
+                  <a
+                    href={imovel.sharing_url}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1.5px solid var(--border)', color: 'var(--text-muted)', textDecoration: 'none', fontSize: '13px', fontWeight: '600', padding: '11px', borderRadius: '12px', background: 'var(--bg)' }}
+                  >
+                    Ver no site da incorporadora ↗
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {imovel.min_price && <SimuladorEmbutido valorImovel={imovel.min_price} />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

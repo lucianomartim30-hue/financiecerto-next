@@ -126,4 +126,62 @@ export async function GET(
         bedrooms: (t.bedrooms ?? t.rooms ?? null) as number | null,
         bathrooms: (t.bathrooms ?? t.baths ?? null) as number | null,
         vagas: (t.garages ?? t.parking_spots ?? t.vagas ?? null) as number | null,
-        
+        suites: (t.suites ?? null) as number | null,
+        area: t.area ? `${t.area} m²` : (t.private_area ? `${t.private_area} m²` : ''),
+        private_area: t.private_area ? `${t.private_area} m²` : '',
+        total_area: t.total_area ? `${t.total_area} m²` : '',
+        price: t.price ? `R$ ${Number(t.price).toLocaleString('pt-BR')}` : 'Consultar',
+        photo: tImg ? pickUrl(tImg) : null,
+        blueprint: tBp ? pickUrl(tBp) : null,
+      };
+    });
+
+    // Coordenadas (para mapa)
+    const latitude = (address.latitude ?? b.latitude ?? null) as number | null;
+    const longitude = (address.longitude ?? b.longitude ?? null) as number | null;
+
+    // Previsão de entrega
+    const delivery_date = (b.delivery_date ?? b.ready_at ?? b.expected_delivery ?? b.delivered_at ?? null) as string | null;
+
+    // CEP
+    const zipcode = (address.zipcode ?? address.zip ?? address.postal_code ?? '') as string;
+
+    return NextResponse.json({
+      id: String(b.id),
+      name: (b.name as string) || 'Empreendimento',
+      developer,
+      developer_logo,
+      developer_website,
+      min_price: (b.min_price as number) ?? null,
+      max_price: (b.max_price as number) ?? null,
+      bedrooms_min: (b.min_bedrooms as number) ?? null,
+      bedrooms_max: (b.max_bedrooms as number) ?? null,
+      area_min: (b.min_area as number) ?? null,
+      area_max: (b.max_area as number) ?? null,
+      bathrooms_min: (b.min_bathrooms as number) ?? null,
+      bathrooms_max: (b.max_bathrooms as number) ?? null,
+      vagas_min: (b.min_parking_spots as number) ?? (b.min_garages as number) ?? (b.parking_spots_min as number) ?? null,
+      vagas_max: (b.max_parking_spots as number) ?? (b.max_garages as number) ?? (b.parking_spots_max as number) ?? null,
+      neighborhood: (address.area ?? address.neighborhood ?? '') as string,
+      city: (address.city ?? '') as string,
+      state: (address.state ?? '') as string,
+      zipcode,
+      address_full: [address.street, address.number, address.area ?? address.neighborhood, address.city].filter(Boolean).join(', '),
+      latitude,
+      longitude,
+      status: (b.status as string) || '',
+      delivery_date,
+      description: (b.description as string) || '',
+      photos,
+      blueprints,
+      amenities,
+      typologies,
+      sharing_url: (b.sharing_url as string) || null,
+    });
+
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+    console.error(`[api/orulo/${id}]`, msg);
+    return NextResponse.json({ error: 'Erro ao buscar imóvel.' }, { status: 500 });
+  }
+}
