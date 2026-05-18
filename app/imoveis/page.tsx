@@ -377,6 +377,31 @@ function stripFmt(formatted: string): string {
 // ──────────────────────────────────────────────────────────────────────────────
 interface BuildingSuggestion { id: string; name: string; neighborhood: string; city: string; }
 
+// Lista estática de bairros de SP e RMSP — garante autocomplete mesmo sem fetch
+const BAIRROS_SP_STATIC = [
+  // Centro
+  'Sé','República','Liberdade','Bela Vista','Consolação','Higienópolis','Santa Cecília','Bom Retiro',
+  // Oeste
+  'Pinheiros','Vila Madalena','Lapa','Perdizes','Pompeia','Pacaembu','Butantã','Alto de Pinheiros',
+  'Itaim Bibi','Vila Olímpia','Vila Hamburguesa','Barra Funda','Sumaré',
+  // Sul
+  'Moema','Brooklin','Campo Belo','Santo Amaro','Jabaquara','Saúde','Vila Mariana','Ipiranga',
+  'Cursino','Sacomã','Interlagos','Campo Grande','Cidade Dutra',
+  // Norte
+  'Santana','Tucuruvi','Casa Verde','Cachoeirinha','Mandaqui','Vila Maria','Vila Guilherme',
+  'Pirituba','Jaraguá','Tremembé',
+  // Leste
+  'Tatuapé','Mooca','Belém','Penha','Vila Matilde','Itaquera','São Mateus','Vila Prudente',
+  'Vila Carrão','Aricanduva','Vila Formosa',
+  // Jardins e adjacentes
+  'Jardins','Cerqueira César','Paraíso','Aclimação','Vila Clementino',
+  // Grande ABC
+  'Santo André','São Bernardo do Campo','São Caetano do Sul','Diadema','Mauá','Ribeirão Pires',
+  // Outros municípios RMSP
+  'Guarulhos','Osasco','Barueri','Alphaville','Santana de Parnaíba','Cotia',
+  'Taboão da Serra','Carapicuíba','Mogi das Cruzes','Suzano','Embu das Artes',
+];
+
 function LocationAutocomplete({
   value,
   onConfirm,
@@ -403,7 +428,12 @@ function LocationAutocomplete({
       try {
         const res = await fetch(`/api/orulo?q=${encodeURIComponent(q)}&state=SP`);
         const data = await res.json();
-        setBuildingSugg((data.buildings || []).slice(0, 5));
+        // Filtrar APENAS imóveis cujo NOME contém o texto digitado
+        // (q= na Orulo busca por relevância, não só por nome exato)
+        const filtered = (data.buildings || []).filter(
+          (b: BuildingSuggestion) => b.name.toLowerCase().includes(q)
+        );
+        setBuildingSugg(filtered.slice(0, 5));
       } catch { setBuildingSugg([]); }
     }, 350);
     return () => clearTimeout(timer);
@@ -419,8 +449,12 @@ function LocationAutocomplete({
   }, []);
 
   const q = input.trim().toLowerCase();
+  // Usa sugestões dinâmicas (da API) se disponíveis, senão cai no estático
+  const neighborhoodSource = locationSuggestions.length > 10
+    ? locationSuggestions
+    : BAIRROS_SP_STATIC.map(n => `${n}, São Paulo – SP`);
   const matchingNeighborhoods = q.length >= 2
-    ? locationSuggestions.filter(s => s.toLowerCase().includes(q)).slice(0, 6)
+    ? neighborhoodSource.filter(s => s.toLowerCase().includes(q)).slice(0, 6)
     : [];
 
   const hasResults = matchingNeighborhoods.length > 0 || buildingSugg.length > 0;
