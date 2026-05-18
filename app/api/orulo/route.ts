@@ -75,6 +75,15 @@ function normalizeBuilding(b: Record<string, unknown>) {
   };
 }
 
+// Mapa de status canônico → valores aceitos pela Orulo API (situation param)
+function toOruloSituation(status: string): string {
+  const s = status.toLowerCase();
+  if (s === 'na planta' || s === 'lançamento' || s === 'lancamento') return 'planta';
+  if (s === 'em obras')   return 'construcao';
+  if (s === 'pronto')     return 'pronto';
+  return '';
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -109,13 +118,19 @@ export async function GET(req: NextRequest) {
     const token = await getToken();
     const qs = new URLSearchParams();
     qs.set('page',     String(page));
-    qs.set('per_page', '50');
+    // Aumenta per_page quando filtros server-side estão ativos (status, neighborhood)
+    const hasServerFilters = !!(statusReq || neighborhood);
+    qs.set('per_page', hasServerFilters ? '200' : '50');
     if (minPrice)                          qs.set('min_price',    minPrice);
     if (maxPrice)                          qs.set('max_price',    maxPrice);
     if (state)                             qs.set('state',        state);
     if (city)                              qs.set('city',         city);
     if (bedroomsMin)                       qs.set('min_bedrooms', bedroomsMin);
     if (bedroomsMax && bedroomsMax !== '99') qs.set('max_bedrooms', bedroomsMax);
+    if (statusReq) {
+      const sit = toOruloSituation(statusReq);
+      if (sit) qs.set('situation', sit); // tenta filtrar na Orulo diretamente
+    }
     if (neighborhood) {
       // Orulo não tem filtro nativo de bairro — usamos q= com o nome do bairro
       // + per_page maior para ter mais resultados antes de filtrar server-side

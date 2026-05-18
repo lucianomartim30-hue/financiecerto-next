@@ -433,8 +433,13 @@ function ImoveisContent() {
         // q não necessário quando parsed — evita full-text que ignora localização
       } else {
         params.set('state', 'SP');
-        // localSearch livre vai como q (ex: nome do empreendimento, bairro sem cidade)
-        if (localSearch.trim()) params.set('q', localSearch.trim());
+        if (localSearch.trim()) {
+          // Trata texto livre como busca de bairro em São Paulo
+          // (usuário digitou sem selecionar do autocomplete)
+          params.set('q',            localSearch.trim());
+          params.set('neighborhood', localSearch.trim());
+          params.set('city',         'São Paulo');
+        }
       }
       if (minPrice) params.set('min_price', minPrice);
       if (maxPrice) params.set('max_price', maxPrice);
