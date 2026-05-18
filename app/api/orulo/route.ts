@@ -96,7 +96,10 @@ export async function GET(req: NextRequest) {
       if (bedroomsMin)                       buildings = buildings.filter(b => (b.bedrooms_max ?? 0) >= Number(bedroomsMin));
       if (bedroomsMax && bedroomsMax !== '99') buildings = buildings.filter(b => (b.bedrooms_min ?? 0) <= Number(bedroomsMax));
       if (statusReq)                         buildings = buildings.filter(b => b.status_norm === statusReq);
-      if (q) {
+      if (neighborhood) {
+        const nl = neighborhood.toLowerCase();
+        buildings = buildings.filter(b => (b.neighborhood || '').toLowerCase().includes(nl));
+      } else if (q) {
         const ql = q.toLowerCase();
         buildings = buildings.filter(b => [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase().includes(ql));
       }
@@ -113,8 +116,14 @@ export async function GET(req: NextRequest) {
     if (city)                              qs.set('city',         city);
     if (bedroomsMin)                       qs.set('min_bedrooms', bedroomsMin);
     if (bedroomsMax && bedroomsMax !== '99') qs.set('max_bedrooms', bedroomsMax);
-    if (q)                                 qs.set('q',            q);
-    if (neighborhood)                       qs.set('neighborhood',  neighborhood);
+    if (neighborhood) {
+      // Orulo não tem filtro nativo de bairro — usamos q= com o nome do bairro
+      // + per_page maior para ter mais resultados antes de filtrar server-side
+      qs.set('q',        neighborhood);
+      qs.set('per_page', '100');
+    } else {
+      if (q) qs.set('q', q);
+    }
 
     const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -126,6 +135,15 @@ export async function GET(req: NextRequest) {
     let buildings = rawList.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
 
     if (statusReq) buildings = buildings.filter(b => b.status_norm === statusReq);
+
+    // Filtro server-side de bairro — garante que só bairros corretos passem
+    if (neighborhood) {
+      const nb = neighborhood.toLowerCase();
+      buildings = buildings.filter(b =>
+        (b.neighborhood || '').toLowerCase().includes(nb) ||
+        (b.name        || '').toLowerCase().includes(nb)
+      );
+    }
 
     return NextResponse.json({
       buildings,
