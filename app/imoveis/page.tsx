@@ -374,17 +374,6 @@ function stripFmt(formatted: string): string {
 // ──────────────────────────────────────────────────────────────────────────────
 // Main content (needs Suspense for useSearchParams)
 // ──────────────────────────────────────────────────────────────────────────────
-// Parse "Bairro, Cidade – SP" or "Cidade – SP" from datalist selection
-function parseLocation(search: string): { neighborhood: string; city: string; state: string } | null {
-  const s = search.trim();
-  // "Moema, São Paulo – SP"
-  const nbMatch = s.match(/^(.+?),\s*(.+?)\s*[–\-]\s*([A-Z]{2})$/);
-  if (nbMatch) return { neighborhood: nbMatch[1].trim(), city: nbMatch[2].trim(), state: nbMatch[3].trim() };
-  // "Guarulhos – SP"
-  const cityMatch = s.match(/^(.+?)\s*[–\-]\s*([A-Z]{2})$/);
-  if (cityMatch) return { neighborhood: '', city: cityMatch[1].trim(), state: cityMatch[2].trim() };
-  return null;
-}
 
 function ImoveisContent() {
   const searchParams = useSearchParams();
@@ -406,7 +395,7 @@ function ImoveisContent() {
 
   // UI state do painel
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
+
 
   // Data
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
@@ -424,23 +413,8 @@ function ImoveisContent() {
     try {
       const params = new URLSearchParams();
       params.set('page', String(p));
-      // Parse localização estruturada do datalist ("Bairro, Cidade – SP")
-      const parsed = localSearch.trim() ? parseLocation(localSearch) : null;
-      if (parsed) {
-        if (parsed.state)        params.set('state', parsed.state);
-        if (parsed.city)         params.set('city', parsed.city);
-        if (parsed.neighborhood) params.set('neighborhood', parsed.neighborhood);
-        // q não necessário quando parsed — evita full-text que ignora localização
-      } else {
-        params.set('state', 'SP');
-        if (localSearch.trim()) {
-          // Trata texto livre como busca de bairro em São Paulo
-          // (usuário digitou sem selecionar do autocomplete)
-          params.set('q',            localSearch.trim());
-          params.set('neighborhood', localSearch.trim());
-          params.set('city',         'São Paulo');
-        }
-      }
+      params.set('state', 'SP');
+
       if (minPrice) params.set('min_price', minPrice);
       if (maxPrice) params.set('max_price', maxPrice);
 
@@ -455,10 +429,10 @@ function ImoveisContent() {
         }
       }
 
-      // Filtro de estágio → API
+      // Filtro de estágio → API (server-side na rota)
       if (statusFilter !== 'todos') params.set('status', statusFilter);
 
-      // Busca textual → API
+      // Busca textual → q= para pesquisar nome do empreendimento
       if (localSearch.trim()) params.set('q', localSearch.trim());
 
       const res = await fetch(`/api/orulo?${params}`);
@@ -480,16 +454,6 @@ function ImoveisContent() {
 
   // Re-fetch sempre que qualquer filtro de API mudar
   useEffect(() => { buscar(1); }, [buscar]);
-
-  // Carrega sugestões de localização da API
-  useEffect(() => {
-    fetch('/api/orulo/bairros')
-      .then(r => r.json())
-      .then(d => {
-        if (d.locations) setLocationSuggestions(d.locations.map((l: { label: string }) => l.label));
-      })
-      .catch(() => {});
-  }, []);
 
   // Ordenação local (não precisa re-fetch)
   const imoveisFiltrados = [...imoveis].sort((a, bx) => {
@@ -600,11 +564,10 @@ function ImoveisContent() {
               <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
               <input
                 type="text"
-                list="location-suggestions"
                 value={localSearchInput}
                 onChange={e => setLocalSearchInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && (aplicarPreco(), aplicarBusca())}
-                placeholder="Bairro, cidade ou empreendimento..."
+                placeholder="Buscar por nome do empreendimento..."
                 style={{
                   padding: '10px 12px 10px 34px', border: '1.5px solid var(--border)',
                   borderRadius: '10px', fontSize: '13px', width: '100%',
@@ -612,11 +575,6 @@ function ImoveisContent() {
                   color: 'var(--text)', fontFamily: 'inherit',
                 }}
               />
-              {locationSuggestions.length > 0 && (
-                <datalist id="location-suggestions">
-                  {locationSuggestions.map(s => <option key={s} value={s} />)}
-                </datalist>
-              )}
             </div>
 
             {/* Buscar */}
