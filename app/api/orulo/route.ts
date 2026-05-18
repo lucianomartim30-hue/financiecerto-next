@@ -117,26 +117,21 @@ export async function GET(req: NextRequest) {
 
     const token = await getToken();
     const qs = new URLSearchParams();
-    qs.set('page',     String(page));
-    // Aumenta per_page quando filtros server-side estão ativos (status, neighborhood)
-    const hasServerFilters = !!(statusReq || neighborhood);
-    qs.set('per_page', hasServerFilters ? '200' : '50');
-    if (minPrice)                          qs.set('min_price',    minPrice);
-    if (maxPrice)                          qs.set('max_price',    maxPrice);
-    if (state)                             qs.set('state',        state);
-    if (city)                              qs.set('city',         city);
-    if (bedroomsMin)                       qs.set('min_bedrooms', bedroomsMin);
+    qs.set('page', String(page));
+    // Aumenta per_page quando filtros server-side ativos (status/neighborhood precisam de amostra maior)
+    qs.set('per_page', (statusReq || neighborhood) ? '200' : '50');
+
+    // Params conhecidos e suportados pela Orulo API v2
+    if (minPrice)                            qs.set('min_price',    minPrice);
+    if (maxPrice)                            qs.set('max_price',    maxPrice);
+    if (state)                               qs.set('state',        state);
+    if (city)                                qs.set('city',         city);
+    if (bedroomsMin)                         qs.set('min_bedrooms', bedroomsMin);
     if (bedroomsMax && bedroomsMax !== '99') qs.set('max_bedrooms', bedroomsMax);
-    if (statusReq) {
-      const sit = toOruloSituation(statusReq);
-      if (sit) qs.set('situation', sit); // tenta filtrar na Orulo diretamente
-    }
-    if (q) qs.set('q', q);
-    if (neighborhood) {
-      // Tenta filtro nativo de bairro na Orulo (area / neighborhood param)
-      qs.set('area', neighborhood);
-      qs.set('neighborhood', neighborhood);
-    }
+    if (q)                                   qs.set('q',            q);
+    // Nota: NÃO passamos situation/area/neighborhood para a Orulo — parâmetros não
+    // documentados que podem invalidar a query e retornar 0 resultados.
+    // Todos os filtros de bairro e estágio são aplicados server-side abaixo.
 
     const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -147,20 +142,36 @@ export async function GET(req: NextRequest) {
     const rawList = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
     let buildings = rawList.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
 
-    if (statusReq) buildings = buildings.filter(b => b.status_norm === statusReq);
+    // ── Filtros server-side com cascade de fallback ──────────────────────────
+    // Estratégia: tenta o filtro mais restrito primeiro; se zerar, afrouxa.
+    // Prioridade: (bairro + status) → (bairro) → (status) → (sem filtro extra)
 
-    // Filtro server-side de bairro com degradação graceful
-    if (neighborhood) {
+    const byNeighborhood = (list: typeof buildings) => {
+      if (!neighborhood) return list;
       const nb = neighborhood.toLowerCase();
-      const filtered = buildings.filter(b =>
-        (b.neighborhood || '').toLowerCase().includes(nb)
-      );
-      // Só aplica o filtro se restar algum resultado — evita retornar 0
-      // quando Orulo não retornou o campo neighborhood corretamente
-      if (filtered.length > 0) {
-        buildings = filtered;
+      return list.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
+    };
+
+    const byStatus = (list: typeof buildings) => {
+      if (!statusReq) return list;
+      return list.filter(b => b.status_norm === statusReq);
+    };
+
+    if (neighborhood || statusReq) {
+      // Tenta os dois filtros juntos
+      const strict = byStatus(byNeighborhood(buildings));
+      if (strict.length > 0) {
+        buildings = strict;
+      } else if (neighborhood) {
+        // Relaxa status, mantém bairro
+        const nbOnly = byNeighborhood(buildings);
+        buildings = nbOnly.length > 0 ? nbOnly : byStatus(buildings);
+      } else {
+        // Só status, sem bairro
+        const stOnly = byStatus(buildings);
+        if (stOnly.length > 0) buildings = stOnly;
+        // Se stOnly=0 também: mantém todos (a amostra de 200 talvez não cobriu esse status)
       }
-      // Se filtered=0: retorna todos os resultados da cidade (melhor que zero)
     }
 
     return NextResponse.json({
