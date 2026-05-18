@@ -377,29 +377,35 @@ function stripFmt(formatted: string): string {
 // ──────────────────────────────────────────────────────────────────────────────
 interface BuildingSuggestion { id: string; name: string; neighborhood: string; city: string; }
 
-// Lista estática de bairros de SP e RMSP — garante autocomplete mesmo sem fetch
-const BAIRROS_SP_STATIC = [
-  // Centro
-  'Sé','República','Liberdade','Bela Vista','Consolação','Higienópolis','Santa Cecília','Bom Retiro',
-  // Oeste
-  'Pinheiros','Vila Madalena','Lapa','Perdizes','Pompeia','Pacaembu','Butantã','Alto de Pinheiros',
-  'Itaim Bibi','Vila Olímpia','Vila Hamburguesa','Barra Funda','Sumaré',
-  // Sul
-  'Moema','Brooklin','Campo Belo','Santo Amaro','Jabaquara','Saúde','Vila Mariana','Ipiranga',
-  'Cursino','Sacomã','Interlagos','Campo Grande','Cidade Dutra',
-  // Norte
-  'Santana','Tucuruvi','Casa Verde','Cachoeirinha','Mandaqui','Vila Maria','Vila Guilherme',
-  'Pirituba','Jaraguá','Tremembé',
-  // Leste
-  'Tatuapé','Mooca','Belém','Penha','Vila Matilde','Itaquera','São Mateus','Vila Prudente',
-  'Vila Carrão','Aricanduva','Vila Formosa',
-  // Jardins e adjacentes
-  'Jardins','Cerqueira César','Paraíso','Aclimação','Vila Clementino',
-  // Grande ABC
-  'Santo André','São Bernardo do Campo','São Caetano do Sul','Diadema','Mauá','Ribeirão Pires',
-  // Outros municípios RMSP
-  'Guarulhos','Osasco','Barueri','Alphaville','Santana de Parnaíba','Cotia',
-  'Taboão da Serra','Carapicuíba','Mogi das Cruzes','Suzano','Embu das Artes',
+// Lista de bairros SP + municípios RMSP para o autocomplete (offline, sem fetch)
+// Formato: "Nome, Cidade – SP" para bairros / "Cidade – SP" para municípios
+const LOCATION_STATIC = [
+  // Municípios da RMSP (cidade nível)
+  'São Paulo – SP','Guarulhos – SP','Osasco – SP','Barueri – SP','Alphaville – SP',
+  'Santo André – SP','São Bernardo do Campo – SP','São Caetano do Sul – SP',
+  'Diadema – SP','Mauá – SP','Ribeirão Pires – SP','Rio Grande da Serra – SP',
+  'Santana de Parnaíba – SP','Cotia – SP','Taboão da Serra – SP','Carapicuíba – SP',
+  'Mogi das Cruzes – SP','Suzano – SP','Embu das Artes – SP','Itaquaquecetuba – SP',
+  // Bairros de São Paulo
+  'Moema, São Paulo – SP','Itaim Bibi, São Paulo – SP','Brooklin, São Paulo – SP',
+  'Campo Belo, São Paulo – SP','Vila Olímpia, São Paulo – SP','Pinheiros, São Paulo – SP',
+  'Vila Madalena, São Paulo – SP','Perdizes, São Paulo – SP','Lapa, São Paulo – SP',
+  'Santo Amaro, São Paulo – SP','Vila Mariana, São Paulo – SP','Ipiranga, São Paulo – SP',
+  'Jabaquara, São Paulo – SP','Saúde, São Paulo – SP','Cursino, São Paulo – SP',
+  'Sacomã, São Paulo – SP','Interlagos, São Paulo – SP','Campo Grande, São Paulo – SP',
+  'Santana, São Paulo – SP','Tatuapé, São Paulo – SP','Mooca, São Paulo – SP',
+  'Penha, São Paulo – SP','Vila Matilde, São Paulo – SP','Itaquera, São Paulo – SP',
+  'São Mateus, São Paulo – SP','Vila Prudente, São Paulo – SP','Aricanduva, São Paulo – SP',
+  'Vila Formosa, São Paulo – SP','Vila Carrão, São Paulo – SP',
+  'Tucuruvi, São Paulo – SP','Casa Verde, São Paulo – SP','Cachoeirinha, São Paulo – SP',
+  'Vila Maria, São Paulo – SP','Vila Guilherme, São Paulo – SP','Pirituba, São Paulo – SP',
+  'Jardins, São Paulo – SP','Cerqueira César, São Paulo – SP','Paraíso, São Paulo – SP',
+  'Bela Vista, São Paulo – SP','Consolação, São Paulo – SP','Higienópolis, São Paulo – SP',
+  'Santa Cecília, São Paulo – SP','República, São Paulo – SP','Liberdade, São Paulo – SP',
+  'Butantã, São Paulo – SP','Alto de Pinheiros, São Paulo – SP','Pacaembu, São Paulo – SP',
+  'Pompeia, São Paulo – SP','Barra Funda, São Paulo – SP','Sumaré, São Paulo – SP',
+  'Vila Hamburguesa, São Paulo – SP','Vila Leopoldina, São Paulo – SP',
+  'Aclimação, São Paulo – SP','Vila Clementino, São Paulo – SP','Tremembé, São Paulo – SP',
 ];
 
 function LocationAutocomplete({
@@ -411,33 +417,13 @@ function LocationAutocomplete({
   onConfirm: (v: string) => void;
   locationSuggestions: string[];
 }) {
-  const router = useRouter();
   const [input, setInput] = useState(value);
   const [open, setOpen] = useState(false);
-  const [buildingSugg, setBuildingSugg] = useState<BuildingSuggestion[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Sync externo
   useEffect(() => { setInput(value); }, [value]);
 
-  // Debounced building search via API
-  useEffect(() => {
-    const q = input.trim();
-    if (q.length < 2) { setBuildingSugg([]); return; }
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/orulo?q=${encodeURIComponent(q)}&state=SP`);
-        const data = await res.json();
-        // Filtrar APENAS imóveis cujo NOME contém o texto digitado
-        // (q= na Orulo busca por relevância, não só por nome exato)
-        const filtered = (data.buildings || []).filter(
-          (b: BuildingSuggestion) => b.name.toLowerCase().includes(q)
-        );
-        setBuildingSugg(filtered.slice(0, 5));
-      } catch { setBuildingSugg([]); }
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [input]);
 
   // Fecha ao clicar fora
   useEffect(() => {
@@ -452,22 +438,17 @@ function LocationAutocomplete({
   // Usa sugestões dinâmicas (da API) se disponíveis, senão cai no estático
   const neighborhoodSource = locationSuggestions.length > 10
     ? locationSuggestions
-    : BAIRROS_SP_STATIC.map(n => `${n}, São Paulo – SP`);
+    : LOCATION_STATIC;
   const matchingNeighborhoods = q.length >= 2
-    ? neighborhoodSource.filter(s => s.toLowerCase().includes(q)).slice(0, 6)
+    ? neighborhoodSource.filter(s => s.toLowerCase().includes(q)).slice(0, 8)
     : [];
 
-  const hasResults = matchingNeighborhoods.length > 0 || buildingSugg.length > 0;
+  const hasResults = matchingNeighborhoods.length > 0;
 
   function selectNeighborhood(label: string) {
     setInput(label);
     setOpen(false);
     onConfirm(label);
-  }
-
-  function selectBuilding(b: BuildingSuggestion) {
-    setOpen(false);
-    router.push(`/imoveis/${b.id}`);
   }
 
   return (
@@ -485,7 +466,7 @@ function LocationAutocomplete({
           if (e.key === 'Enter') { setOpen(false); onConfirm(input); }
           if (e.key === 'Escape') setOpen(false);
         }}
-        placeholder="Bairro, cidade ou empreendimento..."
+        placeholder="Bairro ou cidade..."
         style={{
           padding: '10px 12px 10px 34px', border: '1.5px solid var(--border)',
           borderRadius: '10px', fontSize: '13px', width: '100%',
@@ -531,39 +512,7 @@ function LocationAutocomplete({
               })}
             </div>
           )}
-          {buildingSugg.length > 0 && (
-            <div style={{ borderTop: matchingNeighborhoods.length > 0 ? '1px solid var(--border)' : 'none' }}>
-              <div style={{
-                padding: '8px 14px 4px', fontSize: '10px', fontWeight: '800',
-                color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px',
-                display: 'flex', alignItems: 'center', gap: '6px',
-              }}>
-                <span style={{ fontSize: '12px' }}>🏙️</span> Imóveis
-              </div>
-              {buildingSugg.map(b => (
-                <button
-                  key={b.id}
-                  onMouseDown={e => { e.preventDefault(); selectBuilding(b); }}
-                  style={{
-                    display: 'block', width: '100%', textAlign: 'left',
-                    padding: '9px 14px 9px 22px', background: 'none',
-                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                >
-                  <span style={{ display: 'block', fontSize: '13px', color: 'var(--text)', fontWeight: '600' }}>
-                    {b.name}
-                  </span>
-                  {(b.neighborhood || b.city) && (
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {[b.neighborhood, b.city].filter(Boolean).join(', ')}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
+
         </div>
       )}
     </div>
@@ -636,10 +585,8 @@ function ImoveisContent() {
           params.set('city',         structured[2].trim());
           params.set('neighborhood', structured[1].trim());
         } else if (cityOnly) {
+          // Município da RMSP (ex: "Guarulhos")
           params.set('city', cityOnly[1].trim());
-        } else if (txt.startsWith('#')) {
-          // # prefixo = busca por nome de empreendimento
-          params.set('q', txt.slice(1).trim());
         } else {
           // Texto livre → assume bairro de São Paulo
           params.set('city',         'São Paulo');
@@ -1117,118 +1064,6 @@ function ImoveisContent() {
           </div>
         )}
 
-        {/* ── SEO: Bairros populares ───────────────────────────────────────── */}
-        <div style={{ marginTop: '64px', borderTop: '1px solid var(--border)', paddingTop: '48px' }}>
-          <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text)', marginBottom: '8px' }}>
-            Buscar imóveis por região em São Paulo e Grande SP
-          </h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.65 }}>
-            Explore apartamentos à venda em toda a Região Metropolitana — capital, ABC Paulista, Guarulhos, Osasco e mais.
-          </p>
-
-          {/* Grupos de regiões */}
-          {[
-            {
-              titulo: 'São Paulo – Zona Sul & Oeste',
-              bairros: ['Moema','Itaim Bibi','Brooklin','Campo Belo','Vila Olímpia',
-                'Pinheiros','Vila Madalena','Perdizes','Lapa','Santo Amaro','Vila Mariana'],
-            },
-            {
-              titulo: 'São Paulo – Zona Norte & Leste',
-              bairros: ['Santana','Tatuapé','Mooca','Penha','Vila Maria',
-                'Casa Verde','Tucuruvi','Aricanduva','Vila Prudente','Itaquera'],
-            },
-            {
-              titulo: 'São Paulo – Centro',
-              bairros: ['Consolação','Bela Vista','Jardins','Higienópolis',
-                'República','Liberdade','Santa Cecília','Cerqueira César','Paraíso'],
-            },
-            {
-              titulo: 'Grande ABC',
-              bairros: ['Santo André','São Bernardo do Campo','São Caetano do Sul',
-                'Diadema','Mauá','Ribeirão Pires'],
-            },
-            {
-              titulo: 'Outros municípios da RMSP',
-              bairros: ['Guarulhos','Osasco','Barueri','Alphaville','Santana de Parnaíba',
-                'Cotia','Taboão da Serra','Carapicuíba','Mogi das Cruzes','Suzano',
-                'Itaquaquecetuba','Embu das Artes','Mairiporã','Caieiras'],
-            },
-          ].map(({ titulo, bairros }) => (
-            <div key={titulo} style={{ marginBottom: '20px' }}>
-              <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)',
-                textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>
-                {titulo}
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
-                {bairros.map(bairro => (
-                  <button
-                    key={bairro}
-                    onClick={() => { setLocalSearchInput(bairro); setLocalSearch(bairro); }}
-                    style={{
-                      padding: '5px 13px', borderRadius: '99px', fontSize: '12px',
-                      fontWeight: '600', cursor: 'pointer',
-                      border: '1.5px solid var(--border)',
-                      background: 'var(--bg-card)', color: 'var(--text-muted)',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {bairro}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-          <div style={{ marginBottom: '24px' }} />
-
-          {/* SEO editorial */}
-          <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text)', marginBottom: '12px' }}>
-            Morar em São Paulo
-          </h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.8, marginBottom: '20px', maxWidth: '720px' }}>
-            São Paulo concentra o maior volume de lançamentos imobiliários do Brasil. A cidade oferece
-            opções para todos os perfis: do Minha Casa Minha Vida (MCMV) até imóveis de altíssimo padrão
-            no SFI. Bairros como Pinheiros, Itaim Bibi e Jardins lideram em valorização; já regiões como
-            Tatuapé, Vila Mariana e Brooklin atraem compradores que buscam custo-benefício.
-          </p>
-
-          {/* FAQ */}
-          <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text)', marginBottom: '20px' }}>
-            Perguntas frequentes
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '720px' }}>
-            {[
-              {
-                q: 'Com renda de R$ 3.000 consigo comprar um apartamento em São Paulo?',
-                a: 'Sim! Com R$ 3.000 de renda você se enquadra no Minha Casa Minha Vida Faixa 1 (até R$ 3.200). Pelo programa, juros são subsidiados e a parcela pode caber no seu bolso. Use o simulador FinancieCerto para calcular o valor exato que você pode financiar.',
-              },
-              {
-                q: 'Qual o valor do metro quadrado em São Paulo?',
-                a: 'O m² varia muito por bairro. Em 2025, a média em São Paulo é de R$ 9.000–11.000/m². Bairros premium como Jardins e Itaim Bibi chegam a R$ 15.000/m², enquanto regiões periféricas ficam entre R$ 4.000–6.000/m².',
-              },
-              {
-                q: 'Vale a pena comprar na planta em São Paulo?',
-                a: 'Sim, comprar na planta costuma ser até 20–30% mais barato que o imóvel pronto. O risco é o prazo de entrega (2–4 anos), mas construtoras credenciadas pela Orulo passam por avaliação de risco. Você também pode usar o FGTS na entrada.',
-              },
-              {
-                q: 'Quais bairros têm mais lançamentos de MCMV em São Paulo?',
-                a: 'As regiões com mais lançamentos MCMV são: Zona Leste (Tatuapé, Penha, Itaquera), Zona Norte (Santana, Tremembé) e municípios como Santo André, São Bernardo do Campo e Guarulhos. Use os filtros acima para ver opções na sua faixa de renda.',
-              },
-            ].map(({ q: pergunta, a: resposta }, i) => (
-              <div key={i} style={{
-                background: 'var(--bg-card)', borderRadius: '12px',
-                border: '1px solid var(--border)', padding: '16px 18px',
-              }}>
-                <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>
-                  {pergunta}
-                </p>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.65, margin: 0 }}>
-                  {resposta}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

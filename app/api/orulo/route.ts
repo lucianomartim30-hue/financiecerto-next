@@ -119,14 +119,14 @@ async function getOrBuildCatalog(token: string): Promise<NormalizedBuilding[]> {
   try {
     // 1. Descobrir total de páginas
     const probe = await fetch(
-      `${ORULO_BASE}/api/v2/buildings?state=SP&city=S%C3%A3o+Paulo&per_page=1&page=1`,
+      `${ORULO_BASE}/api/v2/buildings?state=SP&per_page=1&page=1`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const probeData = await probe.json();
     const totalPages = Math.min(probeData.total_pages ?? probeData.pages ?? 1, 30);
 
     // 2. Busca todos em paralelo, em lotes de 10
-    const BASE_QS = new URLSearchParams({ state: 'SP', city: 'São Paulo', per_page: '200' });
+    const BASE_QS = new URLSearchParams({ state: 'SP', per_page: '200' });
     const allBuildings: NormalizedBuilding[] = [];
     const BATCH = 10;
 
@@ -187,11 +187,22 @@ export async function GET(req: NextRequest) {
     const token = await getToken();
 
     // ── Busca por bairro: usa catálogo completo ───────────────────────────────
-    if (neighborhood) {
+    if (neighborhood || city) {
       const catalog = await getOrBuildCatalog(token);
 
-      const nb = neighborhood.toLowerCase();
-      let filtered = catalog.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
+      let filtered = catalog;
+
+      // Filtro por cidade (quando bairro não foi especificado, ex: "Guarulhos")
+      if (city && !neighborhood) {
+        const ct = city.toLowerCase();
+        filtered = filtered.filter(b => (b.city || '').toLowerCase().includes(ct));
+      }
+
+      // Filtro por bairro (mais específico)
+      if (neighborhood) {
+        const nb = neighborhood.toLowerCase();
+        filtered = filtered.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
+      }
 
       // Aplica filtros adicionais do catálogo
       if (minPrice)    filtered = filtered.filter(b => (b.min_price  ?? 0)  >= Number(minPrice));
