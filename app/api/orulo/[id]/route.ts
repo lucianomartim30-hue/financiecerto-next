@@ -28,25 +28,35 @@ function getMock(id: string) {
   const mocks: Record<string, object> = {
     '1': {
       id: '1', name: 'Residencial Vila Madalena', developer: 'Construtora ABC',
+      developer_logo: null, developer_website: null,
       min_price: 320000, max_price: 450000,
       bedrooms_min: 2, bedrooms_max: 3,
       area_min: 62, area_max: 85,
       bathrooms_min: 2, bathrooms_max: 2,
       vagas_min: 1, vagas_max: 1,
       neighborhood: 'Vila Madalena', city: 'São Paulo', state: 'SP',
+      zipcode: '05433-010',
       status: 'Pronto',
-      description: 'Empreendimento moderno com acabamento de alto padrão, localizado em uma das regiões mais valorizadas de São Paulo. Próximo a restaurantes, bares e transporte público.',
+      delivery_date: null,
+      description: 'Empreendimento moderno com acabamento de alto padrão, localizado em uma das regiões mais valorizadas de São Paulo.',
       photos: [],
+      blueprints: [],
       amenities: ['Academia', 'Piscina', 'Salão de Festas', 'Churrasqueira', 'Playground', 'Portaria 24h', 'Elevador'],
       address_full: 'Rua Aspicuelta, 350 – Vila Madalena, São Paulo – SP',
+      latitude: -23.5505, longitude: -46.6333,
       sharing_url: null,
       typologies: [
-        { type: '2 dorms', area: '62 m²', price: 'R$ 320.000' },
-        { type: '3 dorms', area: '85 m²', price: 'R$ 450.000' },
+        { type: '2 dorms', bedrooms: 2, bathrooms: 2, vagas: 1, area: '62 m²', private_area: '58 m²', total_area: '74 m²', price: 'R$ 320.000', photo: null },
+        { type: '3 dorms', bedrooms: 3, bathrooms: 2, vagas: 1, area: '85 m²', private_area: '80 m²', total_area: '98 m²', price: 'R$ 450.000', photo: null },
       ],
     },
   };
   return mocks[id] || null;
+}
+
+function pickUrl(obj: Record<string, string> | null | undefined): string {
+  if (!obj) return '';
+  return obj['1200x628'] || obj['840x560'] || obj['520x280'] || obj['200x140'] || obj.url || obj.image_url || '';
 }
 
 export async function GET(
@@ -74,20 +84,32 @@ export async function GET(
     const raw = await resp.json();
     const b = raw.building ?? raw;
 
-    const developer = (b.developer as Record<string, string> | null)?.name || (b.developer_name as string) || '';
-    const address = (b.address as Record<string, string>) || {};
+    const devObj = (b.developer as Record<string, unknown> | null) ?? {};
+    const developer = (devObj.name as string) || (b.developer_name as string) || '';
+    const developer_logo = (devObj.logo as string) || (devObj.image as string) || null;
+    const developer_website = (devObj.website as string) || null;
+
+    const address = (b.address as Record<string, unknown>) || {};
     const images = (b.images as Record<string, string>[] | null) || [];
     const defaultImg = (b.default_image as Record<string, string>) || {};
 
-    // Montar lista de fotos (até 12)
+    // Fotos (até 20)
     const photos: string[] = [];
-    if (defaultImg['520x280']) photos.push(defaultImg['520x280']);
-    for (const img of images.slice(0, 12)) {
-      const url = img['520x280'] || img['200x140'] || img.url || '';
+    const mainPhoto = pickUrl(defaultImg as Record<string, string>);
+    if (mainPhoto) photos.push(mainPhoto);
+    for (const img of images.slice(0, 20)) {
+      const url = pickUrl(img as Record<string, string>);
       if (url && !photos.includes(url)) photos.push(url);
     }
 
-    // Amenidades/diferenciais
+    // Plantas (blueprints)
+    const bpRaw = (b.blueprints ?? b.floor_plans ?? b.plants ?? []) as Record<string, unknown>[];
+    const blueprints = bpRaw.map(bp => ({
+      name: (bp.name ?? bp.label ?? bp.description ?? '') as string,
+      url: pickUrl((bp.image ?? bp) as Record<string, string>),
+    })).filter(bp => bp.url);
+
+    // Amenidades
     const amenities: string[] = [];
     const feats = (b.amenities ?? b.features ?? b.differentials ?? []) as Record<string, unknown>[];
     for (const f of feats) {
@@ -95,42 +117,13 @@ export async function GET(
       else if (typeof f === 'string') amenities.push(f);
     }
 
-    // Tipologias (quadro de áreas)
-    const typologies = ((b.typologies ?? b.apartments ?? []) as Record<string, unknown>[]).map((t) => ({
-      type: (t.name ?? t.type ?? `${t.bedrooms} dorms`) as string,
-      area: t.area ? `${t.area} m²` : '',
-      price: t.price ? `R$ ${Number(t.price).toLocaleString('pt-BR')}` : 'Consultar',
-    }));
-
-    return NextResponse.json({
-      id: String(b.id),
-      name: (b.name as string) || 'Empreendimento',
-      developer,
-      min_price: (b.min_price as number) ?? null,
-      max_price: (b.max_price as number) ?? null,
-      bedrooms_min: (b.min_bedrooms as number) ?? null,
-      bedrooms_max: (b.max_bedrooms as number) ?? null,
-      area_min: (b.min_area as number) ?? null,
-      area_max: (b.max_area as number) ?? null,
-      bathrooms_min: (b.min_bathrooms as number) ?? null,
-      bathrooms_max: (b.max_bathrooms as number) ?? null,
-      vagas_min: (b.min_parking_spots as number) ?? null,
-      vagas_max: (b.max_parking_spots as number) ?? null,
-      neighborhood: address.area || address.neighborhood || '',
-      city: address.city || '',
-      state: address.state || '',
-      address_full: [address.street, address.number, address.area || address.neighborhood, address.city].filter(Boolean).join(', '),
-      status: (b.status as string) || '',
-      description: (b.description as string) || '',
-      photos,
-      amenities,
-      typologies,
-      sharing_url: (b.sharing_url as string) || null,
-    });
-
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Erro desconhecido';
-    console.error(`[api/orulo/${id}]`, msg);
-    return NextResponse.json({ error: 'Erro ao buscar imóvel.' }, { status: 500 });
-  }
-}
+    // Tipologias enriquecidas
+    const typologies = ((b.typologies ?? b.apartments ?? []) as Record<string, unknown>[]).map((t) => {
+      const tImg = (t.images as Record<string, string>[])?.[0] ?? (t.image as Record<string, string>) ?? null;
+      const tBp = (t.blueprints as Record<string, string>[])?.[0] ?? null;
+      return {
+        type: (t.name ?? t.type ?? `${t.bedrooms ?? '?'} dorms`) as string,
+        bedrooms: (t.bedrooms ?? t.rooms ?? null) as number | null,
+        bathrooms: (t.bathrooms ?? t.baths ?? null) as number | null,
+        vagas: (t.garages ?? t.parking_spots ?? t.vagas ?? null) as number | null,
+        

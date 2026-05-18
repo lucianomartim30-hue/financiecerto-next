@@ -37,14 +37,40 @@ type StatusKey = 'Na Planta' | 'Em Obras' | 'Pronto' | 'Lançamento' | string;
 // Status config
 // ──────────────────────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { cor: string; bg: string; label: string }> = {
-  'na planta':   { cor: '#2563eb', bg: 'rgba(37,99,235,.12)',  label: 'Na Planta' },
-  'lançamento':  { cor: '#7c3aed', bg: 'rgba(124,58,237,.12)', label: 'Lançamento' },
-  'em obras':    { cor: '#d97706', bg: 'rgba(217,119,6,.12)',   label: 'Em Obras' },
-  'pronto':      { cor: '#16a34a', bg: 'rgba(22,163,74,.12)',   label: 'Pronto' },
+  // Na planta
+  'na planta':      { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
+  'planta':         { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
+  'pre-lançamento': { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Pré-Lançamento' },
+  'pre lançamento': { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Pré-Lançamento' },
+  // Lançamento
+  'lançamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
+  'lancamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
+  // Em obras / em construção
+  'em obras':       { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Obras' },
+  'em construção':  { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
+  'em construcao':  { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
+  'construção':     { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
+  'em andamento':   { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Andamento' },
+  // Pronto / entregue
+  'pronto':         { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Pronto' },
+  'pronto novo':    { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Pronto Novo' },
+  'entregue':       { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Entregue' },
+  'concluído':      { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Concluído' },
+  'concluido':      { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Concluído' },
 };
 
 function getStatusCfg(status: StatusKey) {
-  return STATUS_CFG[status.toLowerCase()] ?? { cor: '#64748b', bg: 'rgba(100,116,139,.12)', label: status };
+  const key = status.toLowerCase().trim();
+  if (STATUS_CFG[key]) return STATUS_CFG[key];
+  // Fuzzy match por palavras-chave
+  if (key.includes('planta'))      return STATUS_CFG['na planta'];
+  if (key.includes('lança'))       return STATUS_CFG['lançamento'];
+  if (key.includes('constru') || key.includes('obra') || key.includes('andamento'))
+                                   return STATUS_CFG['em obras'];
+  if (key.includes('pronto') || key.includes('entreg') || key.includes('conclui'))
+                                   return STATUS_CFG['pronto'];
+  // Fallback visível (cinza escuro, não transparente)
+  return { cor: '#475569', bg: 'rgba(71,85,105,.18)', label: status };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -691,7 +717,7 @@ function ImoveisContent() {
             gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
             gap: '16px',
           }}>
-            {Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}
+            {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         )}
 
@@ -704,6 +730,10 @@ function ImoveisContent() {
             marginBottom: '40px',
           }}>
             {imoveisFiltrados.map(b => <CardImovel key={b.id} imovel={b} />)}
+            {/* Fillers invisíveis para completar última linha do grid */}
+            {Array.from({ length: (4 - (imoveisFiltrados.length % 4)) % 4 }).map((_, i) => (
+              <div key={`filler-${i}`} style={{ visibility: 'hidden', minHeight: '1px' }} />
+            ))}
           </div>
         )}
 
@@ -816,45 +846,4 @@ function ImoveisContent() {
               },
               {
                 q: 'O que é melhor: comprar na planta ou pronto?',
-                a: 'Na planta oferece preço de lançamento (menor) e entrada parcelada durante a obra. Pronto permite financiamento imediato e mudança imediata. Na planta tem risco de obra e prazo; pronto tem liquidez maior. Use o simulador para comparar parcelas.',
-              },
-              {
-                q: 'Posso usar o FGTS para comprar apartamento em SP?',
-                a: 'Sim, desde que você seja cotista há pelo menos 3 anos, seja o primeiro imóvel financiado e não possua outro imóvel no município onde reside ou trabalha. O FGTS pode ser usado como entrada em imóveis de até R$ 2,25 milhões (SFH).',
-              },
-            ].map(({ q, a }, i) => (
-              <div key={i} style={{
-                padding: '16px 18px',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-              }}>
-                <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>
-                  {q}
-                </p>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.7, margin: 0 }}>
-                  {a}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Export (Suspense boundary for useSearchParams)
-// ──────────────────────────────────────────────────────────────────────────────
-export default function ImoveisPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ padding: '80px 24px', textAlign: 'center', color: 'var(--text-faint)' }}>
-        Carregando imóveis...
-      </div>
-    }>
-      <ImoveisContent />
-    </Suspense>
-  );
-}
+                a: 'Na planta oferece preço de lança
