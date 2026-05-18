@@ -131,13 +131,11 @@ export async function GET(req: NextRequest) {
       const sit = toOruloSituation(statusReq);
       if (sit) qs.set('situation', sit); // tenta filtrar na Orulo diretamente
     }
+    if (q) qs.set('q', q);
     if (neighborhood) {
-      // Orulo não tem filtro nativo de bairro — usamos q= com o nome do bairro
-      // + per_page maior para ter mais resultados antes de filtrar server-side
-      qs.set('q',        neighborhood);
-      qs.set('per_page', '100');
-    } else {
-      if (q) qs.set('q', q);
+      // Tenta filtro nativo de bairro na Orulo (area / neighborhood param)
+      qs.set('area', neighborhood);
+      qs.set('neighborhood', neighborhood);
     }
 
     const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
@@ -151,13 +149,18 @@ export async function GET(req: NextRequest) {
 
     if (statusReq) buildings = buildings.filter(b => b.status_norm === statusReq);
 
-    // Filtro server-side de bairro — garante que só bairros corretos passem
+    // Filtro server-side de bairro com degradação graceful
     if (neighborhood) {
       const nb = neighborhood.toLowerCase();
-      buildings = buildings.filter(b =>
-        (b.neighborhood || '').toLowerCase().includes(nb) ||
-        (b.name        || '').toLowerCase().includes(nb)
+      const filtered = buildings.filter(b =>
+        (b.neighborhood || '').toLowerCase().includes(nb)
       );
+      // Só aplica o filtro se restar algum resultado — evita retornar 0
+      // quando Orulo não retornou o campo neighborhood corretamente
+      if (filtered.length > 0) {
+        buildings = filtered;
+      }
+      // Se filtered=0: retorna todos os resultados da cidade (melhor que zero)
     }
 
     return NextResponse.json({
