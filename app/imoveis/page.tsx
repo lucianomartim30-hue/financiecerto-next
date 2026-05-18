@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatBRL } from '@/lib/calculos';
@@ -371,6 +371,171 @@ function stripFmt(formatted: string): string {
   return formatted.replace(/\D/g, '');
 }
 
+
+// ──────────────────────────────────────────────────────────────────────────────
+// LocationAutocomplete — dropdown categorizado (Bairros + Empreendimentos)
+// ──────────────────────────────────────────────────────────────────────────────
+interface BuildingSuggestion { id: string; name: string; neighborhood: string; city: string; }
+
+function LocationAutocomplete({
+  value,
+  onConfirm,
+  locationSuggestions,
+}: {
+  value: string;
+  onConfirm: (v: string) => void;
+  locationSuggestions: string[];
+}) {
+  const router = useRouter();
+  const [input, setInput] = useState(value);
+  const [open, setOpen] = useState(false);
+  const [buildingSugg, setBuildingSugg] = useState<BuildingSuggestion[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Sync externo
+  useEffect(() => { setInput(value); }, [value]);
+
+  // Debounced building search via API
+  useEffect(() => {
+    const q = input.trim();
+    if (q.length < 2) { setBuildingSugg([]); return; }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/orulo?q=${encodeURIComponent(q)}&state=SP`);
+        const data = await res.json();
+        setBuildingSugg((data.buildings || []).slice(0, 5));
+      } catch { setBuildingSugg([]); }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [input]);
+
+  // Fecha ao clicar fora
+  useEffect(() => {
+    function onClickOut(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOut);
+    return () => document.removeEventListener('mousedown', onClickOut);
+  }, []);
+
+  const q = input.trim().toLowerCase();
+  const matchingNeighborhoods = q.length >= 2
+    ? locationSuggestions.filter(s => s.toLowerCase().includes(q)).slice(0, 6)
+    : [];
+
+  const hasResults = matchingNeighborhoods.length > 0 || buildingSugg.length > 0;
+
+  function selectNeighborhood(label: string) {
+    setInput(label);
+    setOpen(false);
+    onConfirm(label);
+  }
+
+  function selectBuilding(b: BuildingSuggestion) {
+    setOpen(false);
+    router.push(`/imoveis/${b.id}`);
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
+      <span style={{
+        position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)',
+        color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none',
+      }}>📍</span>
+      <input
+        type="text"
+        value={input}
+        onChange={e => { setInput(e.target.value); setOpen(true); }}
+        onFocus={() => { if (input.trim().length >= 2) setOpen(true); }}
+        onKeyDown={e => {
+          if (e.key === 'Enter') { setOpen(false); onConfirm(input); }
+          if (e.key === 'Escape') setOpen(false);
+        }}
+        placeholder="Bairro, cidade ou empreendimento..."
+        style={{
+          padding: '10px 12px 10px 34px', border: '1.5px solid var(--border)',
+          borderRadius: '10px', fontSize: '13px', width: '100%',
+          outline: 'none', background: 'var(--bg)',
+          color: 'var(--text)', fontFamily: 'inherit',
+        }}
+      />
+
+      {open && hasResults && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
+          background: 'var(--bg-card)', border: '1.5px solid var(--border)',
+          borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,.14)',
+          zIndex: 200, overflow: 'hidden', maxHeight: '340px', overflowY: 'auto',
+        }}>
+          {matchingNeighborhoods.length > 0 && (
+            <div>
+              <div style={{
+                padding: '8px 14px 4px', fontSize: '10px', fontWeight: '800',
+                color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px',
+                display: 'flex', alignItems: 'center', gap: '6px',
+              }}>
+                <span style={{ fontSize: '12px' }}>📍</span> Bairros
+              </div>
+              {matchingNeighborhoods.map(s => {
+                const display = s.replace(/\s*[\u2013\-]\s*[A-Z]{2}$/, '');
+                return (
+                  <button
+                    key={s}
+                    onMouseDown={e => { e.preventDefault(); selectNeighborhood(s); }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '9px 14px 9px 22px', background: 'none',
+                      border: 'none', cursor: 'pointer', fontSize: '13px',
+                      color: 'var(--text)', fontFamily: 'inherit',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    {display}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {buildingSugg.length > 0 && (
+            <div style={{ borderTop: matchingNeighborhoods.length > 0 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{
+                padding: '8px 14px 4px', fontSize: '10px', fontWeight: '800',
+                color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px',
+                display: 'flex', alignItems: 'center', gap: '6px',
+              }}>
+                <span style={{ fontSize: '12px' }}>🏙️</span> Imóveis
+              </div>
+              {buildingSugg.map(b => (
+                <button
+                  key={b.id}
+                  onMouseDown={e => { e.preventDefault(); selectBuilding(b); }}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '9px 14px 9px 22px', background: 'none',
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                  <span style={{ display: 'block', fontSize: '13px', color: 'var(--text)', fontWeight: '600' }}>
+                    {b.name}
+                  </span>
+                  {(b.neighborhood || b.city) && (
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      {[b.neighborhood, b.city].filter(Boolean).join(', ')}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Main content (needs Suspense for useSearchParams)
 // ──────────────────────────────────────────────────────────────────────────────
@@ -395,7 +560,7 @@ function ImoveisContent() {
 
   // UI state do painel
   const [showAdvanced, setShowAdvanced] = useState(false);
-
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
 
   // Data
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
@@ -418,7 +583,37 @@ function ImoveisContent() {
       if (minPrice) params.set('min_price', minPrice);
       if (maxPrice) params.set('max_price', maxPrice);
 
-      // Filtros de quartos → API
+      // ── Localização ────────────────────────────────────────────────────────
+      // Regra: NÃO passar q= para busca por bairro (q= busca NOME do
+      // empreendimento na Orulo — combinar q=bairro + min_bedrooms = 0 resultados).
+      // Estratégia:
+      //   1. Se digitou exatamente no formato datalist "Bairro, Cidade – SP" →
+      //      passa city= para a Orulo (melhora amostra de 200) + neighborhood= para
+      //      filtro server-side.
+      //   2. Se texto livre sem separador → trata como bairro de São Paulo +
+      //      filtro server-side.
+      //   3. Se começa com "#" → interpreta como nome de empreendimento (q=).
+      const txt = localSearch.trim();
+      if (txt) {
+        // Formato estruturado do datalist: "Jabaquara, São Paulo – SP"
+        const structured = txt.match(/^(.+?),\s*(.+?)\s*[–\-]\s*([A-Z]{2})$/);
+        const cityOnly   = txt.match(/^(.+?)\s*[–\-]\s*([A-Z]{2})$/);
+        if (structured) {
+          params.set('city',         structured[2].trim());
+          params.set('neighborhood', structured[1].trim());
+        } else if (cityOnly) {
+          params.set('city', cityOnly[1].trim());
+        } else if (txt.startsWith('#')) {
+          // # prefixo = busca por nome de empreendimento
+          params.set('q', txt.slice(1).trim());
+        } else {
+          // Texto livre → assume bairro de São Paulo
+          params.set('city',         'São Paulo');
+          params.set('neighborhood', txt);
+        }
+      }
+
+      // Filtros de quartos → Orulo API (parâmetro confirmado, nunca q=)
       if (quartosFilter !== 'todos') {
         if (quartosFilter === '4+') {
           params.set('bedrooms_min', '4');
@@ -429,11 +624,8 @@ function ImoveisContent() {
         }
       }
 
-      // Filtro de estágio → API (server-side na rota)
+      // Filtro de estágio → server-side na rota
       if (statusFilter !== 'todos') params.set('status', statusFilter);
-
-      // Busca textual → q= para pesquisar nome do empreendimento
-      if (localSearch.trim()) params.set('q', localSearch.trim());
 
       const res = await fetch(`/api/orulo?${params}`);
       if (!res.ok) throw new Error('Erro');
@@ -454,6 +646,16 @@ function ImoveisContent() {
 
   // Re-fetch sempre que qualquer filtro de API mudar
   useEffect(() => { buscar(1); }, [buscar]);
+
+  // Carrega sugestões de bairros/cidades do endpoint dinâmico
+  useEffect(() => {
+    fetch('/api/orulo/bairros')
+      .then(r => r.json())
+      .then(d => {
+        if (d.locations) setLocationSuggestions(d.locations.map((l: { label: string }) => l.label));
+      })
+      .catch(() => {});
+  }, []);
 
   // Ordenação local (não precisa re-fetch)
   const imoveisFiltrados = [...imoveis].sort((a, bx) => {
@@ -559,23 +761,15 @@ function ImoveisContent() {
           {/* ── Linha principal (sempre visível) ─────────────────────────────── */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
 
-            {/* Busca bairro/nome */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: '1 1 220px', minWidth: '180px' }}>
-              <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
-              <input
-                type="text"
-                value={localSearchInput}
-                onChange={e => setLocalSearchInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && (aplicarPreco(), aplicarBusca())}
-                placeholder="Buscar por nome do empreendimento..."
-                style={{
-                  padding: '10px 12px 10px 34px', border: '1.5px solid var(--border)',
-                  borderRadius: '10px', fontSize: '13px', width: '100%',
-                  outline: 'none', background: 'var(--bg)',
-                  color: 'var(--text)', fontFamily: 'inherit',
-                }}
-              />
-            </div>
+            {/* Autocomplete bairro/empreendimento */}
+            <LocationAutocomplete
+              value={localSearchInput}
+              onConfirm={v => {
+                setLocalSearchInput(v);
+                setLocalSearch(v);
+              }}
+              locationSuggestions={locationSuggestions}
+            />
 
             {/* Buscar */}
             <button
@@ -979,25 +1173,23 @@ function ImoveisContent() {
                 a: 'O m² varia muito por bairro. Em 2025, a média em São Paulo é de R$ 9.000–11.000/m². Bairros premium como Jardins e Itaim Bibi chegam a R$ 15.000/m², enquanto regiões periféricas ficam entre R$ 4.000–6.000/m².',
               },
               {
-                q: 'O que é melhor: comprar na planta ou pronto?',
-                a: 'Na planta oferece preço de lançamento (menor) e entrada parcelada durante a obra. Pronto permite financiamento imediato e mudança imediata. Na planta tem risco de obra e prazo; pronto tem liquidez maior. Use o simulador para comparar parcelas.',
+                q: 'Vale a pena comprar na planta em São Paulo?',
+                a: 'Sim, comprar na planta costuma ser até 20–30% mais barato que o imóvel pronto. O risco é o prazo de entrega (2–4 anos), mas construtoras credenciadas pela Orulo passam por avaliação de risco. Você também pode usar o FGTS na entrada.',
               },
               {
-                q: 'Posso usar o FGTS para comprar apartamento em SP?',
-                a: 'Sim, desde que você seja cotista há pelo menos 3 anos, seja o primeiro imóvel financiado e não possua outro imóvel no município onde reside ou trabalha. O FGTS pode ser usado como entrada em imóveis de até R$ 2,25 milhões (SFH).',
+                q: 'Quais bairros têm mais lançamentos de MCMV em São Paulo?',
+                a: 'As regiões com mais lançamentos MCMV são: Zona Leste (Tatuapé, Penha, Itaquera), Zona Norte (Santana, Tremembé) e municípios como Santo André, São Bernardo do Campo e Guarulhos. Use os filtros acima para ver opções na sua faixa de renda.',
               },
-            ].map(({ q, a }, i) => (
+            ].map(({ q: pergunta, a: resposta }, i) => (
               <div key={i} style={{
-                padding: '16px 18px',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
+                background: 'var(--bg-card)', borderRadius: '12px',
+                border: '1px solid var(--border)', padding: '16px 18px',
               }}>
-                <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>
-                  {q}
+                <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>
+                  {pergunta}
                 </p>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.7, margin: 0 }}>
-                  {a}
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.65, margin: 0 }}>
+                  {resposta}
                 </p>
               </div>
             ))}
@@ -1009,13 +1201,13 @@ function ImoveisContent() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Export (Suspense boundary for useSearchParams)
+// Page export (Suspense boundary for useSearchParams)
 // ──────────────────────────────────────────────────────────────────────────────
 export default function ImoveisPage() {
   return (
     <Suspense fallback={
-      <div style={{ padding: '80px 24px', textAlign: 'center', color: 'var(--text-faint)' }}>
-        Carregando imoveis...
+      <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>Carregando imóveis...</p>
       </div>
     }>
       <ImoveisContent />
