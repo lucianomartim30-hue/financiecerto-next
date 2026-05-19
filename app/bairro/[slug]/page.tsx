@@ -2,8 +2,10 @@ import { Suspense } from 'react';
 import { slugToLocation } from '@/lib/locations';
 import BairroContent from './BairroContent';
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
-  const loc = slugToLocation(params.slug);
+// Next.js 15+: params e searchParams são Promises
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const loc = slugToLocation(slug);
   return {
     title:       `Imóveis em ${loc.neighborhood}, ${loc.city} | FinancieCerto`,
     description: `Encontre os melhores apartamentos e lançamentos em ${loc.neighborhood}, ${loc.city}. ` +
@@ -15,17 +17,14 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   };
 }
 
-export default function BairroPage({
+export default async function BairroPage({
   params,
   searchParams,
 }: {
-  params:       { slug: string };
-  searchParams: Record<string, string>;
+  params:       Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string>>;
 }) {
-  const loc = slugToLocation(params.slug);
-  return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--bg)' }} />}>
-      <BairroContent location={loc} searchParams={searchParams} />
-    </Suspense>
-  );
-}
+  const { slug } = await params;
+  const sp       = await searchParams;
+  const loc      = slugToLocation(slug);
+  re
