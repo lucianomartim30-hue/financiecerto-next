@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
 
+// ── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK_BUILDINGS = [
   { id: '1', name: 'Residencial Vila Madalena', developer: 'Construtora ABC', min_price: 320000, max_price: 450000, bedrooms_min: 2, bedrooms_max: 3, area_min: 62, area_max: 85, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Vila Madalena', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
-  { id: '2', name: 'Jardins Exclusive', developer: 'MRV Engenharia', min_price: 280000, max_price: 380000, bedrooms_min: 1, bedrooms_max: 2, area_min: 38, area_max: 58, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jardins', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
-  { id: '3', name: 'Moema Garden', developer: 'Cyrela', min_price: 650000, max_price: 900000, bedrooms_min: 2, bedrooms_max: 4, area_min: 80, area_max: 140, bathrooms_min: 2, bathrooms_max: 3, vagas_min: 2, vagas_max: 2, neighborhood: 'Moema', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
-  { id: '4', name: 'Vila Mariana Park', developer: 'Even', min_price: 480000, max_price: 620000, bedrooms_min: 1, bedrooms_max: 3, area_min: 45, area_max: 90, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Vila Mariana', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Em Obras' },
-  { id: '5', name: 'Jabaquara Residences', developer: 'Trisul', min_price: 250000, max_price: 350000, bedrooms_min: 2, bedrooms_max: 2, area_min: 55, area_max: 70, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jabaquara', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
+  { id: '2', name: 'Jardins Exclusive',         developer: 'MRV Engenharia',  min_price: 280000, max_price: 380000, bedrooms_min: 1, bedrooms_max: 2, area_min: 38, area_max: 58, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jardins',       city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
+  { id: '3', name: 'Moema Garden',              developer: 'Cyrela',          min_price: 650000, max_price: 900000, bedrooms_min: 2, bedrooms_max: 4, area_min: 80, area_max: 140, bathrooms_min: 2, bathrooms_max: 3, vagas_min: 2, vagas_max: 2, neighborhood: 'Moema',         city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
+  { id: '4', name: 'Vila Mariana Park',         developer: 'Even',            min_price: 480000, max_price: 620000, bedrooms_min: 1, bedrooms_max: 3, area_min: 45, area_max: 90, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Vila Mariana',  city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Em Obras' },
+  { id: '5', name: 'Jabaquara Residences',      developer: 'Trisul',          min_price: 250000, max_price: 350000, bedrooms_min: 2, bedrooms_max: 2, area_min: 55, area_max: 70, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jabaquara',     city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
 ];
 
+// ── Token (em memória — warm só na mesma instância, ok p/ Vercel) ─────────────
 let _tokenCache = { token: null as string | null, expiresAt: 0 };
 
 async function getToken(): Promise<string> {
   const now = Date.now();
   if (_tokenCache.token && now < _tokenCache.expiresAt) return _tokenCache.token;
-  const clientId = process.env.ORULO_CLIENT_ID;
+  const clientId     = process.env.ORULO_CLIENT_ID;
   const clientSecret = process.env.ORULO_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new Error('ORULO_CLIENT_ID ou ORULO_CLIENT_SECRET não configurados.');
   const resp = await fetch(`${ORULO_BASE}/oauth/token`, {
@@ -30,39 +32,53 @@ async function getToken(): Promise<string> {
   return data.access_token;
 }
 
+// ── Normalização ──────────────────────────────────────────────────────────────
+
 function normalizeStatus(raw: string): string {
   const s = (raw || '').toLowerCase().trim();
-  if (s.includes('planta'))                                                   return 'na planta';
-  if (s.includes('lança') || s.includes('lanca'))                            return 'lançamento';
+  if (s.includes('planta'))                                                    return 'na planta';
+  if (s.includes('lança') || s.includes('lanca'))                             return 'lançamento';
   if (s.includes('constru') || s.includes('obra') || s.includes('andamento')) return 'em obras';
-  if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui')) return 'pronto';
+  if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui'))  return 'pronto';
   return s;
+}
+
+function extractNeighborhood(address: Record<string, unknown>): string {
+  // Orulo usa 'area' como campo de bairro na v2. Cobrimos todos os aliases conhecidos.
+  return (
+    (address.area        as string) ||
+    (address.neighborhood as string) ||
+    (address.neighbourhood as string) ||
+    (address.district     as string) ||
+    (address.region       as string) ||
+    ''
+  );
 }
 
 function normalizeBuilding(b: Record<string, unknown>) {
   const developer = (b.developer as Record<string, string> | null)?.name || (b.developer_name as string) || '';
-  const address = (b.address as Record<string, string>) || {};
-  const img = (b.default_image as Record<string, string>) || {};
+  const address   = (b.address   as Record<string, unknown>) || {};
+  const img       = (b.default_image as Record<string, string>) || {};
   return {
     id:            String(b.id),
     name:          (b.name as string) || 'Empreendimento',
     developer,
-    min_price:     (b.min_price as number)    ?? null,
-    max_price:     (b.max_price as number)    ?? null,
-    bedrooms_min:  (b.min_bedrooms as number) ?? null,
-    bedrooms_max:  (b.max_bedrooms as number) ?? null,
-    area_min:      (b.min_area as number)     ?? (b.area_min as number)      ?? null,
-    area_max:      (b.max_area as number)     ?? (b.area_max as number)      ?? null,
-    bathrooms_min: (b.min_bathrooms as number)?? (b.bathrooms_min as number) ?? null,
-    bathrooms_max: (b.max_bathrooms as number)?? (b.bathrooms_max as number) ?? null,
+    min_price:     (b.min_price     as number) ?? null,
+    max_price:     (b.max_price     as number) ?? null,
+    bedrooms_min:  (b.min_bedrooms  as number) ?? null,
+    bedrooms_max:  (b.max_bedrooms  as number) ?? null,
+    area_min:      (b.min_area      as number) ?? (b.area_min  as number) ?? null,
+    area_max:      (b.max_area      as number) ?? (b.area_max  as number) ?? null,
+    bathrooms_min: (b.min_bathrooms as number) ?? (b.bathrooms_min as number) ?? null,
+    bathrooms_max: (b.max_bathrooms as number) ?? (b.bathrooms_max as number) ?? null,
     vagas_min:     (b.min_parking_spots as number) ?? (b.min_garages as number) ?? (b.vagas_min as number) ?? null,
     vagas_max:     (b.max_parking_spots as number) ?? (b.max_garages as number) ?? (b.vagas_max as number) ?? null,
-    neighborhood:  address.area || address.neighborhood || '',
-    address_full:  [address.street, address.number].filter(Boolean).join(', ') || '',
-    street:        (address.street as string) || '',
-    number:        (address.number as string) || '',
-    city:          address.city  || '',
-    state:         address.state || '',
+    neighborhood:  extractNeighborhood(address),
+    address_full:  [address.street as string, address.number as string].filter(Boolean).join(', ') || '',
+    street:        (address.street  as string) || '',
+    number:        (address.number  as string) || '',
+    city:          (address.city    as string) || '',
+    state:         (address.state   as string) || '',
     photo:         img['520x280'] || img['840x560'] || img['200x140'] || null,
     sharing_url:   (b.sharing_url as string) || null,
     orulo_url:     (b.sharing_url as string) || `${ORULO_BASE}/buildings/${b.id}`,
@@ -74,83 +90,112 @@ function normalizeBuilding(b: Record<string, unknown>) {
 
 type NormalizedBuilding = ReturnType<typeof normalizeBuilding>;
 
-// ── Cache completo de imóveis SP ──────────────────────────────────────────────
-// Busca TODAS as páginas da Orulo em paralelo para permitir filtro real por bairro.
-// O campo address.neighborhood de cada building é o que usamos para filtrar —
-// a API não suporta neighborhood= como parâmetro de query.
+// ── Busca por localização (cidade + bairro) ───────────────────────────────────
+//
+// ARQUITETURA: Vercel é stateless — variáveis de módulo são resetadas em cada
+// cold start. Por isso NÃO usamos cache em memória para o catálogo completo.
+//
+// Em vez disso, para cada busca por bairro:
+//   1. Buscamos 5 páginas (×200 = até 1.000 imóveis) da cidade-alvo em paralelo
+//   2. Filtramos o bairro server-side nesses 1.000 resultados
+//   3. Total de tempo: ~1-2s (5 fetches concorrentes)
+//
+// Isso é suficiente porque:
+//   - São Paulo tem ~500-800 imóveis na Orulo → 5 págs cobrem tudo
+//   - Municípios menores (Guarulhos, Santo André…) têm <200 → 1 pág já basta
 
-const CATALOG_CACHE: {
-  buildings: NormalizedBuilding[];
-  fetchedAt: number;
-  building: boolean;
-} = { buildings: [], fetchedAt: 0, building: false };
-
-const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 horas
-
-async function fetchOnePage(token: string, qs: URLSearchParams, page: number): Promise<NormalizedBuilding[]> {
-  const params = new URLSearchParams(qs);
-  params.set('page', String(page));
+async function fetchCityPage(
+  token: string,
+  city: string,
+  page: number,
+): Promise<{ buildings: NormalizedBuilding[]; rawSample: Record<string, unknown> | null }> {
   try {
-    const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${params}`, {
+    const qs = new URLSearchParams({ state: 'SP', city, per_page: '200', page: String(page) });
+    const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!resp.ok) return [];
+    if (!resp.ok) return { buildings: [], rawSample: null };
     const raw = await resp.json();
     const list = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
-    return list.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
+    const buildings = list
+      .map(normalizeBuilding)
+      .filter(b => b.min_price && b.min_price >= 1000);
+    const rawSample = list[0] ?? null;
+    return { buildings, rawSample };
   } catch {
-    return [];
+    return { buildings: [], rawSample: null };
   }
 }
 
-async function getOrBuildCatalog(token: string): Promise<NormalizedBuilding[]> {
-  const now = Date.now();
+async function fetchByLocation(
+  token: string,
+  city: string,
+  neighborhood: string,
+  filters: {
+    minPrice?: string | null;
+    maxPrice?: string | null;
+    bedroomsMin?: string | null;
+    bedroomsMax?: string | null;
+    status?: string | null;
+  },
+  page: number,
+): Promise<NextResponse> {
+  const MAX_PAGES = 5; // 5 × 200 = 1 000 buildings máx
+  const cityTarget = city || 'São Paulo';
 
-  // Cache válido — retorna direto
-  if (CATALOG_CACHE.buildings.length > 0 && now - CATALOG_CACHE.fetchedAt < CACHE_TTL) {
-    return CATALOG_CACHE.buildings;
+  // Busca todas as páginas em paralelo
+  const results = await Promise.all(
+    Array.from({ length: MAX_PAGES }, (_, i) => fetchCityPage(token, cityTarget, i + 1)),
+  );
+
+  // Amostra do raw para inspeção de campos (só p/ debug via console do Vercel)
+  const rawSample = results.find(r => r.rawSample)?.rawSample;
+  if (rawSample) {
+    const addr = (rawSample.address as Record<string, unknown>) || {};
+    console.log('[orulo] address keys:', Object.keys(addr).join(', '));
+    console.log('[orulo] address.area:', addr.area, '| address.neighborhood:', addr.neighborhood,
+      '| address.neighbourhood:', addr.neighbourhood, '| address.district:', addr.district);
   }
 
-  // Já está sendo construído — retorna o que tem (pode ser parcial)
-  if (CATALOG_CACHE.building) return CATALOG_CACHE.buildings;
+  let all = results.flatMap(r => r.buildings);
 
-  CATALOG_CACHE.building = true;
-
-  try {
-    // 1. Descobrir total de páginas
-    const probe = await fetch(
-      `${ORULO_BASE}/api/v2/buildings?state=SP&per_page=1&page=1`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const probeData = await probe.json();
-    const totalPages = Math.min(probeData.total_pages ?? probeData.pages ?? 1, 30);
-
-    // 2. Busca todos em paralelo, em lotes de 10
-    const BASE_QS = new URLSearchParams({ state: 'SP', per_page: '200' });
-    const allBuildings: NormalizedBuilding[] = [];
-    const BATCH = 10;
-
-    for (let start = 1; start <= totalPages; start += BATCH) {
-      const batch = Array.from(
-        { length: Math.min(BATCH, totalPages - start + 1) },
-        (_, i) => start + i
-      );
-      const results = await Promise.all(batch.map(p => fetchOnePage(token, BASE_QS, p)));
-      allBuildings.push(...results.flat());
-    }
-
-    CATALOG_CACHE.buildings = allBuildings;
-    CATALOG_CACHE.fetchedAt = now;
-    CATALOG_CACHE.building = false;
-    return allBuildings;
-
-  } catch {
-    CATALOG_CACHE.building = false;
-    return CATALOG_CACHE.buildings;
+  // Filtro por bairro — usa todos os campos conhecidos da Orulo
+  if (neighborhood) {
+    const nb = neighborhood.toLowerCase();
+    all = all.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
   }
+
+  // Filtros adicionais
+  if (filters.minPrice)    all = all.filter(b => (b.min_price  ?? 0) >= Number(filters.minPrice));
+  if (filters.maxPrice)    all = all.filter(b => (b.min_price  ?? 0) <= Number(filters.maxPrice));
+  if (filters.bedroomsMin) all = all.filter(b => (b.bedrooms_max ?? 99) >= Number(filters.bedroomsMin));
+  if (filters.bedroomsMax && filters.bedroomsMax !== '99')
+                           all = all.filter(b => (b.bedrooms_min ?? 0) <= Number(filters.bedroomsMax));
+  if (filters.status) {
+    const byStatus = all.filter(b => b.status_norm === filters.status);
+    if (byStatus.length > 0) all = byStatus;
+  }
+
+  // Remove duplicatas (mesmo imóvel pode aparecer em várias páginas da Orulo)
+  const seen = new Set<string>();
+  all = all.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
+
+  // Paginação server-side
+  const PER_PAGE = 20;
+  const start    = (page - 1) * PER_PAGE;
+
+  return NextResponse.json({
+    buildings: all.slice(start, start + PER_PAGE),
+    total:     all.length,
+    page,
+    pages:     Math.ceil(all.length / PER_PAGE) || 1,
+    source:    'location',
+    city:      cityTarget,
+    neighborhood_filter: neighborhood || null,
+  });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Handler principal ─────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   try {
@@ -174,69 +219,26 @@ export async function GET(req: NextRequest) {
       if (bedroomsMin)                         buildings = buildings.filter(b => (b.bedrooms_max ?? 0) >= Number(bedroomsMin));
       if (bedroomsMax && bedroomsMax !== '99') buildings = buildings.filter(b => (b.bedrooms_min ?? 0) <= Number(bedroomsMax));
       if (statusReq)    buildings = buildings.filter(b => b.status_norm === statusReq);
-      if (neighborhood) {
-        const nl = neighborhood.toLowerCase();
-        buildings = buildings.filter(b => (b.neighborhood || '').toLowerCase().includes(nl));
-      } else if (q) {
-        const ql = q.toLowerCase();
-        buildings = buildings.filter(b => [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase().includes(ql));
-      }
+      if (neighborhood) buildings = buildings.filter(b => (b.neighborhood || '').toLowerCase().includes(neighborhood.toLowerCase()));
+      else if (q)       buildings = buildings.filter(b => [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase().includes(q.toLowerCase()));
       return NextResponse.json({ buildings, total: buildings.length, page: 1, pages: 1, source: 'mock' });
     }
 
     const token = await getToken();
 
-    // ── Busca por bairro: usa catálogo completo ───────────────────────────────
+    // ── Busca com localização (bairro ou cidade) ──────────────────────────────
     if (neighborhood || city) {
-      const catalog = await getOrBuildCatalog(token);
-
-      let filtered = catalog;
-
-      // Filtro por cidade (quando bairro não foi especificado, ex: "Guarulhos")
-      if (city && !neighborhood) {
-        const ct = city.toLowerCase();
-        filtered = filtered.filter(b => (b.city || '').toLowerCase().includes(ct));
-      }
-
-      // Filtro por bairro (mais específico)
-      if (neighborhood) {
-        const nb = neighborhood.toLowerCase();
-        filtered = filtered.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
-      }
-
-      // Aplica filtros adicionais do catálogo
-      if (minPrice)    filtered = filtered.filter(b => (b.min_price  ?? 0)  >= Number(minPrice));
-      if (maxPrice)    filtered = filtered.filter(b => (b.min_price  ?? 0)  <= Number(maxPrice));
-      if (bedroomsMin) filtered = filtered.filter(b => (b.bedrooms_max ?? 99) >= Number(bedroomsMin));
-      if (bedroomsMax && bedroomsMax !== '99')
-                       filtered = filtered.filter(b => (b.bedrooms_min ?? 0)  <= Number(bedroomsMax));
-      if (statusReq) {
-        const byStatus = filtered.filter(b => b.status_norm === statusReq);
-        if (byStatus.length > 0) filtered = byStatus;
-      }
-
-      // Paginação server-side
-      const PER_PAGE = 20;
-      const start    = (page - 1) * PER_PAGE;
-      const paginated = filtered.slice(start, start + PER_PAGE);
-
-      return NextResponse.json({
-        buildings: paginated,
-        total:     filtered.length,
-        page,
-        pages:     Math.ceil(filtered.length / PER_PAGE) || 1,
-        source:    'catalog',
-      });
+      return fetchByLocation(token, city, neighborhood, { minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq }, page);
     }
 
-    // ── Busca normal (sem bairro): query direta à Orulo ───────────────────────
+    // ── Busca geral (sem localização) — query direta à Orulo ─────────────────
     const qs = new URLSearchParams();
-    qs.set('page', String(page));
-    qs.set('per_page', statusReq ? '200' : '50');
+    qs.set('page',     String(page));
+    qs.set('per_page', '50');
+    qs.set('state',    state);
 
     if (minPrice)                            qs.set('min_price',    minPrice);
     if (maxPrice)                            qs.set('max_price',    maxPrice);
-    if (state)                               qs.set('state',        state);
     if (city)                                qs.set('city',         city);
     if (bedroomsMin)                         qs.set('min_bedrooms', bedroomsMin);
     if (bedroomsMax && bedroomsMax !== '99') qs.set('max_bedrooms', bedroomsMax);
@@ -247,9 +249,9 @@ export async function GET(req: NextRequest) {
     });
     if (!resp.ok) throw new Error(`Orulo buildings error ${resp.status}`);
 
-    const raw = await resp.json();
-    const rawList = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
-    let buildings = rawList.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
+    const raw      = await resp.json();
+    const rawList  = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
+    let buildings  = rawList.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
 
     if (statusReq) {
       const filtered = buildings.filter(b => b.status_norm === statusReq);
