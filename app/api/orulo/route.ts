@@ -108,22 +108,23 @@ async function fetchCityPage(
   token: string,
   city: string,
   page: number,
-): Promise<{ buildings: NormalizedBuilding[]; rawSample: Record<string, unknown> | null }> {
+): Promise<{ buildings: NormalizedBuilding[]; rawSample: Record<string, unknown> | null; totalPages: number }> {
   try {
     const qs = new URLSearchParams({ state: 'SP', city, per_page: '200', page: String(page) });
     const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!resp.ok) return { buildings: [], rawSample: null };
+    if (!resp.ok) return { buildings: [], rawSample: null, totalPages: 0 };
     const raw = await resp.json();
     const list = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
     const buildings = list
       .map(normalizeBuilding)
       .filter(b => b.min_price && b.min_price >= 1000);
     const rawSample = list[0] ?? null;
-    return { buildings, rawSample };
+    const totalPages = raw.total_pages ?? raw.pages ?? 1;
+    return { buildings, rawSample, totalPages };
   } catch {
-    return { buildings: [], rawSample: null };
+    return { buildings: [], rawSample: null, totalPages: 0 };
   }
 }
 
@@ -140,26 +141,33 @@ async function fetchByLocation(
   },
   page: number,
 ): Promise<NextResponse> {
-  const MAX_PAGES = 5; // 5 × 200 = 1 000 buildings máx
   const cityTarget = city || 'São Paulo';
 
-  // Busca todas as páginas em paralelo
-  const results = await Promise.all(
-    Array.from({ length: MAX_PAGES }, (_, i) => fetchCityPage(token, cityTarget, i + 1)),
-  );
+  // 1ª página para descobrir quantas páginas existem para essa cidade
+  const first = await fetchCityPage(token, cityTarget, 1);
+  const totalPagesForCity = Math.min(first.totalPages, 10); // máx 10 × 200 = 2 000
 
-  // Amostra do raw para inspeção de campos (só p/ debug via console do Vercel)
-  const rawSample = results.find(r => r.rawSample)?.rawSample;
-  if (rawSample) {
-    const addr = (rawSample.address as Record<string, unknown>) || {};
-    console.log('[orulo] address keys:', Object.keys(addr).join(', '));
-    console.log('[orulo] address.area:', addr.area, '| address.neighborhood:', addr.neighborhood,
-      '| address.neighbourhood:', addr.neighbourhood, '| address.district:', addr.district);
-  }
+  // Busca páginas restantes em paralelo
+  const rest = totalPagesForCity > 1
+    ? await Promise.all(
+        Array.from({ length: totalPagesForCity - 1 }, (_, i) => fetchCityPage(token, cityTarget, i + 2)),
+      )
+    : [];
 
-  let all = results.flatMap(r => r.buildings);
+  const allResults = [first, ...rest];
 
-  // Filtro por bairro — usa todos os campos conhecidos da Orulo
+  // Debug: expõe campos reais da Orulo na resposta (remover depois de validar)
+  const rawSample = allResults.find(r => r.rawSample)?.rawSample ?? null;
+  const addressDebug = rawSample
+    ? (rawSample.address as Record<string, unknown>) ?? {}
+    : null;
+
+  let all = allResults.flatMap(r => r.buildings);
+
+  // Bairros únicos encontrados (para diagnóstico)
+  const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
+
+  // Filtro por bairro
   if (neighborhood) {
     const nb = neighborhood.toLowerCase();
     all = all.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
@@ -176,7 +184,7 @@ async function fetchByLocation(
     if (byStatus.length > 0) all = byStatus;
   }
 
-  // Remove duplicatas (mesmo imóvel pode aparecer em várias páginas da Orulo)
+  // Remove duplicatas
   const seen = new Set<string>();
   all = all.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
 
@@ -192,6 +200,14 @@ async function fetchByLocation(
     source:    'location',
     city:      cityTarget,
     neighborhood_filter: neighborhood || null,
+    // ── DEBUG (remover após validar campos) ──────────────────────────────────
+    _debug: {
+      total_fetched:         allResults.flatMap(r => r.buildings).length,
+      pages_fetched:         allResults.length,
+      unique_neighborhoods:  uniqueNeighborhoods.slice(0, 50),
+      address_keys:          addressDebug ? Object.keys(addressDebug) : [],
+      address_sample:        addressDebug,
+    },
   });
 }
 
@@ -262,6 +278,7 @@ export async function GET(req: NextRequest) {
       buildings,
       total:  raw.total       ?? buildings.length,
       page,
+   
       pages:  raw.total_pages ?? raw.pages ?? 1,
       source: 'orulo',
     });
