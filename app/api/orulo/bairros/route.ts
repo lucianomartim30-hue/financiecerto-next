@@ -9,7 +9,7 @@ async function getToken(): Promise<string> {
   if (_tokenCache.token && now < _tokenCache.expiresAt) return _tokenCache.token;
   const clientId     = process.env.ORULO_CLIENT_ID;
   const clientSecret = process.env.ORULO_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error('Credenciais Orulo não configuradas.');
+  if (!clientId || !clientSecret) throw new Error('Credenciais nao configuradas.');
   const resp = await fetch(`${ORULO_BASE}/oauth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -17,149 +17,83 @@ async function getToken(): Promise<string> {
   });
   if (!resp.ok) throw new Error(`Token error ${resp.status}`);
   const data = await resp.json();
+  if (!data.access_token) throw new Error('Token nao retornado.');
   _tokenCache = { token: data.access_token, expiresAt: now + 20 * 60 * 60 * 1000 };
   return data.access_token;
 }
 
-// Cache bairros por 6h
-let _bairrosCache: { data: LocationSuggestion[]; expiresAt: number } = { data: [], expiresAt: 0 };
-
-interface LocationSuggestion {
-  label: string;  // "Moema, São Paulo – SP"
-  city: string;
-  neighborhood: string;
-  state: string;
+function extractNeighborhood(address: Record<string, unknown>): string {
+  return (
+    (address.area         as string) ||
+    (address.neighborhood as string) ||
+    (address.neighbourhood as string) ||
+    (address.district      as string) ||
+    (address.region        as string) ||
+    ''
+  );
 }
 
-// Fallback estático com toda a Região Metropolitana de SP
-const RMSP_STATIC: LocationSuggestion[] = [
-  // ── São Paulo – Centro ──────────────────────────────────────────────────────
-  ...['Sé','República','Liberdade','Bela Vista','Consolação','Higienópolis',
-      'Santa Cecília','Bom Retiro','Brás','Cambuci','Pari','Glicério'].map(n =>
-    ({ label: `${n}, São Paulo – SP`, city: 'São Paulo', neighborhood: n, state: 'SP' })),
-  // ── São Paulo – Oeste ───────────────────────────────────────────────────────
-  ...['Pinheiros','Vila Madalena','Lapa','Perdizes','Pompeia','Sumaré',
-      'Barra Funda','Água Branca','Pacaembu','Butantã','Vila Leopoldina',
-      'Alto de Pinheiros','Itaim Bibi','Vila Olímpia','Vila Hamburguesa'].map(n =>
-    ({ label: `${n}, São Paulo – SP`, city: 'São Paulo', neighborhood: n, state: 'SP' })),
-  // ── São Paulo – Sul ─────────────────────────────────────────────────────────
-  ...['Moema','Brooklin','Campo Belo','Santo Amaro','Campo Grande','Jabaquara',
-      'Saúde','Vila Mariana','Ipiranga','Cursino','Sacomã','Interlagos',
-      'Pedreira','Cidade Dutra','Grajaú','Parelheiros','Socorro'].map(n =>
-    ({ label: `${n}, São Paulo – SP`, city: 'São Paulo', neighborhood: n, state: 'SP' })),
-  // ── São Paulo – Norte ───────────────────────────────────────────────────────
-  ...['Santana','Tucuruvi','Casa Verde','Cachoeirinha','Mandaqui','Jaçanã',
-      'Tremembé','Brasilândia','Pirituba','Jaraguá','Perus','Anhanguera',
-      'Vila Guilherme','Vila Maria','Vila Medeiros'].map(n =>
-    ({ label: `${n}, São Paulo – SP`, city: 'São Paulo', neighborhood: n, state: 'SP' })),
-  // ── São Paulo – Leste ───────────────────────────────────────────────────────
-  ...['Tatuapé','Mooca','Belém','Penha','Vila Matilde','Sapopemba','Itaquera',
-      'São Mateus','Guaianases','Cidade Tiradentes','Ermelino Matarazzo',
-      'São Miguel Paulista','Artur Alvim','Vila Prudente','Vila Carrão',
-      'Vila Formosa','Aricanduva','Jardim Helena','Iguatemi'].map(n =>
-    ({ label: `${n}, São Paulo – SP`, city: 'São Paulo', neighborhood: n, state: 'SP' })),
-  // ── São Paulo – Jardins e nobres ────────────────────────────────────────────
-  ...['Jardins','Jardim Paulista','Jardim América','Jardim Europa','Cerqueira César',
-      'Paulista','Avenida Paulista','Vila Nova Conceição','Chácara Klabin',
-      'Paraíso','Vila Clementino','Mirandópolis','Planalto Paulista'].map(n =>
-    ({ label: `${n}, São Paulo – SP`, city: 'São Paulo', neighborhood: n, state: 'SP' })),
-  // ── Grande ABC ──────────────────────────────────────────────────────────────
-  ...['Santo André','Vila Bastos','Campestre','Jardim','Utinga'].map(n =>
-    ({ label: `${n}, Santo André – SP`, city: 'Santo André', neighborhood: n, state: 'SP' })),
-  ...['São Bernardo do Campo','Rudge Ramos','Nova Petrópolis','Assunção','Alvarenga'].map(n =>
-    ({ label: `${n}, São Bernardo do Campo – SP`, city: 'São Bernardo do Campo', neighborhood: n, state: 'SP' })),
-  { label: 'São Caetano do Sul – SP', city: 'São Caetano do Sul', neighborhood: '', state: 'SP' },
-  { label: 'Diadema – SP', city: 'Diadema', neighborhood: '', state: 'SP' },
-  { label: 'Mauá – SP', city: 'Mauá', neighborhood: '', state: 'SP' },
-  { label: 'Ribeirão Pires – SP', city: 'Ribeirão Pires', neighborhood: '', state: 'SP' },
-  { label: 'Rio Grande da Serra – SP', city: 'Rio Grande da Serra', neighborhood: '', state: 'SP' },
-  // ── Guarulhos ───────────────────────────────────────────────────────────────
-  ...['Guarulhos','Gopouva','Jardim Bom Clima','Centro de Guarulhos','Pimentas',
-      'Vila Galvão','Jardim Tranquilidade'].map(n =>
-    ({ label: `${n !== 'Guarulhos' ? n + ', ' : ''}Guarulhos – SP`, city: 'Guarulhos', neighborhood: n === 'Guarulhos' ? '' : n, state: 'SP' })),
-  // ── Osasco e região Oeste ───────────────────────────────────────────────────
-  ...['Osasco','Barueri','Alphaville','Santana de Parnaíba','Carapicuíba',
-      'Itapevi','Jandira','Cotia','Granja Viana'].map(n =>
-    ({ label: `${n} – SP`, city: n, neighborhood: '', state: 'SP' })),
-  // ── Sul e Sudoeste ──────────────────────────────────────────────────────────
-  ...['Taboão da Serra','Embu das Artes','Embu-Guaçu','Itapecerica da Serra',
-      'São Lourenço da Serra','Juquitiba'].map(n =>
-    ({ label: `${n} – SP`, city: n, neighborhood: '', state: 'SP' })),
-  // ── Norte ───────────────────────────────────────────────────────────────────
-  ...['Mairiporã','Caieiras','Franco da Rocha','Francisco Morato','Cajamar',
-      'Pirapora do Bom Jesus'].map(n =>
-    ({ label: `${n} – SP`, city: n, neighborhood: '', state: 'SP' })),
-  // ── Leste / Alto Tietê ─────────────────────────────────────────────────────
-  ...['Mogi das Cruzes','Suzano','Poá','Itaquaquecetuba','Ferraz de Vasconcelos',
-      'Guararema','Salesópolis','Biritiba-Mirim'].map(n =>
-    ({ label: `${n} – SP`, city: n, neighborhood: '', state: 'SP' })),
-];
+// Busca UMA página da cidade
+async function fetchPage(token: string, city: string, page: number) {
+  try {
+    const qs = new URLSearchParams({ state: 'SP', city, per_page: '200', page: String(page) });
+    const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return [];
+    const raw = await resp.json();
+    return (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
+  } catch {
+    return [];
+  }
+}
+
+// Cache simples em memória (warm por instância Vercel — se reiniciar, rebusca)
+let _cache: { locations: { label: string; city: string; neighborhood: string }[]; at: number } | null = null;
+const CACHE_TTL = 30 * 60 * 1000; // 30 min
 
 export async function GET() {
   try {
-    // Retorna cache se válido
-    if (_bairrosCache.data.length > 0 && Date.now() < _bairrosCache.expiresAt) {
-      return NextResponse.json({ locations: _bairrosCache.data, source: 'cache' });
-    }
-
-    // Mock mode — retorna estático
-    if (process.env.USE_MOCK === 'true') {
-      return NextResponse.json({ locations: RMSP_STATIC, source: 'static' });
+    // Serve do cache se ainda válido
+    if (_cache && Date.now() - _cache.at < CACHE_TTL) {
+      return NextResponse.json({ locations: _cache.locations, cached: true });
     }
 
     const token = await getToken();
 
-    // Busca primeiros 200 empreendimentos do estado SP para extrair cidades/bairros reais
-    const qs = new URLSearchParams({ state: 'SP', per_page: '200', page: '1' });
-    const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    // Busca 3 páginas de SP (600 imóveis) em paralelo — ~1-2 s
+    const [pg1, pg2, pg3] = await Promise.all([
+      fetchPage(token, 'São Paulo', 1),
+      fetchPage(token, 'São Paulo', 2),
+      fetchPage(token, 'São Paulo', 3),
+    ]);
 
-    if (!resp.ok) throw new Error(`Orulo ${resp.status}`);
-    const raw = await resp.json();
-    const list = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
+    const all = [...pg1, ...pg2, ...pg3];
 
-    // Extrai cidades e bairros únicos
-    const seen = new Set<string>();
-    const fromApi: LocationSuggestion[] = [];
-
-    for (const b of list) {
-      const addr = (b.address as Record<string, string>) || {};
-      const city = (addr.city || '').trim();
-      const neighborhood = (addr.area || addr.neighborhood || '').trim();
-      const state = (addr.state || 'SP').trim();
-
-      if (city) {
-        const cityKey = `${city}|${state}`;
-        if (!seen.has(cityKey)) {
-          seen.add(cityKey);
-          fromApi.push({ label: `${city} – ${state}`, city, neighborhood: '', state });
-        }
-        if (neighborhood) {
-          const nbKey = `${neighborhood}|${city}`;
-          if (!seen.has(nbKey)) {
-            seen.add(nbKey);
-            fromApi.push({
-              label: `${neighborhood}, ${city} – ${state}`,
-              city, neighborhood, state,
-            });
-          }
-        }
-      }
+    // Contagem de bairros
+    const nbCount: Record<string, number> = {};
+    for (const b of all) {
+      const addr = (b.address as Record<string, unknown>) || {};
+      const nb   = extractNeighborhood(addr);
+      if (nb) nbCount[nb] = (nbCount[nb] || 0) + 1;
     }
 
-    // Merge: API first, then static fill any gaps
-    const apiCities = new Set(fromApi.map(l => l.city.toLowerCase()));
-    const staticOnly = RMSP_STATIC.filter(l => !apiCities.has(l.city.toLowerCase()));
-    const merged = [...fromApi, ...staticOnly].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+    // Ordenar por frequência
+    const sorted = Object.entries(nbCount)
+      .sort((a, b) => b[1] - a[1])
+      .map(([nb]) => nb);
 
-    _bairrosCache = { data: merged, expiresAt: Date.now() + 6 * 60 * 60 * 1000 };
+    // Formatar para o autocomplete: "Bairro, São Paulo – SP"
+    const locations = sorted.map(nb => ({
+      label:        `${nb}, São Paulo – SP`,
+      city:         'São Paulo',
+      neighborhood: nb,
+    }));
 
-    return NextResponse.json({ locations: merged, source: 'orulo+static' });
+    _cache = { locations, at: Date.now() };
 
+    return NextResponse.json({ locations, total: locations.length });
   } catch (err) {
-    console.error('[api/orulo/bairros]', err);
-    // Fallback para lista estática
-    return NextResponse.json({ locations: RMSP_STATIC, source: 'static' });
+    return NextResponse.json({ error: String(err), locations: [] }, { status: 500 });
   }
 }
