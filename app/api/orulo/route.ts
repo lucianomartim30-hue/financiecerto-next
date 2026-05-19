@@ -117,14 +117,14 @@ async function fetchCityPage(
 //
 // ARQUITETURA: Vercel é stateless. Sem cache de módulo para o catálogo.
 //
-// Estratégia: dispara 5 páginas × 200 = até 1.000 imóveis TODOS EM PARALELO
+// Estratégia: dispara 11 páginas × 200 = até 2.200 imóveis TODOS EM PARALELO
 // (sem esperar a pg 1 para descobrir o total_pages).
 // Tempo: ~1-2 s independentemente do número de páginas existentes.
-// Cobre SP inteiro (≈600-800 imóveis na Orulo) e municípios menores (<200).
+// Catálogo atual via client_credentials = ~2.031 imóveis → 11 páginas cobre tudo.
 //
 // Páginas além do total real da cidade retornam vazio e são descartadas.
 
-const MAX_CITY_PAGES = 5; // 5 × 200 = 1.000 imóveis
+const MAX_CITY_PAGES = 11; // 11 × 200 = 2.200 imóveis (cobre catálogo completo ~2.031)
 
 async function fetchByLocation(
   token: string,
@@ -282,6 +282,4 @@ export async function GET(req: NextRequest) {
       _tokenCache = { token: null, expiresAt: 0 };
       return NextResponse.json({ error: 'Credenciais Orulo invalidas.' }, { status: 401 });
     }
-    return NextResponse.json({ error: 'Erro ao buscar imoveis.' }, { status: 500 });
-  }
-}
+    return NextResponse.json({ error: 'Erro ao 
