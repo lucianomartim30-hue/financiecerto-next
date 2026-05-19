@@ -373,146 +373,146 @@ function stripFmt(formatted: string): string {
 
 
 // ──────────────────────────────────────────────────────────────────────────────
-// LocationAutocomplete — dropdown categorizado (Bairros + Empreendimentos)
+// SmartSearchInput — autocomplete inteligente com redirect para /bairro/[slug]
+// Chama /api/orulo/search?q= e retorna 3 categorias: Bairros, Empreendimentos, Cidades.
+// Ao selecionar bairro ou empreendimento, navega para a página contextual.
 // ──────────────────────────────────────────────────────────────────────────────
-interface BuildingSuggestion { id: string; name: string; neighborhood: string; city: string; }
-
-// Lista de bairros SP + municípios RMSP para o autocomplete (offline, sem fetch)
-// Formato: "Nome, Cidade – SP" para bairros / "Cidade – SP" para municípios
-const LOCATION_STATIC = [
-  // Municípios da RMSP (cidade nível)
-  'São Paulo – SP','Guarulhos – SP','Osasco – SP','Barueri – SP','Alphaville – SP',
-  'Santo André – SP','São Bernardo do Campo – SP','São Caetano do Sul – SP',
-  'Diadema – SP','Mauá – SP','Ribeirão Pires – SP','Rio Grande da Serra – SP',
-  'Santana de Parnaíba – SP','Cotia – SP','Taboão da Serra – SP','Carapicuíba – SP',
-  'Mogi das Cruzes – SP','Suzano – SP','Embu das Artes – SP','Itaquaquecetuba – SP',
-  // Bairros de São Paulo
-  'Moema, São Paulo – SP','Itaim Bibi, São Paulo – SP','Brooklin, São Paulo – SP',
-  'Campo Belo, São Paulo – SP','Vila Olímpia, São Paulo – SP','Pinheiros, São Paulo – SP',
-  'Vila Madalena, São Paulo – SP','Perdizes, São Paulo – SP','Lapa, São Paulo – SP',
-  'Santo Amaro, São Paulo – SP','Vila Mariana, São Paulo – SP','Ipiranga, São Paulo – SP',
-  'Jabaquara, São Paulo – SP','Saúde, São Paulo – SP','Cursino, São Paulo – SP',
-  'Sacomã, São Paulo – SP','Interlagos, São Paulo – SP','Campo Grande, São Paulo – SP',
-  'Santana, São Paulo – SP','Tatuapé, São Paulo – SP','Mooca, São Paulo – SP',
-  'Penha, São Paulo – SP','Vila Matilde, São Paulo – SP','Itaquera, São Paulo – SP',
-  'São Mateus, São Paulo – SP','Vila Prudente, São Paulo – SP','Aricanduva, São Paulo – SP',
-  'Vila Formosa, São Paulo – SP','Vila Carrão, São Paulo – SP',
-  'Tucuruvi, São Paulo – SP','Casa Verde, São Paulo – SP','Cachoeirinha, São Paulo – SP',
-  'Vila Maria, São Paulo – SP','Vila Guilherme, São Paulo – SP','Pirituba, São Paulo – SP',
-  'Jardins, São Paulo – SP','Cerqueira César, São Paulo – SP','Paraíso, São Paulo – SP',
-  'Bela Vista, São Paulo – SP','Consolação, São Paulo – SP','Higienópolis, São Paulo – SP',
-  'Santa Cecília, São Paulo – SP','República, São Paulo – SP','Liberdade, São Paulo – SP',
-  'Butantã, São Paulo – SP','Alto de Pinheiros, São Paulo – SP','Pacaembu, São Paulo – SP',
-  'Pompeia, São Paulo – SP','Barra Funda, São Paulo – SP','Sumaré, São Paulo – SP',
-  'Vila Hamburguesa, São Paulo – SP','Vila Leopoldina, São Paulo – SP',
-  'Aclimação, São Paulo – SP','Vila Clementino, São Paulo – SP','Tremembé, São Paulo – SP',
-];
-
-function LocationAutocomplete({
+function SmartSearchInput({
   value,
   onConfirm,
-  locationSuggestions,
 }: {
-  value: string;
+  value:     string;
   onConfirm: (v: string) => void;
-  locationSuggestions: string[];
 }) {
-  const [input, setInput] = useState(value);
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  type SearchResults = {
+    neighborhoods: { label: string; slug: string }[];
+    cities:        { label: string; slug: string }[];
+    buildings:     { label: string; id: string; neighborhood: string; slug: string }[];
+  };
 
-  // Sync externo
+  const [input,      setInput]      = useState(value);
+  const [open,       setOpen]       = useState(false);
+  const [results,    setResults]    = useState<SearchResults>({ neighborhoods: [], cities: [], buildings: [] });
+  const [searching,  setSearching]  = useState(false);
+  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const router       = useRouter();
+
   useEffect(() => { setInput(value); }, [value]);
 
+  // Debounce: chama /api/orulo/search após 280 ms sem digitar
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const q = input.trim();
+    if (q.length < 2) { setResults({ neighborhoods: [], cities: [], buildings: [] }); return; }
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res  = await fetch(`/api/orulo/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        setResults(data);
+        setOpen(true);
+      } catch { /* ignore */ } finally { setSearching(false); }
+    }, 280);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [input]);
 
   // Fecha ao clicar fora
   useEffect(() => {
-    function onClickOut(e: MouseEvent) {
+    function handler(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener('mousedown', onClickOut);
-    return () => document.removeEventListener('mousedown', onClickOut);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const q = input.trim().toLowerCase();
-  // Usa sugestões dinâmicas (da API) se disponíveis, senão cai no estático
-  const neighborhoodSource = locationSuggestions.length > 10
-    ? locationSuggestions
-    : LOCATION_STATIC;
-  const matchingNeighborhoods = q.length >= 2
-    ? neighborhoodSource.filter(s => s.toLowerCase().includes(q)).slice(0, 8)
-    : [];
+  const hasResults = results.neighborhoods.length > 0 || results.cities.length > 0 || results.buildings.length > 0;
 
-  const hasResults = matchingNeighborhoods.length > 0;
-
-  function selectNeighborhood(label: string) {
-    setInput(label);
+  function goToBairro(slug: string, label: string) {
+    setInput(label.replace(/,\s*.+$/, ''));
     setOpen(false);
-    onConfirm(label);
+    router.push(`/bairro/${slug}`);
   }
+  function goToBuilding(slug: string, label: string) {
+    setInput(label); setOpen(false);
+    if (slug) router.push(`/bairro/${slug}`);
+    else onConfirm(label);
+  }
+
+  const btnStyle: React.CSSProperties = {
+    display: 'block', width: '100%', textAlign: 'left',
+    padding: '9px 14px 9px 22px', background: 'none',
+    border: 'none', cursor: 'pointer', fontSize: '13px',
+    color: 'var(--text)', fontFamily: 'inherit',
+  };
+  const sectionHeader: React.CSSProperties = {
+    padding: '8px 14px 4px', fontSize: '10px', fontWeight: '800',
+    color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px',
+    display: 'flex', alignItems: 'center', gap: '5px',
+  };
 
   return (
     <div ref={containerRef} style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
-      <span style={{
-        position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)',
-        color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none',
-      }}>📍</span>
+      <span style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none' }}>📍</span>
       <input
-        type="text"
-        value={input}
-        onChange={e => { setInput(e.target.value); setOpen(true); }}
-        onFocus={() => { if (input.trim().length >= 2) setOpen(true); }}
+        type="text" value={input}
+        onChange={e => setInput(e.target.value)}
+        onFocus={() => { if (input.trim().length >= 2 && hasResults) setOpen(true); }}
         onKeyDown={e => {
           if (e.key === 'Enter') { setOpen(false); onConfirm(input); }
           if (e.key === 'Escape') setOpen(false);
         }}
-        placeholder="Bairro ou cidade..."
-        style={{
-          padding: '10px 12px 10px 34px', border: '1.5px solid var(--border)',
-          borderRadius: '10px', fontSize: '13px', width: '100%',
-          outline: 'none', background: 'var(--bg)',
-          color: 'var(--text)', fontFamily: 'inherit',
-        }}
+        placeholder="Bairro, empreendimento ou cidade..."
+        style={{ padding: '10px 32px 10px 34px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '13px', width: '100%', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit' }}
       />
+      {searching && <span style={{ position: 'absolute', right: '11px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: 'var(--text-faint)' }}>⟳</span>}
 
       {open && hasResults && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
-          background: 'var(--bg-card)', border: '1.5px solid var(--border)',
-          borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,.14)',
-          zIndex: 200, overflow: 'hidden', maxHeight: '340px', overflowY: 'auto',
-        }}>
-          {matchingNeighborhoods.length > 0 && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,.14)', zIndex: 200, overflow: 'hidden', maxHeight: '380px', overflowY: 'auto' }}>
+
+          {/* Bairros */}
+          {results.neighborhoods.length > 0 && (
             <div>
-              <div style={{
-                padding: '8px 14px 4px', fontSize: '10px', fontWeight: '800',
-                color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px',
-                display: 'flex', alignItems: 'center', gap: '6px',
-              }}>
-                <span style={{ fontSize: '12px' }}>📍</span> Bairros
-              </div>
-              {matchingNeighborhoods.map(s => {
-                const display = s.replace(/\s*[\u2013\-]\s*[A-Z]{2}$/, '');
-                return (
-                  <button
-                    key={s}
-                    onMouseDown={e => { e.preventDefault(); selectNeighborhood(s); }}
-                    style={{
-                      display: 'block', width: '100%', textAlign: 'left',
-                      padding: '9px 14px 9px 22px', background: 'none',
-                      border: 'none', cursor: 'pointer', fontSize: '13px',
-                      color: 'var(--text)', fontFamily: 'inherit',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
-                  >
-                    {display}
-                  </button>
-                );
-              })}
+              <div style={sectionHeader}><span>📍</span> Bairros</div>
+              {results.neighborhoods.map(nb => (
+                <button key={nb.slug} onMouseDown={e => { e.preventDefault(); goToBairro(nb.slug, nb.label); }} style={btnStyle}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                  {nb.label.replace(/,\s*São Paulo\s*–\s*SP$/, '')}
+                  <span style={{ marginLeft: '6px', fontSize: '10px', color: 'var(--text-faint)' }}>São Paulo · ver bairro →</span>
+                </button>
+              ))}
             </div>
           )}
 
+          {/* Empreendimentos */}
+          {results.buildings.length > 0 && (
+            <div style={{ borderTop: results.neighborhoods.length > 0 ? '1px solid var(--border)' : 'none' }}>
+              <div style={sectionHeader}><span>🏢</span> Empreendimentos</div>
+              {results.buildings.map(b => (
+                <button key={b.id} onMouseDown={e => { e.preventDefault(); goToBuilding(b.slug, b.label); }} style={btnStyle}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                  {b.label}
+                  {b.neighborhood && <span style={{ marginLeft: '6px', fontSize: '10px', color: 'var(--text-faint)' }}>· {b.neighborhood}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Cidades */}
+          {results.cities.length > 0 && (
+            <div style={{ borderTop: (results.neighborhoods.length > 0 || results.buildings.length > 0) ? '1px solid var(--border)' : 'none' }}>
+              <div style={sectionHeader}><span>🌆</span> Cidades</div>
+              {results.cities.map(c => (
+                <button key={c.slug} onMouseDown={e => { e.preventDefault(); setInput(c.label); setOpen(false); onConfirm(c.label); }} style={btnStyle}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -543,7 +543,6 @@ function ImoveisContent() {
 
   // UI state do painel
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
 
   // Data
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
@@ -627,16 +626,6 @@ function ImoveisContent() {
 
   // Re-fetch sempre que qualquer filtro de API mudar
   useEffect(() => { buscar(1); }, [buscar]);
-
-  // Carrega sugestões de bairros/cidades do endpoint dinâmico
-  useEffect(() => {
-    fetch('/api/orulo/bairros')
-      .then(r => r.json())
-      .then(d => {
-        if (d.locations) setLocationSuggestions(d.locations.map((l: { label: string }) => l.label));
-      })
-      .catch(() => {});
-  }, []);
 
   // Ordenação local (não precisa re-fetch)
   const imoveisFiltrados = [...imoveis].sort((a, bx) => {
@@ -743,13 +732,12 @@ function ImoveisContent() {
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
 
             {/* Autocomplete bairro/empreendimento */}
-            <LocationAutocomplete
+            <SmartSearchInput
               value={localSearchInput}
               onConfirm={v => {
                 setLocalSearchInput(v);
                 setLocalSearch(v);
               }}
-              locationSuggestions={locationSuggestions}
             />
 
             {/* Buscar */}
