@@ -1,1426 +1,715 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
-  descobrir,
-  simular,
-  formatBRL,
-  calcularSeguros,
-  type ResultadoDescobrir,
-  type ResultadoSimulacao,
+  descobrir, simular, formatBRL, parseBRL,
+  detectarFaixaMCMV, calcSubsidioEstimado,
+  getMIPCoeff, TAXA_SBPE_ANUAL, FAIXAS_MCMV, TR_MENSAL,
+  type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Types
-// ──────────────────────────────────────────────────────────────────────────────
-type Modo = 'descobrir' | 'imovel' | 'planta';
-type Fase = 'form' | 'resultado';
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────────────────────────────────────────
-function parseMoeda(v: string): number {
-  return Number(v.replace(/\D/g, ''));
-}
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtInput(v: string): string {
   const n = v.replace(/\D/g, '');
   return n ? Number(n).toLocaleString('pt-BR') : '';
 }
-
-/** Salva contexto da simulação no sessionStorage para o João */
-function salvarContexto(ctx: Record<string, unknown>) {
+function parseMoeda(v: string): number { return Number(v.replace(/\D/g, '')) || 0; }
+function salvarCtx(ctx: Record<string, unknown>) {
   try {
     sessionStorage.setItem('joao_sim_context', JSON.stringify(ctx));
     window.dispatchEvent(new StorageEvent('storage', { key: 'joao_sim_context' }));
-  } catch { /* SSR safety */ }
+  } catch { /* SSR */ }
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Shared UI
-// ──────────────────────────────────────────────────────────────────────────────
+// ─── Paleta de saúde ─────────────────────────────────────────────────────────
+const SAUDE: Record<string, { cor: string; bg: string; txt: string; emoji: string }> = {
+  ótimo:   { cor: '#0F6E56', bg: '#E1F5EE', txt: '#085041', emoji: '✅' },
+  bom:     { cor: '#3B6D11', bg: '#EAF3DE', txt: '#27500A', emoji: '👍' },
+  atenção: { cor: '#854F0B', bg: '#FAEEDA', txt: '#633806', emoji: '⚠️' },
+  risco:   { cor: '#993C1D', bg: '#FAECE7', txt: '#4A1B0C', emoji: '🚨' },
+};
 
-function Progresso({ total, atual }: { total: number; atual: number }) {
+// ─── Barra de progresso ───────────────────────────────────────────────────────
+function Barra({ etapa, total }: { etapa: number; total: number }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '36px' }}>
+    <div style={{ display: 'flex', gap: 4, marginBottom: 36, alignItems: 'center' }}>
       {Array.from({ length: total }).map((_, i) => (
-        <div
-          key={i}
-          style={{
-            height: '4px',
-            width: i === atual ? '28px' : '10px',
-            borderRadius: '99px',
-            background: i < atual ? 'var(--primary)' : i === atual ? 'var(--primary)' : 'var(--border)',
-            opacity: i < atual ? 0.4 : 1,
-            transition: 'all 0.35s cubic-bezier(.4,0,.2,1)',
-          }}
-        />
+        <div key={i} style={{
+          height: 4, flex: i === etapa ? 2 : 1,
+          borderRadius: 99,
+          background: i < etapa ? 'var(--primary)' : i === etapa ? 'var(--primary)' : 'var(--border)',
+          opacity: i < etapa ? 0.45 : 1,
+          transition: 'all .35s ease',
+        }} />
       ))}
-      <span style={{ marginLeft: '6px', fontSize: '12px', color: 'var(--text-faint)' }}>
-        {atual + 1}/{total}
+      <span style={{ fontSize: 12, color: 'var(--text-faint)', marginLeft: 6 }}>
+        {etapa + 1}/{total}
       </span>
     </div>
   );
 }
 
-function CampoGrande({
-  label, hint, value, onChange, prefix, placeholder,
+// ─── Input monetário grande ───────────────────────────────────────────────────
+function InputBRL({
+  label, hint, value, onChange, prefix = 'R$', placeholder = '0',
 }: {
   label: string; hint?: string; value: string;
   onChange: (v: string) => void; prefix?: string; placeholder?: string;
 }) {
   const [focused, setFocused] = useState(false);
   return (
-    <div style={{ marginBottom: '32px' }}>
-      <label style={{
-        display: 'block', fontSize: '11px', fontWeight: '700',
-        color: 'var(--text-faint)', marginBottom: '10px',
-        textTransform: 'uppercase', letterSpacing: '0.8px',
-      }}>
-        {label}
-      </label>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '6px',
-        paddingBottom: '10px',
-        borderBottom: `2px solid ${focused ? 'var(--primary)' : 'var(--border)'}`,
-        transition: 'border-color 0.2s',
-      }}>
-        {prefix && (
-          <span style={{
-            fontSize: '26px', fontWeight: '300',
-            color: focused ? 'var(--primary)' : 'var(--text-faint)',
-            transition: 'color 0.2s', flexShrink: 0, lineHeight: 1,
-          }}>
-            {prefix}
-          </span>
-        )}
+    <div style={{ marginBottom: 28 }}>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.8px' }}>{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 10, borderBottom: `2px solid ${focused ? 'var(--primary)' : 'var(--border)'}`, transition: 'border-color .2s' }}>
+        <span style={{ fontSize: 24, fontWeight: 300, color: focused ? 'var(--primary)' : 'var(--text-faint)', transition: 'color .2s', flexShrink: 0 }}>{prefix}</span>
         <input
-          type="text"
-          inputMode="numeric"
+          type="text" inputMode="numeric"
           value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder ?? '0'}
+          placeholder={placeholder}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          style={{
-            flex: 1, border: 'none', outline: 'none',
-            fontSize: '32px', fontWeight: '700',
-            color: 'var(--text)', background: 'transparent',
-            fontVariantNumeric: 'tabular-nums',
-            padding: 0,
-          }}
+          onChange={e => onChange(fmtInput(e.target.value))}
+          style={{ flex: 1, border: 'none', outline: 'none', fontSize: 32, fontWeight: 600, background: 'transparent', color: 'var(--text)', fontFamily: 'inherit', width: '100%' }}
         />
       </div>
-      {hint && (
-        <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginTop: '8px', lineHeight: 1.5 }}>
-          {hint}
-        </p>
-      )}
+      {hint && <p style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 8 }}>{hint}</p>}
     </div>
   );
 }
 
-function BarraComprometimento({ pct }: { pct: number }) {
-  const cor = pct <= 25 ? '#16a34a' : pct <= 30 ? '#d97706' : '#dc2626';
-  const label = pct <= 25 ? 'Saudável' : pct <= 30 ? 'Aceitável' : 'Elevado';
+// ─── Chip toggle ─────────────────────────────────────────────────────────────
+function Chip({ label, ativo, onClick }: { label: string; ativo: boolean; onClick: () => void }) {
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Comprometimento de renda</span>
-        <span style={{ fontSize: '13px', fontWeight: '700', color: cor }}>
-          {pct.toFixed(1)}% — {label}
-        </span>
-      </div>
-      <div style={{ height: '6px', background: 'var(--border)', borderRadius: '99px', overflow: 'hidden' }}>
-        <div style={{
-          width: `${Math.min(pct, 100)}%`, height: '100%',
-          background: cor, borderRadius: '99px',
-          transition: 'width 0.6s cubic-bezier(.4,0,.2,1)',
-        }} />
-      </div>
-    </div>
-  );
-}
-
-function LinhaDetalhe({ label, valor, destaque }: { label: string; valor: string; destaque?: boolean }) {
-  return (
-    <div style={{
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      padding: '11px 0',
-      borderBottom: '1px solid var(--border)',
+    <button onClick={onClick} style={{
+      padding: '10px 20px', borderRadius: 99, border: `1.5px solid ${ativo ? 'var(--primary)' : 'var(--border)'}`,
+      background: ativo ? 'var(--primary)' : 'transparent',
+      color: ativo ? '#fff' : 'var(--text)', fontSize: 14, fontWeight: ativo ? 600 : 400,
+      cursor: 'pointer', transition: 'all .2s', fontFamily: 'inherit',
     }}>
-      <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{label}</span>
-      <span style={{
-        fontSize: '14px',
-        fontWeight: destaque ? '800' : '600',
-        color: destaque ? 'var(--text)' : 'var(--text)',
-      }}>
-        {valor}
-      </span>
+      {label}
+    </button>
+  );
+}
+
+// ─── Badge de faixa ───────────────────────────────────────────────────────────
+function BadgeFaixa({ renda }: { renda: number }) {
+  if (!renda) return null;
+  const faixa = detectarFaixaMCMV(renda);
+  if (!faixa) return <span style={{ fontSize: 13, color: '#185FA5', background: '#E6F1FB', padding: '3px 10px', borderRadius: 99, fontWeight: 600 }}>SBPE — sem limite</span>;
+  const cores: Record<number, { bg: string; txt: string }> = {
+    1: { bg: '#E1F5EE', txt: '#0F6E56' },
+    2: { bg: '#E6F1FB', txt: '#185FA5' },
+    3: { bg: '#FAEEDA', txt: '#854F0B' },
+    4: { bg: '#FAECE7', txt: '#993C1D' },
+  };
+  const c = cores[faixa.numero];
+  return (
+    <span style={{ fontSize: 13, color: c.txt, background: c.bg, padding: '3px 12px', borderRadius: 99, fontWeight: 700, display: 'inline-block' }}>
+      {faixa.label} MCMV · {faixa.taxaRef}% a.a. + TR
+    </span>
+  );
+}
+
+// ─── Botão principal ──────────────────────────────────────────────────────────
+function BtnPrimario({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={onClick} disabled={disabled}
+      style={{
+        width: '100%', padding: '16px 0', borderRadius: 12, border: 'none',
+        background: disabled ? 'var(--border)' : 'var(--primary)',
+        color: disabled ? 'var(--text-faint)' : '#fff',
+        fontSize: 16, fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer',
+        transition: 'background .2s', fontFamily: 'inherit',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ─── Container de etapa ───────────────────────────────────────────────────────
+function Etapa({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px 60px' }}>
+      {children}
     </div>
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// MODO SELECTOR
-// ──────────────────────────────────────────────────────────────────────────────
-function ModeSelector({ modo, onChange }: { modo: Modo; onChange: (m: Modo) => void }) {
-  const modos: { key: Modo; label: string; icon: string }[] = [
-    { key: 'descobrir', label: 'Descobrir', icon: '🔍' },
-    { key: 'imovel',   label: 'Já sei o imóvel', icon: '🏠' },
-    { key: 'planta',   label: 'Na planta', icon: '🏗️' },
-  ];
-  return (
-    <div style={{
-      display: 'inline-flex',
-      background: 'rgba(255,255,255,.08)',
-      backdropFilter: 'blur(8px)',
-      borderRadius: '16px',
-      padding: '5px',
-      gap: '3px',
-      border: '1px solid rgba(255,255,255,.1)',
-    }}>
-      {modos.map(({ key, label, icon }) => (
-        <button
-          key={key}
-          onClick={() => onChange(key)}
-          style={{
-            padding: '10px 16px',
-            borderRadius: '11px',
-            border: 'none',
-            background: modo === key ? '#fff' : 'transparent',
-            color: modo === key ? '#1e3a5f' : 'rgba(255,255,255,.65)',
-            fontSize: '13px',
-            fontWeight: modo === key ? '700' : '500',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            whiteSpace: 'nowrap',
-            display: 'flex', alignItems: 'center', gap: '6px',
-          }}
-        >
-          <span>{icon}</span>
-          <span>{label}</span>
-        </button>
-      ))}
-    </div>
-  );
+function Titulo({ children }: { children: React.ReactNode }) {
+  return <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25, marginBottom: 10, marginTop: 0 }}>{children}</h1>;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Toggle checkbox
-// ──────────────────────────────────────────────────────────────────────────────
-function CheckItem({
-  label, checked, onChange, aviso,
-}: { label: string; checked: boolean; onChange: (v: boolean) => void; aviso?: string }) {
-  return (
-    <label style={{
-      display: 'flex', alignItems: 'flex-start', gap: '10px',
-      cursor: 'pointer', padding: '10px 0',
-      borderBottom: '1px solid var(--border)',
-    }}>
-      <div
-        onClick={() => onChange(!checked)}
-        style={{
-          width: '20px', height: '20px', borderRadius: '6px', flexShrink: 0,
-          border: `2px solid ${checked ? 'var(--primary)' : 'var(--border)'}`,
-          background: checked ? 'var(--primary)' : 'transparent',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.15s', marginTop: '1px',
-        }}
-      >
-        {checked && <span style={{ color: '#fff', fontSize: '12px', fontWeight: '800' }}>✓</span>}
-      </div>
-      <div>
-        <p style={{ fontSize: '14px', color: 'var(--text)', lineHeight: 1.4 }}>{label}</p>
-        {aviso && (
-          <p style={{ fontSize: '12px', color: '#d97706', marginTop: '3px' }}>{aviso}</p>
-        )}
-      </div>
-    </label>
-  );
+function Subtitulo({ children }: { children: React.ReactNode }) {
+  return <p style={{ fontSize: 16, color: 'var(--text-faint)', lineHeight: 1.6, marginBottom: 32, marginTop: 0 }}>{children}</p>;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// MODO 1 — DESCOBRIR: Form (4 steps)
-// ──────────────────────────────────────────────────────────────────────────────
-function FormDescobrir({ onResult }: { onResult: (r: ResultadoDescobrir) => void }) {
-  const [step, setStep] = useState(0);
-  const [renda, setRenda] = useState('');
-  const [entrada, setEntrada] = useState('');
-  const [fgts, setFgts] = useState('');
-  const [prazo, setPrazo] = useState('35');
-  const [idade, setIdade] = useState('');
-  // Qualificações
-  const [cotista, setCotista] = useState(true);
-  const [primeiroImovel, setPrimeiroImovel] = useState(true);
-  const [beneficio, setBeneficio] = useState(false);
-  const [temImovel, setTemImovel] = useState(false);
-  const [dependentes, setDependentes] = useState(0);
-  const [erro, setErro] = useState('');
+// ─── ESTADO GLOBAL DA SESSÃO ──────────────────────────────────────────────────
+type Estado = {
+  renda: string;
+  idade: string;
+  dependentes: number;
+  fgts: string;
+  cotista: boolean;
+  primeiroImovel: boolean;
+  jaRecebeuBeneficio: boolean;
+  temImovelMunicipio: boolean;
+  entrada: string;
+  valorImovel: string;
+  prazoAnos: number;
+  naPlanta: boolean;
+};
 
-  // Prazo máximo calculado pela idade
-  const idadeNum = parseInt(idade) || 0;
-  const prazoMax = idadeNum > 0 ? Math.max(5, Math.min(35, Math.floor(80.5 - idadeNum))) : 35;
+const ESTADO_INICIAL: Estado = {
+  renda: '', idade: '', dependentes: 0,
+  fgts: '', cotista: true, primeiroImovel: true,
+  jaRecebeuBeneficio: false, temImovelMunicipio: false,
+  entrada: '', valorImovel: '', prazoAnos: 35, naPlanta: false,
+};
 
-  function avancar() {
-    setErro('');
-    if (step === 0) {
-      const r = parseMoeda(renda);
-      if (!r || r < 800) { setErro('Informe uma renda válida — mínimo R$ 800.'); return; }
-    }
-    if (step < 3) { setStep(s => s + 1); return; }
-    // Calcular
-    const r = parseMoeda(renda);
-    const e = parseMoeda(entrada);
-    const f = parseMoeda(fgts);
-    const prazoReal = Math.min(parseInt(prazo), prazoMax);
-    onResult(descobrir(r, f, e, prazoReal));
+// ─── COMPONENTE PRINCIPAL ────────────────────────────────────────────────────
+export default function SimuladorPage() {
+  const router = useRouter();
+  const [etapa, setEtapa] = useState(0);
+  const [e, setE] = useState<Estado>(ESTADO_INICIAL);
+  const [perfil, setPerfil] = useState<ResultadoDescobrir | null>(null);
+  const [sim, setSim] = useState<ResultadoSimulacao | null>(null);
+  const TOTAL_ETAPAS = 7;
+
+  function upd(partial: Partial<Estado>) { setE(prev => ({ ...prev, ...partial })); }
+
+  function calcularPerfil() {
+    const r = descobrir(
+      parseMoeda(e.renda),
+      parseMoeda(e.fgts),
+      parseMoeda(e.entrada),
+      e.prazoAnos,
+      Number(e.idade) || 35,
+      e.cotista, e.primeiroImovel, e.jaRecebeuBeneficio, e.dependentes,
+    );
+    setPerfil(r);
+    salvarCtx({
+      renda: parseMoeda(e.renda), fgts: parseMoeda(e.fgts),
+      entrada: parseMoeda(e.entrada), faixa: r.faixa?.label ?? 'SBPE',
+      valorMaxImovel: r.mcmv.elegivel ? r.mcmv.valorMaxImovel : r.sbpe.valorMaxImovel,
+    });
   }
 
-  return (
-    <div>
-      <Progresso total={4} atual={step} />
-
-      {/* Step 0: Renda */}
-      {step === 0 && (
-        <div style={{ animation: 'fadeUp 0.3s ease' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', lineHeight: 1.2, marginBottom: '10px' }}>
-            Qual é a renda familiar?
-          </h2>
-          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '40px' }}>
-            Some todos os rendimentos de quem vai comprar o imóvel — salário, renda extra, cônjuge.
-          </p>
-          <CampoGrande
-            label="Renda bruta mensal"
-            prefix="R$"
-            placeholder="5.000"
-            value={renda}
-            onChange={v => { setRenda(fmtInput(v)); setErro(''); }}
-            hint="Antes dos descontos. Pode incluir mais de uma pessoa."
-          />
-        </div>
-      )}
-
-      {/* Step 1: Qualificações */}
-      {step === 1 && (
-        <div style={{ animation: 'fadeUp 0.3s ease' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', lineHeight: 1.2, marginBottom: '10px' }}>
-            Algumas perguntas rápidas
-          </h2>
-          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '24px' }}>
-            Usamos para verificar elegibilidade no Minha Casa Minha Vida e uso do FGTS.
-          </p>
-          <CheckItem
-            label="Sou cotista do FGTS há pelo menos 3 anos (carteira assinada)"
-            checked={cotista}
-            onChange={setCotista}
-          />
-          <CheckItem
-            label="Este é meu primeiro imóvel financiado"
-            checked={primeiroImovel}
-            onChange={setPrimeiroImovel}
-          />
-          <CheckItem
-            label="Já recebi subsídio habitacional (MCMV ou similar)"
-            checked={beneficio}
-            onChange={setBeneficio}
-            aviso={beneficio ? '⚠️ Pode impedir novo subsídio MCMV' : undefined}
-          />
-          <CheckItem
-            label="Possuo imóvel residencial no município onde vou morar"
-            checked={temImovel}
-            onChange={setTemImovel}
-            aviso={temImovel ? '⚠️ Impede uso do FGTS e elegibilidade MCMV' : undefined}
-          />
-          <div style={{ marginTop: '16px' }}>
-            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
-              Dependentes
-            </p>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {[0, 1, 2, 3, 4].map(n => (
-                <button
-                  key={n}
-                  onClick={() => setDependentes(n)}
-                  style={{
-                    flex: 1, padding: '10px 4px', borderRadius: '10px',
-                    border: `2px solid ${dependentes === n ? 'var(--primary)' : 'var(--border)'}`,
-                    background: dependentes === n ? 'var(--primary-light)' : 'var(--bg)',
-                    color: dependentes === n ? 'var(--primary)' : 'var(--text-muted)',
-                    fontWeight: dependentes === n ? '700' : '500',
-                    fontSize: '14px', cursor: 'pointer', transition: 'all 0.15s',
-                  }}
-                >
-                  {n === 4 ? '4+' : n}
-                </button>
-              ))}
-            </div>
-            <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '6px' }}>
-              Filhos, cônjuge dependente ou pais — pode aumentar o subsídio
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Step 2: Entrada */}
-      {step === 2 && (
-        <div style={{ animation: 'fadeUp 0.3s ease' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', lineHeight: 1.2, marginBottom: '10px' }}>
-            Quanto você tem para a entrada?
-          </h2>
-          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '40px' }}>
-            Inclua poupança, investimentos e saldo do FGTS. Não precisa ser muito.
-          </p>
-          <CampoGrande
-            label="Recursos próprios"
-            prefix="R$"
-            placeholder="20.000"
-            value={entrada}
-            onChange={v => setEntrada(fmtInput(v))}
-            hint="Dinheiro em conta, poupança ou investimentos"
-          />
-          {cotista && primeiroImovel && !temImovel ? (
-            <CampoGrande
-              label="Saldo do FGTS"
-              prefix="R$"
-              placeholder="0"
-              value={fgts}
-              onChange={v => setFgts(fmtInput(v))}
-              hint="Pode ser usado como entrada em imóveis SFH (até R$ 2,25 mi)"
-            />
-          ) : (
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px 16px', marginBottom: '32px' }}>
-              <p style={{ fontSize: '13px', color: '#92400e', margin: 0, lineHeight: 1.55 }}>
-                ⚠️ FGTS indisponível: {temImovel ? 'você possui imóvel no município' : !cotista ? 'não atende o requisito de cotista 3+ anos' : 'não é seu primeiro imóvel financiado'}.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Step 3: Prazo + Idade */}
-      {step === 3 && (
-        <div style={{ animation: 'fadeUp 0.3s ease' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', lineHeight: 1.2, marginBottom: '10px' }}>
-            Prazo e idade
-          </h2>
-          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '32px' }}>
-            O banco limita o prazo pela idade — máximo 80 anos e 6 meses ao final do contrato.
-          </p>
-
-          {/* Idade */}
-          <div style={{ marginBottom: '28px' }}>
-            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
-              Idade do proponente mais velho
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={idade}
-                onChange={e => setIdade(e.target.value)}
-                placeholder="Ex: 35"
-                min={18}
-                max={79}
-                style={{
-                  width: '120px', padding: '12px 16px', fontSize: '20px', fontWeight: '700',
-                  border: '2px solid var(--border)', borderRadius: '12px',
-                  outline: 'none', background: 'var(--bg)', color: 'var(--text)',
-                  fontFamily: 'inherit',
-                }}
-              />
-              {idadeNum > 0 && (
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Prazo máximo: <strong style={{ color: 'var(--primary)' }}>{prazoMax} anos</strong>
-                </p>
-              )}
-            </div>
-            <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '6px' }}>
-              Opcional — informe para calcular o prazo máximo disponível
-            </p>
-          </div>
-
-          <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>
-            Prazo desejado
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-            {[
-              { v: '20', label: '20 anos', desc: 'Menos juros' },
-              { v: '25', label: '25 anos', desc: 'Equilibrado' },
-              { v: '30', label: '30 anos', desc: 'Popular' },
-              { v: '35', label: '35 anos', desc: 'Parcela menor' },
-            ].map(({ v, label, desc }) => {
-              const bloqueado = parseInt(v) > prazoMax;
-              return (
-                <button
-                  key={v}
-                  onClick={() => !bloqueado && setPrazo(v)}
-                  style={{
-                    padding: '18px 14px', borderRadius: '14px', textAlign: 'left',
-                    border: `2px solid ${prazo === v ? 'var(--primary)' : bloqueado ? 'var(--border)' : 'var(--border)'}`,
-                    background: prazo === v ? 'var(--primary-light)' : bloqueado ? 'var(--bg)' : 'var(--bg)',
-                    cursor: bloqueado ? 'not-allowed' : 'pointer',
-                    opacity: bloqueado ? 0.4 : 1,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  <p style={{ fontSize: '16px', fontWeight: '700', color: prazo === v ? 'var(--primary)' : 'var(--text)', margin: 0, marginBottom: '3px' }}>
-                    {label}
-                  </p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-faint)', margin: 0 }}>
-                    {bloqueado ? 'Indisponível pela idade' : desc}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-          <p style={{ fontSize: '12px', color: 'var(--text-faint)', textAlign: 'center' }}>
-            Prazo máximo de 35 anos · limitado pela sua idade (80 anos e 6 meses)
-          </p>
-        </div>
-      )}
-
-      {/* Error */}
-      {erro && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px' }}>
-          <p style={{ fontSize: '13px', color: '#dc2626', margin: 0 }}>{erro}</p>
-        </div>
-      )}
-
-      {/* Navigation */}
-      {erro && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px' }}>
-          <p style={{ fontSize: '13px', color: '#dc2626', margin: 0 }}>{erro}</p>
-        </div>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
-        <button
-          onClick={() => { setStep(s => s - 1); setErro(''); }}
-          style={{
-            background: 'none', border: 'none', color: 'var(--text-muted)',
-            fontSize: '14px', cursor: 'pointer', padding: '8px 0',
-            visibility: step > 0 ? 'visible' : 'hidden',
-          }}
-        >
-          ← Voltar
-        </button>
-        <button
-          onClick={avancar}
-          style={{
-            background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-            color: '#fff', border: 'none', borderRadius: '12px',
-            padding: '14px 32px', fontSize: '15px', fontWeight: '700',
-            cursor: 'pointer',
-            boxShadow: '0 4px 20px rgba(37,99,235,.3)',
-            transition: 'transform 0.15s, box-shadow 0.15s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 6px 24px rgba(37,99,235,.4)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(37,99,235,.3)';
-          }}
-        >
-          {step < 3 ? 'Continuar →' : 'Ver diagnóstico →'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// MODO 1 — DESCOBRIR: Resultado (diagnóstico)
-// ──────────────────────────────────────────────────────────────────────────────
-function DiagnosticoDescobrir({
-  resultado,
-  onVoltar,
-}: {
-  resultado: ResultadoDescobrir;
-  onVoltar: () => void;
-}) {
-  const { mcmv, sbpe, faixa, oruloMinPrice, oruloMaxPrice, rendaBruta, fgts } = resultado;
-  const entrada = resultado.entrada;
-  const [cenario, setCenario] = useState<'mcmv' | 'sbpe'>(mcmv.elegivel ? 'mcmv' : 'sbpe');
-
-  const ativo = cenario === 'mcmv' ? mcmv : sbpe;
-
-  // ── Injeta contexto para o João ────────────────────────────────────────────
-  useEffect(() => {
-    salvarContexto({
-      pagina: '/simulador',
-      modo: 'descobrir',
-      resultado: {
-        cenarioAtivo: cenario,
-        valorMaxImovel: ativo.valorMaxImovel,
-        parcela: ativo.parcela,
-        valorFinanciado: ativo.valorFinanciado,
-        comprometimento: ativo.comprometimento,
-        taxa: cenario === 'mcmv' ? mcmv.taxa : 10.5,
-        elegivelMCMV: mcmv.elegivel,
-        faixa: faixa?.label ?? null,
-        subsidioMax: faixa?.subsidioMax ?? 0,
-        rendaBruta,
-        fgts,
-        entrada,
-        oruloMinPrice,
-        oruloMaxPrice,
-      },
+  function calcularSimulacao() {
+    if (!e.valorImovel) return;
+    const r = simular({
+      rendaBruta: parseMoeda(e.renda),
+      fgts: parseMoeda(e.fgts),
+      entrada: parseMoeda(e.entrada),
+      valorImovel: parseMoeda(e.valorImovel),
+      prazoAnos: e.prazoAnos,
+      naPlanta: e.naPlanta,
+      prazoObraAnos: 3,
+      idadeProponente: Number(e.idade) || 35,
+      cotista: e.cotista,
+      primeiroImovel: e.primeiroImovel,
+      jaRecebeuBeneficio: e.jaRecebeuBeneficio,
+      temImovelMunicipio: e.temImovelMunicipio,
+      dependentes: e.dependentes,
     });
-  }, [cenario]); // re-salva se o usuário alternar MCMV ↔ SBPE
-  const gradiente = cenario === 'mcmv'
-    ? 'linear-gradient(145deg, #16a34a 0%, #059669 100%)'
-    : 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)';
-  const taxaLabel = cenario === 'mcmv'
-    ? `${mcmv.taxa.toFixed(2).replace('.', ',')}% a.a. + TR`
-    : '11,19% a.a. + TR';
-  const modalidadeLabel = cenario === 'mcmv' ? `MCMV ${faixa?.label ?? ''}` : 'SBPE';
+    setSim(r);
+  }
 
-  return (
-    <div style={{ animation: 'fadeUp 0.35s ease' }}>
+  function avancar() {
+    if (etapa === 4) calcularPerfil();
+    if (etapa === 5 && e.valorImovel) calcularSimulacao();
+    setEtapa(e => Math.min(e + 1, TOTAL_ETAPAS - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function voltar() {
+    setEtapa(e => Math.max(e - 1, 0));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
-      {/* Hero diagnóstico */}
-      <div style={{
-        background: gradiente,
-        borderRadius: '20px',
-        padding: '28px',
-        marginBottom: '12px',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* Decorative circle */}
-        <div style={{
-          position: 'absolute', top: '-40px', right: '-40px',
-          width: '180px', height: '180px',
-          borderRadius: '50%', background: 'rgba(255,255,255,.06)',
-          pointerEvents: 'none',
-        }} />
+  const voltar_link = (
+    etapa > 0 ? (
+      <button onClick={voltar} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: 14, cursor: 'pointer', padding: 0, fontFamily: 'inherit', marginBottom: 24, display: 'block' }}>
+        ← Voltar
+      </button>
+    ) : null
+  );
 
-        {/* Toggle MCMV / SBPE */}
-        {mcmv.elegivel && (
-          <div style={{ display: 'flex', gap: '6px', marginBottom: '22px' }}>
-            {(['mcmv', 'sbpe'] as const).map(c => (
-              <button
-                key={c}
-                onClick={() => setCenario(c)}
-                style={{
-                  padding: '5px 14px', borderRadius: '99px',
-                  border: '1.5px solid',
-                  borderColor: cenario === c ? 'rgba(255,255,255,.8)' : 'rgba(255,255,255,.25)',
-                  background: cenario === c ? 'rgba(255,255,255,.95)' : 'transparent',
-                  color: cenario === c ? (c === 'mcmv' ? '#16a34a' : '#2563eb') : 'rgba(255,255,255,.8)',
-                  fontSize: '12px', fontWeight: '700', cursor: 'pointer',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {c === 'mcmv' ? `MCMV ${faixa?.label}` : 'SBPE'}
-              </button>
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ETAPA 0 — LANDING
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (etapa === 0) return (
+    <Etapa>
+      <div style={{ paddingTop: 60 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 16 }}>Simulador FinancieCerto 2026</div>
+        <Titulo>Primeiro entenda seu perfil. Depois busque o imóvel.</Titulo>
+        <Subtitulo>A maioria das pessoas busca imóvel sem saber quanto pode financiar. Aqui você descobre sua faixa real, taxa de juros, subsídio e parcela — antes de ver qualquer imóvel.</Subtitulo>
+
+        <div style={{ display: 'grid', gap: 12, marginBottom: 36 }}>
+          {[
+            { ico: '📊', txt: 'Faixa MCMV, SBPE ou SFI — detectada pela sua renda' },
+            { ico: '🏦', txt: 'Taxa real da Caixa + cálculo de subsídio estimado' },
+            { ico: '📋', txt: 'MIP etário calibrado pelo contrato SIOPI/Caixa' },
+            { ico: '🏠', txt: 'Imóveis compatíveis com seu perfil ao final' },
+          ].map(({ ico, txt }) => (
+            <div key={txt} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: 20, flexShrink: 0 }}>{ico}</span>
+              <span style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.5 }}>{txt}</span>
+            </div>
+          ))}
+        </div>
+
+        <BtnPrimario label="Começar — leva 2 minutos" onClick={avancar} />
+
+        <p style={{ fontSize: 12, color: 'var(--text-faint)', textAlign: 'center', marginTop: 16 }}>
+          Baseado nas regras SFH/MCMV vigentes · maio/2026 · TR {TR_MENSAL}%/mês
+        </p>
+      </div>
+    </Etapa>
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ETAPA 1 — RENDA
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (etapa === 1) {
+    const renda = parseMoeda(e.renda);
+    return (
+      <Etapa>
+        {voltar_link}
+        <Barra etapa={0} total={6} />
+        <Titulo>Qual é a renda familiar mensal?</Titulo>
+        <Subtitulo>Some a renda bruta de todos que vão participar do financiamento — casal, pais, filhos.</Subtitulo>
+
+        <InputBRL label="Renda total bruta" value={e.renda} onChange={v => upd({ renda: v })}
+          hint="Renda antes de descontos. Inclua todos os participantes." />
+
+        {renda > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <BadgeFaixa renda={renda} />
+            {renda <= 13000 && (
+              <p style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 8 }}>
+                {detectarFaixaMCMV(renda)
+                  ? `Teto do imóvel: ${formatBRL(detectarFaixaMCMV(renda)!.teto)} · Subsídio máx: ${formatBRL(detectarFaixaMCMV(renda)!.subsidioMax)}`
+                  : ''}
+              </p>
+            )}
+            {renda > 13000 && (
+              <p style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 8 }}>
+                Mercado livre (SBPE) · Taxa Caixa: {TAXA_SBPE_ANUAL}% a.a. + TR
+              </p>
+            )}
+          </div>
+        )}
+
+        <BtnPrimario label="Próximo →" onClick={avancar} disabled={renda < 500} />
+      </Etapa>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ETAPA 2 — COMPOSIÇÃO FAMILIAR
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (etapa === 2) {
+    const idade = Number(e.idade) || 0;
+    const prazoMax = idade > 0 ? Math.min(35, Math.floor(80.5 - idade)) : 35;
+    return (
+      <Etapa>
+        {voltar_link}
+        <Barra etapa={1} total={6} />
+        <Titulo>Composição familiar</Titulo>
+        <Subtitulo>O prazo máximo é definido pela idade do proponente mais velho. Limite: 80 anos e 6 meses.</Subtitulo>
+
+        <InputBRL label="Idade do proponente mais velho" value={e.idade}
+          onChange={v => upd({ idade: v.replace(/\D/g, '') })}
+          prefix="🎂" placeholder="35" hint="Define o prazo máximo do financiamento" />
+
+        {idade > 0 && (
+          <div style={{ padding: '12px 16px', background: '#E6F1FB', borderRadius: 10, marginBottom: 24 }}>
+            <span style={{ fontSize: 14, color: '#185FA5', fontWeight: 600 }}>Prazo máximo: {prazoMax} anos</span>
+            {prazoMax < 35 && <span style={{ fontSize: 13, color: '#185FA5', marginLeft: 8 }}>(limitado pela idade)</span>}
+          </div>
+        )}
+
+        <div style={{ marginBottom: 28 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '.8px' }}>Dependentes (filhos)</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[0, 1, 2, 3, 4].map(n => (
+              <Chip key={n} label={n === 4 ? '4+' : String(n)} ativo={e.dependentes === n} onClick={() => upd({ dependentes: n })} />
+            ))}
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>Dependentes aumentam levemente o subsídio estimado</p>
+        </div>
+
+        <BtnPrimario label="Próximo →" onClick={avancar} disabled={!e.idade} />
+      </Etapa>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ETAPA 3 — FGTS E ELEGIBILIDADE
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (etapa === 3) {
+    const renda = parseMoeda(e.renda);
+    const faixa = detectarFaixaMCMV(renda);
+    return (
+      <Etapa>
+        {voltar_link}
+        <Barra etapa={2} total={6} />
+        <Titulo>FGTS e elegibilidade</Titulo>
+        <Subtitulo>O FGTS pode ser usado como entrada e reduz o valor financiado — abaixando a parcela.</Subtitulo>
+
+        <InputBRL label="Saldo do FGTS disponível" value={e.fgts} onChange={v => upd({ fgts: v })}
+          hint="Saldo atual da sua conta FGTS. Deixe em branco se não tiver." />
+
+        <div style={{ display: 'grid', gap: 10, marginBottom: 28 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.8px' }}>Condições de uso do FGTS</label>
+
+          {[
+            { key: 'cotista', label: 'Cotista FGTS há pelo menos 3 anos', val: e.cotista, set: (v: boolean) => upd({ cotista: v }) },
+            { key: 'primeiroImovel', label: 'Será o meu primeiro imóvel financiado', val: e.primeiroImovel, set: (v: boolean) => upd({ primeiroImovel: v }) },
+          ].map(({ key, label, val, set }) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-card)', borderRadius: 10, border: `1px solid ${val ? 'var(--primary)' : 'var(--border)'}`, cursor: 'pointer' }}
+              onClick={() => set(!val)}>
+              <span style={{ fontSize: 14, color: 'var(--text)' }}>{label}</span>
+              <div style={{
+                width: 42, height: 24, borderRadius: 99,
+                background: val ? 'var(--primary)' : 'var(--border)',
+                position: 'relative', transition: 'background .2s', flexShrink: 0,
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 99, background: '#fff',
+                  position: 'absolute', top: 3,
+                  left: val ? 21 : 3, transition: 'left .2s',
+                }} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {faixa && (
+          <div style={{ display: 'grid', gap: 10, marginBottom: 28 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.8px' }}>Elegibilidade MCMV (impacta subsídio)</label>
+            {[
+              { key: 'jaRecebeuBeneficio', label: 'Já recebi benefício habitacional (MCMV, subsídio)', val: e.jaRecebeuBeneficio, set: (v: boolean) => upd({ jaRecebeuBeneficio: v }) },
+              { key: 'temImovelMunicipio', label: 'Tenho imóvel no mesmo município', val: e.temImovelMunicipio, set: (v: boolean) => upd({ temImovelMunicipio: v }) },
+            ].map(({ key, label, val, set }) => (
+              <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-card)', borderRadius: 10, border: `1px solid ${val ? '#E24B4A' : 'var(--border)'}`, cursor: 'pointer' }}
+                onClick={() => set(!val)}>
+                <span style={{ fontSize: 14, color: 'var(--text)' }}>{label}</span>
+                <div style={{ width: 42, height: 24, borderRadius: 99, background: val ? '#E24B4A' : 'var(--border)', position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 99, background: '#fff', position: 'absolute', top: 3, left: val ? 21 : 3, transition: 'left .2s' }} />
+                </div>
+              </div>
             ))}
           </div>
         )}
 
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.7)', marginBottom: '4px' }}>
-          Você pode comprar imóveis de até
-        </p>
-        <p style={{
-          fontSize: 'clamp(36px, 8vw, 52px)',
-          fontWeight: '800', color: '#fff', lineHeight: 1,
-          marginBottom: '24px',
-          fontVariantNumeric: 'tabular-nums',
-        }}>
-          {formatBRL(ativo.valorMaxImovel)}
-        </p>
-
-        {/* 4 stat boxes */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-          {[
-            { label: 'Parcela (Price)', value: `${formatBRL(ativo.parcela)}/mês` },
-            { label: 'Taxa de juros', value: taxaLabel },
-            { label: 'A financiar', value: formatBRL(ativo.valorFinanciado) },
-            { label: 'Modalidade', value: modalidadeLabel },
-          ].map(({ label, value }) => (
-            <div key={label} style={{
-              background: 'rgba(255,255,255,.12)',
-              borderRadius: '12px', padding: '12px 14px',
-            }}>
-              <p style={{ fontSize: '10px', color: 'rgba(255,255,255,.65)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {label}
-              </p>
-              <p style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>{value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Comprometimento */}
-      <div style={{
-        background: 'var(--bg-card)', borderRadius: '16px',
-        padding: '20px', marginBottom: '10px',
-      }}>
-        <BarraComprometimento pct={ativo.comprometimento} />
-        <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginTop: '10px' }}>
-          Recomendado: máximo 30% da renda comprometida com parcelas (lei brasileira).
-        </p>
-      </div>
-
-      {/* Subsídio */}
-      {faixa && faixa.subsidioMax > 0 && cenario === 'mcmv' && (
-        <div style={{
-          background: '#f0fdf4', border: '1px solid #bbf7d0',
-          borderRadius: '14px', padding: '16px 18px', marginBottom: '10px',
-          display: 'flex', gap: '12px', alignItems: 'flex-start',
-        }}>
-          <span style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0, marginTop: '1px' }}>🎁</span>
-          <div>
-            <p style={{ fontSize: '13px', fontWeight: '700', color: '#16a34a', marginBottom: '4px' }}>
-              Subsídio do governo: até {formatBRL(faixa.subsidioMax)}
-            </p>
-            <p style={{ fontSize: '13px', color: '#166534', lineHeight: 1.55 }}>
-              Na {faixa.label}, o governo abate até <strong>{formatBRL(faixa.subsidioMax)}</strong> do preço do imóvel — sem devolver. Você financia o restante.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Se não elegível MCMV → comparativo de bancos */}
-      {!mcmv.elegivel && (
-        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', marginBottom: '10px' }}>
-          <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>
-            Comparativo de taxas — SBPE/SFH (maio 2026)
-          </p>
-          {[
-            { banco: 'Caixa Econômica Federal', taxa: 11.19, destaque: true },
-            { banco: 'BRB', taxa: 11.36, destaque: false },
-            { banco: 'Itaú', taxa: 11.60, destaque: false },
-            { banco: 'Santander', taxa: 11.69, destaque: false },
-            { banco: 'Bradesco', taxa: 11.70, destaque: false },
-          ].map(({ banco, taxa, destaque }) => (
-            <div key={banco} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '9px 0', borderBottom: '1px solid var(--border)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {destaque && (
-                  <span style={{ fontSize: '10px', background: '#dcfce7', color: '#16a34a', padding: '2px 7px', borderRadius: '99px', fontWeight: '700' }}>
-                    Menor taxa
-                  </span>
-                )}
-                <span style={{ fontSize: '13px', color: destaque ? 'var(--text)' : 'var(--text-muted)', fontWeight: destaque ? '700' : '400' }}>
-                  {banco}
-                </span>
-              </div>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: destaque ? '#16a34a' : 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                {taxa.toFixed(2).replace('.', ',')}% a.a. + TR
-              </span>
-            </div>
-          ))}
-          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '10px', lineHeight: 1.5 }}>
-            Taxas de balcão sujeitas à análise de crédito e relacionamento bancário. Caixa lidera no SFH — busque simulação em cada banco antes de contratar.
-          </p>
-        </div>
-      )}
-
-      {/* CTA: imóveis */}
-      <Link href={`/imoveis?min=${oruloMinPrice}&max=${oruloMaxPrice}`} style={{ textDecoration: 'none', display: 'block', marginBottom: '8px' }}>
-        <div
-          style={{
-            background: 'var(--bg-card)', border: '1.5px solid var(--border)',
-            borderRadius: '16px', padding: '18px 20px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            cursor: 'pointer', transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = 'var(--primary)';
-            e.currentTarget.style.boxShadow = '0 4px 16px rgba(37,99,235,.1)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = 'var(--border)';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        >
-          <div>
-            <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', marginBottom: '3px' }}>
-              🏘️ Ver imóveis compatíveis
-            </p>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Entre {formatBRL(oruloMinPrice)} e {formatBRL(oruloMaxPrice)} — filtro automático
-            </p>
-          </div>
-          <span style={{ color: 'var(--primary)', fontSize: '18px' }}>→</span>
-        </div>
-      </Link>
-
-      {/* CTA: na planta */}
-      <Link
-        href={`/simulador/na-planta?renda=${rendaBruta}&mcmv=${mcmv.valorFinanciado}&sbpe=${sbpe.valorFinanciado}&fgts=${fgts}&proprios=${entrada - fgts}`}
-        style={{ textDecoration: 'none', display: 'block', marginBottom: '24px' }}
-      >
-        <div style={{
-          background: '#0f172a', borderRadius: '16px', padding: '18px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          cursor: 'pointer',
-        }}>
-          <div>
-            <p style={{ fontSize: '14px', fontWeight: '700', color: '#fff', marginBottom: '3px' }}>
-              🏗️ Simular imóvel na planta
-            </p>
-            <p style={{ fontSize: '12px', color: '#64748b' }}>
-              Minha Casa Minha Vida · entrada parcelada · juros evolutivos
-            </p>
-          </div>
-          <span style={{ color: '#60a5fa', fontSize: '18px' }}>→</span>
-        </div>
-      </Link>
-
-      <button
-        onClick={onVoltar}
-        style={{
-          background: 'none', border: 'none',
-          color: 'var(--text-faint)', fontSize: '13px',
-          cursor: 'pointer', textDecoration: 'underline',
-        }}
-      >
-        ← Nova simulação
-      </button>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// MODO 2 — JÁ SEI O IMÓVEL: Form (2 steps)
-// ──────────────────────────────────────────────────────────────────────────────
-function FormImovel({ onResult }: { onResult: (r: ResultadoSimulacao) => void }) {
-  const [step, setStep] = useState(0);
-  const [valorImovel, setValorImovel] = useState('');
-  const [entrada, setEntrada] = useState('');
-  const [fgts, setFgts] = useState('');
-  const [renda, setRenda] = useState('');
-  const [prazo, setPrazo] = useState('35');
-  const [erro, setErro] = useState('');
-
-  function avancar() {
-    setErro('');
-    if (step === 0) {
-      const vi = parseMoeda(valorImovel);
-      if (!vi || vi < 50000) {
-        setErro('Informe um valor de imóvel válido — mínimo R$ 50.000.');
-        return;
-      }
-    }
-    if (step === 1) {
-      const r = parseMoeda(renda);
-      if (!r || r < 800) {
-        setErro('Informe uma renda bruta válida — mínimo R$ 800.');
-        return;
-      }
-    }
-    if (step < 1) { setStep(s => s + 1); return; }
-
-    const vi = parseMoeda(valorImovel);
-    const e = parseMoeda(entrada);
-    const f = parseMoeda(fgts);
-    const r = parseMoeda(renda);
-    onResult(simular({
-      rendaBruta: r, fgts: f, entrada: e,
-      valorImovel: vi, prazoAnos: parseInt(prazo),
-      naPlanta: false, prazoObraAnos: 0,
-    }));
+        <BtnPrimario label="Próximo →" onClick={avancar} />
+      </Etapa>
+    );
   }
 
-  return (
-    <div>
-      <Progresso total={2} atual={step} />
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ETAPA 4 — ENTRADA
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (etapa === 4) {
+    const renda = parseMoeda(e.renda);
+    const fgts  = parseMoeda(e.fgts);
+    const entrada = parseMoeda(e.entrada);
+    const faixa = detectarFaixaMCMV(renda);
+    const total = entrada + (e.cotista && e.primeiroImovel ? fgts : 0);
+    const entradaMinPct = faixa ? (faixa.numero <= 2 ? 0.05 : 0.20) : 0.30;
+    const entradaRef = total;
+    return (
+      <Etapa>
+        {voltar_link}
+        <Barra etapa={3} total={6} />
+        <Titulo>Quanto você tem de entrada?</Titulo>
+        <Subtitulo>Soma o dinheiro guardado mais o FGTS disponível. Quanto mais entrada, menor a parcela.</Subtitulo>
 
-      {/* Step 0: Imóvel */}
-      {step === 0 && (
-        <div style={{ animation: 'fadeUp 0.3s ease' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', lineHeight: 1.2, marginBottom: '10px' }}>
-            Qual é o imóvel?
-          </h2>
-          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '40px' }}>
-            Informe o valor do imóvel e quanto você tem disponível para dar de entrada.
-          </p>
-          <CampoGrande
-            label="Valor do imóvel"
-            prefix="R$"
-            placeholder="300.000"
-            value={valorImovel}
-            onChange={v => { setValorImovel(fmtInput(v)); setErro(''); }}
-          />
-          <CampoGrande
-            label="Entrada disponível"
-            prefix="R$"
-            placeholder="60.000"
-            value={entrada}
-            onChange={v => setEntrada(fmtInput(v))}
-            hint="Inclua todos os recursos: poupança, investimentos e FGTS"
-          />
-          <CampoGrande
-            label="Saldo FGTS (incluso na entrada)"
-            prefix="R$"
-            placeholder="0"
-            value={fgts}
-            onChange={v => setFgts(fmtInput(v))}
-            hint="Será subtraído da entrada para cálculo do LTV"
-          />
-        </div>
-      )}
+        <InputBRL label="Entrada em dinheiro (poupança, reserva)" value={e.entrada} onChange={v => upd({ entrada: v })}
+          hint="Não inclua o FGTS aqui — já calculamos acima." />
 
-      {/* Step 1: Renda + Prazo */}
-      {step === 1 && (
-        <div style={{ animation: 'fadeUp 0.3s ease' }}>
-          <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text)', lineHeight: 1.2, marginBottom: '10px' }}>
-            Qual é a renda familiar?
-          </h2>
-          <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '40px' }}>
-            Renda bruta de todos os compradores. Usamos para verificar o comprometimento.
-          </p>
-          <CampoGrande
-            label="Renda bruta mensal"
-            prefix="R$"
-            placeholder="8.000"
-            value={renda}
-            onChange={v => { setRenda(fmtInput(v)); setErro(''); }}
-          />
-
-          <div>
-            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '12px' }}>
-              Prazo do financiamento
-            </p>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {['20', '25', '30', '35'].map(p => (
-                <button
-                  key={p}
-                  onClick={() => setPrazo(p)}
-                  style={{
-                    flex: 1, padding: '12px 4px', borderRadius: '10px',
-                    border: `2px solid ${prazo === p ? 'var(--primary)' : 'var(--border)'}`,
-                    background: prazo === p ? 'var(--primary-light)' : 'var(--bg)',
-                    color: prazo === p ? 'var(--primary)' : 'var(--text-muted)',
-                    fontWeight: prazo === p ? '700' : '500',
-                    fontSize: '14px', cursor: 'pointer', transition: 'all 0.15s',
-                  }}
-                >
-                  {p}a
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {erro && (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', margin: '16px 0' }}>
-          <p style={{ fontSize: '13px', color: '#dc2626', margin: 0 }}>{erro}</p>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '32px' }}>
-        <button
-          onClick={() => { setStep(s => s - 1); setErro(''); }}
-          style={{
-            background: 'none', border: 'none', color: 'var(--text-muted)',
-            fontSize: '14px', cursor: 'pointer',
-            visibility: step > 0 ? 'visible' : 'hidden',
-          }}
-        >
-          ← Voltar
-        </button>
-        <button
-          onClick={avancar}
-          style={{
-            background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-            color: '#fff', border: 'none', borderRadius: '12px',
-            padding: '14px 32px', fontSize: '15px', fontWeight: '700',
-            cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,99,235,.3)',
-          }}
-        >
-          {step < 1 ? 'Continuar →' : 'Simular →'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// MODO 2 — JÁ SEI O IMÓVEL: Resultado
-// ──────────────────────────────────────────────────────────────────────────────
-function DiagnosticoImovel({
-  resultado,
-  onVoltar,
-}: {
-  resultado: ResultadoSimulacao;
-  onVoltar: () => void;
-}) {
-  const {
-    isMCMV, faixa, valorImovel, valorFinanciado,
-    entrada, prazoMeses, taxaAnual, parcelaPrimeiro,
-    seguros, comprometimento,
-  } = resultado;
-
-  // SAC calculation (parcelaPrimeiro from simular() is Price-based)
-  const amortizacaoSAC = valorFinanciado / prazoMeses;
-  const jurosPrimeiro  = valorFinanciado * (taxaAnual / 100 / 12);
-  const parcelaSAC1   = Math.round(amortizacaoSAC + jurosPrimeiro + seguros.total);
-  const jurosFinal    = amortizacaoSAC * (taxaAnual / 100 / 12);
-  const parcelaSACFinal = Math.round(amortizacaoSAC + jurosFinal + seguros.total);
-  const parcelaPrice  = parcelaPrimeiro; // from simular()
-
-  // Totals
-  const totalSAC   = Math.round((parcelaSAC1 + parcelaSACFinal) / 2 * prazoMeses);
-  const totalPrice = Math.round(parcelaPrice * prazoMeses);
-  const jurosSAC   = totalSAC - valorFinanciado;
-  const jurosPrice = totalPrice - valorFinanciado;
-
-  const pctEntrada = Math.round((entrada / valorImovel) * 100);
-  const isSFI     = resultado.isSFI ?? false;
-  const modalidade = isMCMV
-    ? (faixa ? `Minha Casa Minha Vida — ${faixa.label}` : 'MCMV')
-    : isSFI
-      ? 'SFI — Imóvel acima de R$ 2,25 mi'
-      : 'SBPE / SFH — Mercado';
-
-  // ── Injeta contexto para o João ────────────────────────────────────────────
-  useEffect(() => {
-    salvarContexto({
-      pagina: '/simulador',
-      modo: 'imovel',
-      resultado: {
-        valorImovel,
-        valorFinanciado,
-        entrada,
-        pctEntrada,
-        prazoMeses,
-        prazoAnos: prazoMeses / 12,
-        taxaAnual,
-        parcelaSAC1,
-        parcelaSACFinal,
-        parcelaPrice,
-        totalSAC,
-        totalPrice,
-        jurosSAC,
-        jurosPrice,
-        comprometimento,
-        isMCMV,
-        faixa: faixa?.label ?? null,
-        modalidade,
-        seguros,
-      },
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const gradiente  = isMCMV
-    ? 'linear-gradient(145deg, #16a34a 0%, #059669 100%)'
-    : isSFI
-      ? 'linear-gradient(145deg, #0f172a 0%, #1e293b 100%)'
-      : 'linear-gradient(145deg, #2563eb 0%, #1d4ed8 100%)';
-
-  const viavel = comprometimento <= 35;
-  const taxa   = isMCMV && faixa
-    ? `${faixa.taxaRef.toFixed(2).replace('.', ',')}% a.a. + TR`
-    : isSFI
-      ? '12,5% a.a. + TR (SFI)'
-      : '11,19% a.a. + TR (SFH)';
-
-  return (
-    <div style={{ animation: 'fadeUp 0.35s ease' }}>
-
-      {/* Hero */}
-      <div style={{
-        background: gradiente, borderRadius: '20px',
-        padding: '28px', marginBottom: '12px',
-        position: 'relative', overflow: 'hidden',
-      }}>
-        <div style={{
-          position: 'absolute', bottom: '-30px', right: '-30px',
-          width: '140px', height: '140px', borderRadius: '50%',
-          background: 'rgba(255,255,255,.06)', pointerEvents: 'none',
-        }} />
-
-        {/* Status badge */}
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '7px',
-          background: 'rgba(255,255,255,.15)', borderRadius: '99px',
-          padding: '5px 14px', marginBottom: '18px',
-        }}>
-          <span>{viavel ? '✅' : '⚠️'}</span>
-          <span style={{ fontSize: '12px', fontWeight: '700', color: '#fff' }}>
-            {modalidade} — {viavel ? 'Financiamento viável' : 'Comprometimento elevado'}
-          </span>
-        </div>
-
-        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.65)', marginBottom: '4px' }}>
-          Imóvel
-        </p>
-        <p style={{
-          fontSize: 'clamp(32px, 7vw, 46px)', fontWeight: '800',
-          color: '#fff', lineHeight: 1, marginBottom: '22px',
-          fontVariantNumeric: 'tabular-nums',
-        }}>
-          {formatBRL(valorImovel)}
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-          {[
-            { label: 'Entrada', value: `${formatBRL(entrada)} (${pctEntrada}%)` },
-            { label: 'Financiado', value: formatBRL(valorFinanciado) },
-            { label: 'Prazo', value: `${prazoMeses / 12} anos` },
-          ].map(({ label, value }) => (
-            <div key={label} style={{ background: 'rgba(255,255,255,.12)', borderRadius: '10px', padding: '10px 12px' }}>
-              <p style={{ fontSize: '9px', color: 'rgba(255,255,255,.6)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</p>
-              <p style={{ fontSize: '12px', fontWeight: '700', color: '#fff' }}>{value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* SAC vs Price */}
-      <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', marginBottom: '10px' }}>
-        <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '16px' }}>
-          SAC × Price — Comparativo
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
-          {/* SAC */}
-          <div style={{ border: '1.5px solid var(--border)', borderRadius: '14px', padding: '16px' }}>
-            <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
-              SAC
-            </p>
-            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>1ª parcela</p>
-            <p style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text)', marginBottom: '8px', lineHeight: 1 }}>
-              {formatBRL(parcelaSAC1)}
-            </p>
-            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Última parcela</p>
-            <p style={{ fontSize: '16px', fontWeight: '700', color: '#16a34a', marginBottom: '10px' }}>
-              {formatBRL(parcelaSACFinal)}
-            </p>
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-              <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Total de juros</p>
-              <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>{formatBRL(jurosSAC)}</p>
-            </div>
-          </div>
-
-          {/* Price */}
-          <div style={{ border: '1.5px solid var(--border)', borderRadius: '14px', padding: '16px' }}>
-            <p style={{ fontSize: '10px', fontWeight: '700', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
-              Price
-            </p>
-            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Parcela fixa</p>
-            <p style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text)', marginBottom: '8px', lineHeight: 1 }}>
-              {formatBRL(parcelaPrice)}
-            </p>
-            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Sempre igual</p>
-            <p style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '10px' }}>
-              ≡ fixo
-            </p>
-            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px' }}>
-              <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Total de juros</p>
-              <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>{formatBRL(jurosPrice)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ background: '#eff6ff', borderRadius: '10px', padding: '12px 14px' }}>
-          <p style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.6, margin: 0 }}>
-            <strong>SAC</strong> economiza {formatBRL(jurosPrice - jurosSAC)} em juros no total, mas exige parcela inicial maior.{' '}
-            <strong>Price</strong> é previsível e mais acessível no início.
-          </p>
-        </div>
-      </div>
-
-      {/* Comparativo de bancos (SBPE/SFI) */}
-      {!isMCMV && (
-        <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', marginBottom: '10px' }}>
-          <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>
-            Comparativo de taxas — {isSFI ? 'SFI' : 'SBPE/SFH'} (maio 2026)
-          </p>
-          {(isSFI
-            ? [
-                { banco: 'Caixa (SFI)', taxa: 12.5, destaque: true },
-                { banco: 'Itaú (SFI)', taxa: 13.0, destaque: false },
-                { banco: 'Bradesco (SFI)', taxa: 13.2, destaque: false },
-              ]
-            : [
-                { banco: 'Caixa Econômica Federal', taxa: 11.19, destaque: true },
-                { banco: 'BRB', taxa: 11.36, destaque: false },
-                { banco: 'Itaú', taxa: 11.60, destaque: false },
-                { banco: 'Santander', taxa: 11.69, destaque: false },
-                { banco: 'Bradesco', taxa: 11.70, destaque: false },
-              ]
-          ).map(({ banco, taxa, destaque }) => (
-            <div key={banco} style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '9px 0', borderBottom: '1px solid var(--border)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {destaque && (
-                  <span style={{ fontSize: '10px', background: '#dcfce7', color: '#16a34a', padding: '2px 7px', borderRadius: '99px', fontWeight: '700' }}>
-                    Menor taxa
-                  </span>
-                )}
-                <span style={{ fontSize: '13px', color: destaque ? 'var(--text)' : 'var(--text-muted)', fontWeight: destaque ? '700' : '400' }}>
-                  {banco}
-                </span>
+        {total > 0 && (
+          <div style={{ padding: '16px', background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)', marginBottom: 28 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, textAlign: 'center' }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Poupança</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)' }}>{formatBRL(entrada)}</div>
               </div>
-              <span style={{ fontSize: '13px', fontWeight: '700', color: destaque ? '#16a34a' : 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                {taxa.toFixed(2).replace('.', ',')}% a.a. + TR
-              </span>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>FGTS</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: e.cotista && e.primeiroImovel ? 'var(--text)' : 'var(--text-faint)' }}>
+                  {e.cotista && e.primeiroImovel ? formatBRL(fgts) : '—'}
+                </div>
+              </div>
+              <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: 8 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>Total</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--primary)' }}>{formatBRL(total)}</div>
+              </div>
             </div>
-          ))}
-          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '10px', lineHeight: 1.5 }}>
-            Taxas sujeitas a análise de crédito. Simule em cada banco antes de contratar.
-          </p>
-        </div>
-      )}
-
-      {/* Comprometimento */}
-      <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', marginBottom: '10px' }}>
-        <BarraComprometimento pct={comprometimento} />
-        {comprometimento > 30 && (
-          <div style={{ marginTop: '12px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 13px' }}>
-            <p style={{ fontSize: '12px', color: '#92400e', margin: 0, lineHeight: 1.5 }}>
-              ⚠️ Comprometimento acima do recomendado. O banco pode exigir um codevedor, reduzir o prazo ou pedir maior entrada.
-            </p>
           </div>
         )}
-      </div>
 
-      {/* Detalhes 1ª parcela SAC */}
-      <div style={{ background: 'var(--bg-card)', borderRadius: '16px', padding: '20px', marginBottom: '10px' }}>
-        <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>
-          Composição — 1ª parcela SAC
-        </p>
-        <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '14px' }}>
-          Taxa: {taxa} · {prazoMeses / 12} anos
-        </p>
-        <LinhaDetalhe label="Amortização" valor={formatBRL(Math.round(amortizacaoSAC))} />
-        <LinhaDetalhe label="Juros" valor={formatBRL(Math.round(jurosPrimeiro))} />
-        <LinhaDetalhe label="MIP (seguro de vida)" valor={formatBRL(seguros.mip)} />
-        <LinhaDetalhe label="DFI (seguro do imóvel)" valor={formatBRL(seguros.dfi)} />
-        <LinhaDetalhe label="Taxa de administração" valor={`R$ ${seguros.txAdm}`} />
-        <LinhaDetalhe label="Total 1ª parcela (SAC)" valor={formatBRL(parcelaSAC1)} destaque />
-      </div>
+        {faixa && (
+          <p style={{ fontSize: 13, color: 'var(--text-faint)', marginBottom: 28 }}>
+            Entrada mínima {faixa.label}: {(entradaMinPct * 100).toFixed(0)}% do imóvel · FGTS pode complementar a entrada nos imóveis MCMV.
+          </p>
+        )}
 
-      {/* CTA planta */}
-      <Link href="/simulador/na-planta" style={{ textDecoration: 'none', display: 'block', marginBottom: '24px' }}>
-        <div style={{
-          background: '#0f172a', borderRadius: '16px', padding: '18px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          cursor: 'pointer',
-        }}>
-          <div>
-            <p style={{ fontSize: '14px', fontWeight: '700', color: '#fff', marginBottom: '3px' }}>
-              🏗️ Esse imóvel é na planta?
-            </p>
-            <p style={{ fontSize: '12px', color: '#64748b' }}>
-              Entrada parcelada · juros evolutivos de obra · MCMV e SBPE
-            </p>
-          </div>
-          <span style={{ color: '#60a5fa', fontSize: '18px' }}>→</span>
-        </div>
-      </Link>
+        <BtnPrimario label="Descobrir meu perfil →" onClick={avancar} />
+      </Etapa>
+    );
+  }
 
-      <button
-        onClick={onVoltar}
-        style={{
-          background: 'none', border: 'none',
-          color: 'var(--text-faint)', fontSize: '13px',
-          cursor: 'pointer', textDecoration: 'underline',
-        }}
-      >
-        ← Nova simulação
-      </button>
-    </div>
-  );
-}
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ETAPA 5 — REVELAÇÃO DO PERFIL
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (etapa === 5) {
+    if (!perfil) { calcularPerfil(); return <Etapa><p>Calculando...</p></Etapa>; }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// MODO 3 — NA PLANTA: Cartão de entrada
-// ──────────────────────────────────────────────────────────────────────────────
-function CartaoPlanta() {
-  const features = [
-    { icon: '📋', text: 'Estágio do empreendimento (pré-lançamento, obra, pronto)' },
-    { icon: '📈', text: 'Curva SIOPI/Caixa de evolução física de obra' },
-    { icon: '💰', text: 'Juros evolutivos mensais durante a construção' },
-    { icon: '🏦', text: 'Financiamento Caixa: Minha Casa Minha Vida e SBPE' },
-    { icon: '🏗️', text: 'Entrada parcelada + FGTS + recursos próprios' },
-    { icon: '📅', text: 'Cronograma físico-financeiro realista' },
-  ];
+    const { faixa, mcmv, sbpe, subsidioEstimado, prazoMaxMeses } = perfil;
+    const useMCMV = mcmv.elegivel;
+    const valorMax = useMCMV ? mcmv.valorMaxImovel : sbpe.valorMaxImovel;
+    const parcela = useMCMV ? mcmv.parcela : sbpe.parcela;
+    const compr = useMCMV ? mcmv.comprometimento : sbpe.comprometimento;
+    const saude = compr <= 20 ? 'ótimo' : compr <= 25 ? 'bom' : compr <= 30 ? 'atenção' : 'risco';
+    const sc = SAUDE[saude];
+    const modalidade = useMCMV ? `${faixa!.label} MCMV` : 'SBPE';
+    const taxa = useMCMV ? faixa!.taxaRef : TAXA_SBPE_ANUAL;
+    const prazoAnos = Math.round(prazoMaxMeses / 12);
 
-  return (
-    <div style={{ animation: 'fadeUp 0.3s ease' }}>
-      <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text)', marginBottom: '10px' }}>
-        Imóvel na planta
-      </h2>
-      <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '32px' }}>
-        O simulador mais completo para compra na planta — reproduz a lógica real da construtora e da Caixa Econômica Federal.
-      </p>
+    return (
+      <Etapa>
+        <Barra etapa={4} total={6} />
 
-      <div style={{
-        background: '#0f172a', borderRadius: '20px',
-        padding: '28px', marginBottom: '14px',
-      }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
-          {features.map(({ icon, text }) => (
-            <div key={text} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <span style={{ fontSize: '16px', lineHeight: '20px', flexShrink: 0 }}>{icon}</span>
-              <p style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5, margin: 0 }}>{text}</p>
+        {/* Card de Revelação */}
+        <div style={{ background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 20, overflow: 'hidden', marginBottom: 24 }}>
+          {/* Header */}
+          <div style={{ background: 'var(--primary)', padding: '24px 24px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.7)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Seu perfil de compra</div>
+            <div style={{ fontSize: 38, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{formatBRL(valorMax)}</div>
+            <div style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', marginTop: 6 }}>valor máximo do imóvel</div>
+            <div style={{ display: 'inline-block', marginTop: 14, padding: '5px 16px', background: 'rgba(255,255,255,.2)', borderRadius: 99, fontSize: 13, color: '#fff', fontWeight: 700 }}>
+              {modalidade} · {taxa}% a.a. + TR
             </div>
-          ))}
+          </div>
+
+          {/* Grid de métricas */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--border)' }}>
+            {[
+              { l: 'Parcela estimada', v: formatBRL(parcela) + '/mês', d: `${compr.toFixed(1)}% da renda` },
+              { l: 'Prazo máximo', v: `${prazoAnos} anos`, d: `${prazoMaxMeses} meses` },
+              { l: useMCMV ? 'Subsídio estimado' : 'FGTS disponível', v: useMCMV ? formatBRL(subsidioEstimado || 0) : formatBRL(perfil.fgts), d: useMCMV ? 'Valor estimado · confirme na Caixa' : 'Usado como entrada' },
+              { l: 'Taxa de juros', v: `${taxa}% a.a.`, d: `+TR ${TR_MENSAL}%/mês` },
+            ].map(({ l, v, d }) => (
+              <div key={l} style={{ padding: '16px', background: 'var(--bg-card)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.4px' }}>{l}</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>{v}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{d}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Saúde financeira */}
+          <div style={{ padding: '16px 20px', background: sc.bg, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>{sc.emoji}</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: sc.txt }}>Saúde financeira: {saude.toUpperCase()}</div>
+              <div style={{ fontSize: 12, color: sc.cor }}>
+                {saude === 'ótimo' && 'Comprometimento abaixo de 20% — excelente margem de segurança.'}
+                {saude === 'bom' && 'Entre 20% e 25% — dentro do ideal, com alguma folga.'}
+                {saude === 'atenção' && 'Entre 25% e 30% — aprovável, mas próximo do limite bancário.'}
+                {saude === 'risco' && 'Acima de 30% — banco provavelmente reprovará. Considere aumentar a entrada ou o prazo.'}
+              </div>
+            </div>
+          </div>
         </div>
-        <Link href="/simulador/na-planta" style={{ textDecoration: 'none', display: 'block' }}>
-          <button style={{
-            width: '100%', background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-            color: '#fff', border: 'none', borderRadius: '12px',
-            padding: '15px 24px', fontSize: '15px', fontWeight: '700',
-            cursor: 'pointer', boxShadow: '0 4px 20px rgba(37,99,235,.4)',
-          }}>
-            Abrir Simulador na Planta →
+
+        {/* Informações adicionais */}
+        {!useMCMV && faixa && (
+          <div style={{ padding: '12px 16px', background: '#FAEEDA', borderRadius: 10, marginBottom: 16, fontSize: 13, color: '#633806' }}>
+            <strong>Renda compatível com {faixa.label} MCMV</strong>, mas o teto do imóvel ({formatBRL(faixa.teto)}) limita a compra. Para imóveis acima do teto, usa-se o SBPE ({TAXA_SBPE_ANUAL}% a.a.).
+          </div>
+        )}
+
+        {subsidioEstimado > 0 && (
+          <div style={{ padding: '12px 16px', background: '#E1F5EE', borderRadius: 10, marginBottom: 16, fontSize: 13, color: '#085041' }}>
+            ✅ Subsídio estimado de <strong>{formatBRL(subsidioEstimado)}</strong> incluído no cálculo. O valor exato depende do perfil, município e disponibilidade de verba — confirme na Caixa.
+          </div>
+        )}
+
+        {/* CTAs */}
+        <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+          <Link href={`/imoveis?max=${valorMax}&modalidade=${useMCMV ? 'mcmv' : 'sbpe'}`}
+            style={{ display: 'block', padding: '16px 0', borderRadius: 12, background: 'var(--primary)', color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
+            🏠 Ver imóveis compatíveis
+          </Link>
+          <button onClick={avancar}
+            style={{ padding: '14px 0', borderRadius: 12, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Simular imóvel específico
           </button>
-        </Link>
-      </div>
+        </div>
 
-      <div style={{
-        background: '#eff6ff', border: '1px solid #bfdbfe',
-        borderRadius: '12px', padding: '14px 16px',
-      }}>
-        <p style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.55, margin: 0 }}>
-          💡 <strong>Dica:</strong> Execute primeiro o simulador "Descobrir" para identificar se você se encaixa no Minha Casa Minha Vida — o resultado é aproveitado automaticamente no simulador de planta.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// MAIN PAGE
-// ──────────────────────────────────────────────────────────────────────────────
-export default function SimuladorPage() {
-  const [modo, setModo] = useState<Modo>('descobrir');
-  const [fase, setFase] = useState<Fase>('form');
-  const [resDescobrir, setResDescobrir] = useState<ResultadoDescobrir | null>(null);
-  const [resImovel, setResImovel] = useState<ResultadoSimulacao | null>(null);
-
-  function trocarModo(m: Modo) {
-    setModo(m);
-    setFase('form');
-    setResDescobrir(null);
-    setResImovel(null);
+        <button onClick={voltar} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: 13, cursor: 'pointer', padding: 0, fontFamily: 'inherit', display: 'block', textAlign: 'center', width: '100%' }}>
+          ← Ajustar dados
+        </button>
+      </Etapa>
+    );
   }
 
-  const modoLabels: Record<Modo, string> = {
-    descobrir: '🔍 Descobrir',
-    imovel: '🏠 Já sei o imóvel',
-    planta: '🏗️ Na planta',
-  };
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ETAPA 6 — SIMULAÇÃO DE IMÓVEL ESPECÍFICO
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (etapa === 6) {
+    const valorImovel = parseMoeda(e.valorImovel);
+    const perfValorMax = perfil ? (perfil.mcmv.elegivel ? perfil.mcmv.valorMaxImovel : perfil.sbpe.valorMaxImovel) : 0;
+    return (
+      <Etapa>
+        {voltar_link}
+        <Barra etapa={5} total={6} />
+        <Titulo>Qual é o valor do imóvel?</Titulo>
+        <Subtitulo>Informe o valor do imóvel que você tem em mente para ver a simulação completa.</Subtitulo>
 
-  return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+        <InputBRL label="Valor do imóvel" value={e.valorImovel} onChange={v => upd({ valorImovel: v })} />
 
-      {/* ── Hero (só na fase de form) ─────────────────────────────────────── */}
-      {fase === 'form' && (
-        <section style={{
-          background: 'linear-gradient(160deg, #0f172a 0%, #1a2e4a 55%, #0f172a 100%)',
-          padding: '72px 24px 88px',
-          textAlign: 'center',
-        }}>
-          <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-            <p style={{
-              fontSize: '11px', fontWeight: '700', color: '#64748b',
-              letterSpacing: '1.2px', textTransform: 'uppercase',
-              marginBottom: '20px',
-            }}>
-              Simulador Inteligente · FinancieCerto
-            </p>
-            <h1 style={{
-              fontSize: 'clamp(26px, 5vw, 42px)',
-              fontWeight: '800', color: '#fff', lineHeight: 1.2,
-              marginBottom: '16px',
-            }}>
-              Descubra o imóvel certo<br />para a sua realidade
-            </h1>
-            <p style={{
-              fontSize: '16px', color: 'rgba(255,255,255,.55)',
-              lineHeight: 1.7, marginBottom: '40px',
-            }}>
-              Minha Casa Minha Vida para imóveis até R$ 600 mil · SBPE acima disso · Para todos os perfis de renda.
-            </p>
-            <ModeSelector modo={modo} onChange={trocarModo} />
+        {perfValorMax > 0 && valorImovel > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            {valorImovel > perfValorMax * 1.05 ? (
+              <div style={{ padding: '12px 16px', background: '#FAECE7', borderRadius: 10, fontSize: 13, color: '#4A1B0C' }}>
+                ⚠️ <strong>{formatBRL(valorImovel)}</strong> está acima do seu teto ({formatBRL(perfValorMax)}). A parcela pode ultrapassar 30% da renda.
+              </div>
+            ) : (
+              <div style={{ padding: '12px 16px', background: '#E1F5EE', borderRadius: 10, fontSize: 13, color: '#085041' }}>
+                ✅ Dentro da sua capacidade (teto: {formatBRL(perfValorMax)})
+              </div>
+            )}
           </div>
-        </section>
-      )}
+        )}
 
-      {/* ── Breadcrumb (resultado) ───────────────────────────────────────── */}
-      {fase === 'resultado' && (
-        <div style={{
-          borderBottom: '1px solid var(--border)',
-          background: 'var(--bg-card)',
-          padding: '14px 24px',
-        }}>
-          <div style={{ maxWidth: '560px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={() => {
-                setFase('form');
-                setResDescobrir(null);
-                setResImovel(null);
-              }}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '4px' }}
-            >
-              ← Simulador
-            </button>
-            <span style={{ color: 'var(--border)', fontSize: '14px' }}>›</span>
-            <span style={{ fontSize: '13px', color: 'var(--text)', fontWeight: '600' }}>
-              {modoLabels[modo]}
-            </span>
+        <div style={{ marginBottom: 28 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.8px' }}>Prazo de financiamento</label>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[10, 15, 20, 25, 30, 35].map(a => (
+              <Chip key={a} label={`${a} anos`} ativo={e.prazoAnos === a} onClick={() => upd({ prazoAnos: a })} />
+            ))}
           </div>
         </div>
-      )}
 
-      {/* ── Conteúdo principal ──────────────────────────────────────────────── */}
-      <div style={{
-        maxWidth: '560px',
-        margin: fase === 'form' ? '-40px auto 0' : '0 auto',
-        padding: fase === 'form' ? '0 16px 80px' : '36px 16px 80px',
-        position: 'relative',
-        zIndex: 1,
-      }}>
-
-        {/* Container card (só no form) */}
-        {fase === 'form' ? (
-          <div style={{
-            background: 'var(--bg-card)',
-            borderRadius: '20px',
-            padding: '36px 28px',
-            boxShadow: '0 4px 40px rgba(0,0,0,.10)',
-            border: '1px solid var(--border)',
-          }}>
-            {modo === 'descobrir' && (
-              <FormDescobrir onResult={r => { setResDescobrir(r); setFase('resultado'); }} />
-            )}
-            {modo === 'imovel' && (
-              <FormImovel onResult={r => { setResImovel(r); setFase('resultado'); }} />
-            )}
-            {modo === 'planta' && <CartaoPlanta />}
-
-            <p style={{
-              textAlign: 'center', fontSize: '11px',
-              color: 'var(--text-faint)', marginTop: '24px',
-            }}>
-              🔒 Seus dados não são armazenados · Simulação gratuita
-            </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-card)', borderRadius: 10, border: `1px solid ${e.naPlanta ? 'var(--primary)' : 'var(--border)'}`, cursor: 'pointer', marginBottom: 28 }}
+          onClick={() => upd({ naPlanta: !e.naPlanta })}>
+          <div>
+            <div style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>Imóvel na planta (crédito associativo)</div>
+            <div style={{ fontSize: 12, color: 'var(--text-faint)' }}>Há fase de obra antes da entrega das chaves</div>
           </div>
-        ) : (
-          <>
-            {modo === 'descobrir' && resDescobrir && (
-              <DiagnosticoDescobrir resultado={resDescobrir} onVoltar={() => { setFase('form'); setResDescobrir(null); }} />
-            )}
-            {modo === 'imovel' && resImovel && (
-              <DiagnosticoImovel resultado={resImovel} onVoltar={() => { setFase('form'); setResImovel(null); }} />
-            )}
-          </>
+          <div style={{ width: 42, height: 24, borderRadius: 99, background: e.naPlanta ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background .2s', flexShrink: 0 }}>
+            <div style={{ width: 18, height: 18, borderRadius: 99, background: '#fff', position: 'absolute', top: 3, left: e.naPlanta ? 21 : 3, transition: 'left .2s' }} />
+          </div>
+        </div>
+
+        <BtnPrimario label="Ver simulação completa →" onClick={avancar} disabled={valorImovel < 10000} />
+      </Etapa>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ETAPA 7 — RESULTADO COMPLETO
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (etapa === 7) {
+    if (!sim) { calcularSimulacao(); return <Etapa><p>Calculando...</p></Etapa>; }
+
+    const sc = SAUDE[sim.saudeLabel];
+    const economiasSAC = sim.totalPagoPrice - sim.totalPagoSAC;
+
+    return (
+      <Etapa>
+        {voltar_link}
+
+        {/* Header do resultado */}
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: sc.cor, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 8 }}>{sc.emoji} {sim.modalidade}</div>
+          <div style={{ fontSize: 38, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>{formatBRL(sim.parcelaPrimeiro)}</div>
+          <div style={{ fontSize: 14, color: 'var(--text-faint)', marginTop: 4 }}>parcela inicial (Price) · {sim.comprometimento.toFixed(1)}% da renda</div>
+        </div>
+
+        {/* Price vs SAC */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+          <div style={{ padding: '16px', background: 'var(--bg-card)', borderRadius: 14, border: '1.5px solid var(--primary)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>Tabela Price</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{formatBRL(sim.parcelaPrimeiro)}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>parcela fixa</div>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 8 }}>Total: {formatBRL(sim.totalPagoPrice)}</div>
+          </div>
+          <div style={{ padding: '16px', background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>SAC</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{formatBRL(sim.parcelaSACPrimeiro)}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>1ª parcela · decresce</div>
+            <div style={{ fontSize: 11, color: '#0F6E56', marginTop: 8, fontWeight: 600 }}>Economiza {formatBRL(Math.max(0, economiasSAC))}</div>
+          </div>
+        </div>
+
+        {/* Detalhamento */}
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 16 }}>
+          {[
+            { l: 'Valor do imóvel', v: formatBRL(sim.valorImovel) },
+            { l: 'Entrada total (dinheiro + FGTS' + (sim.subsidioEstimado > 0 ? ' + subsídio)' : ')'), v: formatBRL(sim.entrada) },
+            sim.subsidioEstimado > 0 ? { l: '  ↳ Subsídio estimado MCMV', v: formatBRL(sim.subsidioEstimado), destaque: true } : null,
+            { l: 'Valor financiado', v: formatBRL(sim.valorFinanciado) },
+            { l: 'Taxa de juros nominal', v: `${sim.taxaAnual}% a.a. + TR` },
+            { l: 'Prazo', v: `${Math.round(sim.prazoMeses / 12)} anos (${sim.prazoMeses} meses)` },
+            { l: 'Parcela (A+J)', v: formatBRL(sim.parcelaPrimeiro - sim.seguros.total) },
+            { l: 'MIP (seguro vida, idade)', v: formatBRL(sim.seguros.mip) },
+            { l: 'DFI (seguro imóvel)', v: formatBRL(sim.seguros.dfi) },
+            { l: 'Tarifa de administração', v: formatBRL(sim.seguros.txAdm) },
+          ].filter(Boolean).map((item, i) => {
+            const { l, v, destaque } = item as { l: string; v: string; destaque?: boolean };
+            return (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '11px 16px', borderBottom: '1px solid var(--border)', background: destaque ? '#E1F5EE' : 'transparent' }}>
+                <span style={{ fontSize: 13, color: destaque ? '#085041' : 'var(--text-faint)' }}>{l}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: destaque ? '#0F6E56' : 'var(--text)' }}>{v}</span>
+              </div>
+            );
+          })}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: sc.bg }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: sc.txt }}>Parcela total (Price)</span>
+            <span style={{ fontSize: 18, fontWeight: 800, color: sc.cor }}>{formatBRL(sim.parcelaPrimeiro)}</span>
+          </div>
+        </div>
+
+        {/* Alertas */}
+        {sim.alertas.map((a, i) => (
+          <div key={i} style={{ padding: '12px 14px', background: '#FAEEDA', borderLeft: '3px solid #EF9F27', borderRadius: '0 8px 8px 0', marginBottom: 10, fontSize: 13, color: '#633806' }}>
+            {a}
+          </div>
+        ))}
+
+        {sim.obraAlerta && (
+          <div style={{ padding: '12px 14px', background: '#E6F1FB', borderLeft: '3px solid #378ADD', borderRadius: '0 8px 8px 0', marginBottom: 16, fontSize: 13, color: '#0C447C' }}>
+            🏗️ {sim.obraAlerta}
+          </div>
         )}
-      </div>
-    </div>
-  );
+
+        {/* Aviso legal */}
+        <p style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 28 }}>
+          Simulação educativa com base nas regras SFH/MCMV vigentes · maio/2026. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Valores exatos devem ser confirmados na Caixa Econômica Federal. Não constitui proposta de crédito.
+        </p>
+
+        {/* CTAs finais */}
+        <div style={{ display: 'grid', gap: 12 }}>
+          <Link href={`/imoveis?max=${sim.valorImovel}&modalidade=${sim.isMCMV ? 'mcmv' : 'sbpe'}`}
+            style={{ display: 'block', padding: '16px 0', borderRadius: 12, background: 'var(--primary)', color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
+            🏠 Ver imóveis compatíveis
+          </Link>
+          <button onClick={() => { setEtapa(0); setE(ESTADO_INICIAL); setPerfil(null); setSim(null); }}
+            style={{ padding: '14px 0', borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Fazer nova simulação
+          </button>
+        </div>
+      </Etapa>
+    );
+  }
+
+  return null;
 }

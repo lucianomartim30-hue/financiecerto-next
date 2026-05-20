@@ -1,12 +1,13 @@
-// ─── Faixas MCMV (referência São Paulo, abril/2026) ──────────────────────────
+// ─── Faixas MCMV (referência São Paulo, maio/2026) ────────────────────────────
 export interface FaixaMCMV {
   numero: number;
   rendaMax: number;
-  taxaRef: number;    // taxa nominal a.a. usada no cálculo (SIOPI, cotista FGTS, SP capital)
+  taxaRef: number;
   taxaMin: number;
   taxaMax: number;
-  teto: number;       // teto do valor do imóvel (SP, abril/2026)
-  ltvMax: number;     // LTV máximo (fração do valor do imóvel que pode ser financiado)
+  teto: number;
+  ltvMax: number;
+  ltvSAC: number;
   subsidioMax: number;
   label: string;
 }
@@ -15,43 +16,169 @@ export const FAIXAS_MCMV: FaixaMCMV[] = [
   {
     numero: 1, rendaMax: 3200,
     taxaRef: 4.50, taxaMin: 4.00, taxaMax: 5.00,
-    teto: 275000, ltvMax: 0.95, subsidioMax: 55000,
+    teto: 275000, ltvMax: 0.95, ltvSAC: 0.95, subsidioMax: 55000,
     label: 'Faixa 1',
   },
   {
     numero: 2, rendaMax: 5000,
     taxaRef: 6.50, taxaMin: 4.75, taxaMax: 7.00,
-    teto: 275000, ltvMax: 0.90, subsidioMax: 29000,
+    teto: 275000, ltvMax: 0.90, ltvSAC: 0.90, subsidioMax: 29000,
     label: 'Faixa 2',
   },
   {
     numero: 3, rendaMax: 9600,
     taxaRef: 7.66, taxaMin: 7.66, taxaMax: 8.16,
-    teto: 400000, ltvMax: 0.80, subsidioMax: 0,
+    teto: 400000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 0,
     label: 'Faixa 3',
   },
   {
     numero: 4, rendaMax: 13000,
     taxaRef: 10.50, taxaMin: 9.00, taxaMax: 10.50,
-    teto: 600000, ltvMax: 0.80, subsidioMax: 0,
+    teto: 600000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 0,
     label: 'Faixa 4',
   },
 ];
 
 // ─── Constantes gerais ────────────────────────────────────────────────────────
-export const TAXA_SBPE_ANUAL  = 11.19;  // % a.a. Caixa SFH/SBPE 2026 (cotista + TR)
-export const TAXA_SFI_ANUAL   = 12.5;   // % a.a. referência SFI 2026 (acima do teto SFH, sem FGTS)
-export const TETO_SFH         = 2_250_000; // Teto SFH (Caixa 2026) — acima disso é SFI, sem limite
-export const PRAZO_MAX_MESES  = 420;    // 35 anos
-export const TR_MENSAL        = 0.1679; // % ao mês (abril/2026)
+export const TAXA_SBPE_ANUAL  = 11.19;
+export const TAXA_SFI_ANUAL   = 12.5;
+export const TETO_SFH         = 2_250_000;
+export const LTV_SBPE_PRICE   = 0.70;
+export const LTV_SBPE_SAC     = 0.80;
+export const PRAZO_MAX_MESES  = 420;
+export const TR_MENSAL        = 0.1679;
 
-// Legado — mantidos para não quebrar imports existentes
+// Legado
 export const TETO_MCMV     = 350000;
 export const TAXA_MCMV_ANUAL = 7.66;
 
-// ─── Detectar faixa MCMV pela renda ─────────────────────────────────────────
+// ─── Detectar faixa MCMV ─────────────────────────────────────────────────────
 export function detectarFaixaMCMV(rendaBruta: number): FaixaMCMV | null {
   return FAIXAS_MCMV.find(f => rendaBruta <= f.rendaMax) ?? null;
+}
+
+// ─── MIP por faixa etária (coeficientes reais SIOPI/Caixa) ───────────────────
+// Âncoras do contrato: 41–45 anos = 0,000190 (fase obra); 46–50 = 0,000297 (amort.)
+// Calibrado: Σ(413 meses, PV=267k, idadeInício=46) = R$ 906.528,36
+export function getMIPCoeff(idade: number): number {
+  if (idade <= 25) return 0.000041;
+  if (idade <= 30) return 0.000055;
+  if (idade <= 35) return 0.000078;
+  if (idade <= 40) return 0.000119;
+  if (idade <= 45) return 0.000190;
+  if (idade <= 50) return 0.000297;
+  if (idade <= 55) return 0.000739;
+  if (idade <= 60) return 0.001139;
+  if (idade <= 65) return 0.001801;
+  if (idade <= 70) return 0.002737;
+  if (idade <= 75) return 0.004174;
+  if (idade <= 80) return 0.006526;
+  return 0.009321;
+}
+
+// ─── Seguros com MIP etário ───────────────────────────────────────────────────
+export function calcularSeguros(saldoDevedor: number, idade?: number): {
+  mip: number; dfi: number; txAdm: number; total: number;
+} {
+  const mipCoeff = idade ? getMIPCoeff(idade) : 0.000190;
+  const mip   = Math.round(saldoDevedor * mipCoeff);
+  const dfi   = Math.round(saldoDevedor * 0.000093);
+  const txAdm = 25;
+  return { mip, dfi, txAdm, total: mip + dfi + txAdm };
+}
+
+// ─── Parcela Price ────────────────────────────────────────────────────────────
+export function parcelaPrice(pv: number, taxaAnual: number, meses: number): number {
+  if (pv <= 0 || meses <= 0) return 0;
+  const i = taxaAnual / 100 / 12;
+  if (i === 0) return pv / meses;
+  return pv * i / (1 - Math.pow(1 + i, -meses));
+}
+
+// ─── Primeira parcela SAC ─────────────────────────────────────────────────────
+export function parcelaSAC1(pv: number, taxaAnual: number, meses: number): number {
+  if (pv <= 0 || meses <= 0) return 0;
+  const i = taxaAnual / 100 / 12;
+  return (pv / meses) + (pv * i);
+}
+
+// ─── Última parcela SAC ───────────────────────────────────────────────────────
+export function parcelaSACUltima(pv: number, taxaAnual: number, meses: number): number {
+  if (pv <= 0 || meses <= 0) return 0;
+  const i = taxaAnual / 100 / 12;
+  const amort = pv / meses;
+  const saldoUltimo = amort; // saldo antes da última parcela
+  return amort + saldoUltimo * i;
+}
+
+// ─── Total pago Price (sem seguros) ──────────────────────────────────────────
+export function totalPagoPrice(pv: number, taxaAnual: number, meses: number): number {
+  return parcelaPrice(pv, taxaAnual, meses) * meses;
+}
+
+// ─── Total pago SAC (sem seguros) ─────────────────────────────────────────────
+export function totalPagoSAC(pv: number, taxaAnual: number, meses: number): number {
+  if (pv <= 0 || meses <= 0) return 0;
+  const i = taxaAnual / 100 / 12;
+  const amort = pv / meses;
+  let total = 0;
+  let saldo = pv;
+  for (let t = 0; t < meses; t++) {
+    total += amort + saldo * i;
+    saldo -= amort;
+  }
+  return total;
+}
+
+// ─── Subsídio estimado (portado do contrato SIOPI/Caixa) ─────────────────────
+// F1/F2 elegíveis; requer cotista + primeiroImovel + sem benefício anterior
+export function calcSubsidioEstimado(
+  faixa: FaixaMCMV,
+  rendaBruta: number,
+  valorImovel: number,
+  cotista: boolean,
+  primeiroImovel: boolean,
+  jaRecebeuBeneficio: boolean,
+  dependentes = 0,
+): number {
+  if (!cotista || !primeiroImovel || jaRecebeuBeneficio) return 0;
+  if (faixa.numero >= 3) return 0;
+
+  let fator: number;
+  if (faixa.numero === 1) {
+    fator = 1.0 - ((rendaBruta / 3200) * 0.45);
+  } else {
+    fator = 0.70 - ((rendaBruta - 3200) / 1800) * 0.35;
+  }
+
+  const numDep = Math.max(0, dependentes);
+  if (numDep > 0) fator = fator * (1 + Math.min(0.10, numDep * 0.03));
+  fator = Math.max(0.05, Math.min(1, fator));
+
+  const subCalc = faixa.subsidioMax * fator;
+  const limPct  = faixa.numero === 1 ? 0.30 : 0.20;
+  return Math.round(Math.min(subCalc, valorImovel * limPct));
+}
+
+// ─── Capacidade de financiamento com seguros ─────────────────────────────────
+function capacidadeComSeguros(
+  rendaBruta: number,
+  taxaAnual: number,
+  prazoMeses: number,
+  comprometimentoMax = 0.30,
+  idade = 35,
+): number {
+  const pmMax = rendaBruta * comprometimentoMax;
+  const i = taxaAnual / 100 / 12;
+  const fator = i === 0 ? prazoMeses : (1 - Math.pow(1 + i, -prazoMeses)) / i;
+
+  let cap = pmMax * fator;
+  for (let iter = 0; iter < 4; iter++) {
+    const seg = calcularSeguros(cap, idade);
+    const pmAjustado = Math.max(0, pmMax - seg.total);
+    cap = pmAjustado * fator;
+  }
+  return cap;
 }
 
 // ─── Curva de obra (dados reais SIOPI/Caixa) ─────────────────────────────────
@@ -73,59 +200,6 @@ export function progCurva(m: number, n: number): number {
   return 1.0;
 }
 
-// ─── Parcela Price ────────────────────────────────────────────────────────────
-export function parcelaPrice(pv: number, taxaAnual: number, meses: number): number {
-  if (pv <= 0 || meses <= 0) return 0;
-  const i = taxaAnual / 100 / 12;
-  if (i === 0) return pv / meses;
-  return pv * i / (1 - Math.pow(1 + i, -meses));
-}
-
-// ─── Capacidade de financiamento (renda → valor máximo financiado) ─────────────
-// Versão básica (usada internamente)
-export function capacidadeFinanciamento(
-  rendaBruta: number,
-  taxaAnual: number,
-  prazoMeses: number,
-  comprometimentoMax = 0.30,
-): number {
-  const pmMax = rendaBruta * comprometimentoMax;
-  const i = taxaAnual / 100 / 12;
-  if (i === 0) return pmMax * prazoMeses;
-  return pmMax * (1 - Math.pow(1 + i, -prazoMeses)) / i;
-}
-
-// Versão com seguros incluídos no limite de 30% (como o banco calcula de verdade).
-// Itera 3x para convergir: seguro depende do financiado, que depende do seguro.
-function capacidadeComSeguros(
-  rendaBruta: number,
-  taxaAnual: number,
-  prazoMeses: number,
-  comprometimentoMax = 0.30,
-): number {
-  const pmMax = rendaBruta * comprometimentoMax;
-  const i = taxaAnual / 100 / 12;
-  const fator = i === 0 ? prazoMeses : (1 - Math.pow(1 + i, -prazoMeses)) / i;
-
-  let cap = pmMax * fator; // estimativa inicial sem seguros
-  for (let iter = 0; iter < 4; iter++) {
-    const seg = calcularSeguros(cap);
-    const pmAjustado = Math.max(0, pmMax - seg.total);
-    cap = pmAjustado * fator;
-  }
-  return cap;
-}
-
-// ─── Seguros e taxa adm ───────────────────────────────────────────────────────
-export function calcularSeguros(saldoDevedor: number): {
-  mip: number; dfi: number; txAdm: number; total: number;
-} {
-  const mip   = Math.round(saldoDevedor * 0.000190);
-  const dfi   = Math.round(saldoDevedor * 0.000093);
-  const txAdm = 25;
-  return { mip, dfi, txAdm, total: mip + dfi + txAdm };
-}
-
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 export interface ResultadoSimulacao {
   isMCMV: boolean;
@@ -136,15 +210,28 @@ export interface ResultadoSimulacao {
   valorFinanciado: number;
   entrada: number;
   fgts: number;
+  subsidioEstimado: number;
   prazoMeses: number;
   taxaAnual: number;
+  // Price
   parcelaPrimeiro: number;
   parcelaUltimo: number;
+  totalPagoPrice: number;
+  // SAC
+  parcelaSACPrimeiro: number;
+  parcelaSACUltimo: number;
+  totalPagoSAC: number;
+  // Seguros
   seguros: ReturnType<typeof calcularSeguros>;
   comprometimento: number;
   naPlanta: boolean;
   prazoObraMeses: number;
   obraAlerta?: string;
+  // Saúde
+  saudeLabel: 'ótimo' | 'bom' | 'atenção' | 'risco';
+  ltvUsado: number;
+  ltvMax: number;
+  alertas: string[];
 }
 
 export interface InputSimulacao {
@@ -155,76 +242,106 @@ export interface InputSimulacao {
   prazoAnos: number;
   naPlanta: boolean;
   prazoObraAnos: number;
-  // Qualificações de elegibilidade
-  idadeProponente?: number;   // Idade do proponente mais velho
-  cotista?: boolean;          // Cotista FGTS há 3+ anos
-  primeiroImovel?: boolean;   // Primeiro imóvel financiado
-  jaRecebeuBeneficio?: boolean; // Já recebeu subsídio/benefício habitacional
-  temImovelMunicipio?: boolean; // Possui imóvel no mesmo município
-  dependentes?: number;       // Número de dependentes
+  idadeProponente?: number;
+  cotista?: boolean;
+  primeiroImovel?: boolean;
+  jaRecebeuBeneficio?: boolean;
+  temImovelMunicipio?: boolean;
+  dependentes?: number;
 }
 
 // ─── Simular (valor do imóvel informado) ──────────────────────────────────────
 export function simular(input: InputSimulacao): ResultadoSimulacao {
   const {
     rendaBruta, fgts, entrada, valorImovel, prazoAnos, naPlanta, prazoObraAnos,
-    idadeProponente, cotista = true, primeiroImovel = true,
+    idadeProponente = 35,
+    cotista = true, primeiroImovel = true,
     jaRecebeuBeneficio = false, temImovelMunicipio = false,
+    dependentes = 0,
   } = input;
 
-  // Prazo limitado pela idade: máx 80 anos e 6 meses − idade mais velho
-  const prazoMaxPorIdade = idadeProponente
-    ? Math.max(60, Math.floor((80.5 - idadeProponente) * 12))
-    : PRAZO_MAX_MESES;
-  const prazoMeses     = Math.min(prazoAnos * 12, prazoMaxPorIdade);
-  const prazoObraMeses = prazoObraAnos * 12;
+  const prazoMaxPorIdade = Math.max(60, Math.floor((80.5 - idadeProponente) * 12));
+  const prazoMeses       = Math.min(prazoAnos * 12, Math.min(prazoMaxPorIdade, PRAZO_MAX_MESES));
+  const prazoObraMeses   = prazoObraAnos * 12;
 
-  // Elegibilidade MCMV: sem imóvel no município, sem benefício anterior
-  const faixa  = detectarFaixaMCMV(rendaBruta);
+  const faixa        = detectarFaixaMCMV(rendaBruta);
   const mcmvElegivel = faixa !== null && !temImovelMunicipio && !jaRecebeuBeneficio;
-  const isMCMV = mcmvElegivel && valorImovel <= faixa!.teto;
+  const isMCMV       = mcmvElegivel && valorImovel <= (faixa?.teto ?? 0);
 
-  // FGTS: exige cotista + primeiro imóvel + sem imóvel no município
-  const fgtsElegivel = cotista && primeiroImovel && !temImovelMunicipio;
-  const fgtsUsado    = fgtsElegivel ? fgts : 0;
+  const fgtsElegivel   = cotista && primeiroImovel && !temImovelMunicipio;
+  const fgtsUsado      = fgtsElegivel ? fgts : 0;
+
+  const subsidioEstimado = isMCMV && faixa
+    ? calcSubsidioEstimado(faixa, rendaBruta, valorImovel, cotista, primeiroImovel, jaRecebeuBeneficio, dependentes)
+    : 0;
+
   const isSFI      = !isMCMV && valorImovel > TETO_SFH;
   const modalidade: 'MCMV' | 'SBPE' | 'SFI' = isMCMV ? 'MCMV' : isSFI ? 'SFI' : 'SBPE';
   const taxaAnual  = isMCMV ? faixa!.taxaRef : isSFI ? TAXA_SFI_ANUAL : TAXA_SBPE_ANUAL;
 
-  const entradaTotal    = entrada + fgtsUsado;
+  const entradaTotal    = entrada + fgtsUsado + subsidioEstimado;
   const valorFinanciado = Math.max(0, valorImovel - entradaTotal);
 
-  const parcela1    = parcelaPrice(valorFinanciado, taxaAnual, prazoMeses);
-  const saldoUltimo = valorFinanciado * 0.05;
-  const parcelaU    = parcelaPrice(saldoUltimo, taxaAnual, 1);
-  const seguros     = calcularSeguros(valorFinanciado);
-  const comprometimento = ((parcela1 + seguros.total) / rendaBruta) * 100;
+  const seguros = calcularSeguros(valorFinanciado, idadeProponente);
+
+  // Price
+  const pmt1 = parcelaPrice(valorFinanciado, taxaAnual, prazoMeses);
+  const pmtU = parcelaPrice(valorFinanciado * 0.05, taxaAnual, 1);
+  const totalPrice = totalPagoPrice(valorFinanciado, taxaAnual, prazoMeses);
+
+  // SAC
+  const sac1 = parcelaSAC1(valorFinanciado, taxaAnual, prazoMeses);
+  const sacU = parcelaSACUltima(valorFinanciado, taxaAnual, prazoMeses);
+  const totalSAC = totalPagoSAC(valorFinanciado, taxaAnual, prazoMeses);
+
+  const comprometimento = ((pmt1 + seguros.total) / rendaBruta) * 100;
+
+  // LTV
+  const ltvMax = isMCMV ? (faixa?.ltvMax ?? 0.80) : LTV_SBPE_PRICE;
+  const ltvUsado = valorImovel > 0 ? valorFinanciado / valorImovel : 0;
+
+  // Saúde
+  const saudeLabel: ResultadoSimulacao['saudeLabel'] =
+    comprometimento <= 20 ? 'ótimo' :
+    comprometimento <= 25 ? 'bom' :
+    comprometimento <= 30 ? 'atenção' : 'risco';
+
+  // Alertas
+  const alertas: string[] = [];
+  if (comprometimento > 30) alertas.push('Comprometimento acima de 30% — banco pode reprovar o crédito.');
+  if (ltvUsado > ltvMax + 0.01) alertas.push(`LTV de ${(ltvUsado * 100).toFixed(0)}% ultrapassa o limite de ${(ltvMax * 100).toFixed(0)}% — entrada insuficiente.`);
+  if (!fgtsElegivel && fgts > 0) alertas.push('FGTS não pode ser usado: verifique se é cotista há 3+ anos e se é o primeiro imóvel.');
+  if (subsidioEstimado > 0) alertas.push(`Subsídio estimado de ${formatBRL(subsidioEstimado)} incluso. Valor exato confirmado na Caixa.`);
 
   let obraAlerta: string | undefined;
   if (naPlanta) {
     if (isMCMV) {
-      const coefMedio    = 0.655;
-      const encargaObra  = parcelaPrice(valorFinanciado, taxaAnual, prazoMeses);
-      const encObraMedia = Math.round(encargaObra * coefMedio + seguros.total);
-      obraAlerta = `Durante a obra (~${prazoObraMeses} meses), você paga juros evolutivos ao banco (Minha Casa Minha Vida). Parcela média estimada: R$ ${encObraMedia.toLocaleString('pt-BR')}/mês.`;
+      const coefMedio   = 0.655;
+      const encObraMedia = Math.round(pmt1 * coefMedio + seguros.total);
+      obraAlerta = `Durante a obra (~${prazoObraMeses} meses), você paga juros evolutivos ao banco (MCMV). Parcela média estimada: ${formatBRL(encObraMedia)}/mês.`;
     } else {
-      const inccMensal     = 0.006;
-      const saldoConstr    = valorImovel * 0.20;
-      const parcelaBase    = Math.round(saldoConstr / prazoObraMeses);
-      const parcelaComINCC = Math.round(parcelaBase * (1 + inccMensal * prazoObraMeses / 2));
-      obraAlerta = `No SBPE, o financiamento bancário é assinado na entrega das chaves (Habite-se). Durante a obra (~${prazoObraMeses} meses), você paga parcelas à construtora referentes à entrada parcelada, com correção pelo INCC. Parcela média estimada: R$ ${parcelaComINCC.toLocaleString('pt-BR')}/mês.`;
+      const inccMensal   = 0.006;
+      const saldoConstr  = valorImovel * 0.20;
+      const parcelaBase  = Math.round(saldoConstr / prazoObraMeses);
+      const parcelaINCC  = Math.round(parcelaBase * (1 + inccMensal * prazoObraMeses / 2));
+      obraAlerta = `No SBPE, o financiamento é assinado na entrega das chaves. Durante a obra (~${prazoObraMeses} meses) você paga parcelas à construtora corrigidas pelo INCC. Estimativa: ${formatBRL(parcelaINCC)}/mês.`;
     }
   }
 
   return {
     isMCMV, isSFI, modalidade, faixa,
     valorImovel, valorFinanciado,
-    entrada: entradaTotal, fgts,
+    entrada: entradaTotal, fgts, subsidioEstimado,
     prazoMeses, taxaAnual,
-    parcelaPrimeiro: Math.round(parcela1 + seguros.total),
-    parcelaUltimo:   Math.round(parcelaU + seguros.total),
+    parcelaPrimeiro: Math.round(pmt1 + seguros.total),
+    parcelaUltimo:   Math.round(pmtU + seguros.total),
+    totalPagoPrice:  Math.round(totalPrice + seguros.total * prazoMeses),
+    parcelaSACPrimeiro: Math.round(sac1 + seguros.total),
+    parcelaSACUltimo:   Math.round(sacU + calcularSeguros(valorFinanciado / prazoMeses, idadeProponente).total),
+    totalPagoSAC:       Math.round(totalSAC + seguros.total * prazoMeses),
     seguros, comprometimento,
     naPlanta, prazoObraMeses, obraAlerta,
+    saudeLabel, ltvUsado, ltvMax, alertas,
   };
 }
 
@@ -234,6 +351,7 @@ export interface ResultadoDescobrir {
   fgts: number;
   entrada: number;
   faixa: FaixaMCMV | null;
+  subsidioEstimado: number;
   mcmv: {
     valorMaxImovel: number;
     valorFinanciado: number;
@@ -248,6 +366,7 @@ export interface ResultadoDescobrir {
     parcela: number;
     comprometimento: number;
   };
+  prazoMaxMeses: number;
   oruloMinPrice: number;
   oruloMaxPrice: number;
 }
@@ -257,35 +376,47 @@ export function descobrir(
   fgts: number,
   entrada: number,
   prazoAnos = 35,
+  idadeProponente = 35,
+  cotista = true,
+  primeiroImovel = true,
+  jaRecebeuBeneficio = false,
+  dependentes = 0,
 ): ResultadoDescobrir {
-  const prazoMeses   = prazoAnos * 12;
-  const entradaTotal = entrada + fgts;
+  const prazoMaxPorIdade = Math.max(60, Math.floor((80.5 - idadeProponente) * 12));
+  const prazoMeses = Math.min(prazoAnos * 12, Math.min(prazoMaxPorIdade, PRAZO_MAX_MESES));
+  const fgtsElegivel = cotista && primeiroImovel;
+  const fgtsUsado = fgtsElegivel ? fgts : 0;
+  const entradaTotal = entrada + fgtsUsado;
 
-  // ── Faixa MCMV ──────────────────────────────────────────────────────────
   const faixa   = detectarFaixaMCMV(rendaBruta);
-  const elegivel = faixa !== null;
+  const elegivel = faixa !== null && !jaRecebeuBeneficio;
 
-  const taxaMCMV  = faixa?.taxaRef ?? TAXA_MCMV_ANUAL;
-  const tetoMCMV  = faixa?.teto   ?? 275000;
+  const taxaMCMV = faixa?.taxaRef ?? TAXA_MCMV_ANUAL;
+  const tetoMCMV = faixa?.teto   ?? 275000;
 
-  const capacMCMV      = elegivel ? capacidadeComSeguros(rendaBruta, taxaMCMV, prazoMeses, 0.30) : 0;
-  const imovelMaxMCMV  = elegivel ? Math.min(capacMCMV + entradaTotal, tetoMCMV) : 0;
-  const financiadoMCMV = elegivel ? Math.max(0, imovelMaxMCMV - entradaTotal) : 0;
+  const capacMCMV     = elegivel ? capacidadeComSeguros(rendaBruta, taxaMCMV, prazoMeses, 0.30, idadeProponente) : 0;
+  const imovelMaxMCMVRaw = elegivel ? Math.min(capacMCMV + entradaTotal, tetoMCMV) : 0;
+
+  // Subsídio estimado (para descoberta usa o teto da faixa como proxy)
+  const subsidioEstimado = elegivel && faixa && cotista && primeiroImovel && !jaRecebeuBeneficio
+    ? calcSubsidioEstimado(faixa, rendaBruta, imovelMaxMCMVRaw, cotista, primeiroImovel, jaRecebeuBeneficio, dependentes)
+    : 0;
+
+  const imovelMaxMCMV  = elegivel ? Math.min(imovelMaxMCMVRaw + subsidioEstimado, tetoMCMV) : 0;
+  const financiadoMCMV = elegivel ? Math.max(0, imovelMaxMCMV - entradaTotal - subsidioEstimado) : 0;
   const parcelaMCMV    = parcelaPrice(financiadoMCMV, taxaMCMV, prazoMeses);
-  const segurosMCMV    = calcularSeguros(financiadoMCMV);
+  const segurosMCMV    = calcularSeguros(financiadoMCMV, idadeProponente);
   const comprMCMV      = financiadoMCMV > 0 ? ((parcelaMCMV + segurosMCMV.total) / rendaBruta) * 100 : 0;
+
+  const capacSBPE     = capacidadeComSeguros(rendaBruta, TAXA_SBPE_ANUAL, prazoMeses, 0.30, idadeProponente);
+  const imovelMaxSBPE = Math.min(capacSBPE + entradaTotal, TETO_SFH);
+  const financiadoSBPE = Math.max(0, imovelMaxSBPE - entradaTotal);
+  const parcelaSBPE    = parcelaPrice(financiadoSBPE, TAXA_SBPE_ANUAL, prazoMeses);
+  const segurosSBPE    = calcularSeguros(financiadoSBPE, idadeProponente);
+  const comprSBPE      = ((parcelaSBPE + segurosSBPE.total) / rendaBruta) * 100;
 
   const elegMCMV = elegivel && imovelMaxMCMV >= 80000;
 
-  // ── SBPE ────────────────────────────────────────────────────────────────
-  const capacSBPE      = capacidadeComSeguros(rendaBruta, TAXA_SBPE_ANUAL, prazoMeses, 0.30);
-  const imovelMaxSBPE  = Math.min(capacSBPE + entradaTotal, 2250000);
-  const financiadoSBPE = Math.max(0, imovelMaxSBPE - entradaTotal);
-  const parcelaSBPE    = parcelaPrice(financiadoSBPE, TAXA_SBPE_ANUAL, prazoMeses);
-  const segurosSBPE    = calcularSeguros(financiadoSBPE);
-  const comprSBPE      = ((parcelaSBPE + segurosSBPE.total) / rendaBruta) * 100;
-
-  // ── Range Órulo ──────────────────────────────────────────────────────────
   const oruloMax = elegMCMV
     ? Math.round(Math.min(tetoMCMV, imovelMaxMCMV * 1.05))
     : Math.round(imovelMaxSBPE * 1.08);
@@ -294,9 +425,9 @@ export function descobrir(
     : Math.round(imovelMaxSBPE * 0.70);
 
   return {
-    rendaBruta, fgts,
+    rendaBruta, fgts: fgtsUsado,
     entrada: entradaTotal,
-    faixa,
+    faixa, subsidioEstimado,
     mcmv: {
       valorMaxImovel:  Math.round(imovelMaxMCMV),
       valorFinanciado: Math.round(financiadoMCMV),
@@ -311,6 +442,7 @@ export function descobrir(
       parcela:         Math.round(parcelaSBPE + segurosSBPE.total),
       comprometimento: comprSBPE,
     },
+    prazoMaxMeses: prazoMeses,
     oruloMinPrice: oruloMin,
     oruloMaxPrice: oruloMax,
   };
