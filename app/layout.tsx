@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
 import ChatFab from "@/components/ChatFab";
@@ -25,14 +26,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Header />
-        <main style={{ flex: 1 }}>
-          {children}
-        </main>
-        <Footer />
-        <ChatFab />
-      </body>
-    </html>
-  );
-}
+      <head>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-5FCF1KE9XP"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive
