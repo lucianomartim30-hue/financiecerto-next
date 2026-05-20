@@ -49,7 +49,7 @@ const TERMS: Term[] = [
   {
     term: 'Crédito Associativo',
     category: 'modalidades',
-    short: 'Financiamento direto com a construtora via Caixa — indicado para imóvel na planta.',
+    short: 'Financiamento direto com a construtora via Caixa Econômica Federal — indicado para imóvel na planta.',
     full: 'Modalidade em que a Caixa Econômica Federal (ou banco parceiro) contrata o financiamento do comprador ainda na fase de construção. O banco libera recursos diretamente para a construtora conforme o avanço da obra. O comprador paga juros sobre o saldo contratado durante a obra (fase de evolução) e, após o habite-se, inicia as parcelas definitivas de amortização. É a forma mais comum de compra na planta via MCMV.',
   },
 
@@ -57,7 +57,7 @@ const TERMS: Term[] = [
   {
     term: 'TR',
     category: 'indices',
-    short: 'Taxa Referencial — indexador do saldo devedor nos financiamentos da Caixa.',
+    short: 'Taxa Referencial — indexador do saldo devedor nos financiamentos da Caixa Econômica Federal.',
     full: 'A TR (Taxa Referencial) é calculada mensalmente pelo Banco Central a partir da TBF (Taxa Básica Financeira) e aplicada como correção monetária sobre o saldo devedor dos contratos SFH. Em períodos de juros baixos, a TR pode ficar zerada. Em abril de 2026, a TR mensal é de aproximadamente 0,1679%. Ao longo de 35 anos, a TR acumula pode elevar significativamente o saldo devedor se não considerada nas simulações.',
   },
   {
@@ -165,7 +165,7 @@ const TERMS: Term[] = [
   {
     term: 'SICAQ',
     category: 'documentos',
-    short: 'Sistema de Informações do Crédito Associativo — cadastro da Caixa.',
+    short: 'Sistema de Informações do Crédito Associativo — cadastro da Caixa Econômica Federal.',
     full: 'Sistema da Caixa Econômica Federal que centraliza as informações do contrato de crédito associativo: cronograma de obra, repasses, vistorias e situação financeira do comprador. O acompanhamento via SICAQ permite verificar se os repasses à construtora estão dentro do cronograma e se há inconsistências que possam travar o financiamento.',
   },
   {
@@ -200,19 +200,19 @@ const TERMS: Term[] = [
     term: 'Evolução de Obra',
     category: 'planta',
     short: 'Juros pagos durante a construção — incidem sobre o saldo liberado.',
-    full: 'Durante a fase de construção, a Caixa libera o financiamento parceladamente para a construtora conforme o andamento da obra (medições periódicas). O comprador paga mensalmente apenas os juros sobre o saldo já liberado — não há amortização nessa fase. Esse valor cresce à medida que mais recursos são repassados. Após o habite-se, o comprador passa a pagar a parcela completa (amortização + juros) sobre o saldo total contratado.',
+    full: 'Durante a fase de construção, a Caixa Econômica Federal libera o financiamento parceladamente para a construtora conforme o andamento da obra (medições periódicas). O comprador paga mensalmente apenas os juros sobre o saldo já liberado — não há amortização nessa fase. Esse valor cresce à medida que mais recursos são repassados. Após o habite-se, o comprador passa a pagar a parcela completa (amortização + juros) sobre o saldo total contratado.',
   },
   {
     term: 'SIOPI',
     category: 'planta',
-    short: 'Curva padrão de avanço físico de obras residenciais usada pela Caixa.',
+    short: 'Curva padrão de avanço físico de obras residenciais usada pela Caixa Econômica Federal.',
     full: 'O SIOPI (Sistema de Orçamento e Planejamento de Obras da CEF) define a curva típica de evolução física de empreendimentos habitacionais. A CEF usa essa curva para calcular o ritmo de liberação de recursos ao longo da obra. A curva é "S-shaped": começo e fim mais lentos, aceleração no meio. Em simulações, permite estimar os juros de evolução mensais antes mesmo do início da obra.',
   },
   {
     term: 'Cronograma Físico-Financeiro',
     category: 'planta',
     short: 'Documento que detalha o avanço da obra e os repasses financeiros.',
-    full: 'Documento obrigatório do crédito associativo que discrimina, mês a mês, o percentual de obra previsto e o valor de repasse correspondente. A Caixa realiza vistorias periódicas para validar se o avanço físico real coincide com o previsto. Atrasos na obra podem travar repasses, e o comprador deve acompanhar isso via SICAQ.',
+    full: 'Documento obrigatório do crédito associativo que discrimina, mês a mês, o percentual de obra previsto e o valor de repasse correspondente. A Caixa Econômica Federal realiza vistorias periódicas para validar se o avanço físico real coincide com o previsto. Atrasos na obra podem travar repasses, e o comprador deve acompanhar isso via SICAQ.',
   },
   {
     term: 'Interveniente Quitante',

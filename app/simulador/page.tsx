@@ -317,11 +317,11 @@ function SimuladorInner() {
   // ═══════════════ ETAPA 0 — LANDING ════════════════════════════════════════
   if (etapa === 0) return (
     <Etapa>
-      <div style={{ paddingTop: 0 }}>
-        <div style={{ margin: '0 -20px 32px', padding: '52px 28px 40px', background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #0284c7 100%)', borderRadius: '0 0 28px 28px' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '2.5px', marginBottom: 16 }}>Simulador FinancieCerto 2026</div>
-          <h1 style={{ fontSize: 30, fontWeight: 800, color: '#fff', lineHeight: 1.2, marginBottom: 14, marginTop: 0 }}>Primeiro entenda seu perfil. Depois busque o imóvel.</h1>
-          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', lineHeight: 1.65, marginBottom: 0, marginTop: 0 }}>A maioria das pessoas busca imóvel sem saber quanto pode financiar. Aqui você descobre sua faixa real, taxa de juros, subsídio e parcela — antes de ver qualquer imóvel.</p>
+      <div style={{ paddingTop: 52 }}>
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 14 }}>Simulador FinancieCerto 2026</div>
+          <h1 style={{ fontSize: 34, fontWeight: 800, color: '#111827', lineHeight: 1.2, marginBottom: 14, marginTop: 0 }}>Primeiro entenda seu perfil.<br />Depois busque o imóvel.</h1>
+          <p style={{ fontSize: 16, color: '#4B5563', lineHeight: 1.65, marginBottom: 0, marginTop: 0 }}>A maioria das pessoas busca imóvel sem saber quanto pode financiar. Aqui você descobre sua faixa real, taxa de juros, subsídio e parcela — antes de ver qualquer imóvel.</p>
         </div>
 
         <div style={{ display: 'grid', gap: 10, marginBottom: 36 }}>

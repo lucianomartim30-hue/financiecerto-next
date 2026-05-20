@@ -311,7 +311,7 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   if (comprometimento > 30) alertas.push('Comprometimento acima de 30% — banco pode reprovar o crédito.');
   if (ltvUsado > ltvMax + 0.01) alertas.push(`LTV de ${(ltvUsado * 100).toFixed(0)}% ultrapassa o limite de ${(ltvMax * 100).toFixed(0)}% — entrada insuficiente.`);
   if (!fgtsElegivel && fgts > 0) alertas.push('FGTS não pode ser usado: verifique se é cotista há 3+ anos e se é o primeiro imóvel.');
-  if (subsidioEstimado > 0) alertas.push(`Subsídio estimado de ${formatBRL(subsidioEstimado)} incluso. Valor exato confirmado na Caixa.`);
+  if (subsidioEstimado > 0) alertas.push(`Subsídio estimado de ${formatBRL(subsidioEstimado)} incluso. Valor exato confirmado na Caixa Econômica Federal.`);
 
   let obraAlerta: string | undefined;
   if (naPlanta) {

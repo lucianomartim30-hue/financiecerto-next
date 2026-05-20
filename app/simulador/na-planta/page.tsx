@@ -838,7 +838,7 @@ function NaPlantaContent() {
               <LinhaDetalhe
                 label={`Financiamento ${isMCMV ? 'MCMV' : 'SBPE'}`}
                 valor={formatBRL(financiado)}
-                sub={`${((financiado / valor) * 100).toFixed(0)}% do valor — Caixa / banco`}
+                sub={`${((financiado / valor) * 100).toFixed(0)}% do valor — CEF / banco`}
                 destaque
               />
               <div style={{

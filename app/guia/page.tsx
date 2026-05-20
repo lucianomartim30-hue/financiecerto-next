@@ -39,15 +39,15 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'Como funciona o crédito associativo?',
-        resposta: `No crédito associativo (principal modelo MCMV/HIS), o financiamento é assinado **antes ou durante a obra**. A Caixa libera recursos conforme medições de avanço da obra.\n\nO comprador paga os chamados **juros de evolução de obra** mensalmente, sobre o saldo liberado pela Caixa até aquele momento. Quanto mais avançada a obra, maior o saldo liberado e, portanto, maior a parcela de evolução.\n\nAo término da obra (habite-se), o financiamento entra em seu regime normal de amortização.`,
+        resposta: `No crédito associativo (principal modelo MCMV/HIS), o financiamento é assinado **antes ou durante a obra**. A Caixa Econômica Federal Econômica Federal libera recursos conforme medições de avanço da obra.\n\nO comprador paga os chamados **juros de evolução de obra** mensalmente, sobre o saldo liberado pela Caixa Econômica Federal até aquele momento. Quanto mais avançada a obra, maior o saldo liberado e, portanto, maior a parcela de evolução.\n\nAo término da obra (habite-se), o financiamento entra em seu regime normal de amortização.`,
       },
       {
         pergunta: 'O que são os juros de evolução de obra?',
-        resposta: `São os juros pagos mensalmente sobre o saldo já liberado pela Caixa para a construtora. Funciona assim:\n\n• Obra 0% → saldo liberado = 0 → evolução = R$ 0\n• Obra 30% → saldo liberado ≈ R$ 60.000 → evolução ≈ R$ 370/mês (MCMV F1)\n• Obra 70% → saldo liberado ≈ R$ 140.000 → evolução ≈ R$ 870/mês\n• Obra 100% → financiamento entra em regime normal\n\nA taxa varia: Faixa 1 ≈ 0,4% a.m., Faixa 3 ≈ 0,62% a.m., SBPE ≈ 0,83% a.m.`,
+        resposta: `São os juros pagos mensalmente sobre o saldo já liberado pela Caixa Econômica Federal para a construtora. Funciona assim:\n\n• Obra 0% → saldo liberado = 0 → evolução = R$ 0\n• Obra 30% → saldo liberado ≈ R$ 60.000 → evolução ≈ R$ 370/mês (MCMV F1)\n• Obra 70% → saldo liberado ≈ R$ 140.000 → evolução ≈ R$ 870/mês\n• Obra 100% → financiamento entra em regime normal\n\nA taxa varia: Faixa 1 ≈ 0,4% a.m., Faixa 3 ≈ 0,62% a.m., SBPE ≈ 0,83% a.m.`,
       },
       {
         pergunta: 'Qual é o fluxo de pagamento típico da construtora?',
-        resposta: `A construtora normalmente estrutura o pagamento durante a obra assim:\n\n• **Ato:** valor pago na assinatura do contrato (geralmente 5% a 10%)\n• **Mensais:** parcelas fixas mensais durante a obra\n• **Sinais/Reforços:** pagamentos em datas específicas (ex: a cada 6 meses)\n• **Anuais:** parcelas anuais mais pesadas\n• **Chaves:** parcela maior na entrega, antes do financiamento bancário entrar\n• **Evolução de obra:** pago ao banco (Caixa), não à construtora\n\nO saldo restante na entrega das chaves é financiado pela Caixa no prazo escolhido.`,
+        resposta: `A construtora normalmente estrutura o pagamento durante a obra assim:\n\n• **Ato:** valor pago na assinatura do contrato (geralmente 5% a 10%)\n• **Mensais:** parcelas fixas mensais durante a obra\n• **Sinais/Reforços:** pagamentos em datas específicas (ex: a cada 6 meses)\n• **Anuais:** parcelas anuais mais pesadas\n• **Chaves:** parcela maior na entrega, antes do financiamento bancário entrar\n• **Evolução de obra:** pago ao banco (Caixa Econômica Federal), não à construtora\n\nO saldo restante na entrega das chaves é financiado pela Caixa Econômica Federal no prazo escolhido.`,
       },
     ],
   },
@@ -61,7 +61,7 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'Quais são as etapas do processo MCMV/HIS?',
-        resposta: `**1. SICAQ (análise de crédito):** A construtora submete os dados do comprador para análise pela Caixa. O comprador descobre sua capacidade de crédito aprovada.\n\n**2. Assinatura do Contrato de Compra e Venda:** entre comprador e construtora, definindo o imóvel, valor e condições.\n\n**3. Assinatura do Contrato de Financiamento:** entre comprador e Caixa. O financiamento está formalmente contratado.\n\n**4. Início da obra + evolução:** Caixa libera recursos conforme medições. Comprador paga juros de evolução mensalmente.\n\n**5. Habite-se + entrega:** obra concluída, comprador recebe as chaves e o financiamento entra em regime normal.`,
+        resposta: `**1. SICAQ (análise de crédito):** A construtora submete os dados do comprador para análise pela Caixa Econômica Federal. O comprador descobre sua capacidade de crédito aprovada.\n\n**2. Assinatura do Contrato de Compra e Venda:** entre comprador e construtora, definindo o imóvel, valor e condições.\n\n**3. Assinatura do Contrato de Financiamento:** entre comprador e Caixa Econômica Federal. O financiamento está formalmente contratado.\n\n**4. Início da obra + evolução:** Caixa Econômica Federal libera recursos conforme medições. Comprador paga juros de evolução mensalmente.\n\n**5. Habite-se + entrega:** obra concluída, comprador recebe as chaves e o financiamento entra em regime normal.`,
       },
       {
         pergunta: 'Quando o banco faz a análise de crédito?',

@@ -396,8 +396,6 @@ function SmartSearchInput({
   const [searching,  setSearching]  = useState(false);
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const router       = useRouter();
-
   useEffect(() => { setInput(value); }, [value]);
 
   // Debounce: chama /api/orulo/search após 280 ms sem digitar
@@ -428,15 +426,17 @@ function SmartSearchInput({
 
   const hasResults = results.neighborhoods.length > 0 || results.cities.length > 0 || results.buildings.length > 0;
 
-  function goToBairro(slug: string, label: string) {
+  function goToBairro(_slug: string, label: string) {
+    // Filtra na própria página — não navega para /bairro/
     setInput(label.replace(/,\s*.+$/, ''));
     setOpen(false);
-    router.push(`/bairro/${slug}`);
+    onConfirm(label); // passa "Bairro, Cidade – SP" para o buscar() parsear
   }
-  function goToBuilding(slug: string, label: string) {
-    setInput(label); setOpen(false);
-    if (slug) router.push(`/bairro/${slug}`);
-    else onConfirm(label);
+  function goToBuilding(_slug: string, label: string) {
+    // Filtra por nome do empreendimento na mesma página
+    setInput(label);
+    setOpen(false);
+    onConfirm(label);
   }
 
   const btnStyle: React.CSSProperties = {
@@ -566,31 +566,27 @@ function ImoveisContent() {
       if (maxPrice) params.set('max_price', maxPrice);
 
       // ── Localização ────────────────────────────────────────────────────────
-      // Regra: NÃO passar q= para busca por bairro (q= busca NOME do
-      // empreendimento na Orulo — combinar q=bairro + min_bedrooms = 0 resultados).
-      // Estratégia:
-      //   1. Se digitou exatamente no formato datalist "Bairro, Cidade – SP" →
-      //      passa city= para a Orulo (melhora amostra de 200) + neighborhood= para
-      //      filtro server-side.
-      //   2. Se texto livre sem separador → trata como bairro de São Paulo +
-      //      filtro server-side.
-      //   3. Se começa com "#" → interpreta como nome de empreendimento (q=).
+      // SEMPRE envia city= para que fetchByLocation seja chamado e todos os
+      // filtros (quartos, estágio, preço) funcionem no modo server-side.
+      // Quando não há texto de busca, usa São Paulo como padrão.
       const txt = localSearch.trim();
       if (txt) {
-        // Formato estruturado do datalist: "Jabaquara, São Paulo – SP"
+        // Formato estruturado "Bairro, Cidade – SP"
         const structured = txt.match(/^(.+?),\s*(.+?)\s*[–\-]\s*([A-Z]{2})$/);
         const cityOnly   = txt.match(/^(.+?)\s*[–\-]\s*([A-Z]{2})$/);
         if (structured) {
           params.set('city',         structured[2].trim());
           params.set('neighborhood', structured[1].trim());
         } else if (cityOnly) {
-          // Município da RMSP (ex: "Guarulhos")
           params.set('city', cityOnly[1].trim());
         } else {
-          // Texto livre → assume bairro de São Paulo
+          // Texto livre → bairro de São Paulo
           params.set('city',         'São Paulo');
           params.set('neighborhood', txt);
         }
+      } else {
+        // Sem localização → padrão São Paulo (garante que filtros funcionem)
+        params.set('city', 'São Paulo');
       }
 
       // Filtros de quartos → Orulo API (parâmetro confirmado, nunca q=)
