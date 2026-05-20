@@ -26,8 +26,24 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <body style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-5FCF1KE9XP"
           strategy="afterInteractive"
-  
+        />
+        <Script id="google-analytics" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-5FCF1KE9XP');
+        ` }} />
+        <Header />
+        <main style={{ flex: 1 }}>
+          {children}
+        </main>
+        <Footer />
+        <ChatFab />
+      </body>
+    </html>
+  );
+}

@@ -282,4 +282,6 @@ export async function GET(req: NextRequest) {
       _tokenCache = { token: null, expiresAt: 0 };
       return NextResponse.json({ error: 'Credenciais Orulo invalidas.' }, { status: 401 });
     }
-    return NextResponse.json({ error: 'Erro ao 
+    return NextResponse.json({ error: 'Erro ao buscar imoveis.' }, { status: 500 });
+  }
+}

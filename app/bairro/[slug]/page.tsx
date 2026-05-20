@@ -1,17 +1,15 @@
-import { Suspense } from 'react';
-import { slugToLocation } from '@/lib/locations';
-import BairroContent from './BairroContent';
+import { Suspense } from "react";
+import { slugToLocation } from "@/lib/locations";
+import BairroContent from "./BairroContent";
 
-// Next.js 15+: params e searchParams são Promises
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const loc = slugToLocation(slug);
   return {
-    title:       `Imóveis em ${loc.neighborhood}, ${loc.city} | FinancieCerto`,
-    description: `Encontre os melhores apartamentos e lançamentos em ${loc.neighborhood}, ${loc.city}. ` +
-                 `Compare financiamentos, simule MCMV e descubra imóveis compatíveis com seu perfil financeiro.`,
+    title: `Imóveis em ${loc.neighborhood}, ${loc.city} | FinancieCerto`,
+    description: `Encontre os melhores apartamentos e lançamentos em ${loc.neighborhood}, ${loc.city}. Compare financiamentos, simule MCMV e descubra imóveis compatíveis com seu perfil financeiro.`,
     openGraph: {
-      title:       `Imóveis em ${loc.neighborhood} | FinancieCerto`,
+      title: `Imóveis em ${loc.neighborhood} | FinancieCerto`,
       description: `${loc.neighborhood}, ${loc.city} – apartamentos, studios, lançamentos e financiamento imobiliário.`,
     },
   };
@@ -21,10 +19,15 @@ export default async function BairroPage({
   params,
   searchParams,
 }: {
-  params:       Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string>>;
 }) {
   const { slug } = await params;
-  const sp       = await searchParams;
-  const loc      = slugToLocation(slug);
-  re
+  const sp = await searchParams;
+  const loc = slugToLocation(slug);
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
+      <BairroContent location={loc} searchParams={sp} />
+    </Suspense>
+  );
+}
