@@ -90,7 +90,7 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={() => router.push(`/imoveis/${b.id}`)}
+      onClick={() => router.push(`/imovel/${b.id}`)}
       style={{
         background: 'var(--bg-card)', borderRadius: '14px',
         border: `1.5px solid ${hover ? 'var(--primary)' : 'var(--border)'}`,
@@ -182,14 +182,15 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
               fontWeight: '700', textAlign: 'center', textDecoration: 'none', display: 'block' }}>
             Simular
           </Link>
-          <a href={link} target="_blank" rel="noopener noreferrer"
+          <Link
+            href={`/imovel/${b.id}`}
             onClick={e => e.stopPropagation()}
             style={{ flex: 1, background: 'var(--bg)', border: '1.5px solid var(--border)',
               color: 'var(--text-muted)', padding: '8px 10px', borderRadius: '8px',
               fontSize: '11px', fontWeight: '600', textAlign: 'center',
               textDecoration: 'none', display: 'block' }}>
             Ver mais
-          </a>
+          </Link>
         </div>
       </div>
     </div>
