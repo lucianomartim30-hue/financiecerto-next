@@ -20,12 +20,20 @@ type Estagio = 'lancamento' | 'obras' | 'pronto';
 function p(s: string): number { return Number(s.replace(/\D/g, '')) || 0; }
 function fi(s: string): string { const n = s.replace(/\D/g, ''); return n ? Number(n).toLocaleString('pt-BR') : ''; }
 
-/** SIOPI progress already done at purchase moment, by estágio */
-const SIOPI_INICIAL: Record<Estagio, number> = {
-  lancamento: 0.229,   // Obra não iniciada — Caixa Econômica Federal libera ~23% no contrato
-  obras:      0.580,   // Obra em andamento — média SIOPI ≈ 58% (entre 23% e 100%)
-  pronto:     1.0,     // Habite-se emitido — financiamento pleno
-};
+/**
+ * SIOPI — Sistema de Operações Imobiliárias da CEF
+ *
+ * Lógica oficial:
+ * 1. Comprador assina o contrato de financiamento (crédito associativo).
+ * 2. No mês seguinte, a CEF realiza a 1ª medição: avaliação do terreno.
+ * 3. Com base nessa medição, libera o valor do terreno para a construtora.
+ * 4. Juros evolutivos do 1º mês = financiado × taxa_mensal × (valor_liberado / financiado).
+ * 5. A cada mês subsequente, novas medições liberam mais parcelas conforme o avanço da obra.
+ *
+ * O % liberado na 1ª medição NÃO é fixo — depende do valor do terreno do projeto.
+ * Intervalo típico: 10% a 25% do financiamento.
+ * Fonte definitiva: app Habitação Caixa / SIOPI (disponível após a 1ª medição).
+ */
 
 /** Juros evolutivos do 1º mês após assinatura */
 function calcJurosEvo(financiado: number, taxaAnual: number, siopiFrac: number): number {
@@ -218,6 +226,20 @@ function NaPlantaContent() {
   // ── Estágio do empreendimento ────────────────────────────────────────────────
   const [estagio, setEstagio] = useState<Estagio>('lancamento');
 
+  // ── % SIOPI já liberado (inserido pelo usuário ou estimativa default) ─────────
+  // Lançamento: estimativa 10-25% (padrão 15%); Em obras: varia; Pronto: 100%
+  const [siopiPctRaw, setSiopiPctRaw] = useState<string>('15');
+
+  useEffect(() => {
+    if (estagio === 'lancamento') setSiopiPctRaw('15');
+    else if (estagio === 'obras')  setSiopiPctRaw('50');
+    // pronto: não usa campo, always 100%
+  }, [estagio]);
+
+  const siopiInicial = estagio === 'pronto'
+    ? 1.0
+    : Math.min(1, Math.max(0, Number(siopiPctRaw.replace(',', '.') || '0') / 100));
+
   // ── Valor do imóvel ─────────────────────────────────────────────────────────
   const [valorRaw, setValorRaw] = useState('');
   const valor = p(valorRaw);
@@ -265,7 +287,6 @@ function NaPlantaContent() {
   const estruturaOk    = entradaNecessaria > 0 && Math.abs(diferenca) < entradaNecessaria * 0.05;
 
   // ── Juros evolutivos ─────────────────────────────────────────────────────────
-  const siopiInicial  = SIOPI_INICIAL[estagio] || 0;
   const seguros       = calcularSeguros(financiado);
   const parcelaFin    = parcelaPrice(financiado, taxa, 35 * 12);
   const jurosEvo1     = isMCMV && financiado > 0 ? calcJurosEvo(financiado, taxa, siopiInicial) : 0;
@@ -299,7 +320,8 @@ function NaPlantaContent() {
         valorImovel:    valor,
         prazoObraMeses: qtdMensais,
         estagio:        estagio === 'lancamento' ? 'Lançamento' :
-                        estagio === 'obras' ? 'Em obras' : 'Pronto',
+                        estagio === 'obras' ? 'Em obras' : 'Pronto / Habite-se',
+        siopiLiberado:  `${Math.round(siopiInicial * 100)}%`,
         modalidade: isMCMV ? 'MCMV Crédito Associativo' : 'SBPE',
       },
       resultado: {
@@ -315,25 +337,28 @@ function NaPlantaContent() {
   // Render
   // ──────────────────────────────────────────────────────────────────────────────
 
-  const estagioConfig: Record<Estagio, { label: string; desc: string; info: string; color: string; aviso?: string }> = {
+  const estagioConfig: Record<Estagio, {
+    label: string; desc: string; color: string;
+    siopiInfo: string; aviso?: string;
+  }> = {
     lancamento: {
       label: 'Lançamento',
-      desc:  'Obra não iniciada',
-      info:  'Vendas abertas, obra ainda não começou. A construção tipicamente inicia 1 a 6 meses após o lançamento comercial.',
+      desc: 'Obra não iniciada',
       color: '#2563eb',
+      siopiInfo: 'Na assinatura do contrato, a CEF realiza a medição do terreno no mês seguinte e libera esse valor à construtora. Os juros evolutivos do 1º mês são calculados sobre esse valor liberado. O percentual varia conforme o terreno do projeto — normalmente entre 10% e 25% do financiamento. O valor exato só é conhecido após a 1ª medição; consulte o app Habitação Caixa / SIOPI.',
     },
     obras: {
       label: 'Em obras',
-      desc:  'Construção em andamento',
-      info:  'Obra iniciada, medições ativas pela Caixa Econômica Federal. Juros evolutivos incidem sobre o saldo já liberado.',
+      desc: 'Medições ativas',
       color: '#d97706',
+      siopiInfo: 'A CEF realiza medições mensais conforme o avanço da obra e libera os recursos progressivamente à construtora. O percentual total já liberado depende do estágio atual da construção. Consulte o app Habitação Caixa / SIOPI para verificar o saldo liberado até o momento.',
     },
     pronto: {
       label: 'Pronto / Habite-se',
-      desc:  'Entregue',
-      info:  'Habite-se emitido, obra concluída.',
+      desc: 'Entrega imediata',
       color: '#16a34a',
-      aviso: 'Imóvel já entregue — use o Simulador padrão. Não há fase de obra para calcular.',
+      siopiInfo: '',
+      aviso: 'Imóvel com habite-se emitido — use o Simulador principal (financiamento padrão, sem juros evolutivos).',
     },
   };
 
@@ -471,24 +496,10 @@ function NaPlantaContent() {
               ))}
             </div>
 
-            {/* Card informativo do estágio selecionado */}
-            <div style={{
-              marginTop: '12px', padding: '12px 14px', borderRadius: '10px',
-              background: estagioConfig[estagio].color + '10',
-              border: `1px solid ${estagioConfig[estagio].color}40`,
-            }}>
-              <p style={{ fontSize: '13px', color: estagioConfig[estagio].color, fontWeight: '700', marginBottom: '4px' }}>
-                {estagioConfig[estagio].label}
-              </p>
-              <p style={{ fontSize: '12px', color: '#374151', lineHeight: 1.6, margin: 0 }}>
-                {estagioConfig[estagio].info}
-              </p>
-            </div>
-
-            {/* Aviso para Pronto (bloqueante) */}
+            {/* Aviso para Pronto */}
             {estagioConfig[estagio].aviso && (
               <div style={{
-                marginTop: '10px', background: '#fffbeb',
+                marginTop: '12px', background: '#fffbeb',
                 border: '1px solid #fde68a', borderRadius: '10px', padding: '10px 14px',
               }}>
                 <p style={{ fontSize: '12px', color: '#92400e', lineHeight: 1.55 }}>
@@ -497,18 +508,110 @@ function NaPlantaContent() {
               </div>
             )}
 
-            {/* Juros evolutivos iniciais (só para Lançamento e Em obras) */}
-            {estagio !== 'pronto' && temPerfil && (
-              <div style={{ marginTop: '10px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 14px' }}>
-                <p style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.55 }}>
-                  📊 {estagio === 'lancamento'
-                    ? <>No lançamento, a Caixa Econômica Federal libera <strong>{Math.round(siopiInicial * 100)}%</strong> do financiamento na assinatura do contrato.</>
-                    : <>Em obra, estima-se que <strong>{Math.round(siopiInicial * 100)}%</strong> do financiamento já foi liberado.</>
-                  }
-                  {valor > 0 && financiado > 0 && (
-                    <> Juros evolutivos estimados na entrada: <strong>~{formatBRL(jurosEvo1)}/mês</strong>.</>
+            {/* SIOPI: info + campo editável para Lançamento e Em obras */}
+            {(estagio === 'lancamento' || estagio === 'obras') && (
+              <div style={{
+                marginTop: '14px', borderRadius: '12px', overflow: 'hidden',
+                border: `1px solid ${estagioConfig[estagio].color}30`,
+              }}>
+                {/* Cabeçalho */}
+                <div style={{
+                  background: `${estagioConfig[estagio].color}12`,
+                  borderBottom: `1px solid ${estagioConfig[estagio].color}20`,
+                  padding: '10px 14px',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                }}>
+                  <span style={{ fontSize: '14px' }}>🏦</span>
+                  <p style={{ fontSize: '11px', fontWeight: '700', color: estagioConfig[estagio].color, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                    SIOPI — Liberação da Caixa Econômica Federal
+                  </p>
+                </div>
+
+                {/* Explicação */}
+                <div style={{ padding: '12px 14px', background: 'var(--bg-card)' }}>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '14px' }}>
+                    {estagioConfig[estagio].siopiInfo}
+                  </p>
+
+                  {/* Campo de % */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{
+                        display: 'block', fontSize: '10px', fontWeight: '700',
+                        color: 'var(--text-faint)', textTransform: 'uppercase',
+                        letterSpacing: '0.7px', marginBottom: '6px',
+                      }}>
+                        {estagio === 'lancamento'
+                          ? '% estimado da 1ª liberação (terreno)'
+                          : '% já liberado pela CEF até agora'}
+                      </label>
+                      <div style={{
+                        display: 'flex', alignItems: 'center',
+                        border: `1.5px solid ${estagioConfig[estagio].color}50`,
+                        borderRadius: '10px', overflow: 'hidden',
+                        background: 'var(--bg)',
+                      }}>
+                        <input
+                          type="number"
+                          min={estagio === 'lancamento' ? 5 : 5}
+                          max={estagio === 'lancamento' ? 35 : 99}
+                          step="1"
+                          value={siopiPctRaw}
+                          onChange={e => setSiopiPctRaw(e.target.value)}
+                          style={{
+                            flex: 1, padding: '9px 12px', border: 'none', outline: 'none',
+                            fontSize: '18px', fontWeight: '700', color: 'var(--text)',
+                            background: 'transparent', width: '80px',
+                          }}
+                        />
+                        <span style={{
+                          padding: '9px 14px', fontSize: '16px', fontWeight: '700',
+                          color: estagioConfig[estagio].color,
+                          borderLeft: `1px solid ${estagioConfig[estagio].color}20`,
+                          background: `${estagioConfig[estagio].color}08`,
+                        }}>%</span>
+                      </div>
+                    </div>
+
+                    {/* Resultado calculado */}
+                    {financiado > 0 && (
+                      <div style={{
+                        background: `${estagioConfig[estagio].color}10`,
+                        border: `1px solid ${estagioConfig[estagio].color}25`,
+                        borderRadius: '10px', padding: '10px 14px', textAlign: 'center',
+                      }}>
+                        <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>
+                          Valor liberado
+                        </p>
+                        <p style={{ fontSize: '15px', fontWeight: '800', color: estagioConfig[estagio].color }}>
+                          {formatBRL(Math.round(financiado * siopiInicial))}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Range hint */}
+                  <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '8px', lineHeight: 1.5 }}>
+                    {estagio === 'lancamento'
+                      ? '📌 Intervalo típico: 10% a 25% · valor exato disponível no app Habitação Caixa / SIOPI após a 1ª medição'
+                      : '📌 Verifique o % acumulado das medições no app Habitação Caixa / SIOPI'}
+                  </p>
+
+                  {/* Juros evolutivos calculados */}
+                  {isMCMV && financiado > 0 && jurosEvo1 > 0 && (
+                    <div style={{
+                      marginTop: '12px', background: '#eff6ff',
+                      border: '1px solid #bfdbfe', borderRadius: '10px',
+                      padding: '10px 14px',
+                    }}>
+                      <p style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.55 }}>
+                        📊 Juros evolutivos estimados para o {estagio === 'lancamento' ? '1º mês após assinatura' : 'mês atual'}:{' '}
+                        <strong>~{formatBRL(jurosEvo1)}/mês</strong>
+                        {estagio === 'lancamento' && ' — calculado sobre o valor do terreno liberado pela CEF'}
+                      </p>
+                    </div>
                   )}
-                </p>
+                </div>
               </div>
             )}
           </div>
@@ -788,9 +891,9 @@ function NaPlantaContent() {
               {isMCMV && jurosEvo1 > 0 && (
                 <>
                   <LinhaDetalhe
-                    label="Juros evolutivos — 1º mês (ao banco)"
+                    label={`Juros evolutivos — ${estagio === 'lancamento' ? '1º mês após assinatura' : 'mês atual'} (ao banco)`}
                     valor={`~${formatBRL(jurosEvo1)}/mês`}
-                    sub={`${Math.round(siopiInicial * 100)}% do financiamento já liberado`}
+                    sub={`${Math.round(siopiInicial * 100)}% do financiamento liberado pela CEF · ${formatBRL(Math.round(financiado * siopiInicial))}`}
                   />
                   <LinhaDetalhe
                     label="Juros evolutivos — média estimada"
@@ -862,7 +965,7 @@ function NaPlantaContent() {
               <LinhaDetalhe
                 label={`Financiamento ${isMCMV ? 'MCMV' : 'SBPE'}`}
                 valor={formatBRL(financiado)}
-                sub={`${((financiado / valor) * 100).toFixed(0)}% do valor — CEF / banco`}
+                sub={`${((financiado / valor) * 100).toFixed(0)}% do valor — Caixa / banco`}
                 destaque
               />
               <div style={{
