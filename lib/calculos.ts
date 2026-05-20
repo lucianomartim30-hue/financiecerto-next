@@ -366,6 +366,15 @@ export interface ResultadoDescobrir {
     parcela: number;
     comprometimento: number;
   };
+  sfi: {
+    // Sistema de Financiamento Imobiliário — imóveis acima do teto SFH (R$ 2,25M)
+    // SBPE opera dentro do SFH (até R$ 2,25M); SFI é o sistema paralelo sem limite de valor
+    valorMaxImovel: number;
+    valorFinanciado: number;
+    parcela: number;
+    comprometimento: number;
+    taxa: number;
+  };
   prazoMaxMeses: number;
   oruloMinPrice: number;
   oruloMaxPrice: number;
@@ -415,6 +424,16 @@ export function descobrir(
   const segurosSBPE    = calcularSeguros(financiadoSBPE, idadeProponente);
   const comprSBPE      = ((parcelaSBPE + segurosSBPE.total) / rendaBruta) * 100;
 
+  // ── SFI (Sistema de Financiamento Imobiliário) ───────────────────────────
+  // Opera em paralelo ao SFH/SBPE para imóveis acima de R$2,25M (teto SFH)
+  // Sem uso de FGTS, sem limite de valor, taxa livre (~12,5% a.a.)
+  const capacSFI      = capacidadeComSeguros(rendaBruta, TAXA_SFI_ANUAL, prazoMeses, 0.30, idadeProponente);
+  const imovelMaxSFI  = capacSFI + entradaTotal; // sem teto
+  const financiadoSFI = Math.max(0, imovelMaxSFI - entradaTotal);
+  const parcelaSFI    = parcelaPrice(financiadoSFI, TAXA_SFI_ANUAL, prazoMeses);
+  const segurosSFI    = calcularSeguros(financiadoSFI, idadeProponente);
+  const comprSFI      = ((parcelaSFI + segurosSFI.total) / rendaBruta) * 100;
+
   const elegMCMV = elegivel && imovelMaxMCMV >= 80000;
 
   const oruloMax = elegMCMV
@@ -441,6 +460,13 @@ export function descobrir(
       valorFinanciado: Math.round(financiadoSBPE),
       parcela:         Math.round(parcelaSBPE + segurosSBPE.total),
       comprometimento: comprSBPE,
+    },
+    sfi: {
+      valorMaxImovel:  Math.round(imovelMaxSFI),
+      valorFinanciado: Math.round(financiadoSFI),
+      parcela:         Math.round(parcelaSFI + segurosSFI.total),
+      comprometimento: comprSFI,
+      taxa:            TAXA_SFI_ANUAL,
     },
     prazoMaxMeses: prazoMeses,
     oruloMinPrice: oruloMin,
