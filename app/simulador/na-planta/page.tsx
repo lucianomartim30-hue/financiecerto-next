@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   formatBRL, parcelaPrice, calcularSeguros,
-  TAXA_SBPE_ANUAL, detectarFaixaMCMV, progCurva,
+  TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, progCurva,
 } from '@/lib/calculos';
 import Link from 'next/link';
 
@@ -260,9 +260,12 @@ function NaPlantaContent() {
   const [unicaRaw,    setUnicaRaw]    = useState('');
 
   // ── Cálculos de financiamento ────────────────────────────────────────────────
+  // detectarFaixaMCMV retorna null para renda=0 (desconhecida) — nunca assume Faixa 1
   const faixaRenda  = detectarFaixaMCMV(renda);
   const isMCMV      = faixaRenda !== null && valor > 0 && valor <= faixaRenda.teto;
   const taxa        = isMCMV && faixaRenda ? faixaRenda.taxaRef : TAXA_SBPE_ANUAL;
+  // Motivo detalhado quando não é MCMV (renda alta OU valor acima do teto da faixa)
+  const motivo = (!isMCMV && renda > 0 && valor > 0) ? motivoSBPE(renda, valor) : null;
 
   // Financiamento aprovado pelo perfil; se standalone, usa 90% do valor
   const maxFinPerfil = isMCMV ? maxFinMcmv : maxFinSbpe;
@@ -625,18 +628,39 @@ function NaPlantaContent() {
           />
 
           {valor > 0 && (
-            <div style={{ marginBottom: '8px' }}>
-              <span style={{
-                fontSize: '12px', fontWeight: '700', padding: '3px 10px',
-                borderRadius: '99px',
-                background: isMCMV ? '#f0fdf4' : '#eff6ff',
-                color: isMCMV ? '#16a34a' : '#2563eb',
-                border: `1px solid ${isMCMV ? '#bbf7d0' : '#bfdbfe'}`,
-              }}>
-                {isMCMV
-                  ? `✅ MCMV ${faixaRenda?.label} — ${faixaRenda?.taxaRef.toFixed(2).replace('.', ',')}% a.a.`
-                  : '✅ SBPE / Mercado — 10,5% a.a.'}
-              </span>
+            <div style={{ marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {renda <= 0 ? (
+                <span style={{
+                  fontSize: '12px', fontWeight: '700', padding: '3px 10px',
+                  borderRadius: '99px', display: 'inline-block',
+                  background: '#f9fafb', color: '#6b7280', border: '1px solid #e5e7eb',
+                }}>
+                  ⏳ Informe a renda para determinar MCMV ou SBPE
+                </span>
+              ) : isMCMV ? (
+                <span style={{
+                  fontSize: '12px', fontWeight: '700', padding: '3px 10px',
+                  borderRadius: '99px', display: 'inline-block',
+                  background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0',
+                }}>
+                  ✅ Minha Casa, Minha Vida — {faixaRenda!.label} · {faixaRenda!.taxaRef.toFixed(2).replace('.', ',')}% a.a. · teto {formatBRL(faixaRenda!.teto)}
+                </span>
+              ) : (
+                <>
+                  <span style={{
+                    fontSize: '12px', fontWeight: '700', padding: '3px 10px',
+                    borderRadius: '99px', display: 'inline-block',
+                    background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe',
+                  }}>
+                    ℹ️ SBPE / Mercado — {TAXA_SBPE_ANUAL.toFixed(2).replace('.', ',')}% a.a.
+                  </span>
+                  {motivo && (
+                    <p style={{ fontSize: '11px', color: '#6b7280', lineHeight: 1.5, paddingLeft: '2px', margin: 0 }}>
+                      ↳ {motivo}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           )}
 

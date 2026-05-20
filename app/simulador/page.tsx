@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
-  descobrir, simular, formatBRL,
+  descobrir, simular, formatBRL, motivoSBPE,
   detectarFaixaMCMV, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH,
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
@@ -682,7 +682,15 @@ function SimuladorInner() {
 
         {/* Header */}
         <div style={{ margin: '0 -20px 28px', padding: '36px 28px 32px', background: `linear-gradient(135deg, ${sc.cor} 0%, ${sc.cor}CC 100%)`, borderRadius: '0 0 24px 24px', textAlign: 'center' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '2.5px', marginBottom: 10 }}>{sc.emoji} {modalLabel}</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '2.5px', marginBottom: 6 }}>{sc.emoji} {modalLabel}</div>
+          {!sim.isMCMV && !sim.isSFI && (
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 10, lineHeight: 1.5 }}>
+              ℹ️ {sim.faixa
+                ? `Imóvel (${formatBRL(sim.valorImovel)}) acima do teto MCMV ${sim.faixa.label} (${formatBRL(sim.faixa.teto)})`
+                : `Renda acima do limite MCMV (máx. ${formatBRL(13000)}/mês)`}
+              {' '}— financiamento SBPE
+            </div>
+          )}
           <div style={{ fontSize: 42, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{formatBRL(sim.parcelaPrimeiro)}</div>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 8 }}>parcela inicial (Price) · {sim.comprometimento.toFixed(1)}% da renda</div>
         </div>

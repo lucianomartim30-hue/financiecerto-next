@@ -54,7 +54,23 @@ export const TAXA_MCMV_ANUAL = 7.66;
 
 // ─── Detectar faixa MCMV ─────────────────────────────────────────────────────
 export function detectarFaixaMCMV(rendaBruta: number): FaixaMCMV | null {
+  if (rendaBruta <= 0) return null;
   return FAIXAS_MCMV.find(f => rendaBruta <= f.rendaMax) ?? null;
+}
+
+// Explica por que o financiamento e SBPE (nao MCMV)
+// renda alta OU valor do imovel acima do teto da faixa
+export function motivoSBPE(rendaBruta: number, valorImovel: number): string {
+  if (rendaBruta <= 0) return 'Informe a renda para verificar elegibilidade no MCMV';
+  const faixa = FAIXAS_MCMV.find(f => rendaBruta <= f.rendaMax);
+  if (!faixa) {
+    const maxRenda = FAIXAS_MCMV[FAIXAS_MCMV.length - 1].rendaMax;
+    return 'Renda acima do limite MCMV (max ' + maxRenda.toLocaleString('pt-BR') + '/mes) - use o SBPE';
+  }
+  if (valorImovel > faixa.teto) {
+    return 'Imovel acima do teto ' + faixa.label + ' MCMV (' + faixa.teto.toLocaleString('pt-BR') + ') - use o SBPE';
+  }
+  return 'SBPE';
 }
 
 // ─── MIP por faixa etária (coeficientes reais SIOPI/Caixa) ───────────────────
