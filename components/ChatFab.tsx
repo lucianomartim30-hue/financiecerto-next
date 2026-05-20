@@ -273,11 +273,12 @@ export default function ChatFab() {
           }}>
             <div style={{
               width: '44px', height: '44px', borderRadius: '50%',
-              background: 'rgba(255,255,255,.15)',
-              border: '2px solid rgba(255,255,255,.25)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '20px', flexShrink: 0,
-            }}>🧑‍💼</div>
+              overflow: 'hidden',
+              border: '2px solid rgba(255,255,255,.35)',
+              flexShrink: 0,
+            }}>
+              <img src="/avatar-joao.png" alt="João" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
 
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ color: '#fff', fontWeight: '800', fontSize: '14px' }}>João</div>
@@ -480,7 +481,9 @@ export default function ChatFab() {
           }}
           aria-label={open ? 'Fechar chat' : 'Falar com o João'}
         >
-          {open ? '✕' : '🧑‍💼'}
+          {open ? '✕' : (
+            <img src="/avatar-joao.png" alt="João" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+          )}
           {unread > 0 && !open && (
             <span style={{
               position: 'absolute', top: '-3px', right: '-3px',
@@ -488,13 +491,4 @@ export default function ChatFab() {
               width: '18px', height: '18px', borderRadius: '50%',
               fontSize: '11px', fontWeight: '700',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: '2px solid #fff',
-            }}>
-              {unread > 9 ? '9+' : unread}
-            </span>
-          )}
-        </button>
-      </div>
-    </>
-  );
-}
+              border: '2px solid 
