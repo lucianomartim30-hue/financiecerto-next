@@ -12,7 +12,7 @@ import Link from 'next/link';
 // Types
 // ──────────────────────────────────────────────────────────────────────────────
 type Modo    = 'basico' | 'intermediario' | 'completo';
-type Estagio = 'pre' | 'lancamento' | 'obra25' | 'obra50' | 'obra75' | 'pronto';
+type Estagio = 'lancamento' | 'obras' | 'pronto';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -22,12 +22,9 @@ function fi(s: string): string { const n = s.replace(/\D/g, ''); return n ? Numb
 
 /** SIOPI progress already done at purchase moment, by estágio */
 const SIOPI_INICIAL: Record<Estagio, number> = {
-  pre:        0,
-  lancamento: 0.229,   // KP[0] — obra ainda não iniciou, mas Caixa já libera ~23% no contrato
-  obra25:     0.495,   // ~25% temporal → SIOPI ≈ 49.5%
-  obra50:     0.709,   // ~47% temporal → SIOPI ≈ 70.9%
-  obra75:     0.846,   // ~64% temporal → SIOPI ≈ 84.6%
-  pronto:     1.0,
+  lancamento: 0.229,   // Obra não iniciada — Caixa Econômica Federal libera ~23% no contrato
+  obras:      0.580,   // Obra em andamento — média SIOPI ≈ 58% (entre 23% e 100%)
+  pronto:     1.0,     // Habite-se emitido — financiamento pleno
 };
 
 /** Juros evolutivos do 1º mês após assinatura */
@@ -301,11 +298,8 @@ function NaPlantaContent() {
       planta: {
         valorImovel:    valor,
         prazoObraMeses: qtdMensais,
-        estagio:        estagio === 'pre' ? 'Pré-lançamento' :
-                        estagio === 'lancamento' ? 'Lançamento' :
-                        estagio === 'obra25' ? 'Em obra — 25%' :
-                        estagio === 'obra50' ? 'Em obra — 50%' :
-                        estagio === 'obra75' ? 'Em obra — 75%' : 'Pronto',
+        estagio:        estagio === 'lancamento' ? 'Lançamento' :
+                        estagio === 'obras' ? 'Em obras' : 'Pronto',
         modalidade: isMCMV ? 'MCMV Crédito Associativo' : 'SBPE',
       },
       resultado: {
@@ -321,13 +315,26 @@ function NaPlantaContent() {
   // Render
   // ──────────────────────────────────────────────────────────────────────────────
 
-  const estagioConfig: Record<Estagio, { label: string; desc: string; color: string; aviso?: string }> = {
-    pre:        { label: 'Pré-lançamento', desc: 'Sem RI', color: '#94a3b8', aviso: 'Sem Registro de Incorporação — não é possível assinar financiamento ainda. Apenas reserva/proposta.' },
-    lancamento: { label: 'Lançamento', desc: 'RI emitido', color: '#2563eb' },
-    obra25:     { label: 'Em obra — 25%', desc: 'Medições ativas', color: '#d97706' },
-    obra50:     { label: 'Em obra — 50%', desc: 'Medições ativas', color: '#ea580c' },
-    obra75:     { label: 'Em obra — 75%', desc: 'Quase pronto', color: '#dc2626' },
-    pronto:     { label: 'Pronto / Habite-se', desc: 'Financiamento normal', color: '#16a34a', aviso: 'Imóvel entregue — use o Simulador padrão (não é mais "na planta").' },
+  const estagioConfig: Record<Estagio, { label: string; desc: string; info: string; color: string; aviso?: string }> = {
+    lancamento: {
+      label: 'Lançamento',
+      desc:  'Obra não iniciada',
+      info:  'Vendas abertas, obra ainda não começou. A construção tipicamente inicia 1 a 6 meses após o lançamento comercial.',
+      color: '#2563eb',
+    },
+    obras: {
+      label: 'Em obras',
+      desc:  'Construção em andamento',
+      info:  'Obra iniciada, medições ativas pela Caixa Econômica Federal. Juros evolutivos incidem sobre o saldo já liberado.',
+      color: '#d97706',
+    },
+    pronto: {
+      label: 'Pronto / Habite-se',
+      desc:  'Entregue',
+      info:  'Habite-se emitido, obra concluída.',
+      color: '#16a34a',
+      aviso: 'Imóvel já entregue — use o Simulador padrão. Não há fase de obra para calcular.',
+    },
   };
 
   return (
@@ -464,10 +471,24 @@ function NaPlantaContent() {
               ))}
             </div>
 
-            {/* Aviso para estágios bloqueantes */}
+            {/* Card informativo do estágio selecionado */}
+            <div style={{
+              marginTop: '12px', padding: '12px 14px', borderRadius: '10px',
+              background: estagioConfig[estagio].color + '10',
+              border: `1px solid ${estagioConfig[estagio].color}40`,
+            }}>
+              <p style={{ fontSize: '13px', color: estagioConfig[estagio].color, fontWeight: '700', marginBottom: '4px' }}>
+                {estagioConfig[estagio].label}
+              </p>
+              <p style={{ fontSize: '12px', color: '#374151', lineHeight: 1.6, margin: 0 }}>
+                {estagioConfig[estagio].info}
+              </p>
+            </div>
+
+            {/* Aviso para Pronto (bloqueante) */}
             {estagioConfig[estagio].aviso && (
               <div style={{
-                marginTop: '12px', background: '#fffbeb',
+                marginTop: '10px', background: '#fffbeb',
                 border: '1px solid #fde68a', borderRadius: '10px', padding: '10px 14px',
               }}>
                 <p style={{ fontSize: '12px', color: '#92400e', lineHeight: 1.55 }}>
@@ -476,13 +497,16 @@ function NaPlantaContent() {
               </div>
             )}
 
-            {/* Juros evolutivos iniciais baseados no estágio */}
-            {estagio !== 'pre' && estagio !== 'pronto' && temPerfil && (
-              <div style={{ marginTop: '12px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 14px' }}>
+            {/* Juros evolutivos iniciais (só para Lançamento e Em obras) */}
+            {estagio !== 'pronto' && temPerfil && (
+              <div style={{ marginTop: '10px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 14px' }}>
                 <p style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.55 }}>
-                  📊 Neste estágio, <strong>{Math.round(siopiInicial * 100)}%</strong> do financiamento já foi liberado ao comprador anterior.
-                  {valor > 0 && isMCMV && financiado > 0 && (
-                    <> Os juros evolutivos na assinatura serão de <strong>~{formatBRL(jurosEvo1)}/mês</strong> — crescendo até o habite-se.</>
+                  📊 {estagio === 'lancamento'
+                    ? <>No lançamento, a Caixa Econômica Federal libera <strong>{Math.round(siopiInicial * 100)}%</strong> do financiamento na assinatura do contrato.</>
+                    : <>Em obra, estima-se que <strong>{Math.round(siopiInicial * 100)}%</strong> do financiamento já foi liberado.</>
+                  }
+                  {valor > 0 && financiado > 0 && (
+                    <> Juros evolutivos estimados na entrada: <strong>~{formatBRL(jurosEvo1)}/mês</strong>.</>
                   )}
                 </p>
               </div>
@@ -553,7 +577,7 @@ function NaPlantaContent() {
         </div>
 
         {/* ── ESTRUTURA DE PAGAMENTO DA ENTRADA ───────────────────────────── */}
-        {valor > 0 && entradaNecessaria > 0 && estagio !== 'pre' && estagio !== 'pronto' && (
+        {valor > 0 && entradaNecessaria > 0 && estagio !== 'pronto' && (
           <div style={{
             background: 'var(--bg-card)', borderRadius: '20px',
             border: '1px solid var(--border)', padding: '28px',
