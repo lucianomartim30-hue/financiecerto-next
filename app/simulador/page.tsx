@@ -35,12 +35,12 @@ function Barra({ etapa, total }: { etapa: number; total: number }) {
     <div style={{ display: 'flex', gap: 4, marginBottom: 36, alignItems: 'center' }}>
       {Array.from({ length: total }).map((_, i) => (
         <div key={i} style={{
-          height: 4, flex: i === etapa ? 2 : 1, borderRadius: 99,
-          background: i < etapa ? 'var(--primary)' : i === etapa ? 'var(--primary)' : 'var(--border)',
-          opacity: i < etapa ? 0.45 : 1, transition: 'all .35s ease',
+          height: 7, flex: i === etapa ? 2 : 1, borderRadius: 99,
+          background: i < etapa ? '#93C5FD' : i === etapa ? 'var(--primary)' : '#E2E8F0',
+          opacity: 1, transition: 'all .35s ease',
         }} />
       ))}
-      <span style={{ fontSize: 12, color: 'var(--text-faint)', marginLeft: 6 }}>
+      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)', marginLeft: 8 }}>
         {etapa + 1}/{total}
       </span>
     </div>
@@ -56,17 +56,17 @@ function InputBRL({
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ marginBottom: 28 }}>
-      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.8px' }}>{label}</label>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 10, borderBottom: `2px solid ${focused ? 'var(--primary)' : 'var(--border)'}`, transition: 'border-color .2s' }}>
-        <span style={{ fontSize: 24, fontWeight: 300, color: focused ? 'var(--primary)' : 'var(--text-faint)', transition: 'color .2s', flexShrink: 0 }}>{prefix}</span>
+      <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 10, borderBottom: `3px solid ${focused ? 'var(--primary)' : '#D1D5DB'}`, transition: 'border-color .2s' }}>
+        <span style={{ fontSize: 26, fontWeight: 400, color: focused ? 'var(--primary)' : '#9CA3AF', transition: 'color .2s', flexShrink: 0 }}>{prefix}</span>
         <input
           type="text" inputMode="numeric" value={value} placeholder={placeholder}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           onChange={e => onChange(fmtInput(e.target.value))}
-          style={{ flex: 1, border: 'none', outline: 'none', fontSize: 32, fontWeight: 600, background: 'transparent', color: 'var(--text)', fontFamily: 'inherit', width: '100%' }}
+          style={{ flex: 1, border: 'none', outline: 'none', fontSize: 36, fontWeight: 700, background: 'transparent', color: '#111827', fontFamily: 'inherit', width: '100%' }}
         />
       </div>
-      {hint && <p style={{ fontSize: 13, color: 'var(--text-faint)', marginTop: 8 }}>{hint}</p>}
+      {hint && <p style={{ fontSize: 13, color: '#6B7280', marginTop: 8 }}>{hint}</p>}
     </div>
   );
 }
@@ -91,8 +91,9 @@ function Chip({ label, ativo, onClick }: { label: string; ativo: boolean; onClic
   return (
     <button onClick={onClick} style={{
       padding: '10px 20px', borderRadius: 99, border: `1.5px solid ${ativo ? 'var(--primary)' : 'var(--border)'}`,
-      background: ativo ? 'var(--primary)' : 'transparent',
-      color: ativo ? '#fff' : 'var(--text)', fontSize: 14, fontWeight: ativo ? 600 : 400,
+      background: ativo ? 'linear-gradient(135deg, #2563eb, #1e40af)' : 'transparent',
+      color: ativo ? '#fff' : '#374151', fontSize: 14, fontWeight: ativo ? 700 : 500,
+      boxShadow: ativo ? '0 2px 8px rgba(37,99,235,0.3)' : 'none',
       cursor: 'pointer', transition: 'all .2s', fontFamily: 'inherit',
     }}>{label}</button>
   );
@@ -101,11 +102,13 @@ function Chip({ label, ativo, onClick }: { label: string; ativo: boolean; onClic
 function BtnPrimario({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
   return (
     <button onClick={onClick} disabled={disabled} style={{
-      width: '100%', padding: '16px 0', borderRadius: 12, border: 'none',
-      background: disabled ? 'var(--border)' : 'var(--primary)',
-      color: disabled ? 'var(--text-faint)' : '#fff',
-      fontSize: 16, fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer',
-      transition: 'background .2s', fontFamily: 'inherit',
+      width: '100%', padding: '18px 0', borderRadius: 12, border: 'none',
+      background: disabled ? '#E2E8F0' : 'linear-gradient(135deg, #2563eb 0%, #1e40af 100%)',
+      color: disabled ? '#94A3B8' : '#fff',
+      fontSize: 17, fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer',
+      transition: 'all .2s', fontFamily: 'inherit',
+      boxShadow: disabled ? 'none' : '0 4px 18px rgba(37,99,235,0.38)',
+      letterSpacing: '0.2px',
     }}>{label}</button>
   );
 }
@@ -115,13 +118,13 @@ function Etapa({ children }: { children: React.ReactNode }) {
 }
 
 function Titulo({ children }: { children: React.ReactNode }) {
-  return <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)', lineHeight: 1.25, marginBottom: 10, marginTop: 0 }}>{children}</h1>;
+  return <h1 style={{ fontSize: 34, fontWeight: 800, color: '#111827', lineHeight: 1.2, marginBottom: 14, marginTop: 0 }}>{children}</h1>;
 }
 function Sub({ children }: { children: React.ReactNode }) {
-  return <p style={{ fontSize: 16, color: 'var(--text-faint)', lineHeight: 1.6, marginBottom: 32, marginTop: 0 }}>{children}</p>;
+  return <p style={{ fontSize: 16, color: '#4B5563', lineHeight: 1.65, marginBottom: 32, marginTop: 0 }}>{children}</p>;
 }
 function BtnVoltar({ onClick }: { onClick: () => void }) {
-  return <button onClick={onClick} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: 14, cursor: 'pointer', padding: 0, fontFamily: 'inherit', marginBottom: 24, display: 'block' }}>← Voltar</button>;
+  return <button onClick={onClick} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, fontFamily: 'inherit', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 4 }}>← Voltar</button>;
 }
 
 // ─── Badge de faixa em tempo real ────────────────────────────────────────────
@@ -129,16 +132,16 @@ function BadgeModalidade({ renda }: { renda: number }) {
   if (!renda) return null;
   const faixa = detectarFaixaMCMV(renda);
   if (faixa) {
-    const cores: Record<number, { bg: string; txt: string }> = {
-      1: { bg: '#E1F5EE', txt: '#0F6E56' },
-      2: { bg: '#E6F1FB', txt: '#185FA5' },
-      3: { bg: '#FAEEDA', txt: '#854F0B' },
-      4: { bg: '#FAECE7', txt: '#993C1D' },
+    const cores: Record<number, { bg: string; txt: string; cor: string }> = {
+      1: { bg: '#E1F5EE', txt: '#0F6E56', cor: '#0F6E56' },
+      2: { bg: '#E6F1FB', txt: '#185FA5', cor: '#185FA5' },
+      3: { bg: '#FAEEDA', txt: '#854F0B', cor: '#854F0B' },
+      4: { bg: '#FAECE7', txt: '#993C1D', cor: '#993C1D' },
     };
     const c = cores[faixa.numero];
     return (
       <div style={{ marginBottom: 20 }}>
-        <span style={{ display: 'inline-block', padding: '4px 14px', borderRadius: 99, background: c.bg, color: c.txt, fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+        <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 99, background: c.bg, color: c.txt, fontSize: 14, fontWeight: 800, marginBottom: 8, border: `1.5px solid ${c.cor}44` }}>
           {faixa.label} MCMV · {faixa.taxaRef}% a.a. + TR
         </span>
         <p style={{ fontSize: 12, color: 'var(--text-faint)', margin: 0 }}>
@@ -166,24 +169,24 @@ function ExplicacaoSFI() {
       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: 10 }}>
         Entenda as modalidades
       </div>
-      <div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ display: 'grid', gap: 8 }}>
         {[
           {
-            tag: 'MCMV', tagBg: '#E1F5EE', tagTxt: '#0F6E56',
+            tag: 'MCMV', tagBg: '#E1F5EE', tagTxt: '#0F6E56', cor: '#0F6E56',
             desc: 'Minha Casa Minha Vida — renda até R$ 13.000/mês. Taxas subsidiadas pela CEF. Subsídio direto para Faixas 1 e 2.',
           },
           {
-            tag: 'SBPE / SFH', tagBg: '#E6F1FB', tagTxt: '#185FA5',
+            tag: 'SBPE / SFH', tagBg: '#E6F1FB', tagTxt: '#185FA5', cor: '#185FA5',
             desc: 'SBPE é a fonte de captação (poupança). Opera dentro do SFH — regras para imóveis até R$ 2,25M. Taxa CEF: ' + TAXA_SBPE_ANUAL + '% a.a. + TR. Permite FGTS.',
           },
           {
-            tag: 'SFI', tagBg: '#FAEEDA', tagTxt: '#854F0B',
+            tag: 'SFI', tagBg: '#FAEEDA', tagTxt: '#854F0B', cor: '#D97706',
             desc: 'Sistema paralelo ao SFH para imóveis acima de R$ 2,25M. Sem limite de valor, sem teto de taxa, sem FGTS. Taxa estimada: ' + TAXA_SFI_ANUAL + '% a.a.',
           },
-        ].map(({ tag, tagBg, tagTxt, desc }) => (
-          <div key={tag} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 99, background: tagBg, color: tagTxt, fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 2 }}>{tag}</span>
-            <span style={{ fontSize: 13, color: 'var(--text-faint)', lineHeight: 1.5 }}>{desc}</span>
+        ].map(({ tag, tagBg, tagTxt, cor, desc }) => (
+          <div key={tag} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 12px', background: tagBg + '55', borderRadius: 10, borderLeft: `3.5px solid ${cor}` }}>
+            <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 99, background: tagBg, color: tagTxt, fontSize: 11, fontWeight: 800, flexShrink: 0, marginTop: 1 }}>{tag}</span>
+            <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.55, fontWeight: 500 }}>{desc}</span>
           </div>
         ))}
       </div>
@@ -314,21 +317,23 @@ function SimuladorInner() {
   // ═══════════════ ETAPA 0 — LANDING ════════════════════════════════════════
   if (etapa === 0) return (
     <Etapa>
-      <div style={{ paddingTop: 60 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 16 }}>Simulador FinancieCerto 2026</div>
-        <Titulo>Primeiro entenda seu perfil. Depois busque o imóvel.</Titulo>
-        <Sub>A maioria das pessoas busca imóvel sem saber quanto pode financiar. Aqui você descobre sua faixa real, taxa de juros, subsídio e parcela — antes de ver qualquer imóvel.</Sub>
+      <div style={{ paddingTop: 0 }}>
+        <div style={{ margin: '0 -20px 32px', padding: '52px 28px 40px', background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #0284c7 100%)', borderRadius: '0 0 28px 28px' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '2.5px', marginBottom: 16 }}>Simulador FinancieCerto 2026</div>
+          <h1 style={{ fontSize: 30, fontWeight: 800, color: '#fff', lineHeight: 1.2, marginBottom: 14, marginTop: 0 }}>Primeiro entenda seu perfil. Depois busque o imóvel.</h1>
+          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.8)', lineHeight: 1.65, marginBottom: 0, marginTop: 0 }}>A maioria das pessoas busca imóvel sem saber quanto pode financiar. Aqui você descobre sua faixa real, taxa de juros, subsídio e parcela — antes de ver qualquer imóvel.</p>
+        </div>
 
-        <div style={{ display: 'grid', gap: 12, marginBottom: 36 }}>
+        <div style={{ display: 'grid', gap: 10, marginBottom: 36 }}>
           {[
-            { ico: '📊', txt: 'Faixa MCMV, SBPE (SFH) ou SFI — detectados pelo seu perfil e renda' },
-            { ico: '🏦', txt: 'Taxa real da Caixa Econômica Federal + cálculo de subsídio estimado' },
-            { ico: '📋', txt: 'MIP etário calibrado pelo contrato SIOPI / Caixa Econômica Federal' },
-            { ico: '🏠', txt: 'Imóveis compatíveis com seu perfil ao final' },
-          ].map(({ ico, txt }) => (
-            <div key={txt} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 20, flexShrink: 0 }}>{ico}</span>
-              <span style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.5 }}>{txt}</span>
+            { ico: '📊', txt: 'Faixa MCMV, SBPE (SFH) ou SFI — detectados pelo seu perfil e renda', cor: '#2563eb', bg: '#EFF6FF' },
+            { ico: '🏦', txt: 'Taxa real da Caixa Econômica Federal + cálculo de subsídio estimado', cor: '#0F6E56', bg: '#F0FDF9' },
+            { ico: '📋', txt: 'MIP etário calibrado pelo contrato SIOPI / Caixa Econômica Federal', cor: '#7C3AED', bg: '#F5F3FF' },
+            { ico: '🏠', txt: 'Imóveis compatíveis com seu perfil ao final', cor: '#B45309', bg: '#FFFBEB' },
+          ].map(({ ico, txt, cor, bg }) => (
+            <div key={txt} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', padding: '16px 18px', background: bg, borderRadius: 14, borderLeft: `4px solid ${cor}`, border: `1px solid ${cor}22`, borderLeftWidth: 4, borderLeftStyle: 'solid', borderLeftColor: cor }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{ico}</span>
+              <span style={{ fontSize: 14, color: '#1F2937', lineHeight: 1.55, fontWeight: 500 }}>{txt}</span>
             </div>
           ))}
         </div>
@@ -515,14 +520,16 @@ function SimuladorInner() {
     return (
       <Etapa>
         {/* Seletor de modalidade */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           {paneis.map(({ key, label, tagBg, tagTxt, disabled }) => (
             <button key={key} onClick={() => !disabled && setPainelAtivo(key)}
               style={{
-                padding: '7px 14px', borderRadius: 99, border: `1.5px solid ${painelAtivo === key ? (disabled ? '#ccc' : dados.cor) : 'var(--border)'}`,
+                padding: '8px 18px', borderRadius: 99,
+                border: `${painelAtivo === key ? '2.5px' : '1.5px'} solid ${painelAtivo === key ? (disabled ? '#ccc' : dados.cor) : '#D1D5DB'}`,
                 background: painelAtivo === key ? (disabled ? '#f5f5f5' : tagBg) : 'transparent',
-                color: disabled ? '#aaa' : (painelAtivo === key ? tagTxt : 'var(--text-faint)'),
-                fontSize: 13, fontWeight: painelAtivo === key ? 700 : 400,
+                color: disabled ? '#aaa' : (painelAtivo === key ? tagTxt : '#6B7280'),
+                fontSize: 13, fontWeight: painelAtivo === key ? 800 : 500,
+                boxShadow: painelAtivo === key && !disabled ? `0 2px 10px ${dados.cor}44` : 'none',
                 cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all .2s',
               }}>
               {label}{disabled ? ' (inelegível)' : ''}
@@ -533,7 +540,7 @@ function SimuladorInner() {
         {/* Card principal */}
         <div style={{ background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 20, overflow: 'hidden', marginBottom: 16 }}>
           <div style={{ background: dados.cor, padding: '24px 24px 20px', textAlign: 'center' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.7)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Seu perfil — {dados.label}</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 10 }}>Seu perfil — {dados.label}</div>
             <div style={{ fontSize: 38, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{formatBRL(dados.valorMaxImovel)}</div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', marginTop: 6 }}>
               {painelAtivo === 'sfi' ? 'capacidade de compra (sem limite de teto)' : `valor máximo do imóvel${dados.teto ? ` · teto ${formatBRL(dados.teto)}` : ''}`}
@@ -674,25 +681,25 @@ function SimuladorInner() {
         <BtnVoltar onClick={voltar} />
 
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: sc.cor, textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 8 }}>{sc.emoji} {modalLabel}</div>
-          <div style={{ fontSize: 38, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>{formatBRL(sim.parcelaPrimeiro)}</div>
-          <div style={{ fontSize: 14, color: 'var(--text-faint)', marginTop: 4 }}>parcela inicial (Price) · {sim.comprometimento.toFixed(1)}% da renda</div>
+        <div style={{ margin: '0 -20px 28px', padding: '36px 28px 32px', background: `linear-gradient(135deg, ${sc.cor} 0%, ${sc.cor}CC 100%)`, borderRadius: '0 0 24px 24px', textAlign: 'center' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '2.5px', marginBottom: 10 }}>{sc.emoji} {modalLabel}</div>
+          <div style={{ fontSize: 42, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{formatBRL(sim.parcelaPrimeiro)}</div>
+          <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 8 }}>parcela inicial (Price) · {sim.comprometimento.toFixed(1)}% da renda</div>
         </div>
 
         {/* Price vs SAC */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-          <div style={{ padding: '16px', background: 'var(--bg-card)', borderRadius: 14, border: '1.5px solid var(--primary)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>Tabela Price</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{formatBRL(sim.parcelaPrimeiro)}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>parcela fixa</div>
-            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 8 }}>Total: {formatBRL(sim.totalPagoPrice)}</div>
+          <div style={{ padding: '18px', background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)', borderRadius: 14, border: '2px solid #2563eb' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Tabela Price</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#111827' }}>{formatBRL(sim.parcelaPrimeiro)}</div>
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 3 }}>parcela fixa/mês</div>
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 8 }}>Total: {formatBRL(sim.totalPagoPrice)}</div>
           </div>
-          <div style={{ padding: '16px', background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>SAC</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>{formatBRL(sim.parcelaSACPrimeiro)}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>1ª parcela · decresce</div>
-            <div style={{ fontSize: 11, color: '#0F6E56', marginTop: 8, fontWeight: 600 }}>Economiza {formatBRL(economiasSAC)}</div>
+          <div style={{ padding: '18px', background: 'linear-gradient(135deg, #F0FDF9, #D1FAE5)', borderRadius: 14, border: '2px solid #0F6E56' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#0F6E56', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>SAC</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#111827' }}>{formatBRL(sim.parcelaSACPrimeiro)}</div>
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 3 }}>1ª parcela · decresce</div>
+            <div style={{ fontSize: 12, color: '#065F46', marginTop: 8, fontWeight: 700 }}>Economiza {formatBRL(economiasSAC)}</div>
           </div>
         </div>
 
@@ -749,7 +756,7 @@ function SimuladorInner() {
             🏠 Ver imóveis compatíveis
           </Link>
           <button onClick={() => { setEtapa(0); setE(E0); setPerfil(null); setSim(null); }}
-            style={{ padding: '14px 0', borderRadius: 12, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+            style={{ padding: '15px 0', borderRadius: 12, border: '1.5px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
             Fazer nova simulação
           </button>
         </div>
