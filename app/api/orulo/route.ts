@@ -78,7 +78,7 @@ function normalizeBuilding(b: Record<string, unknown>) {
     number:        (address.number  as string) || '',
     city:          (address.city    as string) || '',
     state:         (address.state   as string) || '',
-    photo:         img['520x280'] || img['840x560'] || img['200x140'] || null,
+    photo:         img['520x280'] || img['840x560'] || img['200x140'] || img['1200x628'] || img['original'] || img['url'] || img['image_url'] || null,
     sharing_url:   (b.sharing_url as string) || null,
     orulo_url:     (b.sharing_url as string) || `${ORULO_BASE}/buildings/${b.id}`,
     status:        (b.status as string) || '',

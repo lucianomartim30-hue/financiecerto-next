@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   descobrir, simular, formatBRL,
   detectarFaixaMCMV, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH,
@@ -205,13 +206,68 @@ const E0: Estado = {
 };
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
-export default function SimuladorPage() {
+// ─── Wrapper para useSearchParams (requer Suspense no App Router) ─────────────
+function SimuladorInner() {
+  const searchParams = useSearchParams();
   const [etapa, setEtapa] = useState(0);
   const [e, setE] = useState<Estado>(E0);
   const [perfil, setPerfil] = useState<ResultadoDescobrir | null>(null);
   const [sim, setSim] = useState<ResultadoSimulacao | null>(null);
   // Qual painel o usuário quer ver na revelação: mcmv | sbpe | sfi
   const [painelAtivo, setPainelAtivo] = useState<'mcmv' | 'sbpe' | 'sfi'>('mcmv');
+
+  // Lê URL params vindos da página do imóvel e vai direto ao resultado
+  useEffect(() => {
+    const valorImovelStr = searchParams.get('valorImovel');
+    const rendaStr       = searchParams.get('renda');
+    const entradaStr     = searchParams.get('entrada');
+    const prazoStr       = searchParams.get('prazo');
+    const naPlantaStr    = searchParams.get('naPlanta');
+    const idadeStr       = searchParams.get('idade');
+
+    if (!valorImovelStr || !rendaStr) return; // sem dados suficientes
+
+    const valorImovel = Number(valorImovelStr);
+    const rendaNum    = Number(rendaStr);
+    const entradaNum  = Number(entradaStr) || 0;
+    const prazoNum    = Number(prazoStr) || 35;
+    const naPlanta    = naPlantaStr === 'true';
+    const idadeNum    = Number(idadeStr) || 35;
+
+    if (valorImovel < 1000 || rendaNum < 500) return;
+
+    const novoEstado: Estado = {
+      ...E0,
+      renda:       fmtInput(String(rendaNum)),
+      entrada:     fmtInput(String(entradaNum)),
+      valorImovel: fmtInput(String(valorImovel)),
+      prazoAnos:   prazoNum,
+      naPlanta,
+      idade:       String(idadeNum),
+    };
+    setE(novoEstado);
+
+    // Calcula perfil mínimo para mostrar painel
+    const p = descobrir(rendaNum, 0, entradaNum, prazoNum, idadeNum);
+    setPerfil(p);
+    if (p.mcmv.elegivel) setPainelAtivo('mcmv');
+    else setPainelAtivo('sbpe');
+
+    // Calcula simulação e pula direto para o resultado
+    const resultado = simular({
+      rendaBruta:        rendaNum,
+      fgts:              0,
+      entrada:           entradaNum,
+      valorImovel,
+      prazoAnos:         prazoNum,
+      naPlanta,
+      prazoObraAnos:     naPlanta ? 3 : 0,
+      idadeProponente:   idadeNum,
+    });
+    setSim(resultado);
+    setEtapa(7); // pula direto para o resultado completo
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function upd(p: Partial<Estado>) { setE(prev => ({ ...prev, ...p })); }
 
@@ -702,4 +758,12 @@ export default function SimuladorPage() {
   }
 
   return null;
+}
+
+export default function SimuladorPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+      <SimuladorInner />
+    </Suspense>
+  );
 }
