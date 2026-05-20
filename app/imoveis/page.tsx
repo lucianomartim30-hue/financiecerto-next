@@ -424,7 +424,7 @@ function SmartSearchInput({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const hasResults = results.neighborhoods.length > 0 || results.cities.length > 0 || results.buildings.length > 0;
+  const hasResults = results.neighborhoods.length > 0 || results.cities.length > 0;
 
   function goToBairro(_slug: string, label: string) {
     // Filtra na própria página — não navega para /bairro/
@@ -462,7 +462,7 @@ function SmartSearchInput({
           if (e.key === 'Enter') { setOpen(false); onConfirm(input); }
           if (e.key === 'Escape') setOpen(false);
         }}
-        placeholder="Bairro, empreendimento ou cidade..."
+        placeholder="Bairro ou cidade..."
         style={{ padding: '10px 32px 10px 34px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '13px', width: '100%', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit' }}
       />
       {searching && <span style={{ position: 'absolute', right: '11px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: 'var(--text-faint)' }}>⟳</span>}
@@ -485,24 +485,9 @@ function SmartSearchInput({
             </div>
           )}
 
-          {/* Empreendimentos */}
-          {results.buildings.length > 0 && (
-            <div style={{ borderTop: results.neighborhoods.length > 0 ? '1px solid var(--border)' : 'none' }}>
-              <div style={sectionHeader}><span>🏢</span> Empreendimentos</div>
-              {results.buildings.map(b => (
-                <button key={b.id} onMouseDown={e => { e.preventDefault(); goToBuilding(b.slug, b.label); }} style={btnStyle}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                  {b.label}
-                  {b.neighborhood && <span style={{ marginLeft: '6px', fontSize: '10px', color: 'var(--text-faint)' }}>· {b.neighborhood}</span>}
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* Cidades */}
           {results.cities.length > 0 && (
-            <div style={{ borderTop: (results.neighborhoods.length > 0 || results.buildings.length > 0) ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ borderTop: results.neighborhoods.length > 0 ? '1px solid var(--border)' : 'none' }}>
               <div style={sectionHeader}><span>🌆</span> Cidades</div>
               {results.cities.map(c => (
                 <button key={c.slug} onMouseDown={e => { e.preventDefault(); setInput(c.label); setOpen(false); onConfirm(c.label); }} style={btnStyle}
@@ -584,10 +569,9 @@ function ImoveisContent() {
           params.set('city',         'São Paulo');
           params.set('neighborhood', txt);
         }
-      } else {
-        // Sem localização → padrão São Paulo (garante que filtros funcionem)
-        params.set('city', 'São Paulo');
       }
+      // Sem localização: não passa city= → Orulo retorna state=SP completo (~2031)
+      // Filtros de bedrooms/preço são passados nativamente; status filtrado server-side
 
       // Filtros de quartos → Orulo API (parâmetro confirmado, nunca q=)
       if (quartosFilter !== 'todos') {

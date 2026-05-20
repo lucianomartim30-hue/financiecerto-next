@@ -241,7 +241,7 @@ export async function GET(req: NextRequest) {
     // ── Sem localização → query direta à Orulo (suporta filtros nativos) ──────
     const qs = new URLSearchParams();
     qs.set('page',     String(page));
-    qs.set('per_page', '50');
+    qs.set('per_page', '200');
     qs.set('state',    state);
 
     if (minPrice)                            qs.set('min_price',    minPrice);
@@ -261,8 +261,7 @@ export async function GET(req: NextRequest) {
     let buildings = rawList.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
 
     if (statusReq) {
-      const filtered = buildings.filter(b => b.status_norm === statusReq);
-      if (filtered.length > 0) buildings = filtered;
+      buildings = buildings.filter(b => b.status_norm === statusReq);
     }
 
     return NextResponse.json({
