@@ -78,7 +78,9 @@ function normalizeBuilding(b: Record<string, unknown>) {
     number:        (address.number  as string) || '',
     city:          (address.city    as string) || '',
     state:         (address.state   as string) || '',
-    photo:         img['520x280'] || img['840x560'] || img['200x140'] || img['1200x628'] || img['original'] || img['url'] || img['image_url'] || null,
+    lat:           (b.latitude as number) ?? (address.latitude as number) ?? null,
+    lng:           (b.longitude as number) ?? (address.longitude as number) ?? null,
+    photo:         img['520x280'] || img['840x560'] || img['200x140'] || null,
     sharing_url:   (b.sharing_url as string) || null,
     orulo_url:     (b.sharing_url as string) || `${ORULO_BASE}/buildings/${b.id}`,
     status:        (b.status as string) || '',
@@ -241,7 +243,7 @@ export async function GET(req: NextRequest) {
     // ── Sem localização → query direta à Orulo (suporta filtros nativos) ──────
     const qs = new URLSearchParams();
     qs.set('page',     String(page));
-    qs.set('per_page', '200');
+    qs.set('per_page', '50');
     qs.set('state',    state);
 
     if (minPrice)                            qs.set('min_price',    minPrice);
@@ -261,7 +263,8 @@ export async function GET(req: NextRequest) {
     let buildings = rawList.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
 
     if (statusReq) {
-      buildings = buildings.filter(b => b.status_norm === statusReq);
+      const filtered = buildings.filter(b => b.status_norm === statusReq);
+      if (filtered.length > 0) buildings = filtered;
     }
 
     return NextResponse.json({

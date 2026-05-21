@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatBRL } from '@/lib/calculos';
+import dynamic from 'next/dynamic';
+const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -32,6 +34,8 @@ interface Imovel {
   address_full: string;
   street: string;
   number: string;
+  lat: number | null;
+  lng: number | null;
 }
 
 type StatusKey = 'Na Planta' | 'Em Obras' | 'Pronto' | 'Lançamento' | string;
@@ -543,6 +547,7 @@ function ImoveisContent() {
 
   // UI state do painel
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showMap, setShowMap] = useState(false);
 
   // Data
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
@@ -821,6 +826,22 @@ function ImoveisContent() {
               <option value="maior-preco">Maior preço</option>
             </select>
 
+            {/* Mapa toggle */}
+            <button
+              onClick={() => setShowMap(m => !m)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: showMap ? '#1a56db' : 'var(--bg)',
+                color: showMap ? '#fff' : 'var(--text-muted)',
+                border: '1.5px solid ' + (showMap ? '#1a56db' : 'var(--border)'),
+                borderRadius: '10px', padding: '10px 14px',
+                fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+                whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s',
+              }}
+            >
+              🗺️ {showMap ? 'Ocultar mapa' : 'Ver no mapa'}
+            </button>
+
             {/* Limpar filtros */}
             {filtroAtivo && (
               <button
@@ -967,8 +988,44 @@ function ImoveisContent() {
         </div>
       </div>
 
-      {/* ── Conteúdo ─────────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px 80px' }}>
+      {/* ── Layout: mapa + cards ───────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', minHeight: '60vh' }}>
+
+        {/* Mapa sticky — só aparece quando showMap=true */}
+        {showMap && (
+          <div style={{
+            position: 'sticky', top: '64px',
+            width: '44%', flexShrink: 0,
+            height: 'calc(100vh - 64px)',
+            borderRight: '1px solid var(--border)',
+          }}>
+            <MapView
+              pins={imoveisFiltrados
+                .filter(b => b.lat && b.lng)
+                .map(b => ({
+                  id: b.id,
+                  lat: b.lat!,
+                  lng: b.lng!,
+                  name: b.name,
+                  price: b.min_price
+                    ? 'R$ ' + (b.min_price >= 1000000
+                        ? (b.min_price / 1000000).toFixed(1) + 'M'
+                        : (b.min_price / 1000).toFixed(0) + 'k')
+                    : 'Consultar',
+                  neighborhood: b.neighborhood,
+                  status: b.status,
+                }))}
+            />
+          </div>
+        )}
+
+        {/* Cards — ocupa 100% sem mapa ou lado direito com mapa */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{
+        maxWidth: showMap ? 'none' : '1100px',
+        margin: showMap ? '0' : '0 auto',
+        padding: showMap ? '24px 20px 80px' : '32px 24px 80px',
+      }}>
 
         {/* Contagem + erro */}
         {erro ? (
@@ -1075,6 +1132,8 @@ function ImoveisContent() {
           </div>
         )}
 
+      </div>
+        </div>
       </div>
     </div>
   );
