@@ -5,11 +5,10 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 const NAV_LINKS = [
-  { href: '/simulador',     label: 'Simular',      icon: '🧮' },
-  { href: '/simulador/na-planta', label: 'Na Planta', icon: '🏗️' },
-  { href: '/imoveis',       label: 'Imóveis',      icon: '🏘️' },
-  { href: '/guia',          label: 'Guia',          icon: '📘' },
-  { href: '/glossario',     label: 'Glossário',     icon: '🔤' },
+  { href: '/simulador', label: 'Simular',   icon: '🧮' },
+  { href: '/imoveis',   label: 'Imóveis',   icon: '🏘️' },
+  { href: '/guia',      label: 'Guia',      icon: '📘' },
+  { href: '/glossario', label: 'Glossário', icon: '🔤' },
 ];
 
 export default function Header() {
@@ -212,4 +211,4 @@ export default function Header() {
       `}</style>
     </>
   );
-}
+}

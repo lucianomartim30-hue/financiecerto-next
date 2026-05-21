@@ -113,8 +113,43 @@ function BtnPrimario({ label, onClick, disabled }: { label: string; onClick: () 
   );
 }
 
-function Etapa({ children }: { children: React.ReactNode }) {
-  return <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 20px 60px' }}>{children}</div>;
+// Hero escuro — mesmo estilo da na-planta
+function Hero({ etapa }: { etapa: number }) {
+  const heroCopy: Record<number, { tag: string; titulo: string; sub: string }> = {
+    0: { tag: 'Simulador FinancieCerto 2026', titulo: 'Primeiro entenda\nseu perfil.', sub: 'MCMV · SBPE · FGTS · subsídio — antes de ver qualquer imóvel.' },
+    1: { tag: 'Passo 1 de 6', titulo: 'Qual é a sua\nrenda familiar?', sub: 'Usamos a renda bruta para calcular faixa, taxa e comprometimento.' },
+    2: { tag: 'Passo 2 de 6', titulo: 'Você tem FGTS\ndisponível?', sub: 'O FGTS amplia seu poder de compra e reduz o valor financiado.' },
+    3: { tag: 'Passo 3 de 6', titulo: 'Tem entrada\noutra reserva?', sub: 'Entrada própria reduz o financiamento e pode melhorar a aprovação.' },
+    4: { tag: 'Passo 4 de 6', titulo: 'Prazo e\nperfil pessoal', sub: 'O prazo e a idade definem a parcela e o seguro MIP.' },
+    5: { tag: 'Descobrindo seu perfil...', titulo: 'Calculando seu\nteto de compra.', sub: 'Aguarde um instante.' },
+    6: { tag: 'Imóvel específico', titulo: 'Simule um\nimóvel concreto.', sub: 'Informe o valor e o estágio — calcularemos parcela, FGTS e modalidade.' },
+    7: { tag: 'Resultado', titulo: 'Simulação\ncompleta.', sub: '' },
+  };
+  const { tag, titulo, sub } = heroCopy[etapa] ?? heroCopy[0];
+  return (
+    <section style={{
+      background: 'linear-gradient(160deg, #0f172a 0%, #1e3a5f 100%)',
+      padding: 'clamp(48px, 7vw, 80px) 20px clamp(52px, 7vw, 72px)',
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.45)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 16 }}>{tag}</div>
+      <h1 style={{ fontSize: 'clamp(26px, 5vw, 38px)', fontWeight: 800, color: '#fff', lineHeight: 1.2, marginBottom: sub ? 12 : 0, marginTop: 0, whiteSpace: 'pre-line' }}>{titulo}</h1>
+      {sub && <p style={{ fontSize: 15, color: 'rgba(255,255,255,.55)', lineHeight: 1.7, maxWidth: 480, margin: '0 auto', marginTop: 0 }}>{sub}</p>}
+    </section>
+  );
+}
+
+function Etapa({ children, etapa }: { children: React.ReactNode; etapa?: number }) {
+  return (
+    <div style={{ background: '#F1F5F9', minHeight: 'calc(100vh - var(--header-h))' }}>
+      {etapa !== undefined && <Hero etapa={etapa} />}
+      <div style={{ maxWidth: 520, margin: etapa !== undefined ? '-40px auto 0' : '0 auto', padding: '0 16px 80px', position: 'relative', zIndex: 1 }}>
+        <div style={{ background: 'var(--bg-card)', borderRadius: 20, border: '1px solid var(--border)', boxShadow: '0 4px 40px rgba(0,0,0,.10)', padding: '32px 28px' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Titulo({ children }: { children: React.ReactNode }) {
@@ -339,34 +374,24 @@ function SimuladorInner() {
 
   // ═══════════════ ETAPA 0 — LANDING ════════════════════════════════════════
   if (etapa === 0) return (
-    <Etapa>
-      <div style={{ paddingTop: 52 }}>
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 14 }}>Simulador FinancieCerto 2026</div>
-          <h1 style={{ fontSize: 34, fontWeight: 800, color: '#111827', lineHeight: 1.2, marginBottom: 14, marginTop: 0 }}>Primeiro entenda seu perfil.<br />Depois busque o imóvel.</h1>
-          <p style={{ fontSize: 16, color: '#4B5563', lineHeight: 1.65, marginBottom: 0, marginTop: 0 }}>A maioria das pessoas busca imóvel sem saber quanto pode financiar. Aqui você descobre sua faixa real, taxa de juros, subsídio e parcela — antes de ver qualquer imóvel.</p>
-        </div>
-
-        <div style={{ display: 'grid', gap: 10, marginBottom: 36 }}>
-          {[
-            { ico: '📊', txt: 'Faixa MCMV, SBPE (SFH) ou SFI — detectados pelo seu perfil e renda', cor: '#2563eb', bg: '#EFF6FF' },
-            { ico: '🏦', txt: 'Taxa real da Caixa Econômica Federal + cálculo de subsídio estimado', cor: '#0F6E56', bg: '#F0FDF9' },
-            { ico: '📋', txt: 'MIP etário calibrado pelo contrato SIOPI / Caixa Econômica Federal', cor: '#7C3AED', bg: '#F5F3FF' },
-            { ico: '🏠', txt: 'Imóveis compatíveis com seu perfil ao final', cor: '#B45309', bg: '#FFFBEB' },
-          ].map(({ ico, txt, cor, bg }) => (
-            <div key={txt} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', padding: '16px 18px', background: bg, borderRadius: 14, borderLeft: `4px solid ${cor}`, border: `1px solid ${cor}22`, borderLeftWidth: 4, borderLeftStyle: 'solid', borderLeftColor: cor }}>
-              <span style={{ fontSize: 22, flexShrink: 0 }}>{ico}</span>
-              <span style={{ fontSize: 14, color: '#1F2937', lineHeight: 1.55, fontWeight: 500 }}>{txt}</span>
-            </div>
-          ))}
-        </div>
-
-        <BtnPrimario label="Começar — leva 2 minutos" onClick={avancar} />
-
-        <p style={{ fontSize: 12, color: 'var(--text-faint)', textAlign: 'center', marginTop: 16 }}>
-          Regras SFH/MCMV vigentes · maio/2026 · TR {TR_MENSAL}%/mês
-        </p>
+    <Etapa etapa={0}>
+      <div style={{ display: 'grid', gap: 10, marginBottom: 32 }}>
+        {[
+          { ico: '📊', txt: 'Faixa MCMV, SBPE ou SFI — detectados pelo seu perfil', cor: '#2563eb', bg: '#EFF6FF' },
+          { ico: '🏦', txt: 'Taxa real da Caixa Econômica Federal + subsídio estimado', cor: '#0F6E56', bg: '#F0FDF9' },
+          { ico: '🏗️', txt: 'Simule imóvel pronto, em obras ou na planta', cor: '#7C3AED', bg: '#F5F3FF' },
+          { ico: '🏠', txt: 'Veja imóveis compatíveis com seu perfil ao final', cor: '#B45309', bg: '#FFFBEB' },
+        ].map(({ ico, txt, cor, bg }) => (
+          <div key={txt} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', background: bg, borderRadius: 12, borderLeft: `4px solid ${cor}` }}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>{ico}</span>
+            <span style={{ fontSize: 14, color: '#1F2937', lineHeight: 1.55, fontWeight: 500 }}>{txt}</span>
+          </div>
+        ))}
       </div>
+      <BtnPrimario label="Começar — leva 2 minutos" onClick={avancar} />
+      <p style={{ fontSize: 12, color: 'var(--text-faint)', textAlign: 'center', marginTop: 14 }}>
+        Regras SFH/MCMV vigentes · maio/2026 · TR {TR_MENSAL}%/mês
+      </p>
     </Etapa>
   );
 
@@ -374,7 +399,7 @@ function SimuladorInner() {
   if (etapa === 1) {
     const renda = parseMoeda(e.renda);
     return (
-      <Etapa>
+      <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
         <Barra etapa={0} total={6} />
         <Titulo>Qual é a renda familiar mensal?</Titulo>
@@ -399,7 +424,7 @@ function SimuladorInner() {
     const idade = Number(e.idade) || 0;
     const prazoMax = idade > 0 ? Math.min(35, Math.floor(80.5 - idade)) : 35;
     return (
-      <Etapa>
+      <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
         <Barra etapa={1} total={6} />
         <Titulo>Composição familiar</Titulo>
@@ -435,7 +460,7 @@ function SimuladorInner() {
   if (etapa === 3) {
     const faixa = detectarFaixaMCMV(parseMoeda(e.renda));
     return (
-      <Etapa>
+      <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
         <Barra etapa={2} total={6} />
         <Titulo>FGTS e elegibilidade</Titulo>
@@ -471,7 +496,7 @@ function SimuladorInner() {
     const total   = entrada + (fgtsOk ? fgts : 0);
     const faixa   = detectarFaixaMCMV(parseMoeda(e.renda));
     return (
-      <Etapa>
+      <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
         <Barra etapa={3} total={6} />
         <Titulo>Quanto você tem de entrada?</Titulo>
@@ -518,7 +543,7 @@ function SimuladorInner() {
 
   // ═══════════════ ETAPA 5 — REVELAÇÃO DO PERFIL ════════════════════════════
   if (etapa === 5) {
-    if (!perfil) { calcularPerfil(); return <Etapa><p>Calculando...</p></Etapa>; }
+    if (!perfil) { calcularPerfil(); return <Etapa etapa={etapa}><p>Calculando...</p></Etapa>; }
 
     const { faixa, mcmv, sbpe, sfi, subsidioEstimado, prazoMaxMeses } = perfil;
     const prazoAnos = Math.round(prazoMaxMeses / 12);
@@ -541,7 +566,7 @@ function SimuladorInner() {
     ];
 
     return (
-      <Etapa>
+      <Etapa etapa={etapa}>
         {/* Seletor de modalidade */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           {paneis.map(({ key, label, tagBg, tagTxt, disabled }) => (
@@ -701,7 +726,7 @@ function SimuladorInner() {
     const perfValorMax = perfil ? (perfil.mcmv.elegivel ? perfil.mcmv.valorMaxImovel : perfil.sbpe.valorMaxImovel) : 0;
     const isSFI = valorImovel > TETO_SFH;
     return (
-      <Etapa>
+      <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
         <Barra etapa={4} total={6} />
         <Titulo>Qual é o valor do imóvel?</Titulo>
@@ -736,30 +761,77 @@ function SimuladorInner() {
           </div>
         </div>
 
-        <Toggle label="Imóvel na planta (crédito associativo)" sub="Há fase de obra antes da entrega das chaves"
-          value={e.naPlanta} onChange={v => upd({ naPlanta: v })} />
-
-        <div style={{ marginTop: 24 }}>
-          <BtnPrimario label="Ver simulação completa →" onClick={avancar} disabled={valorImovel < 10000} />
+        {/* Seletor de estágio do imóvel */}
+        <div style={{ marginBottom: 28 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.8px' }}>Estágio do imóvel</label>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {[
+              { id: 'pronto', ico: '🏠', label: 'Pronto / Novo / Usado', sub: 'Entrega imediata — sem fase de obra', naPlanta: false },
+              { id: 'obras',  ico: '🏗️', label: 'Em Obras', sub: 'Medições ativas — pode entrar no crédito associativo', naPlanta: true },
+              { id: 'planta', ico: '🌱', label: 'Na Planta / Lançamento', sub: 'Obra não iniciada — crédito associativo MCMV / SBPE', naPlanta: true },
+            ].map(({ id, ico, label, sub, naPlanta: np }) => {
+              const selecionado = np === false ? !e.naPlanta : e.naPlanta && (
+                id === 'planta' ? !e.temImovelMunicipio : e.temImovelMunicipio
+              );
+              // Simplificado: pronto = !naPlanta; em obras/planta = naPlanta
+              const ativo = id === 'pronto' ? !e.naPlanta : e.naPlanta;
+              // Para distinguir entre obras e planta quando naPlanta=true, não é crítico aqui
+              const realmente = id === 'pronto' ? !e.naPlanta : (e.naPlanta && id === 'obras' ? true : (e.naPlanta && id === 'planta' ? true : false));
+              void selecionado; void realmente;
+              return (
+                <button
+                  key={id}
+                  onClick={() => {
+                    upd({ naPlanta: np });
+                    if (id === 'planta') {
+                      // Não redireciona — simula dentro do fluxo principal com naPlanta=true
+                    }
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 14,
+                    padding: '14px 16px', borderRadius: 12, cursor: 'pointer',
+                    border: `2px solid ${(id === 'pronto' && !e.naPlanta) || (id !== 'pronto' && e.naPlanta) ? 'var(--primary)' : 'var(--border)'}`,
+                    background: (id === 'pronto' && !e.naPlanta) || (id !== 'pronto' && e.naPlanta) ? 'var(--primary-light)' : 'var(--bg)',
+                    textAlign: 'left', width: '100%', fontFamily: 'inherit',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: 22, flexShrink: 0 }}>{ico}</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.45 }}>{sub}</div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {e.naPlanta && (
+            <div style={{ marginTop: 10, padding: '10px 14px', background: '#FAEEDA', borderRadius: 10, fontSize: 12, color: '#633806' }}>
+              🏗️ Imóvel na planta — simulamos juros evolutivos + crédito associativo.{' '}
+              <Link href="/simulador/na-planta" style={{ color: '#854F0B', fontWeight: 700 }}>Ver simulação detalhada da obra →</Link>
+            </div>
+          )}
         </div>
+
+        <BtnPrimario label="Ver simulação completa →" onClick={avancar} disabled={valorImovel < 10000} />
       </Etapa>
     );
   }
 
   // ═══════════════ ETAPA 7 — RESULTADO COMPLETO ═════════════════════════════
   if (etapa === 7) {
-    if (!sim) { calcularSim(); return <Etapa><p>Calculando...</p></Etapa>; }
+    if (!sim) { calcularSim(); return <Etapa etapa={etapa}><p>Calculando...</p></Etapa>; }
 
     const sc = SAUDE[sim.saudeLabel];
     const economiasSAC = Math.max(0, sim.totalPagoPrice - sim.totalPagoSAC);
     const modalLabel = sim.isMCMV ? (perfil?.faixa ? `${perfil.faixa.label} MCMV` : 'MCMV') : sim.isSFI ? 'SFI' : 'SBPE (SFH)';
 
     return (
-      <Etapa>
+      <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
 
         {/* Header */}
-        <div style={{ margin: '0 -20px 28px', padding: '36px 28px 32px', background: `linear-gradient(135deg, ${sc.cor} 0%, ${sc.cor}CC 100%)`, borderRadius: '0 0 24px 24px', textAlign: 'center' }}>
+        <div style={{ margin: '-32px -28px 28px', padding: '36px 28px 32px', background: `linear-gradient(135deg, ${sc.cor} 0%, ${sc.cor}CC 100%)`, borderRadius: '20px 20px 0 0', textAlign: 'center' }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '2.5px', marginBottom: 6 }}>{sc.emoji} {modalLabel}</div>
           {!sim.isMCMV && !sim.isSFI && (
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 10, lineHeight: 1.5 }}>
@@ -860,3 +932,4 @@ export default function SimuladorPage() {
     </Suspense>
   );
 }
+                                                                                                                             
