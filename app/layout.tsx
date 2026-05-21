@@ -45,4 +45,10 @@ export default function RootLayout({
         <Header />
         <main style={{ flex: 1 }}>
           {children}
-      
+        </main>
+        <Footer />
+        <ChatFab />
+      </body>
+    </html>
+  );
+}
