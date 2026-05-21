@@ -721,8 +721,9 @@ function ImoveisContent() {
           )}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {[
-              { icon: '🏗', label: 'Lançamentos & em obras' },
-              { icon: '🏢', label: 'MRV · Cyrela · Even · Trisul' },
+              { icon: '🚀', label: 'Lançamentos' },
+              { icon: '🏗', label: 'Em obras' },
+              { icon: '🏠', label: 'Prontos para morar' },
               { icon: '✅', label: 'MCMV · SBPE · Alto padrão' },
               { icon: '📍', label: 'Grande São Paulo' },
             ].map((chip, i) => (
