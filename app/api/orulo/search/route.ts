@@ -11,6 +11,11 @@ function toSlug(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+// Normaliza acento para comparacao sem acento
+function norm(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 // Lista estatica expandida - SP Capital (distritos oficiais + bairros populares)
 const NEIGHBORHOODS_SP = [
   // Centro
@@ -133,11 +138,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ neighborhoods: [], cities: [], buildings: [] });
   }
 
-  const ql = q.toLowerCase();
+  const ql = norm(q);
 
   // 1. Estático instantâneo
   const staticNeighborhoods = NEIGHBORHOODS_SP
-    .filter(nb => nb.toLowerCase().includes(ql))
+    .filter(nb => norm(nb).includes(ql))
     .slice(0, 5)
     .map(nb => ({
       label: `${nb}, São Paulo – SP`,
@@ -146,7 +151,7 @@ export async function GET(req: NextRequest) {
     }));
 
   const cities = CITIES_RMSP
-    .filter(c => c.toLowerCase().includes(ql))
+    .filter(c => norm(c).includes(ql))
     .slice(0, 4)
     .map(c => ({
       label: `${c} – SP`,
