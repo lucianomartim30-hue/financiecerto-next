@@ -1,16 +1,12 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, useRef, use } from 'react';
 import Link from 'next/link';
 import { formatBRL, simular, descobrir } from '@/lib/calculos';
 
-function parseMoeda(v: string): number {
-  return Number(v.replace(/\./g, '').replace(',', '.')) || 0;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // Types
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 interface Tipologia {
   type: string;
   bedrooms: number | null;
@@ -24,12 +20,7 @@ interface Tipologia {
   photo: string | null;
   blueprint: string | null;
 }
-
-interface Blueprint {
-  name: string;
-  url: string;
-}
-
+interface Blueprint { name: string; url: string; }
 interface ImovelDetalhe {
   id: string;
   name: string;
@@ -62,389 +53,667 @@ interface ImovelDetalhe {
   typologies: Tipologia[];
   sharing_url: string | null;
 }
+interface RelatedImovel {
+  id: string;
+  name: string;
+  developer: string;
+  neighborhood: string;
+  min_price: number | null;
+  max_price: number | null;
+  bedrooms_min: number | null;
+  bedrooms_max: number | null;
+  area_min: number | null;
+  photos: string[];
+  status: string;
+}
 
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // Helpers
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+function parseMoeda(v: string): number {
+  return Number(v.replace(/\./g, '').replace(',', '.')) || 0;
+}
 function fmtInput(raw: string) {
   const d = raw.replace(/\D/g, '');
   return d ? Number(d).toLocaleString('pt-BR') : '';
 }
-
-function faixa(min: number | null, max: number | null, unit: string) {
+function faixaRange(min: number | null, max: number | null, unit: string) {
   if (!min) return null;
   if (max && max !== min) return `${min}–${max} ${unit}`;
   return `${min} ${unit}`;
 }
 
 const STATUS_CFG: Record<string, { cor: string; bg: string; label: string }> = {
-  'na planta':      { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
-  'planta':         { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
-  'pre-lançamento': { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Pré-Lançamento' },
-  'pre lançamento': { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Pré-Lançamento' },
-  'lançamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
-  'lancamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
-  'em obras':       { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Obras' },
-  'em construção':  { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
-  'em construcao':  { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
-  'construção':     { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
-  'em andamento':   { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Andamento' },
-  'pronto':         { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Pronto' },
-  'pronto novo':    { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Pronto Novo' },
-  'entregue':       { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Entregue' },
-  'concluído':      { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Concluído' },
-  'concluido':      { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Concluído' },
+  'na planta':      { cor: '#2563eb', bg: 'rgba(37,99,235,.12)',  label: 'Na Planta' },
+  'planta':         { cor: '#2563eb', bg: 'rgba(37,99,235,.12)',  label: 'Na Planta' },
+  'pre-lançamento': { cor: '#7c3aed', bg: 'rgba(124,58,237,.12)', label: 'Pré-Lançamento' },
+  'lançamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.12)', label: 'Lançamento' },
+  'lancamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.12)', label: 'Lançamento' },
+  'em obras':       { cor: '#d97706', bg: 'rgba(217,119,6,.12)',  label: 'Em Obras' },
+  'em construção':  { cor: '#d97706', bg: 'rgba(217,119,6,.12)',  label: 'Em Construção' },
+  'em andamento':   { cor: '#d97706', bg: 'rgba(217,119,6,.12)',  label: 'Em Andamento' },
+  'pronto':         { cor: '#16a34a', bg: 'rgba(22,163,74,.12)',  label: 'Pronto' },
+  'entregue':       { cor: '#16a34a', bg: 'rgba(22,163,74,.12)',  label: 'Entregue' },
 };
 function getStatus(s: string) {
   const key = s.toLowerCase().trim();
   if (STATUS_CFG[key]) return STATUS_CFG[key];
-  if (key.includes('planta'))    return STATUS_CFG['na planta'];
-  if (key.includes('lança'))     return STATUS_CFG['lançamento'];
+  if (key.includes('planta'))  return STATUS_CFG['na planta'];
+  if (key.includes('lança'))   return STATUS_CFG['lançamento'];
   if (key.includes('constru') || key.includes('obra') || key.includes('andamento'))
-                                 return STATUS_CFG['em obras'];
+    return STATUS_CFG['em obras'];
   if (key.includes('pronto') || key.includes('entreg') || key.includes('conclui'))
-                                 return STATUS_CFG['pronto'];
-  return { cor: '#475569', bg: 'rgba(71,85,105,.18)', label: s };
+    return STATUS_CFG['pronto'];
+  return { cor: '#475569', bg: 'rgba(71,85,105,.12)', label: s };
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Simulador embutido
-// ──────────────────────────────────────────────────────────────────────────────
-function SimuladorEmbutido({ valorImovel, naPlantaDefault = false }: { valorImovel: number; naPlantaDefault?: boolean }) {
-  const [renda, setRenda]     = useState('');
-  const [entrada, setEntrada] = useState('');
-  const [fgts, setFgts]       = useState('');
-  const [prazo, setPrazo]     = useState('30');
-  const [naPlanta, setNaPlanta] = useState(naPlantaDefault);
-  const [resultado, setResultado] = useState<ReturnType<typeof simular> | null>(null);
-  const [poder, setPoder]     = useState<ReturnType<typeof descobrir> | null>(null);
-  const [erro, setErro]       = useState('');
-  const [contextoCarregado, setContextoCarregado] = useState(false);
+// Faixas MCMV (tetos para o imóvel, SP 2026)
+const FAIXAS = [
+  { label: 'Faixa 1', teto: 275000, rendaLabel: 'até R$ 3.200' },
+  { label: 'Faixa 2', teto: 275000, rendaLabel: 'R$ 3.200–4.400' },
+  { label: 'Faixa 3', teto: 400000, rendaLabel: 'R$ 4.400–8.000' },
+  { label: 'Faixa 4', teto: 600000, rendaLabel: 'R$ 8.000–13.000' },
+];
 
-  // Pre-fill a partir do perfil do simulador de descoberta
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const raw = sessionStorage.getItem('joao_sim_context');
-      if (!raw) return;
-      const ctx = JSON.parse(raw) as Record<string, unknown>;
-      if (ctx.renda)   setRenda(fmtInput(String(ctx.renda)));
-      if (ctx.fgts)    setFgts(fmtInput(String(ctx.fgts)));
-      if (ctx.entrada) setEntrada(fmtInput(String(ctx.entrada)));
-      if (ctx.renda || ctx.fgts || ctx.entrada) setContextoCarregado(true);
-    } catch { /* ignore */ }
-  }, []);
-
-  // Recalcula poder de compra quando renda/fgts/entrada mudam
-  useEffect(() => {
-    const r = parseMoeda(renda);
-    const f = parseMoeda(fgts);
-    const en = parseMoeda(entrada);
-    if (r >= 800) {
-      const p = descobrir(r, f, en, parseInt(prazo), 35);
-      setPoder(p);
-    } else {
-      setPoder(null);
-    }
-  }, [renda, fgts, entrada, prazo]);
-
-  function calcular() {
-    const r  = parseMoeda(renda);
-    const en = parseMoeda(entrada);
-    const fg = parseMoeda(fgts);
-    if (!r || r < 800) { setErro('Informe uma renda mensal válida.'); return; }
-    if (!valorImovel)  { setErro('Valor do imóvel não disponível.'); return; }
-    if (en + fg >= valorImovel) { setErro('Entrada + FGTS não pode ser maior que o valor do imóvel.'); return; }
-    setErro('');
-    const res = simular({
-      rendaBruta: r, entrada: en, fgts: fg,
-      valorImovel, prazoAnos: parseInt(prazo),
-      naPlanta, prazoObraAnos: naPlanta ? 3 : 0,
-      idadeProponente: 35,
-    });
-    setResultado(res);
-  }
-
-  const parcela = resultado?.parcelaPrimeiro ?? 0;
-  const comprometimento = resultado ? Math.round((parcela / parseMoeda(renda)) * 100) : 0;
-  const alerta = comprometimento > 30;
-
-  // Poder de compra total = financiamento + fgts + entrada
-  const fg = parseMoeda(fgts);
-  const en = parseMoeda(entrada);
-  const poderTotal = poder
-    ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) + fg + en
-    : 0;
-  const dentroAlcance = poderTotal > 0 && poderTotal >= valorImovel;
-  const diffPoder = poderTotal - valorImovel;
-
-  return (
-    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', marginTop: '32px' }}>
-      <h3 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '4px' }}>
-        Simulador de Financiamento
-      </h3>
-      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: contextoCarregado ? '10px' : '20px' }}>
-        Calcule parcelas para este imóvel com seu perfil.
-      </p>
-
-      {contextoCarregado && (
-        <div style={{ fontSize: '12px', color: '#085041', background: '#E1F5EE', border: '1px solid #A7F3D0', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px' }}>
-          ✓ Dados do seu perfil carregados automaticamente
-        </div>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div>
-          <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px' }}>Valor do imóvel</p>
-          <div style={{ padding: '11px 14px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '15px', fontWeight: '700', color: 'var(--text)', background: 'var(--bg)' }}>
-            {formatBRL(valorImovel)}
-          </div>
-        </div>
-
-        {/* Renda + Entrada */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          {[
-            { label: 'Renda familiar bruta', val: renda, set: (v: string) => { setRenda(fmtInput(v)); setErro(''); }, ph: '3.000' },
-            { label: 'Entrada disponível', val: entrada, set: (v: string) => setEntrada(fmtInput(v)), ph: '0' },
-          ].map(({ label, val, set, ph }) => (
-            <div key={label}>
-              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px' }}>{label}</p>
-              <div style={{ position: 'relative' }}>
-                <span style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', fontSize: '13px', fontWeight: '600' }}>R$</span>
-                <input type="text" inputMode="numeric" value={val} onChange={e => set(e.target.value)} placeholder={ph}
-                  style={{ width: '100%', padding: '11px 12px 11px 34px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontWeight: '600', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* FGTS */}
-        <div>
-          <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px' }}>FGTS disponível</p>
-          <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', fontSize: '13px', fontWeight: '600' }}>R$</span>
-            <input type="text" inputMode="numeric" value={fgts} onChange={e => setFgts(fmtInput(e.target.value))} placeholder="0"
-              style={{ width: '100%', padding: '11px 12px 11px 34px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontWeight: '600', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-          </div>
-          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>FGTS reduz o valor financiado e amplia seu poder de compra</p>
-        </div>
-
-        {/* Poder de compra — preview */}
-        {poderTotal > 0 && (
-          <div style={{ background: dentroAlcance ? '#E1F5EE' : '#FEF3C7', border: `1px solid ${dentroAlcance ? '#A7F3D0' : '#FCD34D'}`, borderRadius: '12px', padding: '14px 16px' }}>
-            <p style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Seu Poder de Compra</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px', textAlign: 'center' }}>
-              <div>
-                <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>Financiamento</p>
-                <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>
-                  {formatBRL(poder ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) : 0)}
-                </p>
-              </div>
-              <div>
-                <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>FGTS</p>
-                <p style={{ fontSize: '13px', fontWeight: '800', color: '#0F6E56' }}>{formatBRL(fg)}</p>
-              </div>
-              <div>
-                <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>Entrada</p>
-                <p style={{ fontSize: '13px', fontWeight: '800', color: '#7C3AED' }}>{formatBRL(en)}</p>
-              </div>
-            </div>
-            <div style={{ borderTop: `1px solid ${dentroAlcance ? '#A7F3D0' : '#FCD34D'}`, paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: dentroAlcance ? '#085041' : '#854F0B' }}>
-                {dentroAlcance ? '✅' : '⚠️'} Total: {formatBRL(poderTotal)}
-              </span>
-              <span style={{ fontSize: '11px', color: dentroAlcance ? '#085041' : '#854F0B', fontWeight: '600' }}>
-                {dentroAlcance
-                  ? `${formatBRL(Math.abs(diffPoder))} abaixo do preço`
-                  : `${formatBRL(Math.abs(diffPoder))} acima do preço`}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Prazo */}
-        <div>
-          <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Prazo</p>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {['20','25','30','35'].map(v => (
-              <button key={v} onClick={() => setPrazo(v)} style={{ flex: 1, padding: '9px 0', borderRadius: '10px', fontSize: '13px', fontWeight: prazo === v ? '800' : '500', border: `2px solid ${prazo === v ? 'var(--primary)' : 'var(--border)'}`, background: prazo === v ? 'var(--primary-light)' : 'var(--bg)', color: prazo === v ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 0.15s' }}>
-                {v} anos
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Na planta toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: '10px' }}>
-          <div>
-            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', margin: 0 }}>Imóvel na planta / em obra</p>
-            <p style={{ fontSize: '11px', color: 'var(--text-faint)', margin: '2px 0 0' }}>Simula juros evolutivos durante a construção</p>
-          </div>
-          <button onClick={() => setNaPlanta(p => !p)} style={{ width: '44px', height: '24px', borderRadius: '99px', border: 'none', cursor: 'pointer', background: naPlanta ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-            <span style={{ position: 'absolute', top: '2px', left: naPlanta ? '22px' : '2px', width: '20px', height: '20px', borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
-          </button>
-        </div>
-
-        {erro && <p style={{ fontSize: '12px', color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: '8px' }}>⚠️ {erro}</p>}
-
-        <button onClick={calcular} style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))', color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontSize: '14px', fontWeight: '800', cursor: 'pointer', width: '100%', boxShadow: '0 4px 16px rgba(37,99,235,.3)', transition: 'opacity 0.15s' }}>
-          Calcular parcelas →
-        </button>
-
-        {resultado && (
-          <div style={{ background: alerta ? 'rgba(239,68,68,.06)' : 'rgba(22,163,74,.06)', border: `1px solid ${alerta ? 'rgba(239,68,68,.25)' : 'rgba(22,163,74,.25)'}`, borderRadius: '12px', padding: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>1ª Parcela</p>
-                <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : 'var(--primary)' }}>{formatBRL(parcela)}</p>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Compromete</p>
-                <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : '#16a34a' }}>{comprometimento}%</p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '8px', fontSize: '12px', color: 'var(--text-muted)', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <span>📋 {resultado.modalidade}</span>
-              <span>·</span>
-              <span>🏦 {resultado.taxaAnual.toFixed(2)}% a.a. + TR</span>
-              <span>·</span>
-              <span>💰 Financia {formatBRL(resultado.valorFinanciado)}</span>
-            </div>
-            {resultado.obraAlerta && (
-              <p style={{ fontSize: '11px', color: '#854F0B', background: '#FAEEDA', borderRadius: '8px', padding: '8px 10px', marginTop: '10px' }}>
-                🏗️ {resultado.obraAlerta}
-              </p>
-            )}
-            {resultado.subsidioEstimado > 0 && (
-              <p style={{ fontSize: '11px', color: '#085041', background: '#E1F5EE', borderRadius: '8px', padding: '8px 10px', marginTop: '8px' }}>
-                ✅ Subsídio estimado: {formatBRL(resultado.subsidioEstimado)}
-              </p>
-            )}
-            {alerta && <p style={{ fontSize: '11px', color: '#dc2626', textAlign: 'center', marginTop: '10px' }}>⚠️ Comprometimento acima de 30% — o banco pode exigir codevedor ou entrada maior.</p>}
-            <Link href={`/simulador?valorImovel=${resultado.valorImovel}&entrada=${en}&renda=${parseMoeda(renda)}&prazo=${prazo}`}
-              style={{ display: 'block', textAlign: 'center', marginTop: '12px', fontSize: '12px', fontWeight: '700', color: 'var(--primary)', textDecoration: 'none' }}>
-              Ver simulação completa no FinancieCerto →
-            </Link>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+function calcEstimate(valorImovel: number) {
+  const entrada = Math.round(valorImovel * 0.20);
+  const financiado = valorImovel - entrada;
+  // Renda sugerida: parcela Price a 10.5% a.a., 30 anos ≤ 30% renda
+  const i = (10.5 / 100) / 12;
+  const n = 360;
+  const parcela = Math.round(financiado * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1) + (financiado * 0.00003) + 25);
+  const rendaSugerida = Math.ceil(parcela / 0.30 / 100) * 100;
+  // MCMV eligibility
+  const faixaMCMV = FAIXAS.find(f => valorImovel <= f.teto) ?? null;
+  return { entrada, parcela, rendaSugerida, faixaMCMV };
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Gallery com lightbox
-// ──────────────────────────────────────────────────────────────────────────────
-function Gallery({ photos, name }: { photos: string[]; name: string }) {
-  const [active, setActive] = useState(0);
-  const [imgErr, setImgErr] = useState<Record<number, boolean>>({});
-  const [lightbox, setLightbox] = useState(false);
+function isNaPlanta(status: string) {
+  const k = status.toLowerCase();
+  return k.includes('planta') || k.includes('lança') || k.includes('constru') || k.includes('obra') || k.includes('andamento');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero Gallery
+// ─────────────────────────────────────────────────────────────────────────────
+function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
+  const [current, setCurrent] = useState(0);
+  const [lightbox, setLightbox] = useState<number | null>(null);
+  const total = photos.length;
 
   useEffect(() => {
-    if (!lightbox) return;
+    if (lightbox === null) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setLightbox(false);
-      if (e.key === 'ArrowLeft') setActive(p => Math.max(0, p - 1));
-      if (e.key === 'ArrowRight') setActive(p => Math.min(photos.length - 1, p + 1));
+      if (e.key === 'ArrowRight') setLightbox(l => l !== null ? (l + 1) % total : null);
+      if (e.key === 'ArrowLeft')  setLightbox(l => l !== null ? (l - 1 + total) % total : null);
+      if (e.key === 'Escape')     setLightbox(null);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [lightbox, photos.length]);
+  }, [lightbox, total]);
 
-  if (!photos.length) {
-    return (
-      <div style={{ height: '380px', borderRadius: '16px', background: 'linear-gradient(145deg, #1e3a5f 0%, #0f2744 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-        <span style={{ fontSize: '56px' }}>🏙️</span>
-        <span style={{ fontSize: '14px', color: 'rgba(255,255,255,.4)' }}>Sem fotos disponíveis</span>
-      </div>
-    );
-  }
+  if (!total) return (
+    <div style={{ height: '360px', background: 'linear-gradient(135deg, #E2E8F0, #CBD5E1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>🏙️</div>
+  );
 
   return (
     <>
-      {/* Lightbox */}
-      {lightbox && (
-        <div onClick={() => setLightbox(false)} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,.92)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <button onClick={() => setLightbox(false)} style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: '44px', height: '44px', color: '#fff', fontSize: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-          <span style={{ position: 'absolute', top: '24px', left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,.6)', fontSize: '13px', fontWeight: '600' }}>{active + 1} / {photos.length}</span>
-          <div onClick={e => e.stopPropagation()} style={{ position: 'relative', maxWidth: '90vw', maxHeight: '85vh' }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photos[active]} alt={`${name} - foto ${active + 1}`} style={{ maxWidth: '90vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: '8px', display: 'block' }} />
-            {photos.length > 1 && (
-              <>
-                <button onClick={e => { e.stopPropagation(); setActive(p => Math.max(0, p - 1)); }} disabled={active === 0} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,.55)', border: 'none', borderRadius: '50%', width: '42px', height: '42px', color: '#fff', fontSize: '20px', cursor: active === 0 ? 'default' : 'pointer', opacity: active === 0 ? 0.25 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-                <button onClick={e => { e.stopPropagation(); setActive(p => Math.min(photos.length - 1, p + 1)); }} disabled={active === photos.length - 1} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,.55)', border: 'none', borderRadius: '50%', width: '42px', height: '42px', color: '#fff', fontSize: '20px', cursor: active === photos.length - 1 ? 'default' : 'pointer', opacity: active === photos.length - 1 ? 0.25 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-              </>
-            )}
-          </div>
-          {photos.length > 1 && (
-            <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', overflowX: 'auto', maxWidth: '90vw', paddingBottom: '4px' }}>
-              {photos.map((p, i) => (
-                <button key={i} onClick={() => setActive(i)} style={{ flexShrink: 0, width: '60px', height: '42px', borderRadius: '6px', overflow: 'hidden', border: `2px solid ${i === active ? '#fff' : 'transparent'}`, padding: 0, cursor: 'pointer', background: '#1e293b', opacity: i === active ? 1 : 0.55, transition: 'all 0.15s' }}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </button>
-              ))}
-            </div>
-          )}
+      {/* Main hero */}
+      <div style={{ position: 'relative', height: 'min(520px, 56vw)', minHeight: '280px', background: '#000', overflow: 'hidden' }}>
+        {photos.map((p, i) => (
+          <img key={i} src={p} alt={`${name} foto ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'}
+            onClick={() => setLightbox(i)}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: i === current ? 1 : 0, transition: 'opacity 0.4s ease', cursor: 'zoom-in' }} />
+        ))}
+        {/* Gradient overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.5) 0%, transparent 40%)' }} />
+
+        {/* Nav arrows */}
+        {total > 1 && (
+          <>
+            <button onClick={() => setCurrent(c => (c - 1 + total) % total)}
+              style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,.55)', color: '#fff', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+            <button onClick={() => setCurrent(c => (c + 1) % total)}
+              style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,.55)', color: '#fff', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+          </>
+        )}
+
+        {/* Counter */}
+        <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: '12px', fontWeight: '600', padding: '4px 10px', borderRadius: '20px' }}>
+          {current + 1} / {total}
+        </div>
+      </div>
+
+      {/* Thumbnail strip */}
+      {total > 1 && (
+        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '8px 0', scrollbarWidth: 'none' }}>
+          {photos.map((p, i) => (
+            <img key={i} src={p} alt="" onClick={() => setCurrent(i)}
+              style={{ width: '72px', height: '52px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0, cursor: 'pointer', opacity: i === current ? 1 : 0.55, border: i === current ? '2px solid var(--primary)' : '2px solid transparent', transition: 'all 0.15s' }} />
+          ))}
         </div>
       )}
 
-      {/* Foto principal */}
-      <div onClick={() => setLightbox(true)} style={{ height: '380px', borderRadius: '16px', overflow: 'hidden', position: 'relative', background: '#0f172a', cursor: 'zoom-in' }}>
-        {!imgErr[active] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photos[active]} alt={`${name} - foto ${active + 1}`} onError={() => setImgErr(p => ({ ...p, [active]: true }))} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <div style={{ width: '100%', height: '100%', background: 'linear-gradient(145deg, #1e3a5f, #0f2744)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '48px' }}>🏙️</span>
-          </div>
-        )}
-        <span style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(0,0,0,.45)', backdropFilter: 'blur(4px)', color: '#fff', fontSize: '12px', fontWeight: '700', padding: '4px 10px', borderRadius: '99px' }}>
-          ⛶ Ver todas as fotos
-        </span>
-        {photos.length > 1 && (
-          <span style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(0,0,0,.55)', backdropFilter: 'blur(6px)', color: '#fff', fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '99px' }}>
-            {active + 1} / {photos.length}
-          </span>
-        )}
-        {photos.length > 1 && (
-          <>
-            <button onClick={e => { e.stopPropagation(); setActive(p => Math.max(0, p - 1)); }} disabled={active === 0} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,.45)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', color: '#fff', fontSize: '16px', cursor: active === 0 ? 'default' : 'pointer', opacity: active === 0 ? 0.3 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-            <button onClick={e => { e.stopPropagation(); setActive(p => Math.min(photos.length - 1, p + 1)); }} disabled={active === photos.length - 1} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,.45)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', color: '#fff', fontSize: '16px', cursor: active === photos.length - 1 ? 'default' : 'pointer', opacity: active === photos.length - 1 ? 0.3 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-          </>
-        )}
-      </div>
-
-      {/* Miniaturas */}
-      {photos.length > 1 && (
-        <div style={{ display: 'flex', gap: '8px', marginTop: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {photos.map((p, i) => (
-            <button key={i} onClick={() => setActive(i)} style={{ flexShrink: 0, width: '72px', height: '50px', borderRadius: '8px', overflow: 'hidden', border: `2px solid ${i === active ? 'var(--primary)' : 'transparent'}`, padding: 0, cursor: 'pointer', background: '#0f172a' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={p} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </button>
-          ))}
+      {/* Lightbox */}
+      {lightbox !== null && (
+        <div onClick={() => setLightbox(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button
+            style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}
+            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l - 1 + total) % total : null); }}>‹</button>
+          <img src={photos[lightbox]} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }} />
+          <button onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l + 1) % total : null); }}
+            style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}>›</button>
+          <button onClick={() => setLightbox(null)}
+            style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '20px', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer' }}>✕</button>
+          <div style={{ position: 'absolute', bottom: '20px', color: 'rgba(255,255,255,.7)', fontSize: '13px' }}>{lightbox + 1} / {total}</div>
         </div>
       )}
     </>
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Section Title
-// ──────────────────────────────────────────────────────────────────────────────
-function SectionTitle({ children }: { children: React.ReactNode }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// Sticky Section Nav
+// ─────────────────────────────────────────────────────────────────────────────
+const NAV_SECTIONS = [
+  { id: 'visao-geral',  label: 'Visão Geral' },
+  { id: 'financeiro',   label: '💰 Financeiro' },
+  { id: 'tipologias',   label: 'Tipologias' },
+  { id: 'diferenciais', label: 'Diferenciais' },
+  { id: 'localizacao',  label: 'Localização' },
+  { id: 'relacionados', label: 'Similares' },
+];
+function StickyNav({ hasTypologies, hasAmenities }: { hasTypologies: boolean; hasAmenities: boolean }) {
+  const [active, setActive] = useState('visao-geral');
+  const sections = NAV_SECTIONS.filter(s =>
+    (s.id !== 'tipologias'   || hasTypologies) &&
+    (s.id !== 'diferenciais' || hasAmenities)
+  );
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) setActive(e.target.id); });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    sections.forEach(s => {
+      const el = document.getElementById(s.id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <h2 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', marginBottom: '14px' }}>
-      {children}
-    </h2>
+    <nav style={{ position: 'sticky', top: 'var(--header-h)', zIndex: 100, background: 'rgba(255,255,255,.97)', borderBottom: '1px solid var(--border)', backdropFilter: 'blur(12px)', overflowX: 'auto', scrollbarWidth: 'none' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px', display: 'flex', gap: '4px' }}>
+        {sections.map(s => (
+          <a key={s.id} href={`#${s.id}`}
+            onClick={() => setActive(s.id)}
+            style={{ padding: '12px 14px', fontSize: '13px', fontWeight: active === s.id ? '700' : '500', color: active === s.id ? 'var(--primary)' : 'var(--text-muted)', borderBottom: active === s.id ? '2px solid var(--primary)' : '2px solid transparent', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+            {s.label}
+          </a>
+        ))}
+      </div>
+    </nav>
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Bloco Financeiro — card lateral sticky (diferencial FinancieCerto)
+// ─────────────────────────────────────────────────────────────────────────────
+function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
+  const valorRef = imovel.min_price ?? imovel.max_price ?? 0;
+  const est = valorRef > 0 ? calcEstimate(valorRef) : null;
+
+  // Simulator state
+  const [expanded, setExpanded] = useState(false);
+  const [renda, setRenda]   = useState('');
+  const [entrada, setEntrada] = useState('');
+  const [fgts, setFgts]     = useState('');
+  const [prazo, setPrazo]   = useState('30');
+  const [naPlanta, setNaPlanta] = useState(isNaPlanta(imovel.status || ''));
+  const [resultado, setResultado] = useState<ReturnType<typeof simular> | null>(null);
+  const [poder, setPoder]   = useState<ReturnType<typeof descobrir> | null>(null);
+  const [erro, setErro]     = useState('');
+  const [ctxLoaded, setCtxLoaded] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem('joao_sim_context') || sessionStorage.getItem('fc_sim_context');
+      if (!raw) return;
+      const ctx = JSON.parse(raw) as Record<string, unknown>;
+      if (ctx.renda)   setRenda(fmtInput(String(ctx.renda)));
+      if (ctx.fgts)    setFgts(fmtInput(String(ctx.fgts)));
+      if (ctx.entrada) setEntrada(fmtInput(String(ctx.entrada)));
+      if (ctx.renda || ctx.fgts || ctx.entrada) setCtxLoaded(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const r = parseMoeda(renda);
+    const f = parseMoeda(fgts);
+    const e = parseMoeda(entrada);
+    if (r >= 800) setPoder(descobrir(r, f, e, parseInt(prazo), 35));
+    else setPoder(null);
+  }, [renda, fgts, entrada, prazo]);
+
+  function calcular() {
+    const r  = parseMoeda(renda);
+    const en = parseMoeda(entrada);
+    const fg = parseMoeda(fgts);
+    if (!r || r < 800) { setErro('Informe sua renda mensal.'); return; }
+    if (!valorRef)     { setErro('Valor do imóvel não disponível.'); return; }
+    if (en + fg >= valorRef) { setErro('Entrada + FGTS não pode ser maior que o imóvel.'); return; }
+    setErro('');
+    setResultado(simular({ rendaBruta: r, entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: 35 }));
+  }
+
+  const fg = parseMoeda(fgts);
+  const en = parseMoeda(entrada);
+  const poderTotal = poder ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) + fg + en : 0;
+  const dentroAlcance = poderTotal > 0 && poderTotal >= valorRef;
+  const diffPoder = poderTotal - valorRef;
+
+  const waMsg = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.`);
+
+  return (
+    <div id="financeiro" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
+
+      {/* Header do bloco */}
+      <div style={{ padding: '20px 20px 0', background: 'linear-gradient(135deg, #0f172a, #1e3a5f)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>FinancieCerto</span>
+        </div>
+        <p style={{ fontSize: '14px', fontWeight: '700', color: '#fff', marginBottom: '16px' }}>Análise Financeira Instantânea</p>
+
+        {/* Preço */}
+        <div style={{ background: 'rgba(255,255,255,.08)', borderRadius: '12px', padding: '14px 16px', marginBottom: '16px' }}>
+          {imovel.min_price && imovel.max_price && imovel.min_price !== imovel.max_price ? (
+            <>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.55)', marginBottom: '4px' }}>Faixa de preço</p>
+              <p style={{ fontSize: '22px', fontWeight: '900', color: '#fff', lineHeight: 1 }}>
+                {formatBRL(imovel.min_price)} <span style={{ fontSize: '14px', fontWeight: '400', color: 'rgba(255,255,255,.6)' }}>até</span> {formatBRL(imovel.max_price)}
+              </p>
+            </>
+          ) : valorRef > 0 ? (
+            <>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.55)', marginBottom: '4px' }}>A partir de</p>
+              <p style={{ fontSize: '26px', fontWeight: '900', color: '#fff', lineHeight: 1 }}>{formatBRL(valorRef)}</p>
+            </>
+          ) : (
+            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,.6)' }}>Consulte preço</p>
+          )}
+        </div>
+      </div>
+
+      <div style={{ padding: '20px' }}>
+        {/* Estimativas instantâneas */}
+        {est && valorRef > 0 && (
+          <div style={{ marginBottom: '18px' }}>
+            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Estimativas sem perfil</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {[
+                { label: 'Renda sugerida', value: formatBRL(est.rendaSugerida) + '/mês', icon: '💼', color: '#2563eb' },
+                { label: 'Entrada (20%)', value: formatBRL(est.entrada), icon: '🏦', color: '#7c3aed' },
+                { label: 'Parcela estimada', value: formatBRL(est.parcela) + '/mês', icon: '📅', color: '#0f6e56' },
+                { label: est.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : 'SBPE / SFI', value: est.faixaMCMV ? est.faixaMCMV.rendaLabel : 'Renda livre', icon: est.faixaMCMV ? '🏠' : '🏛️', color: est.faixaMCMV ? '#16a34a' : '#d97706' },
+              ].map(({ label, value, icon, color }) => (
+                <div key={label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px' }}>
+                  <div style={{ fontSize: '16px', marginBottom: '4px' }}>{icon}</div>
+                  <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>{label}</p>
+                  <p style={{ fontSize: '13px', fontWeight: '800', color }}>{value}</p>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginTop: '8px', textAlign: 'center' }}>
+              * Estimativas SBPE, 30 anos, sem subsídio. Simule para valores precisos.
+            </p>
+          </div>
+        )}
+
+        {/* Botão expandir simulador */}
+        {!expanded ? (
+          <button onClick={() => setExpanded(true)}
+            style={{ width: '100%', background: 'linear-gradient(135deg, var(--primary), var(--accent))', color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontSize: '14px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 16px rgba(37,99,235,.3)', marginBottom: '10px' }}>
+            Simular este imóvel →
+          </button>
+        ) : (
+          /* Simulador expandido */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)' }}>Simulador personalizado</p>
+              {ctxLoaded && (
+                <span style={{ fontSize: '11px', color: '#085041', background: '#E1F5EE', padding: '3px 8px', borderRadius: '20px', fontWeight: '600' }}>✓ Perfil carregado</span>
+              )}
+            </div>
+
+            {/* Campos */}
+            {[
+              { label: 'Renda familiar bruta', val: renda, set: (v: string) => { setRenda(fmtInput(v)); setErro(''); }, ph: '5.000' },
+              { label: 'Entrada disponível', val: entrada, set: (v: string) => setEntrada(fmtInput(v)), ph: '0' },
+              { label: 'FGTS disponível', val: fgts, set: (v: string) => setFgts(fmtInput(v)), ph: '0' },
+            ].map(({ label, val, set, ph }) => (
+              <div key={label}>
+                <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px' }}>{label}</p>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', fontSize: '13px', fontWeight: '600' }}>R$</span>
+                  <input type="text" inputMode="numeric" value={val} onChange={e => set(e.target.value)} placeholder={ph}
+                    style={{ width: '100%', padding: '10px 12px 10px 32px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontWeight: '600', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+            ))}
+
+            {/* Poder de compra preview */}
+            {poderTotal > 0 && (
+              <div style={{ background: dentroAlcance ? '#E1F5EE' : '#FEF3C7', border: `1px solid ${dentroAlcance ? '#A7F3D0' : '#FCD34D'}`, borderRadius: '12px', padding: '12px 14px' }}>
+                <p style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Seu Poder de Compra</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px', textAlign: 'center' }}>
+                  <div>
+                    <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Financiamento</p>
+                    <p style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary)' }}>{formatBRL(poder ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) : 0)}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>FGTS</p>
+                    <p style={{ fontSize: '12px', fontWeight: '800', color: '#0F6E56' }}>{formatBRL(fg)}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Entrada</p>
+                    <p style={{ fontSize: '12px', fontWeight: '800', color: '#7C3AED' }}>{formatBRL(en)}</p>
+                  </div>
+                </div>
+                <div style={{ borderTop: `1px solid ${dentroAlcance ? '#A7F3D0' : '#FCD34D'}`, paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: dentroAlcance ? '#085041' : '#854F0B' }}>
+                    {dentroAlcance ? '✅' : '⚠️'} {formatBRL(poderTotal)}
+                  </span>
+                  <span style={{ fontSize: '11px', color: dentroAlcance ? '#085041' : '#854F0B', fontWeight: '600' }}>
+                    {dentroAlcance ? `${formatBRL(diffPoder)} de sobra` : `${formatBRL(Math.abs(diffPoder))} acima`}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Prazo */}
+            <div>
+              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Prazo</p>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {['20','25','30','35'].map(v => (
+                  <button key={v} onClick={() => setPrazo(v)} style={{ flex: 1, padding: '8px 0', borderRadius: '8px', fontSize: '12px', fontWeight: prazo === v ? '800' : '500', border: `2px solid ${prazo === v ? 'var(--primary)' : 'var(--border)'}`, background: prazo === v ? 'var(--primary-light)' : 'var(--bg)', color: prazo === v ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer' }}>{v}a</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Na planta toggle */}
+            {isNaPlanta(imovel.status || '') && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(37,99,235,.06)', border: '1px solid rgba(37,99,235,.2)', borderRadius: '10px' }}>
+                <div>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text)', margin: 0 }}>Juros evolutivos (obra)</p>
+                  <p style={{ fontSize: '10px', color: 'var(--text-faint)', margin: '2px 0 0' }}>Simula o período de construção</p>
+                </div>
+                <button onClick={() => setNaPlanta(p => !p)} style={{ width: '40px', height: '22px', borderRadius: '99px', border: 'none', cursor: 'pointer', background: naPlanta ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+                  <span style={{ position: 'absolute', top: '2px', left: naPlanta ? '20px' : '2px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+                </button>
+              </div>
+            )}
+
+            {erro && <p style={{ fontSize: '12px', color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: '8px' }}>⚠️ {erro}</p>}
+
+            <button onClick={calcular} style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))', color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontSize: '14px', fontWeight: '800', cursor: 'pointer', width: '100%', boxShadow: '0 4px 16px rgba(37,99,235,.3)' }}>
+              Calcular parcelas →
+            </button>
+
+            {resultado && (() => {
+              const parcela = resultado.parcelaPrimeiro;
+              const comprometimento = parseMoeda(renda) > 0 ? Math.round((parcela / parseMoeda(renda)) * 100) : 0;
+              const alerta = comprometimento > 30;
+              return (
+                <div style={{ background: alerta ? 'rgba(239,68,68,.06)' : 'rgba(22,163,74,.06)', border: `1px solid ${alerta ? 'rgba(239,68,68,.25)' : 'rgba(22,163,74,.25)'}`, borderRadius: '12px', padding: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>1ª Parcela</p>
+                      <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : 'var(--primary)' }}>{formatBRL(parcela)}</p>
+                    </div>
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Comprometimento</p>
+                      <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : '#16a34a' }}>{comprometimento}%</p>
+                    </div>
+                  </div>
+                  {alerta && <p style={{ fontSize: '12px', color: '#dc2626', textAlign: 'center' }}>⚠️ Acima de 30% da renda — risco de reprovação</p>}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                    {[
+                      { l: 'Tabela Price', v: formatBRL(resultado.parcelaPrimeiro) },
+                      { l: 'SAC (1ª)', v: formatBRL(resultado.parcelaSACPrimeiro) },
+                      { l: 'Valor financiado', v: formatBRL(resultado.valorFinanciado) },
+                      { l: 'Total pago (Price)', v: formatBRL(resultado.totalPagoPrice) },
+                    ].map(({ l, v }) => (
+                      <div key={l} style={{ textAlign: 'center' }}>
+                        <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>{l}</p>
+                        <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>{v}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* CTA WhatsApp */}
+        <a href={`https://wa.me/5511999999999?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
+          <span>💬</span> Falar com consultor
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tipologias em cards
+// ─────────────────────────────────────────────────────────────────────────────
+function SecaoTipologias({ typologies }: { typologies: Tipologia[] }) {
+  if (!typologies.length) return null;
+  return (
+    <div id="tipologias" style={{ scrollMarginTop: '100px' }}>
+      <SectionHeader title="Tipologias" subtitle="Plantas e configurações disponíveis" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+        {typologies.map((t, i) => (
+          <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', transition: 'box-shadow 0.2s' }}>
+            {t.photo && (
+              <img src={t.photo} alt={t.type} style={{ width: '100%', height: '140px', objectFit: 'cover' }} />
+            )}
+            <div style={{ padding: '16px' }}>
+              <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)', marginBottom: '12px' }}>{t.type}</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                {t.area && <SpecChip icon="▦" label={`${t.area} m²`} />}
+                {t.bedrooms !== null && <SpecChip icon="🛏" label={`${t.bedrooms} quarto${t.bedrooms !== 1 ? 's' : ''}`} />}
+                {t.suites !== null && <SpecChip icon="🛁" label={`${t.suites} suíte${t.suites !== 1 ? 's' : ''}`} />}
+                {t.vagas !== null && <SpecChip icon="🚗" label={`${t.vagas} vaga${t.vagas !== 1 ? 's' : ''}`} />}
+                {t.bathrooms !== null && <SpecChip icon="🚿" label={`${t.bathrooms} ban.`} />}
+              </div>
+              {t.price && Number(t.price) > 0 && (
+                <p style={{ fontSize: '15px', fontWeight: '900', color: 'var(--primary)' }}>{formatBRL(Number(t.price))}</p>
+              )}
+              {t.blueprint && (
+                <a href={t.blueprint} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', fontSize: '12px', fontWeight: '600', color: 'var(--primary)', textDecoration: 'none' }}>
+                  📐 Ver planta
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SpecChip({ icon, label }: { icon: string; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '4px 8px' }}>
+      <span style={{ fontSize: '12px' }}>{icon}</span>
+      <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)' }}>{label}</span>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diferenciais & Lazer
+// ─────────────────────────────────────────────────────────────────────────────
+const AMENITY_ICONS: Record<string, string> = {
+  piscina: '🏊', academia: '🏋️', salão: '🎉', churrasqueira: '🔥',
+  playground: '🛝', portaria: '🔐', elevador: '🛗', garden: '🌿',
+  sauna: '♨️', spa: '💆', 'espaço gourmet': '🍽️', coworking: '💻',
+  brinquedoteca: '🧸', pet: '🐾', quadra: '🎾', cinema: '🎬',
+  bike: '🚴', lavanderia: '🫧', rooftop: '🌆', concierge: '🫡',
+};
+function getAmenityIcon(name: string): string {
+  const lower = name.toLowerCase();
+  for (const [key, icon] of Object.entries(AMENITY_ICONS)) {
+    if (lower.includes(key)) return icon;
+  }
+  return '✨';
+}
+
+function SecaoDiferenciais({ amenities }: { amenities: string[] }) {
+  if (!amenities.length) return null;
+  return (
+    <div id="diferenciais" style={{ scrollMarginTop: '100px' }}>
+      <SectionHeader title="Diferenciais & Lazer" subtitle={`${amenities.length} itens de lazer e infraestrutura`} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
+        {amenities.map((a, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px 14px' }}>
+            <span style={{ fontSize: '20px', flexShrink: 0 }}>{getAmenityIcon(a)}</span>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text)', lineHeight: 1.3 }}>{a}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Localização contextual
+// ─────────────────────────────────────────────────────────────────────────────
+function SecaoLocalizacao({ imovel }: { imovel: ImovelDetalhe }) {
+  return (
+    <div id="localizacao" style={{ scrollMarginTop: '100px' }}>
+      <SectionHeader title="Localização" subtitle={`${imovel.neighborhood} · ${imovel.city}, ${imovel.state}`} />
+
+      {/* Context chips */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px' }}>
+        {[
+          { icon: '📍', label: imovel.neighborhood },
+          { icon: '🏙️', label: imovel.city },
+          imovel.address_full && { icon: '🗺️', label: imovel.address_full },
+          imovel.zipcode && { icon: '📮', label: `CEP ${imovel.zipcode}` },
+        ].filter(Boolean).map((item, i) => {
+          const { icon, label } = item as { icon: string; label: string };
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '6px 14px' }}>
+              <span style={{ fontSize: '14px' }}>{icon}</span>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>{label}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Map */}
+      {imovel.latitude && imovel.longitude ? (
+        <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid var(--border)', height: '300px' }}>
+          <iframe
+            title="Localização do imóvel"
+            width="100%" height="300"
+            style={{ border: 'none', display: 'block' }}
+            src={`https://maps.google.com/maps?q=${imovel.latitude},${imovel.longitude}&z=15&output=embed`}
+          />
+        </div>
+      ) : (
+        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
+          <span style={{ fontSize: '32px' }}>🗺️</span>
+          <p style={{ color: 'var(--text-faint)', fontSize: '13px' }}>Mapa não disponível</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Imóveis relacionados
+// ─────────────────────────────────────────────────────────────────────────────
+function SecaoRelacionados({ neighborhood, currentId }: { neighborhood: string; currentId: string }) {
+  const [relacionados, setRelacionados] = useState<RelatedImovel[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!neighborhood) return;
+    fetch(`/api/orulo?bairro=${encodeURIComponent(neighborhood)}&per_page=7`)
+      .then(r => r.json())
+      .then((data: RelatedImovel[]) => {
+        setRelacionados(data.filter(im => im.id !== currentId).slice(0, 6));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [neighborhood, currentId]);
+
+  if (loading) return null;
+  if (!relacionados.length) return null;
+
+  return (
+    <div id="relacionados" style={{ scrollMarginTop: '100px' }}>
+      <SectionHeader title="Imóveis no mesmo bairro" subtitle={`Mais opções em ${neighborhood}`} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+        {relacionados.map(im => {
+          const sc = getStatus(im.status || '');
+          return (
+            <Link key={im.id} href={`/imoveis/${im.id}`}
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', textDecoration: 'none', transition: 'box-shadow 0.2s', display: 'block' }}>
+              <div style={{ height: '140px', background: '#E2E8F0', position: 'relative', overflow: 'hidden' }}>
+                {im.photos?.[0] ? (
+                  <img src={im.photos[0]} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>🏢</div>
+                )}
+                <div style={{ position: 'absolute', top: '10px', left: '10px', background: sc.bg, color: sc.cor, border: `1px solid ${sc.cor}33`, borderRadius: '20px', padding: '3px 10px', fontSize: '10px', fontWeight: '700' }}>
+                  {sc.label}
+                </div>
+              </div>
+              <div style={{ padding: '14px' }}>
+                <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{im.name}</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginBottom: '10px' }}>{im.developer}</p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                  {im.bedrooms_min !== null && <SpecChip icon="🛏" label={`${im.bedrooms_min}${im.bedrooms_min !== im.bedrooms_max && im.bedrooms_max ? `–${im.bedrooms_max}` : ''} qts`} />}
+                  {im.area_min !== null && <SpecChip icon="▦" label={`${im.area_min}m²`} />}
+                </div>
+                {im.min_price && (
+                  <p style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)' }}>
+                    {formatBRL(im.min_price)}
+                    {im.max_price && im.max_price !== im.min_price && <span style={{ fontWeight: '400', color: 'var(--text-faint)', fontSize: '11px' }}> – {formatBRL(im.max_price)}</span>}
+                  </p>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section Header helper
+// ─────────────────────────────────────────────────────────────────────────────
+function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text)', marginBottom: '4px' }}>{title}</h2>
+      {subtitle && <p style={{ fontSize: '13px', color: 'var(--text-faint)' }}>{subtitle}</p>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Page
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 export default function ImovelDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [imovel, setImovel] = useState<ImovelDetalhe | null>(null);
@@ -458,29 +727,22 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
         if (!res.ok) throw new Error('Não encontrado');
         const data: ImovelDetalhe = await res.json();
         setImovel(data);
-        // Salva contexto do imóvel para o João consultor
+        // Salva contexto para João consultor
         try {
-          const imovelCtx = {
-            id: data.id, name: data.name, developer: data.developer,
-            minPrice: data.min_price, maxPrice: data.max_price,
-            status: data.status, neighborhood: data.neighborhood,
-            city: data.city, deliveryDate: data.delivery_date,
-          };
-          sessionStorage.setItem('fc_current_imovel', JSON.stringify(imovelCtx));
-          window.dispatchEvent(new StorageEvent('storage', { key: 'fc_current_imovel', newValue: JSON.stringify(imovelCtx) }));
+          const ctx = { id: data.id, name: data.name, developer: data.developer, minPrice: data.min_price, maxPrice: data.max_price, status: data.status, neighborhood: data.neighborhood, city: data.city, deliveryDate: data.delivery_date };
+          sessionStorage.setItem('fc_current_imovel', JSON.stringify(ctx));
+          window.dispatchEvent(new StorageEvent('storage', { key: 'fc_current_imovel', newValue: JSON.stringify(ctx) }));
         } catch { /* ignore */ }
-      } catch {
-        setErro('Imóvel não encontrado ou indisponível.');
-      } finally {
-        setLoading(false);
-      }
+      } catch { setErro('Imóvel não encontrado ou indisponível.'); }
+      finally { setLoading(false); }
     })();
   }, [id]);
 
   if (loading) return (
-    <div style={{ padding: '80px 24px', textAlign: 'center' }}>
-      <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏳</div>
+    <div style={{ padding: '120px 24px', textAlign: 'center' }}>
+      <div style={{ width: '48px', height: '48px', border: '4px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
       <p style={{ color: 'var(--text-muted)' }}>Carregando imóvel...</p>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
@@ -493,262 +755,152 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
   );
 
   const statusCfg = getStatus(imovel.status || '');
-  const pageUrl = typeof window !== 'undefined' ? window.location.href : (`https://www.financiecerto.com.br/imovel/${imovel.id}`);
-  const linkImovel = imovel.sharing_url || pageUrl;
-  const waMsg = encodeURIComponent(
-    `Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações. Link: ${linkImovel}`
-  );
-
   const specs = [
-    faixa(imovel.area_min, imovel.area_max, 'm²')             && { icon: '▦',  label: faixa(imovel.area_min, imovel.area_max, 'm²')! },
-    faixa(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos') && { icon: '🛏', label: faixa(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos')! },
-    faixa(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')  && { icon: '🚿', label: faixa(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')! },
-    faixa(imovel.vagas_min, imovel.vagas_max, 'vagas')         && { icon: '🚗', label: faixa(imovel.vagas_min, imovel.vagas_max, 'vagas')! },
+    faixaRange(imovel.area_min, imovel.area_max, 'm²')             && { icon: '▦',  label: faixaRange(imovel.area_min, imovel.area_max, 'm²')! },
+    faixaRange(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos') && { icon: '🛏', label: faixaRange(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos')! },
+    faixaRange(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')  && { icon: '🚿', label: faixaRange(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')! },
+    faixaRange(imovel.vagas_min, imovel.vagas_max, 'vagas')         && { icon: '🚗', label: faixaRange(imovel.vagas_min, imovel.vagas_max, 'vagas')! },
   ].filter(Boolean) as { icon: string; label: string }[];
-
-  // Colunas da tabela de tipologias
-  const hasPrivate = imovel.typologies.some(t => t.private_area);
-  const hasTotal   = imovel.typologies.some(t => t.total_area);
-  const hasVagas   = imovel.typologies.some(t => t.vagas !== null);
-  const hasSuites  = imovel.typologies.some(t => t.suites !== null);
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
 
-      {/* Breadcrumb */}
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px 24px 0', fontSize: '12px', color: 'var(--text-faint)' }}>
-        <Link href="/imoveis" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}>← Imóveis</Link>
-        <span style={{ margin: '0 8px' }}>·</span>
-        <span>{imovel.name}</span>
+      {/* ── Gallery Hero (full width) ────────────────────────────────────── */}
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px 24px 0' }}>
+        <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '12px' }}>
+          <Link href="/imoveis" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}>← Imóveis</Link>
+          <span style={{ margin: '0 6px' }}>·</span>
+          <span>{imovel.neighborhood}</span>
+          <span style={{ margin: '0 6px' }}>·</span>
+          <span style={{ color: 'var(--text)' }}>{imovel.name}</span>
+        </div>
       </div>
 
-      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '20px 24px 80px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: '32px', alignItems: 'start' }}>
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 24px' }}>
+        <HeroGallery photos={imovel.photos} name={imovel.name} />
+      </div>
 
-          {/* ── Coluna esquerda ─────────────────────────────────────────────── */}
-          <div>
-            <Gallery photos={imovel.photos} name={imovel.name} />
-
-            {/* Título + status */}
-            <div style={{ marginTop: '24px' }}>
-              {imovel.developer && (
-                <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: '6px' }}>
-                  {imovel.developer}
-                </p>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                <h1 style={{ fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: '900', color: 'var(--text)', lineHeight: 1.2 }}>
-                  {imovel.name}
-                </h1>
-                {imovel.status && (
-                  <span style={{ background: statusCfg.bg, border: `1px solid ${statusCfg.cor}50`, color: statusCfg.cor, fontSize: '10px', fontWeight: '800', padding: '3px 10px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
-                    {statusCfg.label}
-                  </span>
-                )}
-                {imovel.delivery_date && (
-                  <span style={{ background: 'rgba(100,116,139,.1)', color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '99px' }}>
-                    📅 Entrega: {imovel.delivery_date}
-                  </span>
-                )}
-              </div>
-              {(imovel.neighborhood || imovel.city) && (
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  📍 {[imovel.neighborhood, imovel.city, imovel.state].filter(Boolean).join(', ')}
-                </p>
-              )}
-              {imovel.address_full && (
-                <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>{imovel.address_full}{imovel.zipcode ? ` — CEP ${imovel.zipcode}` : ''}</p>
+      {/* ── Info bar abaixo da galeria ──────────────────────────────────── */}
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 24px 0' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '8px' }}>
+          <div style={{ flex: '1 1 auto' }}>
+            {/* Status + bairro */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px', flexWrap: 'wrap' }}>
+              <span style={{ background: statusCfg.bg, color: statusCfg.cor, border: `1px solid ${statusCfg.cor}40`, borderRadius: '20px', padding: '4px 12px', fontSize: '11px', fontWeight: '800', letterSpacing: '0.5px' }}>
+                {statusCfg.label}
+              </span>
+              <span style={{ fontSize: '13px', color: 'var(--text-faint)' }}>📍 {imovel.neighborhood} · {imovel.city}</span>
+              {imovel.delivery_date && (
+                <span style={{ fontSize: '12px', color: 'var(--text-faint)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '3px 10px' }}>
+                  🗓️ Entrega: {imovel.delivery_date}
+                </span>
               )}
             </div>
-
-            {/* Specs */}
-            {specs.length > 0 && (
-              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', padding: '18px 0', margin: '20px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
-                {specs.map(({ icon, label }, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '20px' }}>{icon}</span>
-                    <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Descrição */}
-            {imovel.description && (
-              <div style={{ marginBottom: '28px' }}>
-                <SectionTitle>Sobre o empreendimento</SectionTitle>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: 1.75 }}>{imovel.description}</p>
-              </div>
-            )}
-
-            {/* Amenidades */}
-            {imovel.amenities.length > 0 && (
-              <div style={{ marginBottom: '28px' }}>
-                <SectionTitle>Área de lazer e diferenciais</SectionTitle>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '8px' }}>
-                  {imovel.amenities.map((a, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '9px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                      <span style={{ color: 'var(--primary)', fontSize: '14px' }}>✓</span> {a}
-                    </div>
-                  ))}
+            {/* Nome */}
+            <h1 style={{ fontSize: 'clamp(20px, 4vw, 28px)', fontWeight: '900', color: 'var(--text)', marginBottom: '8px', lineHeight: 1.2 }}>{imovel.name}</h1>
+            {/* Construtora */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              {imovel.developer_logo && (
+                <img src={imovel.developer_logo} alt={imovel.developer} style={{ height: '24px', objectFit: 'contain' }} />
+              )}
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>{imovel.developer}</span>
+            </div>
+            {/* Specs row */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {specs.map(({ icon, label }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '6px 14px' }}>
+                  <span style={{ fontSize: '14px' }}>{icon}</span>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text)' }}>{label}</span>
                 </div>
-              </div>
-            )}
-
-            {/* Quadro de tipologias */}
-            {imovel.typologies.length > 0 && (
-              <div style={{ marginBottom: '28px' }}>
-                <SectionTitle>Quadro de áreas e tipologias</SectionTitle>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr>
-                        {[
-                          'Tipo',
-                          imovel.typologies.some(t => t.bedrooms) && '🛏 Quartos',
-                          hasSuites && '🛁 Suítes',
-                          imovel.typologies.some(t => t.bathrooms) && '🚿 Ban.',
-                          hasVagas && '🚗 Vagas',
-                          'Área',
-                          hasPrivate && 'Área Priv.',
-                          hasTotal && 'Área Total',
-                          'Preço',
-                        ].filter(Boolean).map(h => (
-                          <th key={h as string} style={{ textAlign: 'left', padding: '10px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)', fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', whiteSpace: 'nowrap' }}>
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {imovel.typologies.map((t, i) => (
-                        <tr key={i} style={{ background: i % 2 === 0 ? 'transparent' : 'var(--bg-card)' }}>
-                          <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: '600', whiteSpace: 'nowrap' }}>{t.type}</td>
-                          {imovel.typologies.some(x => x.bedrooms) && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'center' }}>{t.bedrooms ?? '—'}</td>}
-                          {hasSuites && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'center' }}>{t.suites ?? '—'}</td>}
-                          {imovel.typologies.some(x => x.bathrooms) && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'center' }}>{t.bathrooms ?? '—'}</td>}
-                          {hasVagas && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'center' }}>{t.vagas ?? '—'}</td>}
-                          <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>{t.area || '—'}</td>
-                          {hasPrivate && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>{t.private_area || '—'}</td>}
-                          {hasTotal && <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>{t.total_area || '—'}</td>}
-                          <td style={{ padding: '10px 14px', border: '1px solid var(--border)', color: 'var(--primary)', fontWeight: '700', whiteSpace: 'nowrap' }}>{t.price}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Plantas */}
-            {imovel.blueprints.length > 0 && (
-              <div style={{ marginBottom: '28px' }}>
-                <SectionTitle>Plantas</SectionTitle>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
-                  {imovel.blueprints.map((bp, i) => (
-                    <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={bp.url} alt={bp.name || `Planta ${i + 1}`} style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }} />
-                      {bp.name && (
-                        <p style={{ padding: '8px 12px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)' }}>{bp.name}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Mapa */}
-            {imovel.latitude && imovel.longitude && (
-              <div style={{ marginBottom: '28px' }}>
-                <SectionTitle>Localização</SectionTitle>
-                <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', height: '280px' }}>
-                  <iframe
-                    title="Localização do imóvel"
-                    width="100%"
-                    height="280"
-                    style={{ border: 0, display: 'block' }}
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={`https://maps.google.com/maps?q=${imovel.latitude},${imovel.longitude}&z=16&output=embed`}
-                  />
-                </div>
-                {imovel.address_full && (
-                  <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginTop: '8px' }}>📍 {imovel.address_full}</p>
-                )}
-              </div>
-            )}
-
-            {/* Incorporadora */}
-            {(imovel.developer_logo || imovel.developer) && (
-              <div style={{ marginBottom: '28px', padding: '20px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                {imovel.developer_logo && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imovel.developer_logo} alt={imovel.developer} style={{ height: '48px', objectFit: 'contain', maxWidth: '120px' }} />
-                )}
-                <div>
-                  <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '4px' }}>Incorporadora</p>
-                  <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)' }}>{imovel.developer}</p>
-                  {imovel.developer_website && (
-                    <a href={imovel.developer_website} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}>
-                      Ver site ↗
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
 
-          {/* ── Coluna direita: preço + CTAs + simulador ─────────────────────── */}
-          <div style={{ position: 'sticky', top: '80px' }}>
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
-              <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginBottom: '4px' }}>A partir de</p>
-              <p style={{ fontSize: '28px', fontWeight: '900', color: 'var(--text)', fontVariantNumeric: 'tabular-nums', lineHeight: 1, marginBottom: '4px' }}>
-                {imovel.min_price ? formatBRL(imovel.min_price) : 'Consultar'}
-              </p>
-              {imovel.max_price && imovel.max_price !== imovel.min_price && (
-                <p style={{ fontSize: '13px', color: 'var(--text-faint)', marginBottom: '8px' }}>até {formatBRL(imovel.max_price)}</p>
-              )}
-              {specs.length > 0 && (
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', padding: '12px 0', margin: '8px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
-                  {specs.map(({ icon, label }, i) => (
-                    <span key={i} style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '600' }}>{icon} {label}</span>
-                  ))}
-                </div>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
-                <a
-                  href={`https://wa.me/5511933661403?text=${waMsg}`}
-                  target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#25D366', color: '#fff', textDecoration: 'none', fontSize: '14px', fontWeight: '800', padding: '13px', borderRadius: '12px', boxShadow: '0 4px 16px rgba(37,211,102,.3)' }}
-                >
-                  💬 Falar com corretor
-                </a>
-                {imovel.sharing_url && (
-                  <a
-                    href={imovel.sharing_url}
-                    target="_blank" rel="noopener noreferrer"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: '1.5px solid var(--border)', color: 'var(--text-muted)', textDecoration: 'none', fontSize: '13px', fontWeight: '600', padding: '11px', borderRadius: '12px', background: 'var(--bg)' }}
-                  >
-                    Ver no site da incorporadora ↗
-                  </a>
-                )}
-              </div>
-            </div>
-
+          {/* Preço destaque (desktop) */}
+          <div className="price-desktop" style={{ textAlign: 'right', flexShrink: 0 }}>
             {imovel.min_price && (
-              <SimuladorEmbutido
-                valorImovel={imovel.min_price}
-                naPlantaDefault={
-                  ['planta', 'lança', 'pre-lança', 'pre lança', 'obra', 'construç', 'andamento'].some(s =>
-                    (imovel.status || '').toLowerCase().includes(s)
-                  )
-                }
-              />
+              <>
+                <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '4px' }}>A partir de</p>
+                <p style={{ fontSize: '28px', fontWeight: '900', color: 'var(--primary)', lineHeight: 1 }}>{formatBRL(imovel.min_price)}</p>
+                {imovel.max_price && imovel.max_price !== imovel.min_price && (
+                  <p style={{ fontSize: '13px', color: 'var(--text-faint)', marginTop: '4px' }}>até {formatBRL(imovel.max_price)}</p>
+                )}
+              </>
             )}
           </div>
         </div>
       </div>
+
+      {/* ── Sticky Nav ───────────────────────────────────────────────────── */}
+      <StickyNav hasTypologies={imovel.typologies.length > 0} hasAmenities={imovel.amenities.length > 0} />
+
+      {/* ── Two-column content ──────────────────────────────────────────── */}
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px 80px' }}>
+        <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 360px', gap: '40px', alignItems: 'start' }}>
+
+          {/* ── LEFT: sections ────────────────────────────────────────── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
+
+            {/* Visão geral */}
+            <div id="visao-geral" style={{ scrollMarginTop: '100px' }}>
+              <SectionHeader title="Visão Geral" />
+              {imovel.description && (
+                <p style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-muted)', marginBottom: '20px' }}>{imovel.description}</p>
+              )}
+              {specs.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
+                  {specs.map(({ icon, label }) => (
+                    <div key={label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>
+                      <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>{label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Blueprints */}
+              {imovel.blueprints.length > 0 && (
+                <div style={{ marginTop: '20px' }}>
+                  <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '10px' }}>Plantas disponíveis</p>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {imovel.blueprints.map((bp, i) => (
+                      <a key={i} href={bp.url} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--primary)30', color: 'var(--primary)', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', textDecoration: 'none' }}>
+                        📐 {bp.name}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Financeiro (mobile only — aparece na coluna esquerda em telas pequenas) */}
+            <div className="financeiro-mobile" style={{ display: 'none' }}>
+              <BlocoFinanceiro imovel={imovel} />
+            </div>
+
+            <SecaoTipologias typologies={imovel.typologies} />
+            <SecaoDiferenciais amenities={imovel.amenities} />
+            <SecaoLocalizacao imovel={imovel} />
+            <SecaoRelacionados neighborhood={imovel.neighborhood} currentId={imovel.id} />
+          </div>
+
+          {/* ── RIGHT: sticky financial card ──────────────────────────── */}
+          <div className="financeiro-desktop" style={{ position: 'sticky', top: 'calc(var(--header-h) + 52px + 24px)', maxHeight: 'calc(100vh - var(--header-h) - 100px)', overflowY: 'auto' }}>
+            <BlocoFinanceiro imovel={imovel} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Responsive styles ──────────────────────────────────────────── */}
+      <style>{`
+        @media (max-width: 860px) {
+          .detail-grid { grid-template-columns: 1fr !important; }
+          .financeiro-desktop { display: none !important; }
+          .financeiro-mobile { display: block !important; }
+          .price-desktop { display: none !important; }
+        }
+        .detail-grid > div:last-child { scrollbar-width: thin; }
+      `}</style>
     </div>
   );
 }
