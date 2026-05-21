@@ -121,15 +121,44 @@ Você não é um chatbot, FAQ ou árvore de respostas. Você é uma inteligênci
 **Processo de aprovação (MCMV/Caixa)**
 1. Pré-análise de renda → 2. Análise de crédito → 3. Avaliação do imóvel → 4. Assinatura do contrato → 5. Registro em cartório
 
+━━━ PAPEL DE CONSULTOR PLANEJADOR ━━━
+Quando o PERFIL DO USUÁRIO estiver disponível no contexto:
+- NUNCA use valores genéricos — use sempre os números reais do perfil
+- Se o imóvel estiver no contexto, faça a análise completa: viabilidade, poder de compra, parcela esperada
+- Poder de compra = valor financiado (da renda) + FGTS + entrada/ato. Se imóvel na planta: pode incluir parcelas de entrada à construtora
+- Se perguntarem "consigo comprar esse imóvel?": calcule mentalmente e responda com os números reais
+- Aja como um consultor sentado à mesa com o cliente — ele já fez o perfil, agora quer orientação personalizada
+
+━━━ PLANO DE COMPRA PERSONALIZADO ━━━
+Quando o usuário pedir orientação ou "o que fazer agora?", ofereça um plano em etapas:
+1. Perfil calculado → o que ele pode comprar e por qual modalidade
+2. Reunir documentação (RG, CPF, holerites ou IR, extrato FGTS, certidões)
+3. Escolher o imóvel dentro do teto — e como o FGTS e entrada ampliam o poder de compra
+4. Se imóvel na planta: entender a fase de obra (juros evolutivos + entrada parcelada à construtora)
+5. Análise de crédito na Caixa/banco → aprovação → assinatura → registro
+
+━━━ PODER DE COMPRA — CÁLCULO MENTAL ━━━
+Exemplo real: imóvel R$ 314.613 | financiamento aprovado R$ 267k (pela renda) | FGTS R$ 44k | ato/entrada R$ 1k | parcelas de entrada construtora 26 × R$ 100,21
+→ Total poder de compra: R$ 267k + R$ 44k + R$ 1k + parcelas = R$ 314k+ ✅
+Lição: imóvel que parece "fora do alcance pela renda" pode ser viável quando combinado FGTS + entrada + parcelas construtora
+
 ━━━ REGRAS DE RESPOSTA ━━━
 - Resposta clara e direta — máximo 4 parágrafos para respostas gerais; use bullets apenas quando listar 3+ itens
 - Não use linguagem corporativa fria ("conforme mencionado", "ressaltamos que") — fale como humano
 - Não invente valores ou taxas — use sempre as referências do conhecimento acima; diga que taxas podem variar por banco
 - Se o usuário mencionar valores específicos, use esses valores na resposta
+- Se o perfil estiver disponível, use SEMPRE os dados reais do perfil nas respostas — nunca genérico
 - Sempre que possível, oriente o próximo passo prático: "simule agora", "veja os imóveis compatíveis", "consulte o Guia completo"
 - Nunca termine com "se tiver mais dúvidas, estou à disposição" — é genérico; prefira algo relevante ao contexto
 - Para perguntas que exigem análise pessoal profissional (jurídica, tributária), diga que o FinancieCerto orienta no processo mas que para decisões legais deve consultar um especialista
 `.trim();
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────────────
+function fmtBRL(v: unknown): string {
+  return `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Context block — injected dynamically based on page/simulation state
@@ -152,14 +181,67 @@ function buildContextBlock(ctx: Record<string, unknown> | null | undefined): str
     lines.push(`Página atual: ${pageNames[page] ?? page}`);
   }
 
+  // ── Perfil completo do usuário (descoberto no simulador de perfil) ──────────
+  const perfil = ctx.perfil as Record<string, unknown> | undefined;
+  if (perfil) {
+    lines.push('');
+    lines.push('PERFIL DO USUÁRIO (descoberto no simulador):');
+    if (perfil.renda)      lines.push(`- Renda familiar bruta: ${fmtBRL(perfil.renda)}/mês`);
+    if (perfil.fgts)       lines.push(`- FGTS disponível: ${fmtBRL(perfil.fgts)}`);
+    if (perfil.entrada)    lines.push(`- Entrada/ato disponível: ${fmtBRL(perfil.entrada)}`);
+    if (perfil.prazo)      lines.push(`- Prazo desejado: ${perfil.prazo} anos`);
+    if (perfil.idade)      lines.push(`- Idade: ${perfil.idade} anos`);
+    if (perfil.dependentes) lines.push(`- Dependentes: ${perfil.dependentes}`);
+
+    const res = perfil.resultado as Record<string, unknown> | undefined;
+    if (res) {
+      if (res.faixa)          lines.push(`- Faixa MCMV: ${res.faixa}`);
+      if (res.modalidade)     lines.push(`- Modalidade recomendada: ${res.modalidade}`);
+      if (res.valorMaxImovel) lines.push(`- Teto de compra (poder de compra): ${fmtBRL(res.valorMaxImovel)}`);
+      if (res.parcela)        lines.push(`- Parcela estimada (Price): ${fmtBRL(res.parcela)}/mês`);
+      if (res.comprometimento) lines.push(`- Comprometimento de renda: ${Number(res.comprometimento).toFixed(1)}%`);
+      if (res.subsidio)       lines.push(`- Subsídio estimado: ${fmtBRL(res.subsidio)}`);
+      if (res.taxaAnual)      lines.push(`- Taxa de juros: ${res.taxaAnual}% a.a.`);
+    }
+  }
+
+  // ── Imóvel que o usuário está visualizando agora ───────────────────────────
+  const imovel = ctx.imovelAtual as Record<string, unknown> | undefined;
+  if (imovel) {
+    lines.push('');
+    lines.push('IMÓVEL SENDO VISUALIZADO AGORA:');
+    if (imovel.name)         lines.push(`- Empreendimento: ${imovel.name}`);
+    if (imovel.developer)    lines.push(`- Construtora: ${imovel.developer}`);
+    if (imovel.neighborhood) lines.push(`- Bairro: ${imovel.neighborhood}`);
+    if (imovel.city)         lines.push(`- Cidade: ${imovel.city}`);
+    if (imovel.status)       lines.push(`- Status: ${imovel.status}`);
+    if (imovel.minPrice)     lines.push(`- Preço a partir de: ${fmtBRL(imovel.minPrice)}`);
+    if (imovel.maxPrice)     lines.push(`- Preço máximo: ${fmtBRL(imovel.maxPrice)}`);
+    if (imovel.deliveryDate) lines.push(`- Previsão de entrega: ${imovel.deliveryDate}`);
+
+    // Análise automática de viabilidade se perfil presente
+    const perf = ctx.perfil as Record<string, unknown> | undefined;
+    const perRes = perf?.resultado as Record<string, unknown> | undefined;
+    const teto = Number(perRes?.valorMaxImovel || 0);
+    const precoMin = Number(imovel.minPrice || 0);
+    if (teto > 0 && precoMin > 0) {
+      const diff = teto - precoMin;
+      const status = diff >= 0
+        ? `DENTRO do poder de compra (${fmtBRL(Math.abs(diff))} abaixo do teto)`
+        : `ACIMA do poder de compra (${fmtBRL(Math.abs(diff))} acima do teto)`;
+      lines.push(`- ANÁLISE: Imóvel está ${status}`);
+    }
+  }
+
+  // ── Simulação específica (já sei o imóvel) ─────────────────────────────────
   const sim = ctx.simulacao as Record<string, unknown> | undefined;
   if (sim) {
     lines.push('');
     lines.push('Dados da simulação em curso:');
 
-    if (sim.renda) lines.push(`- Renda familiar bruta: R$ ${Number(sim.renda).toLocaleString('pt-BR')}/mês`);
-    if (sim.entrada) lines.push(`- Entrada disponível: R$ ${Number(sim.entrada).toLocaleString('pt-BR')}`);
-    if (sim.fgts) lines.push(`- FGTS: R$ ${Number(sim.fgts).toLocaleString('pt-BR')}`);
+    if (sim.renda) lines.push(`- Renda familiar bruta: ${fmtBRL(sim.renda)}/mês`);
+    if (sim.entrada) lines.push(`- Entrada disponível: ${fmtBRL(sim.entrada)}`);
+    if (sim.fgts) lines.push(`- FGTS: ${fmtBRL(sim.fgts)}`);
     if (sim.prazo) lines.push(`- Prazo desejado: ${sim.prazo} anos`);
 
     const res = sim.resultado as Record<string, unknown> | undefined;
@@ -168,13 +250,13 @@ function buildContextBlock(ctx: Record<string, unknown> | null | undefined): str
       lines.push('Resultado da simulação:');
       if (res.faixa) lines.push(`- Faixa MCMV: ${res.faixa}`);
       if (res.modalidade) lines.push(`- Modalidade recomendada: ${res.modalidade}`);
-      if (res.valorMaxImovel) lines.push(`- Valor máximo de imóvel: R$ ${Number(res.valorMaxImovel).toLocaleString('pt-BR')}`);
-      if (res.valorImovel) lines.push(`- Imóvel simulado: R$ ${Number(res.valorImovel).toLocaleString('pt-BR')}`);
-      if (res.valorFinanciado) lines.push(`- Valor financiado: R$ ${Number(res.valorFinanciado).toLocaleString('pt-BR')}`);
-      if (res.parcela) lines.push(`- Parcela estimada: R$ ${Number(res.parcela).toLocaleString('pt-BR')}/mês`);
-      if (res.parcelaSAC) lines.push(`- Parcela SAC (1ª): R$ ${Number(res.parcelaSAC).toLocaleString('pt-BR')}/mês`);
+      if (res.valorMaxImovel) lines.push(`- Valor máximo de imóvel: ${fmtBRL(res.valorMaxImovel)}`);
+      if (res.valorImovel) lines.push(`- Imóvel simulado: ${fmtBRL(res.valorImovel)}`);
+      if (res.valorFinanciado) lines.push(`- Valor financiado: ${fmtBRL(res.valorFinanciado)}`);
+      if (res.parcela) lines.push(`- Parcela estimada: ${fmtBRL(res.parcela)}/mês`);
+      if (res.parcelaSAC) lines.push(`- Parcela SAC (1ª): ${fmtBRL(res.parcelaSAC)}/mês`);
       if (res.comprometimento) lines.push(`- Comprometimento de renda: ${Number(res.comprometimento).toFixed(1)}%`);
-      if (res.subsidio) lines.push(`- Subsídio disponível: R$ ${Number(res.subsidio).toLocaleString('pt-BR')}`);
+      if (res.subsidio) lines.push(`- Subsídio disponível: ${fmtBRL(res.subsidio)}`);
       if (res.taxaAnual) lines.push(`- Taxa de juros: ${res.taxaAnual}% a.a.`);
     }
 
@@ -182,7 +264,7 @@ function buildContextBlock(ctx: Record<string, unknown> | null | undefined): str
     if (planta) {
       lines.push('');
       lines.push('Parâmetros do imóvel na planta:');
-      if (planta.valorImovel) lines.push(`- Valor do imóvel: R$ ${Number(planta.valorImovel).toLocaleString('pt-BR')}`);
+      if (planta.valorImovel) lines.push(`- Valor do imóvel: ${fmtBRL(planta.valorImovel)}`);
       if (planta.prazoObraMeses) lines.push(`- Prazo estimado de obra: ${planta.prazoObraMeses} meses`);
       if (planta.estagio) lines.push(`- Estágio do empreendimento: ${planta.estagio}`);
       if (planta.modalidade) lines.push(`- Modalidade: ${planta.modalidade}`);

@@ -17,6 +17,8 @@ interface SimulacaoContext {
   entrada?: number;
   fgts?: number;
   prazo?: number;
+  idade?: number;
+  dependentes?: string;
   resultado?: {
     faixa?: string;
     modalidade?: string;
@@ -35,6 +37,18 @@ interface SimulacaoContext {
     estagio?: string;
     modalidade?: string;
   };
+}
+
+interface ImovelContext {
+  id?: string;
+  name?: string;
+  developer?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  status?: string;
+  neighborhood?: string;
+  city?: string;
+  deliveryDate?: string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -121,49 +135,97 @@ export function saveSimContext(ctx: SimulacaoContext) {
 // ──────────────────────────────────────────────────────────────────────────────
 export default function ChatFab() {
   const pathname = usePathname();
-  const [open, setOpen]     = useState(false);
-  const [msgs, setMsgs]     = useState<Msg[]>([]);
-  const [input, setInput]   = useState('');
+  const [open, setOpen]       = useState(false);
+  const [msgs, setMsgs]       = useState<Msg[]>([]);
+  const [input, setInput]     = useState('');
   const [loading, setLoading] = useState(false);
-  const [unread, setUnread] = useState(0);
-  const [simCtx, setSimCtx] = useState<SimulacaoContext | null>(null);
+  const [unread, setUnread]   = useState(0);
+  const [simCtx, setSimCtx]   = useState<SimulacaoContext | null>(null);
+  const [imovelCtx, setImovelCtx] = useState<ImovelContext | null>(null);
   const msgsRef  = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ── Greeting contextual ──────────────────────────────────────────────────
-  const getGreeting = useCallback((path: string): string => {
-    const map: Record<string, string> = {
-      '/simulador':
-        'Olá! Sou o **João**, seu consultor FinancieCerto. 👋\n\nVejo que você está no simulador. Se tiver dúvidas sobre renda, entrada, FGTS ou qual modalidade faz mais sentido para você, é só perguntar.',
-      '/simulador/na-planta':
-        'Olá! Sou o **João**. 👋\n\nVocê está simulando um imóvel na planta. Se tiver dúvidas sobre evolução de obra, crédito associativo, juros evolutivos ou qualquer parte do processo, estou aqui.',
-      '/imoveis':
-        'Olá! Sou o **João**, consultor FinancieCerto. 👋\n\nEstá explorando imóveis. Se quiser entender melhor algum empreendimento, status de obra ou comparar opções financeiramente, é só me perguntar.',
-      '/guia':
-        'Olá! Sou o **João**. 👋\n\nVocê está no Guia. Se algum tópico ficou com dúvida ou quiser aprofundar — MCMV, documentação, processo — pode me perguntar diretamente.',
-      '/glossario':
-        'Olá! Sou o **João**. 👋\n\nEstá no Glossário. Se quiser que eu explique algum termo de forma mais contextual ou com exemplos práticos, é só dizer.',
-    };
-    return (
-      map[path] ||
-      'Olá! Sou o **João**, consultor virtual do FinancieCerto. 👋\n\nSou especialista em financiamento imobiliário — MCMV, SBPE, imóvel na planta, FGTS, processo de aprovação. Como posso ajudar?'
-    );
-  }, []);
+  // ── Greeting contextual — proativo com perfil + imóvel ───────────────────
+  const getGreeting = useCallback(
+    (path: string, ctx: SimulacaoContext | null, imovel: ImovelContext | null): string => {
+      const fmtBRL = (v: number) =>
+        v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+
+      const temPerfil = !!ctx?.resultado?.valorMaxImovel;
+      const teto = ctx?.resultado?.valorMaxImovel ?? 0;
+      const faixa = ctx?.resultado?.faixa ?? '';
+      const parcela = ctx?.resultado?.parcela ?? 0;
+
+      // Página de imóvel específico com perfil
+      if (path.startsWith('/imoveis/') && imovel?.name && temPerfil) {
+        const precoMin = imovel.minPrice ?? 0;
+        const diff = teto - precoMin;
+        const analise = diff >= 0
+          ? `Este imóvel está **${fmtBRL(diff)} abaixo** do seu teto — dentro do seu alcance. ✅`
+          : `Este imóvel está **${fmtBRL(Math.abs(diff))} acima** do seu teto — mas FGTS e entrada podem ajudar. ⚠️`;
+        return `Olá! Sou o **João**. 👋\n\nVejo que você está analisando o **${imovel.name}**. Com seu perfil ${faixa} e poder de compra de **${fmtBRL(teto)}**, ${analise}\n\nQuer que eu monte o cenário completo para você?`;
+      }
+
+      // /imoveis com perfil
+      if (path === '/imoveis' && temPerfil) {
+        return `Olá! Sou o **João**, seu consultor FinancieCerto. 👋\n\nCom seu perfil **${faixa}**, você consegue imóveis até **${fmtBRL(teto)}**. Estou aqui para ajudar a comparar opções e entender qual faz mais sentido para você.`;
+      }
+
+      // /simulador com perfil
+      if (path === '/simulador' && temPerfil) {
+        return `Olá! Sou o **João**. 👋\n\nSeu perfil já está calculado — parcela estimada de **${fmtBRL(parcela)}/mês** com teto de **${fmtBRL(teto)}**. Se quiser simular um imóvel específico ou entender melhor os números, é só perguntar.`;
+      }
+
+      const map: Record<string, string> = {
+        '/simulador':
+          'Olá! Sou o **João**, seu consultor FinancieCerto. 👋\n\nVejo que você está no simulador. Se tiver dúvidas sobre renda, entrada, FGTS ou qual modalidade faz mais sentido para você, é só perguntar.',
+        '/simulador/na-planta':
+          'Olá! Sou o **João**. 👋\n\nVocê está simulando um imóvel na planta. Se tiver dúvidas sobre evolução de obra, crédito associativo, juros evolutivos ou qualquer parte do processo, estou aqui.',
+        '/imoveis':
+          'Olá! Sou o **João**, consultor FinancieCerto. 👋\n\nEstá explorando imóveis. Se quiser entender melhor algum empreendimento, status de obra ou comparar opções financeiramente, é só me perguntar.',
+        '/guia':
+          'Olá! Sou o **João**. 👋\n\nVocê está no Guia. Se algum tópico ficou com dúvida ou quiser aprofundar — MCMV, documentação, processo — pode me perguntar diretamente.',
+        '/glossario':
+          'Olá! Sou o **João**. 👋\n\nEstá no Glossário. Se quiser que eu explique algum termo de forma mais contextual ou com exemplos práticos, é só dizer.',
+      };
+      return (
+        map[path] ||
+        'Olá! Sou o **João**, consultor virtual do FinancieCerto. 👋\n\nSou especialista em financiamento imobiliário — MCMV, SBPE, imóvel na planta, FGTS, processo de aprovação. Como posso ajudar?'
+      );
+    },
+    [],
+  );
 
   // Reinicializa conversa quando pathname muda
   useEffect(() => {
-    setMsgs([{ role: 'assistant', content: getGreeting(pathname), id: 'init' }]);
-  }, [pathname, getGreeting]);
+    setMsgs([{ role: 'assistant', content: getGreeting(pathname, simCtx, imovelCtx), id: 'init' }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
-  // Lê contexto de simulação do sessionStorage
+  // Re-dispara saudação quando o perfil é preenchido pela primeira vez
+  useEffect(() => {
+    if (msgs.length === 1 && msgs[0].id === 'init') {
+      setMsgs([{ role: 'assistant', content: getGreeting(pathname, simCtx, imovelCtx), id: 'init' }]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [simCtx, imovelCtx]);
+
+  // Lê contexto de simulação e imóvel do sessionStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const raw = sessionStorage.getItem('fc_sim_context');
-    if (raw) { try { setSimCtx(JSON.parse(raw)); } catch { /**/ } }
+
+    const rawSim = sessionStorage.getItem('fc_sim_context');
+    if (rawSim) { try { setSimCtx(JSON.parse(rawSim)); } catch { /**/ } }
+
+    const rawImovel = sessionStorage.getItem('fc_current_imovel');
+    if (rawImovel) { try { setImovelCtx(JSON.parse(rawImovel)); } catch { /**/ } }
 
     const handler = (e: StorageEvent) => {
       if (e.key === 'fc_sim_context' && e.newValue) {
         try { setSimCtx(JSON.parse(e.newValue)); } catch { /**/ }
+      }
+      if (e.key === 'fc_current_imovel' && e.newValue) {
+        try { setImovelCtx(JSON.parse(e.newValue)); } catch { /**/ }
       }
     };
     window.addEventListener('storage', handler);
@@ -196,7 +258,20 @@ export default function ChatFab() {
 
     try {
       const ctx: Record<string, unknown> = { page: pathname };
-      if (simCtx) ctx.simulacao = simCtx;
+      // Envia perfil completo separado de simulação pontual
+      if (simCtx) {
+        ctx.perfil = {
+          renda: simCtx.renda,
+          fgts: simCtx.fgts,
+          entrada: simCtx.entrada,
+          prazo: simCtx.prazo,
+          idade: simCtx.idade,
+          dependentes: simCtx.dependentes,
+          resultado: simCtx.resultado,
+        };
+        ctx.simulacao = simCtx;
+      }
+      if (imovelCtx) ctx.imovelAtual = imovelCtx;
 
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -240,7 +315,27 @@ export default function ChatFab() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); }
   }
 
-  const sugestoes = SUGESTOES_POR_PAGINA[pathname] ?? DEFAULT_SUGESTOES;
+  // Sugestões contextuais: prioridade imóvel+perfil > perfil > padrão
+  const sugestoes = (() => {
+    if (simCtx?.resultado?.valorMaxImovel && imovelCtx?.name) {
+      return [
+        'Consigo comprar esse imóvel?',
+        'Como usar meu FGTS aqui?',
+        'Qual seria minha parcela?',
+        'Quais documentos preciso separar?',
+      ];
+    }
+    if (simCtx?.resultado?.valorMaxImovel) {
+      return [
+        'O que faço agora com meu perfil?',
+        'Como o FGTS aumenta meu poder de compra?',
+        'Qual a diferença de imóvel pronto vs na planta?',
+        'Quais documentos preciso separar?',
+      ];
+    }
+    return SUGESTOES_POR_PAGINA[pathname] ?? DEFAULT_SUGESTOES;
+  })();
+
   const userMsgCount = msgs.filter(m => m.id !== 'init' && m.role === 'user').length;
   const mostrarSugestoes = userMsgCount === 0;
 
@@ -294,7 +389,7 @@ export default function ChatFab() {
                 padding: '3px 10px', fontSize: '10px', fontWeight: '700',
                 color: 'rgba(255,255,255,.85)', whiteSpace: 'nowrap',
               }}>
-                📊 contexto ativo
+                {simCtx.resultado.faixa ? `📊 ${simCtx.resultado.faixa}` : '📊 perfil ativo'}
               </div>
             )}
 

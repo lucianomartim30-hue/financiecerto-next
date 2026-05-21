@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { formatBRL, simular } from '@/lib/calculos';
+import { formatBRL, simular, descobrir } from '@/lib/calculos';
 
 function parseMoeda(v: string): number {
   return Number(v.replace(/\./g, '').replace(',', '.')) || 0;
@@ -110,26 +110,57 @@ function getStatus(s: string) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Simulador embutido
 // ──────────────────────────────────────────────────────────────────────────────
-function SimuladorEmbutido({ valorImovel }: { valorImovel: number }) {
-  const [renda, setRenda] = useState('');
-  const [entrada, setEntrada] = useState(
-    valorImovel ? fmtInput(String(Math.round(valorImovel * 0.2))) : ''
-  );
-  const [prazo, setPrazo] = useState('30');
+function SimuladorEmbutido({ valorImovel, naPlantaDefault = false }: { valorImovel: number; naPlantaDefault?: boolean }) {
+  const [renda, setRenda]     = useState('');
+  const [entrada, setEntrada] = useState('');
+  const [fgts, setFgts]       = useState('');
+  const [prazo, setPrazo]     = useState('30');
+  const [naPlanta, setNaPlanta] = useState(naPlantaDefault);
   const [resultado, setResultado] = useState<ReturnType<typeof simular> | null>(null);
-  const [erro, setErro] = useState('');
+  const [poder, setPoder]     = useState<ReturnType<typeof descobrir> | null>(null);
+  const [erro, setErro]       = useState('');
+  const [contextoCarregado, setContextoCarregado] = useState(false);
+
+  // Pre-fill a partir do perfil do simulador de descoberta
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem('joao_sim_context');
+      if (!raw) return;
+      const ctx = JSON.parse(raw) as Record<string, unknown>;
+      if (ctx.renda)   setRenda(fmtInput(String(ctx.renda)));
+      if (ctx.fgts)    setFgts(fmtInput(String(ctx.fgts)));
+      if (ctx.entrada) setEntrada(fmtInput(String(ctx.entrada)));
+      if (ctx.renda || ctx.fgts || ctx.entrada) setContextoCarregado(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Recalcula poder de compra quando renda/fgts/entrada mudam
+  useEffect(() => {
+    const r = parseMoeda(renda);
+    const f = parseMoeda(fgts);
+    const en = parseMoeda(entrada);
+    if (r >= 800) {
+      const p = descobrir(r, f, en, parseInt(prazo), 35);
+      setPoder(p);
+    } else {
+      setPoder(null);
+    }
+  }, [renda, fgts, entrada, prazo]);
 
   function calcular() {
-    const r = parseMoeda(renda);
-    const e = parseMoeda(entrada);
+    const r  = parseMoeda(renda);
+    const en = parseMoeda(entrada);
+    const fg = parseMoeda(fgts);
     if (!r || r < 800) { setErro('Informe uma renda mensal válida.'); return; }
-    if (!valorImovel) { setErro('Valor do imóvel não disponível.'); return; }
-    if (e >= valorImovel) { setErro('A entrada não pode ser maior que o valor do imóvel.'); return; }
+    if (!valorImovel)  { setErro('Valor do imóvel não disponível.'); return; }
+    if (en + fg >= valorImovel) { setErro('Entrada + FGTS não pode ser maior que o valor do imóvel.'); return; }
     setErro('');
     const res = simular({
-      rendaBruta: r, entrada: e, fgts: 0,
+      rendaBruta: r, entrada: en, fgts: fg,
       valorImovel, prazoAnos: parseInt(prazo),
-      naPlanta: false, prazoObraAnos: 0,
+      naPlanta, prazoObraAnos: naPlanta ? 3 : 0,
+      idadeProponente: 35,
     });
     setResultado(res);
   }
@@ -138,17 +169,29 @@ function SimuladorEmbutido({ valorImovel }: { valorImovel: number }) {
   const comprometimento = resultado ? Math.round((parcela / parseMoeda(renda)) * 100) : 0;
   const alerta = comprometimento > 30;
 
+  // Poder de compra total = financiamento + fgts + entrada
+  const fg = parseMoeda(fgts);
+  const en = parseMoeda(entrada);
+  const poderTotal = poder
+    ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) + fg + en
+    : 0;
+  const dentroAlcance = poderTotal > 0 && poderTotal >= valorImovel;
+  const diffPoder = poderTotal - valorImovel;
+
   return (
-    <div style={{
-      background: 'var(--bg-card)', border: '1px solid var(--border)',
-      borderRadius: '16px', padding: '24px', marginTop: '32px',
-    }}>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', marginTop: '32px' }}>
       <h3 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '4px' }}>
         Simulador de Financiamento
       </h3>
-      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: contextoCarregado ? '10px' : '20px' }}>
         Calcule parcelas para este imóvel com seu perfil.
       </p>
+
+      {contextoCarregado && (
+        <div style={{ fontSize: '12px', color: '#085041', background: '#E1F5EE', border: '1px solid #A7F3D0', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px' }}>
+          ✓ Dados do seu perfil carregados automaticamente
+        </div>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <div>
@@ -158,25 +201,68 @@ function SimuladorEmbutido({ valorImovel }: { valorImovel: number }) {
           </div>
         </div>
 
+        {/* Renda + Entrada */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           {[
             { label: 'Renda familiar bruta', val: renda, set: (v: string) => { setRenda(fmtInput(v)); setErro(''); }, ph: '3.000' },
-            { label: 'Entrada disponível', val: entrada, set: (v: string) => setEntrada(fmtInput(v)), ph: '20% do valor' },
+            { label: 'Entrada disponível', val: entrada, set: (v: string) => setEntrada(fmtInput(v)), ph: '0' },
           ].map(({ label, val, set, ph }) => (
             <div key={label}>
               <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px' }}>{label}</p>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', fontSize: '13px', fontWeight: '600' }}>R$</span>
-                <input
-                  type="text" inputMode="numeric" value={val}
-                  onChange={e => set(e.target.value)} placeholder={ph}
-                  style={{ width: '100%', padding: '11px 12px 11px 34px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontWeight: '600', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }}
-                />
+                <input type="text" inputMode="numeric" value={val} onChange={e => set(e.target.value)} placeholder={ph}
+                  style={{ width: '100%', padding: '11px 12px 11px 34px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontWeight: '600', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }} />
               </div>
             </div>
           ))}
         </div>
 
+        {/* FGTS */}
+        <div>
+          <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '6px' }}>FGTS disponível</p>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', fontSize: '13px', fontWeight: '600' }}>R$</span>
+            <input type="text" inputMode="numeric" value={fgts} onChange={e => setFgts(fmtInput(e.target.value))} placeholder="0"
+              style={{ width: '100%', padding: '11px 12px 11px 34px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '14px', fontWeight: '600', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+          </div>
+          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>FGTS reduz o valor financiado e amplia seu poder de compra</p>
+        </div>
+
+        {/* Poder de compra — preview */}
+        {poderTotal > 0 && (
+          <div style={{ background: dentroAlcance ? '#E1F5EE' : '#FEF3C7', border: `1px solid ${dentroAlcance ? '#A7F3D0' : '#FCD34D'}`, borderRadius: '12px', padding: '14px 16px' }}>
+            <p style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Seu Poder de Compra</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px', textAlign: 'center' }}>
+              <div>
+                <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>Financiamento</p>
+                <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>
+                  {formatBRL(poder ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) : 0)}
+                </p>
+              </div>
+              <div>
+                <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>FGTS</p>
+                <p style={{ fontSize: '13px', fontWeight: '800', color: '#0F6E56' }}>{formatBRL(fg)}</p>
+              </div>
+              <div>
+                <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>Entrada</p>
+                <p style={{ fontSize: '13px', fontWeight: '800', color: '#7C3AED' }}>{formatBRL(en)}</p>
+              </div>
+            </div>
+            <div style={{ borderTop: `1px solid ${dentroAlcance ? '#A7F3D0' : '#FCD34D'}`, paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: dentroAlcance ? '#085041' : '#854F0B' }}>
+                {dentroAlcance ? '✅' : '⚠️'} Total: {formatBRL(poderTotal)}
+              </span>
+              <span style={{ fontSize: '11px', color: dentroAlcance ? '#085041' : '#854F0B', fontWeight: '600' }}>
+                {dentroAlcance
+                  ? `${formatBRL(Math.abs(diffPoder))} abaixo do preço`
+                  : `${formatBRL(Math.abs(diffPoder))} acima do preço`}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Prazo */}
         <div>
           <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Prazo</p>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -186,6 +272,17 @@ function SimuladorEmbutido({ valorImovel }: { valorImovel: number }) {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Na planta toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: '10px' }}>
+          <div>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', margin: 0 }}>Imóvel na planta / em obra</p>
+            <p style={{ fontSize: '11px', color: 'var(--text-faint)', margin: '2px 0 0' }}>Simula juros evolutivos durante a construção</p>
+          </div>
+          <button onClick={() => setNaPlanta(p => !p)} style={{ width: '44px', height: '24px', borderRadius: '99px', border: 'none', cursor: 'pointer', background: naPlanta ? 'var(--primary)' : 'var(--border)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+            <span style={{ position: 'absolute', top: '2px', left: naPlanta ? '22px' : '2px', width: '20px', height: '20px', borderRadius: '50%', background: '#fff', transition: 'left 0.2s', display: 'block' }} />
+          </button>
         </div>
 
         {erro && <p style={{ fontSize: '12px', color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: '8px' }}>⚠️ {erro}</p>}
@@ -213,11 +310,19 @@ function SimuladorEmbutido({ valorImovel }: { valorImovel: number }) {
               <span>·</span>
               <span>💰 Financia {formatBRL(resultado.valorFinanciado)}</span>
             </div>
+            {resultado.obraAlerta && (
+              <p style={{ fontSize: '11px', color: '#854F0B', background: '#FAEEDA', borderRadius: '8px', padding: '8px 10px', marginTop: '10px' }}>
+                🏗️ {resultado.obraAlerta}
+              </p>
+            )}
+            {resultado.subsidioEstimado > 0 && (
+              <p style={{ fontSize: '11px', color: '#085041', background: '#E1F5EE', borderRadius: '8px', padding: '8px 10px', marginTop: '8px' }}>
+                ✅ Subsídio estimado: {formatBRL(resultado.subsidioEstimado)}
+              </p>
+            )}
             {alerta && <p style={{ fontSize: '11px', color: '#dc2626', textAlign: 'center', marginTop: '10px' }}>⚠️ Comprometimento acima de 30% — o banco pode exigir codevedor ou entrada maior.</p>}
-            <Link
-              href={`/simulador?valorImovel=${resultado.valorImovel}&entrada=${parseMoeda(entrada)}&renda=${parseMoeda(renda)}&prazo=${prazo}`}
-              style={{ display: 'block', textAlign: 'center', marginTop: '12px', fontSize: '12px', fontWeight: '700', color: 'var(--primary)', textDecoration: 'none' }}
-            >
+            <Link href={`/simulador?valorImovel=${resultado.valorImovel}&entrada=${en}&renda=${parseMoeda(renda)}&prazo=${prazo}`}
+              style={{ display: 'block', textAlign: 'center', marginTop: '12px', fontSize: '12px', fontWeight: '700', color: 'var(--primary)', textDecoration: 'none' }}>
               Ver simulação completa no FinancieCerto →
             </Link>
           </div>
@@ -351,7 +456,19 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
       try {
         const res = await fetch(`/api/orulo/${id}`);
         if (!res.ok) throw new Error('Não encontrado');
-        setImovel(await res.json());
+        const data: ImovelDetalhe = await res.json();
+        setImovel(data);
+        // Salva contexto do imóvel para o João consultor
+        try {
+          const imovelCtx = {
+            id: data.id, name: data.name, developer: data.developer,
+            minPrice: data.min_price, maxPrice: data.max_price,
+            status: data.status, neighborhood: data.neighborhood,
+            city: data.city, deliveryDate: data.delivery_date,
+          };
+          sessionStorage.setItem('fc_current_imovel', JSON.stringify(imovelCtx));
+          window.dispatchEvent(new StorageEvent('storage', { key: 'fc_current_imovel', newValue: JSON.stringify(imovelCtx) }));
+        } catch { /* ignore */ }
       } catch {
         setErro('Imóvel não encontrado ou indisponível.');
       } finally {
@@ -619,7 +736,16 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
 
-            {imovel.min_price && <SimuladorEmbutido valorImovel={imovel.min_price} />}
+            {imovel.min_price && (
+              <SimuladorEmbutido
+                valorImovel={imovel.min_price}
+                naPlantaDefault={
+                  ['planta', 'lança', 'pre-lança', 'pre lança', 'obra', 'construç', 'andamento'].some(s =>
+                    (imovel.status || '').toLowerCase().includes(s)
+                  )
+                }
+              />
+            )}
           </div>
         </div>
       </div>

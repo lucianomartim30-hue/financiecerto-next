@@ -284,11 +284,34 @@ function SimuladorInner() {
     // Define painel padrão: MCMV se elegível, SBPE caso contrário
     if (r.mcmv.elegivel) setPainelAtivo('mcmv');
     else setPainelAtivo('sbpe');
+    const faixa = r.faixa?.label ?? 'SBPE';
+    const valorMaxImovel = r.mcmv.elegivel ? r.mcmv.valorMaxImovel : r.sbpe.valorMaxImovel;
+    const modalidade = r.mcmv.elegivel ? `MCMV ${faixa}` : 'SBPE';
+    const parcela = r.mcmv.elegivel ? r.mcmv.parcelaPrice : r.sbpe.parcelaPrice;
+    const subsidio = r.mcmv.elegivel ? (r.mcmv.subsidio ?? 0) : 0;
+    const taxaAnual = r.mcmv.elegivel ? r.mcmv.taxaAnual : TAXA_SBPE_ANUAL;
+    const comprometimento = r.mcmv.elegivel ? r.mcmv.comprometimento : r.sbpe.comprometimento;
+
+    // Legacy key (mantido para compatibilidade)
     salvarCtx({
       renda: parseMoeda(e.renda), fgts: parseMoeda(e.fgts),
-      entrada: parseMoeda(e.entrada), faixa: r.faixa?.label ?? 'SBPE',
-      valorMaxImovel: r.mcmv.elegivel ? r.mcmv.valorMaxImovel : r.sbpe.valorMaxImovel,
+      entrada: parseMoeda(e.entrada), faixa, valorMaxImovel,
     });
+
+    // Chave rica — lida pelo ChatFab e pela API do João
+    const richCtx = {
+      renda: parseMoeda(e.renda),
+      fgts: parseMoeda(e.fgts),
+      entrada: parseMoeda(e.entrada),
+      prazo: e.prazoAnos,
+      idade: Number(e.idade) || 35,
+      dependentes: e.dependentes,
+      resultado: { faixa, modalidade, valorMaxImovel, parcela, comprometimento, subsidio, taxaAnual },
+    };
+    try {
+      sessionStorage.setItem('fc_sim_context', JSON.stringify(richCtx));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'fc_sim_context', newValue: JSON.stringify(richCtx) }));
+    } catch { /* SSR */ }
   }
 
   function calcularSim() {
@@ -599,6 +622,61 @@ function SimuladorInner() {
             ✅ Subsídio estimado de <strong>{formatBRL(subsidioEstimado)}</strong> incluído. O valor exato é definido pela Caixa Econômica Federal conforme perfil, município e verba disponível.
           </div>
         )}
+
+        {/* ── Plano de Compra Personalizado ───────────────────────────── */}
+        <div style={{ marginBottom: 20, padding: '18px 18px 14px', background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 14 }}>
+            📋 Plano de Compra Personalizado
+          </div>
+          {[
+            {
+              num: '✓', done: true,
+              titulo: 'Perfil calculado',
+              desc: `${dados.label} · teto ${formatBRL(dados.valorMaxImovel)} · parcela ~${formatBRL(dados.parcela ?? 0)}/mês`,
+            },
+            {
+              num: '2', done: false,
+              titulo: 'Reunir documentação',
+              desc: 'RG, CPF, holerites (ou IR + extratos), extrato FGTS e certidões negativas',
+            },
+            {
+              num: '3', done: false,
+              titulo: 'Escolher o imóvel',
+              desc: `Busque imóveis até ${formatBRL(dados.valorMaxImovel)}. Lembre: FGTS${parseMoeda(e.fgts) > 0 ? ` (${formatBRL(parseMoeda(e.fgts))})` : ''} e entrada ampliam seu poder de compra`,
+            },
+            ...(painelAtivo === 'mcmv' ? [{
+              num: '4', done: false,
+              titulo: 'Fase de obra (se na planta)',
+              desc: 'Parcelas de entrada à construtora + juros evolutivos ao banco. As duas correm em paralelo durante a obra',
+            }] : []),
+            {
+              num: painelAtivo === 'mcmv' ? '5' : '4', done: false,
+              titulo: 'Análise de crédito',
+              desc: 'Caixa Econômica Federal analisa renda, crédito e avalia o imóvel. Prazo médio: 30–60 dias',
+            },
+            {
+              num: painelAtivo === 'mcmv' ? '6' : '5', done: false,
+              titulo: 'Contrato e registro',
+              desc: 'Assinatura do contrato de financiamento e registro no cartório de imóveis (CRI)',
+            },
+          ].map(({ num, done, titulo, desc }) => (
+            <div key={titulo} style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>
+              <div style={{
+                width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                background: done ? '#0F6E56' : 'var(--primary)',
+                color: '#fff', fontSize: 11, fontWeight: 800,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{num}</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: done ? '#0F6E56' : 'var(--text)', marginBottom: 2 }}>{titulo}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>{desc}</div>
+              </div>
+            </div>
+          ))}
+          <div style={{ fontSize: 12, color: 'var(--primary)', marginTop: 6, fontWeight: 600, borderTop: '1px solid #BFDBFE', paddingTop: 10 }}>
+            💬 Fale com o João para tirar dúvidas sobre cada etapa
+          </div>
+        </div>
 
         {/* CTAs */}
         <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
