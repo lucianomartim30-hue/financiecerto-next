@@ -396,6 +396,8 @@ function SmartSearchInput({
   const [searching,  setSearching]  = useState(false);
   const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const router       = useRouter();
+
   useEffect(() => { setInput(value); }, [value]);
 
   // Debounce: chama /api/orulo/search após 280 ms sem digitar
@@ -424,19 +426,17 @@ function SmartSearchInput({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const hasResults = results.neighborhoods.length > 0 || results.cities.length > 0;
+  const hasResults = results.neighborhoods.length > 0 || results.cities.length > 0 || results.buildings.length > 0;
 
-  function goToBairro(_slug: string, label: string) {
-    // Filtra na própria página — não navega para /bairro/
+  function goToBairro(slug: string, label: string) {
     setInput(label.replace(/,\s*.+$/, ''));
     setOpen(false);
-    onConfirm(label); // passa "Bairro, Cidade – SP" para o buscar() parsear
+    router.push(`/bairro/${slug}`);
   }
-  function goToBuilding(_slug: string, label: string) {
-    // Filtra por nome do empreendimento na mesma página
-    setInput(label);
-    setOpen(false);
-    onConfirm(label);
+  function goToBuilding(slug: string, label: string) {
+    setInput(label); setOpen(false);
+    if (slug) router.push(`/bairro/${slug}`);
+    else onConfirm(label);
   }
 
   const btnStyle: React.CSSProperties = {
@@ -462,7 +462,7 @@ function SmartSearchInput({
           if (e.key === 'Enter') { setOpen(false); onConfirm(input); }
           if (e.key === 'Escape') setOpen(false);
         }}
-        placeholder="Bairro ou cidade..."
+        placeholder="Bairro, empreendimento ou cidade..."
         style={{ padding: '10px 32px 10px 34px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '13px', width: '100%', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit' }}
       />
       {searching && <span style={{ position: 'absolute', right: '11px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: 'var(--text-faint)' }}>⟳</span>}
@@ -485,9 +485,24 @@ function SmartSearchInput({
             </div>
           )}
 
+          {/* Empreendimentos */}
+          {results.buildings.length > 0 && (
+            <div style={{ borderTop: results.neighborhoods.length > 0 ? '1px solid var(--border)' : 'none' }}>
+              <div style={sectionHeader}><span>🏢</span> Empreendimentos</div>
+              {results.buildings.map(b => (
+                <button key={b.id} onMouseDown={e => { e.preventDefault(); goToBuilding(b.slug, b.label); }} style={btnStyle}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                  {b.label}
+                  {b.neighborhood && <span style={{ marginLeft: '6px', fontSize: '10px', color: 'var(--text-faint)' }}>· {b.neighborhood}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Cidades */}
           {results.cities.length > 0 && (
-            <div style={{ borderTop: results.neighborhoods.length > 0 ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ borderTop: (results.neighborhoods.length > 0 || results.buildings.length > 0) ? '1px solid var(--border)' : 'none' }}>
               <div style={sectionHeader}><span>🌆</span> Cidades</div>
               {results.cities.map(c => (
                 <button key={c.slug} onMouseDown={e => { e.preventDefault(); setInput(c.label); setOpen(false); onConfirm(c.label); }} style={btnStyle}
@@ -551,27 +566,32 @@ function ImoveisContent() {
       if (maxPrice) params.set('max_price', maxPrice);
 
       // ── Localização ────────────────────────────────────────────────────────
-      // SEMPRE envia city= para que fetchByLocation seja chamado e todos os
-      // filtros (quartos, estágio, preço) funcionem no modo server-side.
-      // Quando não há texto de busca, usa São Paulo como padrão.
+      // Regra: NÃO passar q= para busca por bairro (q= busca NOME do
+      // empreendimento na Orulo — combinar q=bairro + min_bedrooms = 0 resultados).
+      // Estratégia:
+      //   1. Se digitou exatamente no formato datalist "Bairro, Cidade – SP" →
+      //      passa city= para a Orulo (melhora amostra de 200) + neighborhood= para
+      //      filtro server-side.
+      //   2. Se texto livre sem separador → trata como bairro de São Paulo +
+      //      filtro server-side.
+      //   3. Se começa com "#" → interpreta como nome de empreendimento (q=).
       const txt = localSearch.trim();
       if (txt) {
-        // Formato estruturado "Bairro, Cidade – SP"
+        // Formato estruturado do datalist: "Jabaquara, São Paulo – SP"
         const structured = txt.match(/^(.+?),\s*(.+?)\s*[–\-]\s*([A-Z]{2})$/);
         const cityOnly   = txt.match(/^(.+?)\s*[–\-]\s*([A-Z]{2})$/);
         if (structured) {
           params.set('city',         structured[2].trim());
           params.set('neighborhood', structured[1].trim());
         } else if (cityOnly) {
+          // Município da RMSP (ex: "Guarulhos")
           params.set('city', cityOnly[1].trim());
         } else {
-          // Texto livre → bairro de São Paulo
+          // Texto livre → assume bairro de São Paulo
           params.set('city',         'São Paulo');
           params.set('neighborhood', txt);
         }
       }
-      // Sem localização: não passa city= → Orulo retorna state=SP completo (~2031)
-      // Filtros de bedrooms/preço são passados nativamente; status filtrado server-side
 
       // Filtros de quartos → Orulo API (parâmetro confirmado, nunca q=)
       if (quartosFilter !== 'todos') {
@@ -665,36 +685,58 @@ function ImoveisContent() {
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <section style={{
         background: 'linear-gradient(160deg, #0f172a 0%, #1a2e4a 60%, #0f172a 100%)',
-        padding: '64px 24px 80px',
+        padding: '56px 24px 72px',
       }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <p style={{
-            fontSize: '11px', fontWeight: '700', color: '#475569',
-            letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '14px',
+            fontSize: '11px', fontWeight: '700', color: 'rgba(96,165,250,0.9)',
+            letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '12px',
           }}>
             Empreendimentos · São Paulo
           </p>
           <h1 style={{
-            fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: '800',
-            color: '#fff', lineHeight: 1.2, marginBottom: '10px',
+            fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: '800',
+            color: '#fff', lineHeight: 1.2, marginBottom: '14px',
           }}>
             {minParam || maxParam
               ? 'Imóveis compatíveis com seu perfil'
-              : 'Imóveis disponíveis'}
+              : 'Imóveis disponíveis em São Paulo'}
           </h1>
-          {(minParam || maxParam) && (
-            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.5)', marginBottom: '12px' }}>
+          {(minParam || maxParam) ? (
+            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.55)', marginBottom: '20px' }}>
               Filtrados entre{' '}
-              <strong style={{ color: 'rgba(255,255,255,.8)' }}>
+              <strong style={{ color: 'rgba(255,255,255,.9)' }}>
                 {minParam ? formatBRL(Number(minParam)) : 'sem mínimo'}
               </strong>
               {' '}e{' '}
-              <strong style={{ color: 'rgba(255,255,255,.8)' }}>
+              <strong style={{ color: 'rgba(255,255,255,.9)' }}>
                 {maxParam ? formatBRL(Number(maxParam)) : 'sem máximo'}
               </strong>
-              {' '}— resultado da sua simulação
+              {' — resultado da sua simulação'}
+            </p>
+          ) : (
+            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.55)', marginBottom: '24px', maxWidth: '620px', lineHeight: 1.65 }}>
+              Catálogo curado de lançamentos e imóveis prontos das melhores construtoras e incorporadoras da Grande São Paulo. MCMV, SBPE e alto padrão.
             </p>
           )}
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {[
+              { icon: '🏗', label: 'Lançamentos & em obras' },
+              { icon: '🏢', label: 'MRV · Cyrela · Even · Trisul' },
+              { icon: '✅', label: 'MCMV · SBPE · Alto padrão' },
+              { icon: '📍', label: 'Grande São Paulo' },
+            ].map((chip, i) => (
+              <span key={i} style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '20px', padding: '5px 12px',
+                fontSize: '12px', color: 'rgba(255,255,255,0.75)', fontWeight: '500',
+              }}>
+                {chip.icon} {chip.label}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
