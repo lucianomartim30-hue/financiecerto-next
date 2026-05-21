@@ -110,7 +110,7 @@ function getStatus(s: string) {
 // ──────────────────────────────────────────────────────────────────────────────
 // Simulador embutido
 // ──────────────────────────────────────────────────────────────────────────────
-function SimuladorEmbutido({ valorImovel, naPlantaImovel }: { valorImovel: number; naPlantaImovel: boolean }) {
+function SimuladorEmbutido({ valorImovel }: { valorImovel: number }) {
   const [renda, setRenda] = useState('');
   const [entrada, setEntrada] = useState(
     valorImovel ? fmtInput(String(Math.round(valorImovel * 0.2))) : ''
@@ -129,7 +129,7 @@ function SimuladorEmbutido({ valorImovel, naPlantaImovel }: { valorImovel: numbe
     const res = simular({
       rendaBruta: r, entrada: e, fgts: 0,
       valorImovel, prazoAnos: parseInt(prazo),
-      naPlanta: naPlantaImovel, prazoObraAnos: naPlantaImovel ? 3 : 0,
+      naPlanta: false, prazoObraAnos: 0,
     });
     setResultado(res);
   }
@@ -214,16 +214,11 @@ function SimuladorEmbutido({ valorImovel, naPlantaImovel }: { valorImovel: numbe
               <span>💰 Financia {formatBRL(resultado.valorFinanciado)}</span>
             </div>
             {alerta && <p style={{ fontSize: '11px', color: '#dc2626', textAlign: 'center', marginTop: '10px' }}>⚠️ Comprometimento acima de 30% — o banco pode exigir codevedor ou entrada maior.</p>}
-            {naPlantaImovel && resultado?.obraAlerta && (
-              <p style={{ fontSize: '11px', color: '#0369a1', background: 'rgba(3,105,161,.08)', padding: '8px 10px', borderRadius: '8px', marginTop: '8px', textAlign: 'left', lineHeight: 1.5 }}>
-                🏗️ {resultado.obraAlerta}
-              </p>
-            )}
             <Link
-              href={`/simulador?valorImovel=${resultado.valorImovel}&entrada=${parseMoeda(entrada)}&renda=${parseMoeda(renda)}&prazo=${prazo}&naPlanta=${naPlantaImovel}`}
-              style={{ display: 'block', textAlign: 'center', marginTop: '12px', fontSize: '13px', fontWeight: '700', color: 'var(--primary)', textDecoration: 'none', padding: '8px 0', borderTop: '1px solid var(--border)' }}
+              href={`/simulador?valorImovel=${resultado.valorImovel}&entrada=${parseMoeda(entrada)}&renda=${parseMoeda(renda)}&prazo=${prazo}`}
+              style={{ display: 'block', textAlign: 'center', marginTop: '12px', fontSize: '12px', fontWeight: '700', color: 'var(--primary)', textDecoration: 'none' }}
             >
-              Abrir simulação completa no Simulador →
+              Ver simulação completa no FinancieCerto →
             </Link>
           </div>
         )}
@@ -381,8 +376,10 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
   );
 
   const statusCfg = getStatus(imovel.status || '');
+  const pageUrl = typeof window !== 'undefined' ? window.location.href : (`https://www.financiecerto.com.br/imovel/${imovel.id}`);
+  const linkImovel = imovel.sharing_url || pageUrl;
   const waMsg = encodeURIComponent(
-    `Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.${imovel.sharing_url ? ' Link: ' + imovel.sharing_url : ''}`
+    `Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações. Link: ${linkImovel}`
   );
 
   const specs = [
@@ -622,15 +619,7 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
               </div>
             </div>
 
-            {imovel.min_price && (
-              <SimuladorEmbutido
-                valorImovel={imovel.min_price}
-                naPlantaImovel={(() => {
-                  const s = (imovel.status || '').toLowerCase();
-                  return s.includes('planta') || s.includes('constru') || s.includes('obra') || s.includes('lança') || s.includes('lanca');
-                })()}
-              />
-            )}
+            {imovel.min_price && <SimuladorEmbutido valorImovel={imovel.min_price} />}
           </div>
         </div>
       </div>
