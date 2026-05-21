@@ -322,9 +322,9 @@ function SimuladorInner() {
     const faixa = r.faixa?.label ?? 'SBPE';
     const valorMaxImovel = r.mcmv.elegivel ? r.mcmv.valorMaxImovel : r.sbpe.valorMaxImovel;
     const modalidade = r.mcmv.elegivel ? `MCMV ${faixa}` : 'SBPE';
-    const parcela = r.mcmv.elegivel ? r.mcmv.parcelaPrice : r.sbpe.parcelaPrice;
-    const subsidio = r.mcmv.elegivel ? (r.mcmv.subsidio ?? 0) : 0;
-    const taxaAnual = r.mcmv.elegivel ? r.mcmv.taxaAnual : TAXA_SBPE_ANUAL;
+    const parcela = r.mcmv.elegivel ? r.mcmv.parcela : r.sbpe.parcela;
+    const subsidio = r.mcmv.elegivel ? (r.subsidioEstimado ?? 0) : 0;
+    const taxaAnual = r.mcmv.elegivel ? r.mcmv.taxa : TAXA_SBPE_ANUAL;
     const comprometimento = r.mcmv.elegivel ? r.mcmv.comprometimento : r.sbpe.comprometimento;
 
     // Legacy key (mantido para compatibilidade)
@@ -932,4 +932,3 @@ export default function SimuladorPage() {
     </Suspense>
   );
 }
-                                                                                                                             
