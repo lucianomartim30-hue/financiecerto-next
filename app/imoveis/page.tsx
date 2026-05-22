@@ -134,11 +134,14 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
   const vagasStr   = faixa(b.vagas_min, b.vagas_max, b.vagas_min === 1 && !b.vagas_max ? 'vaga' : 'vagas');
 
   const specs = [
-    areaStr    && { icon: '▦',  label: areaStr },
-    quartosStr && { icon: '🛏', label: quartosStr },
-    bathStr    && { icon: '🚿', label: bathStr },
-    vagasStr   && { icon: '🚗', label: vagasStr },
-  ].filter(Boolean) as { icon: string; label: string }[];
+    areaStr    && { icon: '▦',  label: areaStr,    highlight: false },
+    quartosStr && { icon: '🛏', label: quartosStr, highlight: false },
+    bathStr    && { icon: '🚿', label: bathStr,    highlight: false },
+    vagasStr   && { icon: '🚗', label: vagasStr,   highlight: true  },
+  ].filter(Boolean) as { icon: string; label: string; highlight: boolean }[];
+
+  // Vagas como badge destacado (separado do specs row)
+  const temVaga = (b.vagas_min ?? 0) > 0;
 
   return (
     <div
@@ -238,14 +241,15 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
           </p>
         )}
 
-        {/* Specs: m² / quartos / banheiros / vagas */}
-        {specs.length > 0 && (
+        {/* Specs: m² / quartos / banheiros */}
+        {specs.filter(s => !s.highlight).length > 0 && (
           <div style={{
             display: 'flex', gap: '10px', flexWrap: 'wrap',
-            marginBottom: '10px', paddingBottom: '10px',
-            borderBottom: '1px solid var(--border)',
+            marginBottom: temVaga ? '6px' : '10px',
+            paddingBottom: temVaga ? '6px' : '10px',
+            borderBottom: temVaga ? 'none' : '1px solid var(--border)',
           }}>
-            {specs.map(({ icon, label }, i) => (
+            {specs.filter(s => !s.highlight).map(({ icon, label }, i) => (
               <span key={i} style={{
                 display: 'flex', alignItems: 'center', gap: '3px',
                 fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600',
@@ -254,6 +258,41 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
                 {label}
               </span>
             ))}
+          </div>
+        )}
+
+        {/* Badge de vagas — destacado */}
+        {temVaga ? (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            marginBottom: '10px', paddingBottom: '10px',
+            borderBottom: '1px solid var(--border)',
+          }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              background: 'rgba(37,99,235,.10)', color: 'var(--primary)',
+              border: '1px solid rgba(37,99,235,.22)',
+              borderRadius: '6px', padding: '3px 9px',
+              fontSize: '11px', fontWeight: '700',
+            }}>
+              🚗 {vagasStr}
+            </span>
+          </div>
+        ) : (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            marginBottom: '10px', paddingBottom: '10px',
+            borderBottom: '1px solid var(--border)',
+          }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              background: 'rgba(100,116,139,.08)', color: 'var(--text-faint)',
+              border: '1px solid rgba(100,116,139,.18)',
+              borderRadius: '6px', padding: '3px 9px',
+              fontSize: '11px', fontWeight: '600',
+            }}>
+              🚗 Sem vaga
+            </span>
           </div>
         )}
 
