@@ -568,8 +568,9 @@ function SmartSearchInput({
 
 function ImoveisContent() {
   const searchParams = useSearchParams();
-  const minParam = searchParams.get('min') || '';
-  const maxParam = searchParams.get('max') || '';
+  const minParam    = searchParams.get('min') || '';
+  const maxParam    = searchParams.get('max') || '';
+  const statusParam = searchParams.get('status') || '';
 
   // Filtros de API (todos acionam re-fetch)
   const [minPrice, setMinPriceRaw] = useState(minParam);
@@ -577,7 +578,7 @@ function ImoveisContent() {
   const [minInput, setMinInput] = useState(minParam ? fmtInput(minParam) : '');
   const [maxInput, setMaxInput] = useState(maxParam ? fmtInput(maxParam) : '');
   const [quartosFilter, setQuartosFilter] = useState<string>('todos');
-  const [statusFilter, setStatusFilter] = useState<string>('todos');
+  const [statusFilter, setStatusFilter] = useState<string>(statusParam);
   const [localSearch, setLocalSearch] = useState('');
   const [localSearchInput, setLocalSearchInput] = useState('');
 

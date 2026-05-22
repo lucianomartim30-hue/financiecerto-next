@@ -4,8 +4,9 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
-  descobrir, simular, formatBRL, motivoSBPE,
+  descobrir, simular, formatBRL, motivoSBPE, parcelaPrice,
   detectarFaixaMCMV, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH,
+  BANCOS_SBPE,
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
 
@@ -192,6 +193,45 @@ function BadgeModalidade({ renda }: { renda: number }) {
       </span>
       <p style={{ fontSize: 12, color: 'var(--text-faint)', margin: 0 }}>
         Financiamento bancário convencional · imóveis SFH até {formatBRL(TETO_SFH)} · FGTS permitido · também opera no SFI acima desse valor
+      </p>
+    </div>
+  );
+}
+
+// ─── Comparativo de bancos SBPE ───────────────────────────────────────────────
+function ComparativoBancosSBPE({ financiado, prazoMeses }: { financiado: number; prazoMeses: number }) {
+  if (financiado <= 0) return null;
+  return (
+    <div style={{ marginTop: 20, padding: '16px', background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: 14 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 12 }}>
+        🏦 Comparativo SBPE — Principais bancos (referência mai/2026 · + TR)
+      </div>
+      <div style={{ display: 'grid', gap: 6 }}>
+        {BANCOS_SBPE.map((b, i) => {
+          const parcela = parcelaPrice(financiado, b.taxa, prazoMeses > 0 ? prazoMeses : 420);
+          return (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 12px', borderRadius: 10,
+              background: b.destaque ? '#EFF6FF' : 'white',
+              border: `1px solid ${b.destaque ? '#BFDBFE' : '#E5E7EB'}`,
+            }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: b.destaque ? 800 : 600, color: b.destaque ? 'var(--primary)' : '#374151' }}>
+                  {b.banco}{b.destaque && <span style={{ marginLeft: 6, fontSize: 10, background: '#2563eb', color: '#fff', padding: '1px 6px', borderRadius: 99, fontWeight: 700 }}>menor taxa</span>}
+                </div>
+                {b.obs && <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>{b.obs}</div>}
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: b.destaque ? 'var(--primary)' : '#111827' }}>{b.taxa.toFixed(2).replace('.', ',')}% a.a.</div>
+                {financiado > 0 && <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>~{formatBRL(Math.round(parcela))}/mês</div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: 11, color: '#6B7280', marginTop: 10, lineHeight: 1.5 }}>
+        ℹ️ Taxas nominais + TR. Parcela estimada (Price · sem seguros). Taxas variam por perfil, LTV e relacionamento com o banco. Consulte cada instituição para proposta personalizada.
       </p>
     </div>
   );
@@ -633,9 +673,12 @@ function SimuladorInner() {
 
         {/* Nota explicativa por modalidade */}
         {painelAtivo === 'sbpe' && (
-          <div style={{ padding: '12px 14px', background: '#E6F1FB', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#0C447C' }}>
-            <strong>SBPE</strong> (Sistema Brasileiro de Poupança e Empréstimo) é a <em>fonte de captação</em> — recursos da poupança. Opera dentro do <strong>SFH</strong> (Sistema Financeiro da Habitação) para imóveis até {formatBRL(TETO_SFH)}. Permite uso do FGTS. Taxa Caixa Econômica Federal: {TAXA_SBPE_ANUAL}% a.a. + TR.
-          </div>
+          <>
+            <div style={{ padding: '12px 14px', background: '#E6F1FB', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#0C447C' }}>
+              <strong>SBPE</strong> (Sistema Brasileiro de Poupança e Empréstimo) é a <em>fonte de captação</em> — recursos da poupança. Opera dentro do <strong>SFH</strong> (Sistema Financeiro da Habitação) para imóveis até {formatBRL(TETO_SFH)}. Permite uso do FGTS. <strong>Qualquer banco pode oferecer SBPE</strong> — compare as taxas abaixo.
+            </div>
+            <ComparativoBancosSBPE financiado={perfil?.sbpe.valorFinanciado ?? 0} prazoMeses={perfil?.prazoMaxMeses ?? 420} />
+          </>
         )}
         {painelAtivo === 'sfi' && (
           <div style={{ padding: '12px 14px', background: '#FAEEDA', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#633806' }}>
@@ -705,7 +748,7 @@ function SimuladorInner() {
 
         {/* CTAs */}
         <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
-          <Link href={`/imoveis?max=${dados.valorMaxImovel}&modalidade=${painelAtivo}`}
+          <Link href={`/imoveis?min=${Math.round(dados.valorMaxImovel * 0.5)}&max=${dados.valorMaxImovel}`}
             style={{ display: 'block', padding: '16px 0', borderRadius: 12, background: 'var(--primary)', color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
             🏠 Ver imóveis compatíveis — {dados.label}
           </Link>
@@ -903,15 +946,20 @@ function SimuladorInner() {
           </div>
         )}
 
+        {/* Comparativo bancos SBPE */}
+        {!sim.isMCMV && !sim.isSFI && (
+          <ComparativoBancosSBPE financiado={sim.valorFinanciado} prazoMeses={sim.prazoMeses} />
+        )}
+
         {/* Nota legal */}
-        <p style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 24 }}>
-          Simulação educativa — regras SFH/MCMV vigentes · maio/2026. MIP calculado pelo coeficiente etário real do contrato SIOPI / Caixa Econômica Federal. Valores exatos devem ser confirmados na Caixa Econômica Federal ou correspondente bancário. Não constitui proposta de crédito. SBPE opera dentro do SFH (imóveis até {formatBRL(TETO_SFH)}); SFI é o sistema paralelo para imóveis acima desse limite.
+        <p style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 24, marginTop: 16 }}>
+          Simulação educativa — regras SFH/MCMV vigentes · mai/2026. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Taxas SBPE: referência de mercado — variam por banco, perfil e LTV. Valores exatos confirmados em cada instituição financeira. Não constitui proposta de crédito.
         </p>
 
         <div style={{ display: 'grid', gap: 12 }}>
-          <Link href={`/imoveis?max=${sim.valorImovel}&modalidade=${sim.isMCMV ? 'mcmv' : sim.isSFI ? 'sfi' : 'sbpe'}`}
+          <Link href={`/imoveis?min=${Math.round(sim.valorImovel * 0.75)}&max=${Math.round(sim.valorImovel * 1.20)}${sim.naPlanta ? '&status=na planta' : ''}`}
             style={{ display: 'block', padding: '16px 0', borderRadius: 12, background: 'var(--primary)', color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
-            🏠 Ver imóveis compatíveis
+            🏠 Ver imóveis compatíveis — {formatBRL(Math.round(sim.valorImovel * 0.75))} a {formatBRL(Math.round(sim.valorImovel * 1.20))}
           </Link>
           <button onClick={() => { setEtapa(0); setE(E0); setPerfil(null); setSim(null); }}
             style={{ padding: '15px 0', borderRadius: 12, border: '1.5px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>

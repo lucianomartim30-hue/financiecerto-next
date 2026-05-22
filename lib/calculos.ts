@@ -40,9 +40,28 @@ export const FAIXAS_MCMV: FaixaMCMV[] = [
 ];
 
 // ─── Constantes gerais ────────────────────────────────────────────────────────
-export const TAXA_SBPE_ANUAL  = 11.19;
+export const TAXA_SBPE_ANUAL  = 11.19;  // Caixa — correntista (referência 2026)
+export const TAXA_SBPE_BALCAO = 11.49;  // Caixa — balcão
 export const TAXA_SFI_ANUAL   = 12.5;
 export const TETO_SFH         = 2_250_000;
+
+// ─── Taxas SBPE dos principais bancos (referência maio/2026 + TR) ─────────────
+// Fonte: simuladores oficiais dos bancos. Podem variar por perfil, LTV e relacionamento.
+export interface BancoSBPE {
+  banco: string;
+  taxa: number;       // % a.a. nominal
+  destaque?: boolean; // menor taxa / mais vantajoso
+  obs?: string;
+}
+export const BANCOS_SBPE: BancoSBPE[] = [
+  { banco: 'Caixa Econômica Federal', taxa: 11.19, destaque: true, obs: 'Correntista' },
+  { banco: 'Caixa Econômica Federal', taxa: 11.49, obs: 'Balcão (sem conta)' },
+  { banco: 'Banco Inter',             taxa: 11.49, obs: 'Digital — sem tarifa de adm' },
+  { banco: 'Bradesco',                taxa: 11.69 },
+  { banco: 'Santander',               taxa: 11.74 },
+  { banco: 'Itaú',                    taxa: 11.89 },
+  { banco: 'Banco do Brasil',         taxa: 11.97, obs: 'Correntista BB' },
+];
 export const LTV_SBPE_PRICE   = 0.70;
 export const LTV_SBPE_SAC     = 0.80;
 export const PRAZO_MAX_MESES  = 420;

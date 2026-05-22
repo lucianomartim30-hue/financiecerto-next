@@ -918,26 +918,32 @@ function NaPlantaContent() {
         )}
 
         {/* ── CTA final ───────────────────────────────────────────────────── */}
-        {valido && (
-          <Link href="/imoveis" style={{ textDecoration: 'none', display: 'block' }}>
-            <div style={{
-              background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-              borderRadius: '16px', padding: '20px 24px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              cursor: 'pointer',
-            }}>
-              <div>
-                <p style={{ fontSize: '15px', fontWeight: '800', color: '#fff', marginBottom: '3px' }}>
-                  🏘️ Ver imóveis na planta compatíveis
-                </p>
-                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.7)' }}>
-                  Filtro automático por faixa de valor e modalidade
-                </p>
+        {valido && (() => {
+          // Faixa de preço compatível com o imóvel simulado
+          const minFiltro = Math.round(valor * 0.75);
+          const maxFiltro = isMCMV && faixaRenda ? faixaRenda.teto : Math.round(valor * 1.25);
+          const ctaHref = `/imoveis?min=${minFiltro}&max=${maxFiltro}&status=na planta`;
+          return (
+            <Link href={ctaHref} style={{ textDecoration: 'none', display: 'block' }}>
+              <div style={{
+                background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                borderRadius: '16px', padding: '20px 24px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer',
+              }}>
+                <div>
+                  <p style={{ fontSize: '15px', fontWeight: '800', color: '#fff', marginBottom: '3px' }}>
+                    🏘️ Ver imóveis na planta compatíveis
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.7)' }}>
+                    {formatBRL(minFiltro)} – {formatBRL(maxFiltro)} · filtrando por na planta e em obras
+                  </p>
+                </div>
+                <span style={{ color: '#fff', fontSize: '20px' }}>→</span>
               </div>
-              <span style={{ color: '#fff', fontSize: '20px' }}>→</span>
-            </div>
-          </Link>
-        )}
+            </Link>
+          );
+        })()}
       </div>
     </div>
   );
