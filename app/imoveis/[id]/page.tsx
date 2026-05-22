@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, use } from 'react';
 import Link from 'next/link';
-import { formatBRL, simular, descobrir } from '@/lib/calculos';
+import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, type FaixaMCMV } from '@/lib/calculos';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -107,24 +107,16 @@ function getStatus(s: string) {
   return { cor: '#475569', bg: 'rgba(71,85,105,.12)', label: s };
 }
 
-// Faixas MCMV (tetos para o imóvel, SP 2026)
-const FAIXAS = [
-  { label: 'Faixa 1', teto: 275000, rendaLabel: 'até R$ 3.200' },
-  { label: 'Faixa 2', teto: 275000, rendaLabel: 'R$ 3.200–4.400' },
-  { label: 'Faixa 3', teto: 400000, rendaLabel: 'R$ 4.400–8.000' },
-  { label: 'Faixa 4', teto: 600000, rendaLabel: 'R$ 8.000–13.000' },
-];
-
 function calcEstimate(valorImovel: number) {
   const entrada = Math.round(valorImovel * 0.20);
   const financiado = valorImovel - entrada;
-  // Renda sugerida: parcela Price a 10.5% a.a., 30 anos ≤ 30% renda
-  const i = (10.5 / 100) / 12;
+  // Renda sugerida: parcela Price a TAXA_SBPE_ANUAL, 30 anos ≤ 30% renda
+  const i = (TAXA_SBPE_ANUAL / 100) / 12;
   const n = 360;
   const parcela = Math.round(financiado * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1) + (financiado * 0.00003) + 25);
   const rendaSugerida = Math.ceil(parcela / 0.30 / 100) * 100;
-  // MCMV eligibility
-  const faixaMCMV = FAIXAS.find(f => valorImovel <= f.teto) ?? null;
+  // MCMV eligibility via tabela oficial
+  const faixaMCMV: FaixaMCMV | null = FAIXAS_MCMV.find(f => valorImovel <= f.teto) ?? null;
   return { entrada, parcela, rendaSugerida, faixaMCMV };
 }
 
@@ -258,6 +250,82 @@ function StickyNav({ hasTypologies, hasAmenities }: { hasTypologies: boolean; ha
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Badge MCMV — elegibilidade com subsídio e taxa
+// ─────────────────────────────────────────────────────────────────────────────
+function BadgeMCMV({ valorImovel }: { valorImovel: number }) {
+  const faixa = FAIXAS_MCMV.find(f => valorImovel <= f.teto);
+  if (!faixa) return null;
+  return (
+    <div style={{ background: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)', border: '1.5px solid #86EFAC', borderRadius: '14px', padding: '14px 16px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}>
+        <span style={{ fontSize: '16px' }}>🏠</span>
+        <span style={{ fontSize: '12px', fontWeight: '800', color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Elegível MCMV {faixa.label}
+        </span>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+        <div style={{ background: 'rgba(255,255,255,.7)', borderRadius: '10px', padding: '8px 10px' }}>
+          <p style={{ fontSize: '10px', color: '#4ADE80', fontWeight: '600', marginBottom: '2px' }}>Taxa subsidiada</p>
+          <p style={{ fontSize: '14px', fontWeight: '900', color: '#166534' }}>{faixa.taxaRef}% a.a.</p>
+        </div>
+        {faixa.subsidioMax > 0 ? (
+          <div style={{ background: 'rgba(255,255,255,.7)', borderRadius: '10px', padding: '8px 10px' }}>
+            <p style={{ fontSize: '10px', color: '#4ADE80', fontWeight: '600', marginBottom: '2px' }}>Subsídio máx.</p>
+            <p style={{ fontSize: '14px', fontWeight: '900', color: '#166534' }}>{formatBRL(faixa.subsidioMax)}</p>
+          </div>
+        ) : (
+          <div style={{ background: 'rgba(255,255,255,.7)', borderRadius: '10px', padding: '8px 10px' }}>
+            <p style={{ fontSize: '10px', color: '#4ADE80', fontWeight: '600', marginBottom: '2px' }}>FGTS</p>
+            <p style={{ fontSize: '14px', fontWeight: '900', color: '#166534' }}>Permitido</p>
+          </div>
+        )}
+      </div>
+      <p style={{ fontSize: '10px', color: '#166534', marginTop: '8px', lineHeight: '1.5' }}>
+        Renda até R$ {faixa.rendaMax.toLocaleString('pt-BR')}/mês · LTV máx. {Math.round(faixa.ltvMax * 100)}%
+      </p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Comparativo SBPE mini — para o sidebar do imóvel
+// ─────────────────────────────────────────────────────────────────────────────
+function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number; prazoMeses: number }) {
+  if (financiado <= 0) return null;
+  const menorTaxa = Math.min(...BANCOS_SBPE.map(b => b.taxa));
+  return (
+    <div style={{ background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: '14px', padding: '14px', marginTop: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+        <span style={{ fontSize: '14px' }}>🏦</span>
+        <p style={{ fontSize: '11px', fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Comparativo SBPE · mai/2026</p>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {BANCOS_SBPE.map((b, i) => {
+          const parcela = parcelaPrice(financiado, b.taxa, prazoMeses > 0 ? prazoMeses : 360);
+          const isMenor = b.taxa === menorTaxa && i === 0;
+          return (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: isMenor ? 'rgba(37,99,235,.07)' : 'rgba(255,255,255,.8)', border: `1px solid ${isMenor ? 'rgba(37,99,235,.25)' : 'rgba(0,0,0,.06)'}`, borderRadius: '10px', padding: '8px 10px' }}>
+              <div>
+                <p style={{ fontSize: '11px', fontWeight: '700', color: '#1E293B', lineHeight: 1.2 }}>{b.banco}</p>
+                {b.obs && <p style={{ fontSize: '9px', color: '#64748B', marginTop: '1px' }}>{b.obs}</p>}
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '8px' }}>
+                <p style={{ fontSize: '10px', color: '#64748B' }}>{b.taxa.toFixed(2)}% +TR</p>
+                <p style={{ fontSize: '13px', fontWeight: '800', color: isMenor ? '#1D4ED8' : '#0F172A' }}>{formatBRL(parcela)}</p>
+                {isMenor && <span style={{ fontSize: '9px', background: '#DBEAFE', color: '#1D4ED8', padding: '1px 5px', borderRadius: '4px', fontWeight: '700' }}>menor</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p style={{ fontSize: '9px', color: '#94A3B8', marginTop: '8px', lineHeight: '1.4' }}>
+        Parcela Price estimada · + TR mensal · variam por perfil e LTV
+      </p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Bloco Financeiro — card lateral sticky (diferencial FinancieCerto)
 // ─────────────────────────────────────────────────────────────────────────────
 function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
@@ -356,7 +424,7 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
                 { label: 'Renda sugerida', value: formatBRL(est.rendaSugerida) + '/mês', icon: '💼', color: '#2563eb' },
                 { label: 'Entrada (20%)', value: formatBRL(est.entrada), icon: '🏦', color: '#7c3aed' },
                 { label: 'Parcela estimada', value: formatBRL(est.parcela) + '/mês', icon: '📅', color: '#0f6e56' },
-                { label: est.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : 'SBPE / SFI', value: est.faixaMCMV ? est.faixaMCMV.rendaLabel : 'Renda livre', icon: est.faixaMCMV ? '🏠' : '🏛️', color: est.faixaMCMV ? '#16a34a' : '#d97706' },
+                { label: est.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : 'SBPE / SFI', value: est.faixaMCMV ? `até R$ ${est.faixaMCMV.rendaMax.toLocaleString('pt-BR')}` : 'Renda livre', icon: est.faixaMCMV ? '🏠' : '🏛️', color: est.faixaMCMV ? '#16a34a' : '#d97706' },
               ].map(({ label, value, icon, color }) => (
                 <div key={label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px' }}>
                   <div style={{ fontSize: '16px', marginBottom: '4px' }}>{icon}</div>
@@ -366,10 +434,13 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
               ))}
             </div>
             <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginTop: '8px', textAlign: 'center' }}>
-              * Estimativas SBPE, 30 anos, sem subsídio. Simule para valores precisos.
+              * Estimativas SBPE {TAXA_SBPE_ANUAL}%+TR, 30 anos. Simule para valores precisos.
             </p>
           </div>
         )}
+
+        {/* MCMV Eligibility Badge */}
+        {valorRef > 0 && <BadgeMCMV valorImovel={valorRef} />}
 
         {/* Botão expandir simulador */}
         {!expanded ? (
@@ -432,6 +503,14 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
               </div>
             )}
 
+            {/* SBPE multi-banco preview — aparece quando renda preenche perfil SBPE */}
+            {poder && !poder.mcmv.elegivel && valorRef > 0 && (
+              <ComparativoBancosCard
+                financiado={Math.round(valorRef * 0.80)}
+                prazoMeses={parseInt(prazo) * 12}
+              />
+            )}
+
             {/* Prazo */}
             <div>
               <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Prazo</p>
@@ -465,33 +544,47 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
               const parcela = resultado.parcelaPrimeiro;
               const comprometimento = parseMoeda(renda) > 0 ? Math.round((parcela / parseMoeda(renda)) * 100) : 0;
               const alerta = comprometimento > 30;
+              const minFiltro = Math.round(valorRef * 0.75);
+              const maxFiltro = Math.round(valorRef * 1.25);
+              const ctaLink = `/imoveis?min=${minFiltro}&max=${maxFiltro}${isNaPlanta(imovel.status || '') ? '&status=na planta' : ''}`;
               return (
-                <div style={{ background: alerta ? 'rgba(239,68,68,.06)' : 'rgba(22,163,74,.06)', border: `1px solid ${alerta ? 'rgba(239,68,68,.25)' : 'rgba(22,163,74,.25)'}`, borderRadius: '12px', padding: '16px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>1ª Parcela</p>
-                      <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : 'var(--primary)' }}>{formatBRL(parcela)}</p>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Comprometimento</p>
-                      <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : '#16a34a' }}>{comprometimento}%</p>
-                    </div>
-                  </div>
-                  {alerta && <p style={{ fontSize: '12px', color: '#dc2626', textAlign: 'center' }}>⚠️ Acima de 30% da renda — risco de reprovação</p>}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                    {[
-                      { l: 'Tabela Price', v: formatBRL(resultado.parcelaPrimeiro) },
-                      { l: 'SAC (1ª)', v: formatBRL(resultado.parcelaSACPrimeiro) },
-                      { l: 'Valor financiado', v: formatBRL(resultado.valorFinanciado) },
-                      { l: 'Total pago (Price)', v: formatBRL(resultado.totalPagoPrice) },
-                    ].map(({ l, v }) => (
-                      <div key={l} style={{ textAlign: 'center' }}>
-                        <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>{l}</p>
-                        <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>{v}</p>
+                <>
+                  <div style={{ background: alerta ? 'rgba(239,68,68,.06)' : 'rgba(22,163,74,.06)', border: `1px solid ${alerta ? 'rgba(239,68,68,.25)' : 'rgba(22,163,74,.25)'}`, borderRadius: '12px', padding: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>1ª Parcela</p>
+                        <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : 'var(--primary)' }}>{formatBRL(parcela)}</p>
                       </div>
-                    ))}
+                      <div style={{ textAlign: 'center' }}>
+                        <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Comprometimento</p>
+                        <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : '#16a34a' }}>{comprometimento}%</p>
+                      </div>
+                    </div>
+                    {alerta && <p style={{ fontSize: '12px', color: '#dc2626', textAlign: 'center', marginBottom: '10px' }}>⚠️ Acima de 30% da renda — risco de reprovação</p>}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      {[
+                        { l: 'Tabela Price', v: formatBRL(resultado.parcelaPrimeiro) },
+                        { l: 'SAC (1ª)', v: formatBRL(resultado.parcelaSACPrimeiro) },
+                        { l: 'Valor financiado', v: formatBRL(resultado.valorFinanciado) },
+                        { l: 'Total pago (Price)', v: formatBRL(resultado.totalPagoPrice) },
+                      ].map(({ l, v }) => (
+                        <div key={l} style={{ textAlign: 'center' }}>
+                          <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>{l}</p>
+                          <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>{v}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                  {/* CTAs pós-simulação */}
+                  <Link href={ctaLink}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', background: 'var(--primary-light)', color: 'var(--primary)', border: '1.5px solid rgba(37,99,235,.25)', borderRadius: '12px', padding: '10px', fontSize: '12px', fontWeight: '700', textDecoration: 'none', textAlign: 'center' }}>
+                    🏠 Ver imóveis compatíveis — {formatBRL(minFiltro)} a {formatBRL(maxFiltro)}
+                  </Link>
+                  <Link href="/simulador"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '12px', padding: '9px', fontSize: '12px', fontWeight: '600', textDecoration: 'none', textAlign: 'center' }}>
+                    📊 Simulador completo com todos os cenários →
+                  </Link>
+                </>
               );
             })()}
           </div>
@@ -719,6 +812,7 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
   const [imovel, setImovel] = useState<ImovelDetalhe | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -767,12 +861,27 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
 
       {/* ── Gallery Hero (full width) ────────────────────────────────────── */}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px 24px 0' }}>
-        <div style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '12px' }}>
-          <Link href="/imoveis" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}>← Imóveis</Link>
-          <span style={{ margin: '0 6px' }}>·</span>
-          <span>{imovel.neighborhood}</span>
-          <span style={{ margin: '0 6px' }}>·</span>
-          <span style={{ color: 'var(--text)' }}>{imovel.name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-faint)' }}>
+            <Link href="/imoveis" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}>← Imóveis</Link>
+            <span style={{ margin: '0 6px' }}>·</span>
+            <span>{imovel.neighborhood}</span>
+            <span style={{ margin: '0 6px' }}>·</span>
+            <span style={{ color: 'var(--text)' }}>{imovel.name}</span>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {imovel.sharing_url && (
+              <a href={imovel.sharing_url} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 12px', textDecoration: 'none' }}>
+                🔗 Ver original
+              </a>
+            )}
+            <button
+              onClick={() => { navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '600', color: copied ? '#16a34a' : 'var(--text-muted)', background: copied ? '#E1F5EE' : 'var(--bg-card)', border: `1px solid ${copied ? '#86EFAC' : 'var(--border)'}`, borderRadius: '8px', padding: '5px 12px', cursor: 'pointer', transition: 'all 0.2s' }}>
+              {copied ? '✓ Copiado!' : '📋 Copiar link'}
+            </button>
+          </div>
         </div>
       </div>
 
