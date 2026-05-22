@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { formatBRL } from '@/lib/calculos';
 import dynamic from 'next/dynamic';
+import { formatBRL } from '@/lib/calculos';
+import type { MapViewHandle, Bounds } from '@/components/MapView';
+
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 // Types
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 interface Imovel {
   id: string;
   name: string;
@@ -20,1173 +22,448 @@ interface Imovel {
   bedrooms_max: number | null;
   area_min: number | null;
   area_max: number | null;
-  bathrooms_min: number | null;
-  bathrooms_max: number | null;
-  vagas_min: number | null;
-  vagas_max: number | null;
   neighborhood: string;
   city: string;
-  state: string;
   photo: string | null;
-  orulo_url: string | null;
-  sharing_url: string | null;
   status: string;
-  address_full: string;
-  street: string;
-  number: string;
+  status_norm: string;
   lat: number | null;
   lng: number | null;
+  delivery_date: string | null;
 }
 
-type StatusKey = 'Na Planta' | 'Em Obras' | 'Pronto' | 'Lançamento' | string;
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Status config
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { cor: string; bg: string; label: string }> = {
-  // Na planta
-  'na planta':      { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
-  'planta':         { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
-  'pre-lançamento': { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Pré-Lançamento' },
-  'pre lançamento': { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Pré-Lançamento' },
-  // Lançamento
-  'lançamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
-  'lancamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
-  // Em obras / em construção
-  'em obras':       { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Obras' },
-  'em construção':  { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
-  'em construcao':  { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
-  'construção':     { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
-  'em andamento':   { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Andamento' },
-  // Pronto / entregue
-  'pronto':         { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Pronto' },
-  'pronto novo':    { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Pronto Novo' },
-  'entregue':       { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Entregue' },
-  'concluído':      { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Concluído' },
-  'concluido':      { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Concluído' },
+  'na planta':  { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
+  'lançamento': { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
+  'em obras':   { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Obras' },
+  'pronto':     { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Pronto' },
 };
-
-function getStatusCfg(status: StatusKey) {
-  const key = status.toLowerCase().trim();
-  if (STATUS_CFG[key]) return STATUS_CFG[key];
-  // Fuzzy match por palavras-chave
-  if (key.includes('planta'))      return STATUS_CFG['na planta'];
-  if (key.includes('lança'))       return STATUS_CFG['lançamento'];
-  if (key.includes('constru') || key.includes('obra') || key.includes('andamento'))
-                                   return STATUS_CFG['em obras'];
-  if (key.includes('pronto') || key.includes('entreg') || key.includes('conclui'))
-                                   return STATUS_CFG['pronto'];
-  // Fallback visível (cinza escuro, não transparente)
-  return { cor: '#475569', bg: 'rgba(71,85,105,.18)', label: status };
+function getStatus(s: string) {
+  const k = (s || '').toLowerCase().trim();
+  if (STATUS_CFG[k]) return STATUS_CFG[k];
+  if (k.includes('planta') || k.includes('lança')) return STATUS_CFG['na planta'];
+  if (k.includes('constru') || k.includes('obra') || k.includes('andamento')) return STATUS_CFG['em obras'];
+  if (k.includes('pronto') || k.includes('entreg') || k.includes('conclui')) return STATUS_CFG['pronto'];
+  return { cor: '#475569', bg: 'rgba(71,85,105,.15)', label: s || 'Outros' };
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
+function fmtRange(min: number | null, max: number | null, unit: string) {
+  if (!min) return null;
+  if (max && max !== min) return `${min}–${max} ${unit}`;
+  return `${min} ${unit}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Card compacto para o painel lateral
+// ─────────────────────────────────────────────────────────────────────────────
+function ImovelCard({ im }: { im: Imovel }) {
+  const sc = getStatus(im.status_norm || im.status || '');
+  return (
+    <Link href={`/imoveis/${im.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+      <div style={{
+        display: 'flex', gap: '12px', padding: '12px', background: 'var(--bg-card)',
+        border: '1px solid var(--border)', borderRadius: '14px',
+        transition: 'box-shadow 0.15s, border-color 0.15s', cursor: 'pointer',
+      }}
+        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(37,99,235,.12)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(37,99,235,.3)'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = ''; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; }}
+      >
+        {/* Foto */}
+        <div style={{ width: '88px', height: '72px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, background: '#E2E8F0' }}>
+          {im.photo
+            ? <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>🏢</div>
+          }
+        </div>
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span style={{ background: sc.bg, color: sc.cor, fontSize: '9px', fontWeight: '800', padding: '2px 7px', borderRadius: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+              {sc.label}
+            </span>
+            {im.delivery_date && (
+              <span style={{ fontSize: '9px', color: 'var(--text-faint)' }}>🗓 {im.delivery_date}</span>
+            )}
+          </div>
+          <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {im.name}
+          </p>
+          <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {im.developer} · {im.neighborhood}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '4px' }}>
+            <span style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)' }}>
+              {im.min_price ? formatBRL(im.min_price) : 'Consultar'}
+            </span>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {fmtRange(im.bedrooms_min, im.bedrooms_max, 'qts') && (
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '2px 6px' }}>
+                  🛏 {fmtRange(im.bedrooms_min, im.bedrooms_max, 'qts')}
+                </span>
+              )}
+              {im.area_min && (
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '2px 6px' }}>
+                  ▦ {im.area_min}m²
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Skeleton card
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
-    <div style={{
-      background: 'var(--bg-card)', borderRadius: '18px',
-      border: '1px solid var(--border)', overflow: 'hidden',
-    }}>
-      <div style={{ height: '200px', background: 'var(--border)', animation: 'pulse 1.4s ease infinite' }} />
-      <div style={{ padding: '18px' }}>
-        {[80, 60, 50, 90].map((w, i) => (
-          <div key={i} style={{
-            height: i === 0 ? '14px' : i === 1 ? '18px' : '12px',
-            width: `${w}%`, background: 'var(--border)',
-            borderRadius: '6px', marginBottom: i < 3 ? '10px' : '0',
-            animation: 'pulse 1.4s ease infinite',
-          }} />
+    <div style={{ display: 'flex', gap: '12px', padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px' }}>
+      <div style={{ width: '88px', height: '72px', borderRadius: '10px', background: 'var(--border)', flexShrink: 0 }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', justifyContent: 'center' }}>
+        {[70, 90, 60].map((w, i) => (
+          <div key={i} style={{ height: i === 1 ? '13px' : '10px', width: `${w}%`, background: 'var(--border)', borderRadius: '6px' }} />
         ))}
       </div>
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }`}</style>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }`}</style>
     </div>
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Card Imóvel — estilo portal (Apto.vc)
-// ──────────────────────────────────────────────────────────────────────────────
-function CardImovel({ imovel: b }: { imovel: Imovel }) {
-  const [imgErr, setImgErr] = useState(false);
-  const [hover, setHover] = useState(false);
-  const router = useRouter();
-
-  const preco = b.min_price ? `A partir de ${formatBRL(b.min_price)}` : 'Preço sob consulta';
-  const statusCfg = getStatusCfg(b.status || '');
-  const link = b.sharing_url || b.orulo_url || '#';
-
-  const waMsg = encodeURIComponent(
-    `Olá! Vi o imóvel *${b.name}* no FinancieCerto e quero mais informações.${link !== '#' ? ' Link: ' + link : ''}`
-  );
-
-  // Helpers para faixas (ex: "62–85 m²" ou "62 m²")
-  function faixa(min: number | null, max: number | null, unit: string) {
-    if (!min) return null;
-    if (max && max !== min) return `${min}–${max} ${unit}`;
-    return `${min} ${unit}`;
-  }
-
-  const areaStr    = faixa(b.area_min, b.area_max, 'm²');
-  const quartosStr = faixa(b.bedrooms_min, b.bedrooms_max, b.bedrooms_min === 1 && !b.bedrooms_max ? 'quarto' : 'qts');
-  const bathStr    = faixa(b.bathrooms_min, b.bathrooms_max, b.bathrooms_min === 1 && !b.bathrooms_max ? 'ban.' : 'ban.');
-  const vagasStr   = faixa(b.vagas_min, b.vagas_max, b.vagas_min === 1 && !b.vagas_max ? 'vaga' : 'vagas');
-
-  const specs = [
-    areaStr    && { icon: '▦',  label: areaStr,    highlight: false },
-    quartosStr && { icon: '🛏', label: quartosStr, highlight: false },
-    bathStr    && { icon: '🚿', label: bathStr,    highlight: false },
-    vagasStr   && { icon: '🚗', label: vagasStr,   highlight: true  },
-  ].filter(Boolean) as { icon: string; label: string; highlight: boolean }[];
-
-  // Vagas como badge destacado (separado do specs row)
-  const temVaga = (b.vagas_min ?? 0) > 0;
-
-  return (
-    <div
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      onClick={() => router.push(`/imoveis/${b.id}`)}
-      style={{
-        background: 'var(--bg-card)', borderRadius: '14px',
-        border: `1.5px solid ${hover ? 'var(--primary)' : 'var(--border)'}`,
-        overflow: 'hidden', display: 'flex', flexDirection: 'column',
-        transition: 'border-color 0.18s, box-shadow 0.18s, transform 0.18s',
-        boxShadow: hover ? '0 6px 24px rgba(37,99,235,.13)' : '0 1px 4px rgba(0,0,0,.05)',
-        transform: hover ? 'translateY(-2px)' : 'none',
-        cursor: 'pointer',
-      }}
-    >
-      {/* Foto */}
-      <div style={{ height: '178px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
-        {b.photo && !imgErr ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={b.photo}
-            alt={b.name}
-            onError={() => setImgErr(true)}
-            style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              transform: hover ? 'scale(1.05)' : 'scale(1)',
-              transition: 'transform 0.4s cubic-bezier(.4,0,.2,1)',
-            }}
-          />
-        ) : (
-          <div style={{
-            width: '100%', height: '100%',
-            background: 'linear-gradient(145deg, #1e3a5f 0%, #0f2744 100%)',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: '8px',
-          }}>
-            <span style={{ fontSize: '32px' }}>🏙️</span>
-          </div>
-        )}
-        {/* Overlay gradient */}
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: '70px',
-          background: 'linear-gradient(to top, rgba(0,0,0,.6) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }} />
-        {/* Status badge */}
-        {b.status && (
-          <div style={{
-            position: 'absolute', top: '10px', left: '10px',
-            background: statusCfg.bg, backdropFilter: 'blur(8px)',
-            border: `1px solid ${statusCfg.cor}50`,
-            color: statusCfg.cor, fontSize: '9px', fontWeight: '800',
-            padding: '3px 8px', borderRadius: '99px',
-            textTransform: 'uppercase', letterSpacing: '0.6px',
-          }}>
-            {statusCfg.label}
-          </div>
-        )}
-        {/* Bairro no overlay */}
-        {(b.neighborhood || b.city) && (
-          <p style={{
-            position: 'absolute', bottom: '9px', left: '10px',
-            fontSize: '10px', color: 'rgba(255,255,255,.9)',
-            fontWeight: '600', margin: 0,
-          }}>
-            📍 {b.neighborhood || b.city}
-          </p>
-        )}
-      </div>
-
-      {/* Conteúdo */}
-      <div style={{ padding: '14px 14px 12px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        {b.developer && (
-          <p style={{
-            fontSize: '9px', fontWeight: '700', color: 'var(--text-faint)',
-            textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '4px',
-          }}>
-            {b.developer}
-          </p>
-        )}
-        <h3 style={{
-          fontSize: '13px', fontWeight: '700', color: 'var(--text)',
-          lineHeight: 1.35, marginBottom: b.address_full ? '4px' : '10px', flex: b.address_full ? 0 : 1,
-        }}>
-          {b.name}
-        </h3>
-
-        {/* Endereço */}
-        {b.address_full && (
-          <p style={{
-            fontSize: '10px', color: 'var(--text-faint)', fontWeight: '500',
-            marginBottom: '10px', flex: 1,
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-          }}>
-            📍 {b.address_full}
-          </p>
-        )}
-
-        {/* Specs: m² / quartos / banheiros */}
-        {specs.filter(s => !s.highlight).length > 0 && (
-          <div style={{
-            display: 'flex', gap: '10px', flexWrap: 'wrap',
-            marginBottom: temVaga ? '6px' : '10px',
-            paddingBottom: temVaga ? '6px' : '10px',
-            borderBottom: temVaga ? 'none' : '1px solid var(--border)',
-          }}>
-            {specs.filter(s => !s.highlight).map(({ icon, label }, i) => (
-              <span key={i} style={{
-                display: 'flex', alignItems: 'center', gap: '3px',
-                fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600',
-              }}>
-                <span style={{ fontSize: '12px' }}>{icon}</span>
-                {label}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Badge de vagas — destacado */}
-        {temVaga ? (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            marginBottom: '10px', paddingBottom: '10px',
-            borderBottom: '1px solid var(--border)',
-          }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: '4px',
-              background: 'rgba(37,99,235,.10)', color: 'var(--primary)',
-              border: '1px solid rgba(37,99,235,.22)',
-              borderRadius: '6px', padding: '3px 9px',
-              fontSize: '11px', fontWeight: '700',
-            }}>
-              🚗 {vagasStr}
-            </span>
-          </div>
-        ) : (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            marginBottom: '10px', paddingBottom: '10px',
-            borderBottom: '1px solid var(--border)',
-          }}>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: '4px',
-              background: 'rgba(100,116,139,.08)', color: 'var(--text-faint)',
-              border: '1px solid rgba(100,116,139,.18)',
-              borderRadius: '6px', padding: '3px 9px',
-              fontSize: '11px', fontWeight: '600',
-            }}>
-              🚗 Sem vaga
-            </span>
-          </div>
-        )}
-
-        {/* Preço */}
-        <p style={{
-          fontSize: '14px', fontWeight: '800', color: 'var(--text)',
-          fontVariantNumeric: 'tabular-nums', marginBottom: '10px',
-        }}>
-          {preco}
-        </p>
-
-        {/* CTAs */}
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <a
-            href={`https://wa.me/5511933661403?text=${waMsg}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
-            style={{
-              flex: 1, textAlign: 'center', background: '#25D366', color: '#fff',
-              textDecoration: 'none', fontSize: '11px', fontWeight: '700',
-              padding: '8px 10px', borderRadius: '9px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-            }}
-          >
-            <span>💬</span> WhatsApp
-          </a>
-          <a
-            href={`/imoveis/${b.id}`}
-            onClick={e => e.stopPropagation()}
-            style={{
-              flex: 1, textAlign: 'center',
-              background: 'var(--primary-light)', color: 'var(--primary)',
-              border: '1.5px solid var(--primary)',
-              textDecoration: 'none', fontSize: '11px', fontWeight: '700',
-              padding: '8px 10px', borderRadius: '9px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
-          >
-            Ver detalhes →
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Empty state
-// ──────────────────────────────────────────────────────────────────────────────
-function EmptyState({ filtroAtivo, localSearch }: { filtroAtivo: boolean; localSearch?: string }) {
-  const localName = localSearch?.replace(/,.*$/, '').trim(); // pega só "Guarulhos" de "Guarulhos – SP"
-  return (
-    <div style={{
-      textAlign: 'center', padding: '80px 24px',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
-    }}>
-      <span style={{ fontSize: '56px' }}>🏚️</span>
-      <div>
-        <p style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>
-          {localName
-            ? `Nenhum empreendimento disponível em ${localName}`
-            : filtroAtivo ? 'Nenhum imóvel com esses filtros' : 'Nenhum imóvel encontrado'}
-        </p>
-        <p style={{ fontSize: '14px', color: 'var(--text-muted)', maxWidth: '400px', lineHeight: 1.65 }}>
-          {localName
-            ? `A Orulo ainda não tem lançamentos cadastrados em ${localName}. Tente uma região próxima ou busque por nome do empreendimento.`
-            : filtroAtivo
-              ? 'Tente ajustar a faixa de preço, quartos ou estágio da obra.'
-              : 'A integração com Órulo pode estar configurando. Tente novamente em instantes.'}
-        </p>
-      </div>
-      <Link href="/simulador" style={{
-        background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-        color: '#fff', textDecoration: 'none',
-        fontSize: '14px', fontWeight: '700',
-        padding: '12px 28px', borderRadius: '12px',
-        boxShadow: '0 4px 16px rgba(37,99,235,.3)',
-        marginTop: '8px',
-      }}>
-        Calcular meu perfil →
-      </Link>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Pill button helper
-// ──────────────────────────────────────────────────────────────────────────────
-function Pill({
-  label, active, onClick,
-}: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: '7px 16px', borderRadius: '99px', fontSize: '13px',
-        fontWeight: active ? '700' : '500', cursor: 'pointer', border: '1.5px solid',
-        borderColor: active ? 'var(--primary)' : 'var(--border)',
-        background: active ? 'var(--primary-light)' : 'var(--bg-card)',
-        color: active ? 'var(--primary)' : 'var(--text-muted)',
-        transition: 'all 0.15s', whiteSpace: 'nowrap',
-      }}
-    >
-      {label}
-    </button>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// BRL input helpers
-// ──────────────────────────────────────────────────────────────────────────────
-function fmtInput(raw: string): string {
-  const digits = raw.replace(/\D/g, '');
-  if (!digits) return '';
-  return Number(digits).toLocaleString('pt-BR');
-}
-function stripFmt(formatted: string): string {
-  return formatted.replace(/\D/g, '');
-}
-
-
-// ──────────────────────────────────────────────────────────────────────────────
-// SmartSearchInput — autocomplete inteligente com redirect para /bairro/[slug]
-// Chama /api/orulo/search?q= e retorna 3 categorias: Bairros, Empreendimentos, Cidades.
-// Ao selecionar bairro ou empreendimento, navega para a página contextual.
-// ──────────────────────────────────────────────────────────────────────────────
-function SmartSearchInput({
-  value,
-  onConfirm,
-}: {
-  value:     string;
-  onConfirm: (v: string) => void;
-}) {
-  type SearchResults = {
-    neighborhoods: { label: string; slug: string }[];
-    cities:        { label: string; slug: string }[];
-    buildings:     { label: string; id: string; neighborhood: string; slug: string }[];
-  };
-
-  const [input,      setInput]      = useState(value);
-  const [open,       setOpen]       = useState(false);
-  const [results,    setResults]    = useState<SearchResults>({ neighborhoods: [], cities: [], buildings: [] });
-  const [searching,  setSearching]  = useState(false);
-  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+// ─────────────────────────────────────────────────────────────────────────────
+// Conteúdo principal (separado para Suspense)
+// ─────────────────────────────────────────────────────────────────────────────
+function ImoveisContent() {
   const router       = useRouter();
+  const searchParams = useSearchParams();
 
-  useEffect(() => { setInput(value); }, [value]);
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [allBuildings, setAllBuildings] = useState<Imovel[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [bounds, setBounds]             = useState<Bounds | null>(null);
+  const [displayCount, setDisplayCount] = useState(20);
 
-  // Debounce: chama /api/orulo/search após 280 ms sem digitar
+  // Filtros — inicializados com URL params (vindos do simulador)
+  const [filterStatus,   setFilterStatus]   = useState(searchParams.get('status') || '');
+  const [filterMin,      setFilterMin]      = useState(Number(searchParams.get('min') || 0));
+  const [filterMax,      setFilterMax]      = useState(Number(searchParams.get('max') || 0));
+  const [filterBedrooms, setFilterBedrooms] = useState(0);
+
+  // Busca / geocoding
+  const [search,    setSearch]    = useState('');
+  const [geocoding, setGeocoding] = useState(false);
+  const [geoMsg,    setGeoMsg]    = useState('');
+
+  // Filtros avançados (price inputs em texto)
+  const [minInput, setMinInput] = useState(filterMin ? String(filterMin) : '');
+  const [maxInput, setMaxInput] = useState(filterMax ? String(filterMax) : '');
+
+  const mapRef = useRef<MapViewHandle>(null);
+
+  // ── Carga inicial — todos os imóveis ──────────────────────────────────────
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    const q = input.trim();
-    if (q.length < 2) { setResults({ neighborhoods: [], cities: [], buildings: [] }); return; }
-    debounceRef.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const res  = await fetch(`/api/orulo/search?q=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        setResults(data);
-        setOpen(true);
-      } catch { /* ignore */ } finally { setSearching(false); }
-    }, 280);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [input]);
-
-  // Fecha ao clicar fora
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    setLoading(true);
+    fetch('/api/orulo?all=1')
+      .then(r => r.json())
+      .then(d => setAllBuildings(d.buildings || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const hasResults = results.neighborhoods.length > 0 || results.cities.length > 0 || results.buildings.length > 0;
+  // Reseta displayCount quando bounds ou filtros mudam
+  useEffect(() => { setDisplayCount(20); }, [bounds, filterStatus, filterMin, filterMax, filterBedrooms]);
 
-  function goToBairro(slug: string, label: string) {
-    setInput(label.replace(/,\s*.+$/, ''));
-    setOpen(false);
-    router.push(`/bairro/${slug}`);
-  }
-  function goToBuilding(slug: string, label: string) {
-    setInput(label); setOpen(false);
-    if (slug) router.push(`/bairro/${slug}`);
-    else onConfirm(label);
-  }
+  // ── Pins para o mapa (sem filtro de bounds) ───────────────────────────────
+  const mapPins = useMemo(() => {
+    return allBuildings
+      .filter(b => b.lat && b.lng)
+      .filter(b => !filterMin || (b.min_price ?? 0) >= filterMin)
+      .filter(b => !filterMax || (b.min_price ?? 0) <= filterMax)
+      .filter(b => !filterBedrooms || (b.bedrooms_max ?? 99) >= filterBedrooms)
+      .filter(b => !filterStatus || b.status_norm === filterStatus)
+      .map(b => ({
+        id:           b.id,
+        lat:          b.lat!,
+        lng:          b.lng!,
+        name:         b.name,
+        price:        b.min_price ? formatBRL(b.min_price) : 'Consultar',
+        neighborhood: b.neighborhood,
+        status:       b.status_norm || b.status,
+      }));
+  }, [allBuildings, filterMin, filterMax, filterBedrooms, filterStatus]);
 
-  const btnStyle: React.CSSProperties = {
-    display: 'block', width: '100%', textAlign: 'left',
-    padding: '9px 14px 9px 22px', background: 'none',
-    border: 'none', cursor: 'pointer', fontSize: '13px',
-    color: 'var(--text)', fontFamily: 'inherit',
-  };
-  const sectionHeader: React.CSSProperties = {
-    padding: '8px 14px 4px', fontSize: '10px', fontWeight: '800',
-    color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px',
-    display: 'flex', alignItems: 'center', gap: '5px',
-  };
+  // ── Cards (filtrados por bounds + filtros) ───────────────────────────────
+  const visibleBuildings = useMemo(() => {
+    let result = allBuildings
+      .filter(b => !filterMin || (b.min_price ?? 0) >= filterMin)
+      .filter(b => !filterMax || (b.min_price ?? 0) <= filterMax)
+      .filter(b => !filterBedrooms || (b.bedrooms_max ?? 99) >= filterBedrooms)
+      .filter(b => !filterStatus || b.status_norm === filterStatus);
 
+    if (bounds) {
+      const inBounds = result.filter(b =>
+        b.lat && b.lng &&
+        b.lat >= bounds.sw_lat && b.lat <= bounds.ne_lat &&
+        b.lng >= bounds.sw_lng && b.lng <= bounds.ne_lng,
+      );
+      // se há imóveis com lat/lng no viewport, mostra só eles
+      if (inBounds.length > 0) return inBounds;
+      // caso contrário, mostra todos os filtrados (sem lat/lng também)
+    }
+    return result;
+  }, [allBuildings, bounds, filterMin, filterMax, filterBedrooms, filterStatus]);
+
+  // ── Geocodificar e voar para localização ─────────────────────────────────
+  const geocodeAndFly = useCallback(async (query: string) => {
+    if (!query.trim()) return;
+    setGeocoding(true);
+    setGeoMsg('');
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', São Paulo, Brasil')}&format=json&limit=3&countrycodes=br&accept-language=pt-BR`,
+      );
+      const data = await r.json();
+      if (data.length > 0) {
+        const { lat, lon, display_name } = data[0];
+        mapRef.current?.flyTo(parseFloat(lat), parseFloat(lon), 14);
+        setGeoMsg(`📍 ${display_name.split(',').slice(0, 2).join(',')}`);
+        setTimeout(() => setGeoMsg(''), 4000);
+      } else {
+        setGeoMsg('❌ Localização não encontrada. Tente "Moema, SP" ou "Pinheiros".');
+        setTimeout(() => setGeoMsg(''), 4000);
+      }
+    } catch {
+      setGeoMsg('❌ Erro ao buscar localização.');
+      setTimeout(() => setGeoMsg(''), 3000);
+    } finally {
+      setGeocoding(false);
+    }
+  }, []);
+
+  const handleSearchSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    geocodeAndFly(search);
+  }, [search, geocodeAndFly]);
+
+  const applyPriceFilter = useCallback(() => {
+    setFilterMin(Number(minInput.replace(/\D/g, '')) || 0);
+    setFilterMax(Number(maxInput.replace(/\D/g, '')) || 0);
+  }, [minInput, maxInput]);
+
+  const clearAllFilters = useCallback(() => {
+    setFilterStatus('');
+    setFilterMin(0);
+    setFilterMax(0);
+    setFilterBedrooms(0);
+    setMinInput('');
+    setMaxInput('');
+  }, []);
+
+  const hasFilters = filterStatus || filterMin || filterMax || filterBedrooms;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div ref={containerRef} style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
-      <span style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', fontSize: '14px', pointerEvents: 'none' }}>📍</span>
-      <input
-        type="text" value={input}
-        onChange={e => setInput(e.target.value)}
-        onFocus={() => { if (input.trim().length >= 2 && hasResults) setOpen(true); }}
-        onKeyDown={e => {
-          if (e.key === 'Enter') { setOpen(false); onConfirm(input); }
-          if (e.key === 'Escape') setOpen(false);
-        }}
-        placeholder="Bairro, empreendimento ou cidade..."
-        style={{ padding: '10px 32px 10px 34px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '13px', width: '100%', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit' }}
-      />
-      {searching && <span style={{ position: 'absolute', right: '11px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: 'var(--text-faint)' }}>⟳</span>}
+    <div style={{ display: 'flex', flexDirection: 'column', height: `calc(100vh - var(--header-h))`, overflow: 'hidden', background: 'var(--bg)' }}>
 
-      {open && hasResults && (
-        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,.14)', zIndex: 200, overflow: 'hidden', maxHeight: '380px', overflowY: 'auto' }}>
+      {/* ── Barra de filtros ────────────────────────────────────────────────── */}
+      <div style={{ background: '#fff', borderBottom: '1px solid var(--border)', padding: '10px 16px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', zIndex: 200, flexShrink: 0 }}>
 
-          {/* Bairros */}
-          {results.neighborhoods.length > 0 && (
-            <div>
-              <div style={sectionHeader}><span>📍</span> Bairros</div>
-              {results.neighborhoods.map(nb => (
-                <button key={nb.slug} onMouseDown={e => { e.preventDefault(); goToBairro(nb.slug, nb.label); }} style={btnStyle}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                  {nb.label.replace(/,\s*São Paulo\s*–\s*SP$/, '')}
-                  <span style={{ marginLeft: '6px', fontSize: '10px', color: 'var(--text-faint)' }}>São Paulo · ver bairro →</span>
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Busca por localização */}
+        <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '6px', flex: '1 1 220px', minWidth: '180px' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', pointerEvents: 'none' }}>🔍</span>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar bairro ou endereço..."
+              style={{ width: '100%', paddingLeft: '32px', paddingRight: '12px', height: '36px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '13px', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
+          <button type="submit" disabled={geocoding}
+            style={{ height: '36px', padding: '0 14px', background: geocoding ? 'var(--border)' : 'var(--primary)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: geocoding ? 'wait' : 'pointer', whiteSpace: 'nowrap' }}>
+            {geocoding ? '...' : 'Ir'}
+          </button>
+        </form>
 
-          {/* Empreendimentos */}
-          {results.buildings.length > 0 && (
-            <div style={{ borderTop: results.neighborhoods.length > 0 ? '1px solid var(--border)' : 'none' }}>
-              <div style={sectionHeader}><span>🏢</span> Empreendimentos</div>
-              {results.buildings.map(b => (
-                <button key={b.id} onMouseDown={e => { e.preventDefault(); goToBuilding(b.slug, b.label); }} style={btnStyle}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                  {b.label}
-                  {b.neighborhood && <span style={{ marginLeft: '6px', fontSize: '10px', color: 'var(--text-faint)' }}>· {b.neighborhood}</span>}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Status */}
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          {[
+            { val: '', label: 'Todos' },
+            { val: 'na planta', label: '🌱 Na Planta' },
+            { val: 'em obras', label: '🏗 Em Obras' },
+            { val: 'pronto', label: '✅ Pronto' },
+            { val: 'lançamento', label: '🚀 Lançamento' },
+          ].map(({ val, label }) => (
+            <button key={val} onClick={() => setFilterStatus(filterStatus === val ? '' : val)}
+              style={{ height: '32px', padding: '0 12px', borderRadius: '8px', border: `1.5px solid ${filterStatus === val ? 'var(--primary)' : 'var(--border)'}`, background: filterStatus === val ? 'var(--primary-light)' : 'transparent', color: filterStatus === val ? 'var(--primary)' : 'var(--text-muted)', fontSize: '12px', fontWeight: filterStatus === val ? '700' : '500', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              {label}
+            </button>
+          ))}
+        </div>
 
-          {/* Cidades */}
-          {results.cities.length > 0 && (
-            <div style={{ borderTop: (results.neighborhoods.length > 0 || results.buildings.length > 0) ? '1px solid var(--border)' : 'none' }}>
-              <div style={sectionHeader}><span>🌆</span> Cidades</div>
-              {results.cities.map(c => (
-                <button key={c.slug} onMouseDown={e => { e.preventDefault(); setInput(c.label); setOpen(false); onConfirm(c.label); }} style={btnStyle}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--primary-light)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Quartos */}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-faint)', fontWeight: '600' }}>Qts:</span>
+          {[0, 1, 2, 3, 4].map(n => (
+            <button key={n} onClick={() => setFilterBedrooms(filterBedrooms === n ? 0 : n)}
+              style={{ width: '28px', height: '28px', borderRadius: '7px', border: `1.5px solid ${filterBedrooms === n && n > 0 ? 'var(--primary)' : 'var(--border)'}`, background: filterBedrooms === n && n > 0 ? 'var(--primary-light)' : 'transparent', color: filterBedrooms === n && n > 0 ? 'var(--primary)' : 'var(--text-muted)', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+              {n === 0 ? '∞' : n === 4 ? '4+' : n}
+            </button>
+          ))}
+        </div>
+
+        {/* Preço */}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <input type="text" placeholder="Mín R$" value={minInput}
+            onChange={e => setMinInput(e.target.value)}
+            onBlur={applyPriceFilter}
+            onKeyDown={e => e.key === 'Enter' && applyPriceFilter()}
+            style={{ width: '90px', height: '32px', padding: '0 8px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '12px', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit' }} />
+          <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>—</span>
+          <input type="text" placeholder="Máx R$" value={maxInput}
+            onChange={e => setMaxInput(e.target.value)}
+            onBlur={applyPriceFilter}
+            onKeyDown={e => e.key === 'Enter' && applyPriceFilter()}
+            style={{ width: '90px', height: '32px', padding: '0 8px', border: '1.5px solid var(--border)', borderRadius: '8px', fontSize: '12px', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit' }} />
+        </div>
+
+        {/* Limpar filtros */}
+        {hasFilters && (
+          <button onClick={clearAllFilters}
+            style={{ height: '32px', padding: '0 12px', borderRadius: '8px', border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#DC2626', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            ✕ Limpar
+          </button>
+        )}
+      </div>
+
+      {/* Mensagem de geocoding */}
+      {geoMsg && (
+        <div style={{ background: geoMsg.startsWith('❌') ? '#FEF2F2' : '#F0FDF4', borderBottom: `1px solid ${geoMsg.startsWith('❌') ? '#FCA5A5' : '#86EFAC'}`, padding: '6px 16px', fontSize: '12px', color: geoMsg.startsWith('❌') ? '#DC2626' : '#166534', fontWeight: '500', flexShrink: 0 }}>
+          {geoMsg}
         </div>
       )}
+
+      {/* ── Área principal: mapa + cards ────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 400px', overflow: 'hidden' }} className="imoveis-grid">
+
+        {/* Mapa */}
+        <div style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
+          <MapView
+            ref={mapRef}
+            pins={mapPins}
+            onBoundsChange={setBounds}
+            onPinClick={id => router.push(`/imoveis/${id}`)}
+          />
+          {/* Loading overlay */}
+          {loading && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(241,245,249,.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 500, gap: '12px' }}>
+              <div style={{ width: '40px', height: '40px', border: '4px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Carregando imóveis...</p>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          )}
+        </div>
+
+        {/* Painel de cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid var(--border)', overflow: 'hidden', background: 'var(--bg)' }}>
+
+          {/* Cabeçalho do painel */}
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', background: '#fff', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: '2px' }}>
+                  {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis`}
+                </p>
+                <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>
+                  {bounds ? 'nesta área do mapa' : 'em São Paulo'}
+                </p>
+              </div>
+              {bounds && (
+                <span style={{ fontSize: '10px', color: '#7C3AED', background: '#F5F3FF', border: '1px solid #DDD6FE', padding: '3px 8px', borderRadius: '8px', fontWeight: '600' }}>
+                  🗺 filtrado pelo mapa
+                </span>
+              )}
+            </div>
+
+            {/* Legenda de cores */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
+              {[
+                { color: '#2563eb', label: 'Na Planta / Lançamento' },
+                { color: '#d97706', label: 'Em Obras' },
+                { color: '#16a34a', label: 'Pronto / Entregue' },
+              ].map(({ color, label }) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color }} />
+                  <span style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Lista de cards */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {loading
+              ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+              : visibleBuildings.length === 0
+                ? (
+                  <div style={{ padding: '40px 16px', textAlign: 'center' }}>
+                    <p style={{ fontSize: '32px', marginBottom: '8px' }}>🔍</p>
+                    <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>
+                      Nenhum imóvel nesta área
+                    </p>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      Tente mover ou ampliar o mapa, ou ajuste os filtros.
+                    </p>
+                  </div>
+                )
+                : (
+                  <>
+                    {visibleBuildings.slice(0, displayCount).map(im => (
+                      <ImovelCard key={im.id} im={im} />
+                    ))}
+                    {visibleBuildings.length > displayCount && (
+                      <button
+                        onClick={() => setDisplayCount(c => c + 20)}
+                        style={{ width: '100%', padding: '12px', background: 'var(--primary-light)', color: 'var(--primary)', border: '1.5px solid rgba(37,99,235,.2)', borderRadius: '12px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', marginTop: '4px' }}>
+                        Ver mais {Math.min(20, visibleBuildings.length - displayCount)} imóveis
+                        <span style={{ color: 'var(--text-faint)', fontWeight: '400', marginLeft: '4px' }}>
+                          ({displayCount}/{visibleBuildings.length})
+                        </span>
+                      </button>
+                    )}
+                  </>
+                )
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* Responsive */}
+      <style>{`
+        @media (max-width: 768px) {
+          .imoveis-grid {
+            grid-template-columns: 1fr !important;
+            grid-template-rows: 55vh 45vh;
+          }
+        }
+      `}</style>
     </div>
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Main content (needs Suspense for useSearchParams)
-// ──────────────────────────────────────────────────────────────────────────────
-
-function ImoveisContent() {
-  const searchParams = useSearchParams();
-  const minParam    = searchParams.get('min') || '';
-  const maxParam    = searchParams.get('max') || '';
-  const statusParam = searchParams.get('status') || '';
-
-  // Filtros de API (todos acionam re-fetch)
-  const [minPrice, setMinPriceRaw] = useState(minParam);
-  const [maxPrice, setMaxPriceRaw] = useState(maxParam);
-  const [minInput, setMinInput] = useState(minParam ? fmtInput(minParam) : '');
-  const [maxInput, setMaxInput] = useState(maxParam ? fmtInput(maxParam) : '');
-  const [quartosFilter, setQuartosFilter] = useState<string>('todos');
-  const [statusFilter, setStatusFilter] = useState<string>(statusParam);
-  const [localSearch, setLocalSearch] = useState('');
-  const [localSearchInput, setLocalSearchInput] = useState('');
-
-  // Filtro local apenas (ordenação)
-  const [sortBy, setSortBy] = useState<'relevancia' | 'menor-preco' | 'maior-preco'>('relevancia');
-
-  // UI state do painel
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showMap, setShowMap] = useState(false);
-
-  // Data
-  const [imoveis, setImoveis] = useState<Imovel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
-  const [erro, setErro] = useState('');
-  const [loadingMore, setLoadingMore] = useState(false);
-
-  const buscar = useCallback(async (p = 1, append = false) => {
-    if (p === 1) setLoading(true);
-    else setLoadingMore(true);
-    setErro('');
-    try {
-      const params = new URLSearchParams();
-      params.set('page', String(p));
-      params.set('state', 'SP');
-
-      if (minPrice) params.set('min_price', minPrice);
-      if (maxPrice) params.set('max_price', maxPrice);
-
-      // ── Localização ────────────────────────────────────────────────────────
-      // Regra: NÃO passar q= para busca por bairro (q= busca NOME do
-      // empreendimento na Orulo — combinar q=bairro + min_bedrooms = 0 resultados).
-      // Estratégia:
-      //   1. Se digitou exatamente no formato datalist "Bairro, Cidade – SP" →
-      //      passa city= para a Orulo (melhora amostra de 200) + neighborhood= para
-      //      filtro server-side.
-      //   2. Se texto livre sem separador → trata como bairro de São Paulo +
-      //      filtro server-side.
-      //   3. Se começa com "#" → interpreta como nome de empreendimento (q=).
-      const txt = localSearch.trim();
-      if (txt) {
-        // Formato estruturado do datalist: "Jabaquara, São Paulo – SP"
-        const structured = txt.match(/^(.+?),\s*(.+?)\s*[–\-]\s*([A-Z]{2})$/);
-        const cityOnly   = txt.match(/^(.+?)\s*[–\-]\s*([A-Z]{2})$/);
-        if (structured) {
-          params.set('city',         structured[2].trim());
-          params.set('neighborhood', structured[1].trim());
-        } else if (cityOnly) {
-          // Município da RMSP (ex: "Guarulhos")
-          params.set('city', cityOnly[1].trim());
-        } else {
-          // Texto livre → assume bairro de São Paulo
-          params.set('city',         'São Paulo');
-          params.set('neighborhood', txt);
-        }
-      }
-
-      // Filtros de quartos → Orulo API (parâmetro confirmado, nunca q=)
-      if (quartosFilter !== 'todos') {
-        if (quartosFilter === '4+') {
-          params.set('bedrooms_min', '4');
-          params.set('bedrooms_max', '99');
-        } else {
-          params.set('bedrooms_min', quartosFilter);
-          params.set('bedrooms_max', quartosFilter);
-        }
-      }
-
-      // Filtro de estágio → server-side na rota
-      if (statusFilter !== 'todos') params.set('status', statusFilter);
-
-      const res = await fetch(`/api/orulo?${params}`);
-      if (!res.ok) throw new Error('Erro');
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-
-      setTotal(data.total || 0);
-      setPages(data.pages || 1);
-      setPage(p);
-      setImoveis(prev => append ? [...prev, ...(data.buildings || [])] : (data.buildings || []));
-    } catch {
-      setErro('Não foi possível carregar os imóveis. Verifique a integração Órulo ou tente novamente.');
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [minPrice, maxPrice, quartosFilter, statusFilter, localSearch]);
-
-  // Re-fetch sempre que qualquer filtro de API mudar
-  useEffect(() => { buscar(1); }, [buscar]);
-
-  // Ordenação local (não precisa re-fetch)
-  const imoveisFiltrados = [...imoveis].sort((a, bx) => {
-    if (sortBy === 'menor-preco') return (a.min_price ?? 0) - (bx.min_price ?? 0);
-    if (sortBy === 'maior-preco') return (bx.min_price ?? 0) - (a.min_price ?? 0);
-    return 0;
-  });
-
-  const filtroAtivo = !!(minPrice || maxPrice || quartosFilter !== 'todos' || statusFilter !== 'todos' || localSearch.trim());
-
-  function aplicarPreco() {
-    setMinPriceRaw(stripFmt(minInput));
-    setMaxPriceRaw(stripFmt(maxInput));
-  }
-
-  function aplicarBusca() {
-    setLocalSearch(localSearchInput);
-  }
-
-  function limparFiltros() {
-    setMinPriceRaw(''); setMaxPriceRaw('');
-    setMinInput(''); setMaxInput('');
-    setQuartosFilter('todos');
-    setStatusFilter('todos');
-    setLocalSearch(''); setLocalSearchInput('');
-    setSortBy('relevancia');
-  }
-
-  // Pills de quartos acionam re-fetch direto
-  function handleQuartos(key: string) {
-    setQuartosFilter(key);
-  }
-
-  // Pills de estágio acionam re-fetch direto
-  function handleStatus(key: string) {
-    setStatusFilter(key);
-  }
-
-  const quartosPills = [
-    { key: 'todos', label: 'Todos' },
-    { key: '1', label: '1 quarto' },
-    { key: '2', label: '2 quartos' },
-    { key: '3', label: '3 quartos' },
-    { key: '4+', label: '4+ quartos' },
-  ];
-  const statusPills = [
-    { key: 'todos', label: 'Qualquer estágio' },
-    { key: 'na planta', label: 'Na Planta' },
-    { key: 'lançamento', label: 'Lançamento' },
-    { key: 'em obras', label: 'Em Obras' },
-    { key: 'pronto', label: 'Pronto' },
-  ];
-
-  return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
-
-      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section style={{
-        background: 'linear-gradient(160deg, #0f172a 0%, #1a2e4a 60%, #0f172a 100%)',
-        padding: '56px 24px 72px',
-      }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <p style={{
-            fontSize: '11px', fontWeight: '700', color: 'rgba(96,165,250,0.9)',
-            letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '12px',
-          }}>
-            Empreendimentos · São Paulo
-          </p>
-          <h1 style={{
-            fontSize: 'clamp(24px, 4vw, 38px)', fontWeight: '800',
-            color: '#fff', lineHeight: 1.2, marginBottom: '14px',
-          }}>
-            {minParam || maxParam
-              ? 'Imóveis compatíveis com seu perfil'
-              : 'Imóveis disponíveis em São Paulo'}
-          </h1>
-          {(minParam || maxParam) ? (
-            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.55)', marginBottom: '20px' }}>
-              Filtrados entre{' '}
-              <strong style={{ color: 'rgba(255,255,255,.9)' }}>
-                {minParam ? formatBRL(Number(minParam)) : 'sem mínimo'}
-              </strong>
-              {' '}e{' '}
-              <strong style={{ color: 'rgba(255,255,255,.9)' }}>
-                {maxParam ? formatBRL(Number(maxParam)) : 'sem máximo'}
-              </strong>
-              {' — resultado da sua simulação'}
-            </p>
-          ) : (
-            <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.55)', marginBottom: '24px', maxWidth: '620px', lineHeight: 1.65 }}>
-              Catálogo curado de lançamentos e imóveis prontos das melhores construtoras e incorporadoras da Grande São Paulo. MCMV, SBPE e alto padrão.
-            </p>
-          )}
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {[
-              { icon: '🚀', label: 'Lançamentos' },
-              { icon: '🏗', label: 'Em obras' },
-              { icon: '🏠', label: 'Prontos para morar' },
-              { icon: '✅', label: 'MCMV · SBPE · Alto padrão' },
-              { icon: '📍', label: 'Grande São Paulo' },
-            ].map((chip, i) => (
-              <span key={i} style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px',
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: '20px', padding: '5px 12px',
-                fontSize: '12px', color: 'rgba(255,255,255,0.75)', fontWeight: '500',
-              }}>
-                {chip.icon} {chip.label}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Painel de filtros ────────────────────────────────────────────────── */}
-      <div style={{
-        background: 'var(--bg-card)',
-        borderBottom: '1px solid var(--border)',
-        padding: '14px 24px',
-        position: 'sticky', top: 0, zIndex: 10,
-        boxShadow: '0 2px 12px rgba(0,0,0,.06)',
-      }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '0' }}>
-
-          {/* ── Linha principal (sempre visível) ─────────────────────────────── */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-
-            {/* Autocomplete bairro/empreendimento */}
-            <SmartSearchInput
-              value={localSearchInput}
-              onConfirm={v => {
-                setLocalSearchInput(v);
-                setLocalSearch(v);
-              }}
-            />
-
-            {/* Buscar */}
-            <button
-              onClick={() => { aplicarPreco(); aplicarBusca(); }}
-              style={{
-                background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-                color: '#fff', border: 'none', borderRadius: '10px',
-                padding: '10px 22px', fontSize: '13px', fontWeight: '700',
-                cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-              }}
-            >
-              Buscar
-            </button>
-
-            {/* Filtros avançados toggle */}
-            <button
-              onClick={() => setShowAdvanced(v => !v)}
-              style={{
-                background: showAdvanced ? 'var(--primary-light)' : 'var(--bg)',
-                color: showAdvanced ? 'var(--primary)' : 'var(--text-muted)',
-                border: `1.5px solid ${showAdvanced ? 'var(--primary)' : 'var(--border)'}`,
-                borderRadius: '10px', padding: '10px 16px',
-                fontSize: '13px', fontWeight: '600',
-                cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
-                display: 'flex', alignItems: 'center', gap: '6px',
-                transition: 'all 0.15s',
-              }}
-            >
-              <span>⚙️</span>
-              Filtros avançados
-              <span style={{
-                display: 'inline-block',
-                transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s',
-                fontSize: '10px',
-              }}>▼</span>
-            </button>
-
-            {/* Ordenar por */}
-            <select
-              value={sortBy}
-              onChange={e => setSortBy(e.target.value as typeof sortBy)}
-              title="Ordenar por"
-              style={{
-                padding: '10px 30px 10px 12px', border: '1.5px solid var(--border)',
-                borderRadius: '10px', fontSize: '13px',
-                background: 'var(--bg)', color: 'var(--text)',
-                fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
-                appearance: 'none', flexShrink: 0,
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 10px center',
-              }}
-            >
-              <option value="relevancia">Relevância</option>
-              <option value="menor-preco">Menor preço</option>
-              <option value="maior-preco">Maior preço</option>
-            </select>
-
-            {/* Mapa toggle */}
-            <button
-              onClick={() => setShowMap(m => !m)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                background: showMap ? '#1a56db' : 'var(--bg)',
-                color: showMap ? '#fff' : 'var(--text-muted)',
-                border: '1.5px solid ' + (showMap ? '#1a56db' : 'var(--border)'),
-                borderRadius: '10px', padding: '10px 14px',
-                fontSize: '13px', fontWeight: '600', cursor: 'pointer',
-                whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s',
-              }}
-            >
-              🗺️ {showMap ? 'Ocultar mapa' : 'Ver no mapa'}
-            </button>
-
-            {/* Limpar filtros */}
-            {filtroAtivo && (
-              <button
-                onClick={limparFiltros}
-                style={{
-                  background: 'transparent', color: 'var(--text-muted)',
-                  border: '1.5px solid var(--border)', borderRadius: '10px',
-                  padding: '10px 14px', fontSize: '13px', cursor: 'pointer',
-                  whiteSpace: 'nowrap', flexShrink: 0,
-                }}
-              >
-                ✕ Limpar
-              </button>
-            )}
-          </div>
-
-          {/* ── Chips de filtros ativos (quando avançados fechados) ───────────── */}
-          {!showAdvanced && (quartosFilter !== 'todos' || statusFilter !== 'todos' || minPrice || maxPrice) && (
-            <div style={{
-              display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center',
-              marginTop: '10px',
-            }}>
-              <span style={{ fontSize: '11px', color: 'var(--text-faint)', fontWeight: '600' }}>Filtros:</span>
-              {minPrice && (
-                <span style={{
-                  padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '700',
-                  background: 'rgba(37,99,235,.1)', color: 'var(--primary)', border: '1px solid rgba(37,99,235,.2)',
-                }}>
-                  A partir de R$ {Number(minPrice).toLocaleString('pt-BR')}
-                </span>
-              )}
-              {maxPrice && (
-                <span style={{
-                  padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '700',
-                  background: 'rgba(37,99,235,.1)', color: 'var(--primary)', border: '1px solid rgba(37,99,235,.2)',
-                }}>
-                  Até R$ {Number(maxPrice).toLocaleString('pt-BR')}
-                </span>
-              )}
-              {quartosFilter !== 'todos' && (
-                <span style={{
-                  padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '700',
-                  background: 'rgba(37,99,235,.1)', color: 'var(--primary)', border: '1px solid rgba(37,99,235,.2)',
-                }}>
-                  🛏 {quartosPills.find(p => p.key === quartosFilter)?.label}
-                </span>
-              )}
-              {statusFilter !== 'todos' && (
-                <span style={{
-                  padding: '3px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: '700',
-                  background: `${getStatusCfg(statusFilter).bg}`, color: getStatusCfg(statusFilter).cor,
-                  border: `1px solid ${getStatusCfg(statusFilter).cor}40`,
-                }}>
-                  {getStatusCfg(statusFilter).label}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* ── Seção de filtros avançados (colapsável) ──────────────────────── */}
-          {showAdvanced && (
-            <div style={{
-              marginTop: '14px', paddingTop: '14px',
-              borderTop: '1px solid var(--border)',
-              display: 'flex', flexDirection: 'column', gap: '14px',
-            }}>
-
-              {/* Linha: faixa de preço */}
-              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                <div>
-                  <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
-                    Preço mínimo
-                  </p>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '13px', fontWeight: '600', pointerEvents: 'none' }}>R$</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={minInput}
-                      onChange={e => setMinInput(fmtInput(e.target.value))}
-                      onKeyDown={e => e.key === 'Enter' && (aplicarPreco(), aplicarBusca())}
-                      placeholder="200.000"
-                      style={{
-                        padding: '9px 12px 9px 36px', border: '1.5px solid var(--border)',
-                        borderRadius: '10px', fontSize: '13px', width: '148px',
-                        outline: 'none', background: 'var(--bg)',
-                        color: 'var(--text)', fontFamily: 'inherit',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <span style={{ color: 'var(--text-faint)', fontSize: '16px', marginBottom: '9px' }}>–</span>
-
-                <div>
-                  <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '5px' }}>
-                    Preço máximo
-                  </p>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <span style={{ position: 'absolute', left: '11px', color: 'var(--text-faint)', fontSize: '13px', fontWeight: '600', pointerEvents: 'none' }}>R$</span>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={maxInput}
-                      onChange={e => setMaxInput(fmtInput(e.target.value))}
-                      onKeyDown={e => e.key === 'Enter' && (aplicarPreco(), aplicarBusca())}
-                      placeholder="800.000"
-                      style={{
-                        padding: '9px 12px 9px 36px', border: '1.5px solid var(--border)',
-                        borderRadius: '10px', fontSize: '13px', width: '148px',
-                        outline: 'none', background: 'var(--bg)',
-                        color: 'var(--text)', fontFamily: 'inherit',
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Linha: quartos */}
-              <div>
-                <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '7px' }}>
-                  Quartos
-                </p>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {quartosPills.map(({ key, label }) => (
-                    <Pill key={key} label={label} active={quartosFilter === key} onClick={() => handleQuartos(key)} />
-                  ))}
-                </div>
-              </div>
-
-              {/* Linha: estágio */}
-              <div>
-                <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '7px' }}>
-                  Estágio da obra
-                </p>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {statusPills.map(({ key, label }) => (
-                    <Pill key={key} label={label} active={statusFilter === key} onClick={() => handleStatus(key)} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Layout: mapa + cards ───────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', minHeight: '60vh' }}>
-
-        {/* Mapa sticky — só aparece quando showMap=true */}
-        {showMap && (
-          <div style={{
-            position: 'sticky', top: '64px',
-            width: '44%', flexShrink: 0,
-            height: 'calc(100vh - 64px)',
-            borderRight: '1px solid var(--border)',
-          }}>
-            <MapView
-              pins={imoveisFiltrados
-                .filter(b => b.lat && b.lng)
-                .map(b => ({
-                  id: b.id,
-                  lat: b.lat!,
-                  lng: b.lng!,
-                  name: b.name,
-                  price: b.min_price
-                    ? 'R$ ' + (b.min_price >= 1000000
-                        ? (b.min_price / 1000000).toFixed(1) + 'M'
-                        : (b.min_price / 1000).toFixed(0) + 'k')
-                    : 'Consultar',
-                  neighborhood: b.neighborhood,
-                  status: b.status,
-                }))}
-            />
-          </div>
-        )}
-
-        {/* Cards — ocupa 100% sem mapa ou lado direito com mapa */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-      <div style={{
-        maxWidth: showMap ? 'none' : '1100px',
-        margin: showMap ? '0' : '0 auto',
-        padding: showMap ? '24px 20px 80px' : '32px 24px 80px',
-      }}>
-
-        {/* Contagem + erro */}
-        {erro ? (
-          <div style={{
-            background: '#fef2f2', border: '1px solid #fecaca',
-            borderRadius: '12px', padding: '16px 18px', marginBottom: '24px',
-          }}>
-            <p style={{ fontSize: '14px', color: '#dc2626', margin: 0 }}>⚠️ {erro}</p>
-          </div>
-        ) : !loading && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-              {imoveisFiltrados.length > 0
-                ? <><strong style={{ color: 'var(--text)' }}>{imoveisFiltrados.length}</strong> de {total} empreendimento{total !== 1 ? 's' : ''}</>
-                : 'Nenhum imóvel com esses filtros'}
-            </p>
-            {(statusFilter !== 'todos' || quartosFilter !== 'todos') && imoveisFiltrados.length > 0 && (
-              <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>
-                {statusFilter !== 'todos' && <span style={{ color: getStatusCfg(statusFilter).cor }}>● {getStatusCfg(statusFilter).label}</span>}
-                {statusFilter !== 'todos' && quartosFilter !== 'todos' && '  '}
-                {quartosFilter !== 'todos' && <span>🛏 {quartosPills.find(p => p.key === quartosFilter)?.label}</span>}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Skeletons */}
-        {loading && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-            gap: '16px',
-          }}>
-            {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
-          </div>
-        )}
-
-        {/* Grid */}
-        {!loading && imoveisFiltrados.length > 0 && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-            gap: '16px',
-            marginBottom: '40px',
-          }}>
-            {imoveisFiltrados.map(b => <CardImovel key={b.id} imovel={b} />)}
-            {/* Fillers invisíveis para completar última linha do grid */}
-            {Array.from({ length: (4 - (imoveisFiltrados.length % 4)) % 4 }).map((_, i) => (
-              <div key={`filler-${i}`} style={{ visibility: 'hidden', minHeight: '1px' }} />
-            ))}
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!loading && !erro && imoveisFiltrados.length === 0 && (
-          <EmptyState filtroAtivo={filtroAtivo} localSearch={localSearch} />
-        )}
-
-        {/* Ver mais */}
-        {!loading && page < pages && imoveisFiltrados.length > 0 && (
-          <div style={{ textAlign: 'center', marginTop: '8px' }}>
-            <button
-              onClick={() => buscar(page + 1, true)}
-              disabled={loadingMore}
-              style={{
-                background: 'transparent', color: 'var(--primary)',
-                border: '1.5px solid var(--primary)', borderRadius: '12px',
-                padding: '12px 32px', fontSize: '14px', fontWeight: '700',
-                cursor: loadingMore ? 'default' : 'pointer',
-                opacity: loadingMore ? 0.6 : 1,
-                transition: 'all 0.15s',
-              }}
-            >
-              {loadingMore ? 'Carregando...' : 'Ver mais imóveis →'}
-            </button>
-          </div>
-        )}
-
-        {/* CTA para simulador */}
-        {!loading && !erro && (
-          <div style={{
-            marginTop: '48px',
-            background: 'linear-gradient(145deg, #1e3a5f 0%, #0f172a 100%)',
-            borderRadius: '20px', padding: '32px 28px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            flexWrap: 'wrap', gap: '16px',
-          }}>
-            <div>
-              <p style={{ fontSize: '14px', fontWeight: '800', color: '#fff', marginBottom: '5px' }}>
-                Não sabe qual imóvel cabe no seu bolso?
-              </p>
-              <p style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-                Calcule seu poder de compra, faixa MCMV e valor de parcelas em 2 minutos.
-              </p>
-            </div>
-            <Link href="/simulador" style={{
-              background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-              color: '#fff', textDecoration: 'none', fontSize: '14px',
-              fontWeight: '700', padding: '13px 28px', borderRadius: '12px',
-              whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(37,99,235,.4)',
-            }}>
-              Calcular meu perfil →
-            </Link>
-          </div>
-        )}
-
-      </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Page export (Suspense boundary for useSearchParams)
-// ──────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Export (com Suspense para useSearchParams)
+// ─────────────────────────────────────────────────────────────────────────────
 export default function ImoveisPage() {
   return (
     <Suspense fallback={
-      <div style={{ background: 'var(--bg)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>Carregando imóveis...</p>
+      <div style={{ padding: '80px 24px', textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Carregando...</p>
       </div>
     }>
       <ImoveisContent />

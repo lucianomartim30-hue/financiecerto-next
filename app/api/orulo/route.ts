@@ -140,6 +140,7 @@ async function fetchByLocation(
     status?: string | null;
   },
   page: number,
+  returnAll = false,
 ): Promise<NextResponse> {
   const cityTarget = city || 'São Paulo';
 
@@ -178,6 +179,18 @@ async function fetchByLocation(
   const seen = new Set<string>();
   all = all.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
 
+  // all=1: retorna todos sem paginação (para mapa client-side)
+  if (returnAll) {
+    return NextResponse.json({
+      buildings: all,
+      total:     all.length,
+      page:      1,
+      pages:     1,
+      source:    'location_all',
+      city:      cityTarget,
+    });
+  }
+
   // Paginação server-side (20 por página)
   const PER_PAGE = 20;
   const start    = (page - 1) * PER_PAGE;
@@ -206,6 +219,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const page         = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const returnAll    = searchParams.get('all') === '1';
     const minPrice     = searchParams.get('min_price');
     const maxPrice     = searchParams.get('max_price');
     const state        = searchParams.get('state') || 'SP';
@@ -232,11 +246,13 @@ export async function GET(req: NextRequest) {
     const token = await getToken();
 
     // ── Com localização → busca + filtro server-side ──────────────────────────
-    if (neighborhood || city) {
+    // all=1: retorna todos sem paginação (usado pelo mapa client-side)
+    if (neighborhood || city || returnAll) {
       return fetchByLocation(
-        token, city, neighborhood,
+        token, city || 'São Paulo', neighborhood,
         { minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq },
         page,
+        returnAll,
       );
     }
 
@@ -285,5 +301,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Credenciais Orulo invalidas.' }, { status: 401 });
     }
     return NextResponse.json({ error: 'Erro ao buscar imoveis.' }, { status: 500 });
+  }
+}
+    console.error('[api/orulo]', message);
+    if (message.includes('não configurados'))
+      return NextResponse.json({ error: 'Integracao Orulo nao configurada.' }, { status: 500 });
+    if (message.includes('401') || message.includes('403')) {
+      _tokenCache = { token: null, expiresAt: 0 };
+      return NextResponse.json({ error: 'Credenciais Orulo invalidas.' }, { status: 401 });
+    }
+    return NextResponse.json({ error: 'Erro ao buscar imóveis.' }, { status: 500 });
+  }
+}
+
   }
 }
