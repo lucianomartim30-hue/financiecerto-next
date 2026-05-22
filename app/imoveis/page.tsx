@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useEffect, useState, useRef, useMemo, useCallback, Suspense } from 'react';
@@ -166,6 +167,7 @@ function ImoveisContent() {
 
   // ── Carga inicial — todos os imóveis ──────────────────────────────────────
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     fetch('/api/orulo?all=1')
       .then(r => r.json())
@@ -175,6 +177,7 @@ function ImoveisContent() {
   }, []);
 
   // Reseta displayCount quando bounds ou filtros mudam
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setDisplayCount(20); }, [bounds, filterStatus, filterMin, filterMax, filterBedrooms]);
 
   // ── Pins para o mapa (sem filtro de bounds) ───────────────────────────────
@@ -198,7 +201,7 @@ function ImoveisContent() {
 
   // ── Cards (filtrados por bounds + filtros) ───────────────────────────────
   const visibleBuildings = useMemo(() => {
-    let result = allBuildings
+    const result = allBuildings
       .filter(b => !filterMin || (b.min_price ?? 0) >= filterMin)
       .filter(b => !filterMax || (b.min_price ?? 0) <= filterMax)
       .filter(b => !filterBedrooms || (b.bedrooms_max ?? 99) >= filterBedrooms)

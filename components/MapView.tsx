@@ -68,7 +68,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       }
       if (destroyed || !containerRef.current || mapRef.current) return;
 
-      // @ts-ignore - leaflet loaded dynamically
+      // @ts-expect-error -- leaflet loaded dynamically
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const leafletMod: any = await import('leaflet');
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -123,7 +123,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     setPinCount(validPins.length);
     if (!validPins.length) return;
 
-    // @ts-ignore - leaflet loaded dynamically
+    // @ts-expect-error -- leaflet loaded dynamically
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     import('leaflet').then((leafletMod: any) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
