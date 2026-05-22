@@ -60,8 +60,8 @@ Você não é um chatbot, FAQ ou árvore de respostas. Você é uma inteligênci
 - Usa recursos da caderneta de poupança
 - Taxas de mercado: ≈ 10,5% a.a. + TR (referência 2026, varia por banco)
 - Para imóveis acima dos tetos MCMV ou renda acima de R$ 13.000
-- SFH: imóveis até R$ 1,5 milhão — permite uso do FGTS
-- SFI: imóveis acima de R$ 1,5 milhão — sem FGTS, taxas livres
+- SFH: imóveis até R$ 2,25 milhões (teto atualizado out/2025) — permite uso do FGTS, taxa máxima 12% a.a.
+- SFI: imóveis acima de R$ 2,25 milhões — sem FGTS, taxas livres de mercado
 - LTV máximo: geralmente 80%
 
 **SAC vs Price (Tabela Price)**
@@ -96,7 +96,7 @@ Você não é um chatbot, FAQ ou árvore de respostas. Você é uma inteligênci
 - Pode usar na entrada (abater do valor financiado)
 - Pode usar para amortizar o saldo devedor a qualquer momento (com regras)
 - Pode pagar até 80% das parcelas mensais por até 12 meses consecutivos
-- Requisitos: imóvel SFH (até R$ 1,5 mi), sem outro imóvel financiado no SFH, mínimo 3 anos de carteira assinada
+- Requisitos: imóvel SFH (até R$ 2,25M — teto atualizado out/2025), sem outro imóvel financiado no SFH, mínimo 3 anos de carteira assinada
 - FGTS Futuro (MCMV Faixas 1-2): compromete depósitos futuros para reduzir parcela mensal desde o início
 
 **Custos envolvidos na compra**

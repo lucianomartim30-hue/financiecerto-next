@@ -37,14 +37,14 @@ const TERMS: Term[] = [
   {
     term: 'SFH',
     category: 'modalidades',
-    short: 'Sistema Financeiro de Habitação — imóveis até R$ 1,5 milhão.',
-    full: 'Enquadramento legal para financiamentos habitacionais com imóveis de até R$ 1,5 milhão (valor de avaliação). Permite uso do FGTS, limita a taxa efetiva a 12% a.a. e exige que o imóvel seja residencial. É o enquadramento padrão do MCMV e de parte do SBPE.',
+    short: 'Sistema Financeiro de Habitação — imóveis até R$ 2,25 milhões.',
+    full: 'Enquadramento legal para financiamentos habitacionais com imóveis de até R$ 2,25 milhões (valor de avaliação) — teto atualizado em outubro/2025. Permite uso do FGTS, limita a taxa nominal a 12% a.a. e exige que o imóvel seja residencial. É o enquadramento padrão do MCMV e de parte do SBPE. A Caixa Econômica Federal financia até 80% do valor do imóvel dentro do SFH.',
   },
   {
     term: 'SFI',
     category: 'modalidades',
     short: 'Sistema de Financiamento Imobiliário — sem teto de valor, taxas livres.',
-    full: 'Usado para imóveis acima de R$ 1,5 milhão ou operações com taxas acima de 12% a.a. Não permite uso do FGTS. Inclui instrumentos como CRI (Certificado de Recebíveis Imobiliários). Oferece mais flexibilidade para o credor definir condições contratuais.',
+    full: 'Usado para imóveis acima de R$ 2,25 milhões ou operações com taxas acima de 12% a.a. Não permite uso do FGTS. Inclui instrumentos como CRI (Certificado de Recebíveis Imobiliários). Oferece mais flexibilidade para o credor definir condições contratuais — taxas de mercado, sem vinculação ao SBPE.',
   },
   {
     term: 'Crédito Associativo',
@@ -180,7 +180,7 @@ const TERMS: Term[] = [
     term: 'FGTS',
     category: 'fgts',
     short: 'Fundo de Garantia do Tempo de Serviço — pode ser usado como entrada ou amortização.',
-    full: 'Fundo constituído por depósitos mensais do empregador (8% do salário bruto). O saldo pode ser usado na compra de imóvel residencial (SFH) para: (1) composição da entrada, (2) amortização do saldo devedor, ou (3) pagamento de até 80% das prestações mensais por até 12 meses seguidos. Regras: imóvel até R$ 1,5 milhão, comprador sem outro imóvel financiado no SFH, mínimo 3 anos de vínculo empregatício com FGTS.',
+    full: 'Fundo constituído por depósitos mensais do empregador (8% do salário bruto). O saldo pode ser usado na compra de imóvel residencial (SFH) para: (1) composição da entrada, (2) amortização do saldo devedor, ou (3) pagamento de até 80% das prestações mensais por até 12 meses seguidos. Regras: imóvel dentro do SFH (até R$ 2,25 milhões — teto atualizado em out/2025), comprador sem outro imóvel financiado no SFH, mínimo 3 anos de vínculo empregatício com FGTS.',
   },
   {
     term: 'FGTS Futuro',
