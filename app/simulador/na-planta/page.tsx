@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   formatBRL, parcelaPrice, calcularSeguros,
-  TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, progCurva,
+  TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE,
 } from '@/lib/calculos';
 import Link from 'next/link';
 
@@ -295,13 +295,6 @@ function NaPlantaContent() {
   const jurosEvo1     = isMCMV && financiado > 0 ? calcJurosEvo(financiado, taxa, siopiInicial) : 0;
   const jurosEvoMedio = isMCMV && financiado > 0 ? Math.round(parcelaFin * 0.655 + seguros.total) : 0;
 
-  // SIOPI curve para o gráfico (5 pontos)
-  const obraTotal     = qtdMensais;
-  const siopiPontos   = [0, 0.25, 0.5, 0.75, 1.0].map(frac => {
-    const mes = Math.round(frac * obraTotal);
-    return { pct: Math.round(progCurva(mes, obraTotal) * 100), mes };
-  });
-
   // ── 30% rule ─────────────────────────────────────────────────────────────────
   const limite30 = renda * 0.30;
   const burden   = mensalUnit + jurosEvo1;
@@ -511,112 +504,6 @@ function NaPlantaContent() {
               </div>
             )}
 
-            {/* SIOPI: info + campo editável para Lançamento e Em obras */}
-            {(estagio === 'lancamento' || estagio === 'obras') && (
-              <div style={{
-                marginTop: '14px', borderRadius: '12px', overflow: 'hidden',
-                border: `1px solid ${estagioConfig[estagio].color}30`,
-              }}>
-                {/* Cabeçalho */}
-                <div style={{
-                  background: `${estagioConfig[estagio].color}12`,
-                  borderBottom: `1px solid ${estagioConfig[estagio].color}20`,
-                  padding: '10px 14px',
-                  display: 'flex', alignItems: 'center', gap: '8px',
-                }}>
-                  <span style={{ fontSize: '14px' }}>🏦</span>
-                  <p style={{ fontSize: '11px', fontWeight: '700', color: estagioConfig[estagio].color, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                    SIOPI — Liberação da Caixa Econômica Federal
-                  </p>
-                </div>
-
-                {/* Explicação */}
-                <div style={{ padding: '12px 14px', background: 'var(--bg-card)' }}>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '14px' }}>
-                    {estagioConfig[estagio].siopiInfo}
-                  </p>
-
-                  {/* Campo de % */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ flex: 1 }}>
-                      <label style={{
-                        display: 'block', fontSize: '10px', fontWeight: '700',
-                        color: 'var(--text-faint)', textTransform: 'uppercase',
-                        letterSpacing: '0.7px', marginBottom: '6px',
-                      }}>
-                        {estagio === 'lancamento'
-                          ? '% estimado da 1ª liberação (terreno)'
-                          : '% já liberado pela CEF até agora'}
-                      </label>
-                      <div style={{
-                        display: 'flex', alignItems: 'center',
-                        border: `1.5px solid ${estagioConfig[estagio].color}50`,
-                        borderRadius: '10px', overflow: 'hidden',
-                        background: 'var(--bg)',
-                      }}>
-                        <input
-                          type="number"
-                          min={estagio === 'lancamento' ? 5 : 5}
-                          max={estagio === 'lancamento' ? 35 : 99}
-                          step="1"
-                          value={siopiPctRaw}
-                          onChange={e => setSiopiPctRaw(e.target.value)}
-                          style={{
-                            flex: 1, padding: '9px 12px', border: 'none', outline: 'none',
-                            fontSize: '18px', fontWeight: '700', color: 'var(--text)',
-                            background: 'transparent', width: '80px',
-                          }}
-                        />
-                        <span style={{
-                          padding: '9px 14px', fontSize: '16px', fontWeight: '700',
-                          color: estagioConfig[estagio].color,
-                          borderLeft: `1px solid ${estagioConfig[estagio].color}20`,
-                          background: `${estagioConfig[estagio].color}08`,
-                        }}>%</span>
-                      </div>
-                    </div>
-
-                    {/* Resultado calculado */}
-                    {financiado > 0 && (
-                      <div style={{
-                        background: `${estagioConfig[estagio].color}10`,
-                        border: `1px solid ${estagioConfig[estagio].color}25`,
-                        borderRadius: '10px', padding: '10px 14px', textAlign: 'center',
-                      }}>
-                        <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>
-                          Valor liberado
-                        </p>
-                        <p style={{ fontSize: '15px', fontWeight: '800', color: estagioConfig[estagio].color }}>
-                          {formatBRL(Math.round(financiado * siopiInicial))}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Range hint */}
-                  <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '8px', lineHeight: 1.5 }}>
-                    {estagio === 'lancamento'
-                      ? '📌 Intervalo típico: 10% a 25% · valor exato disponível no app Habitação Caixa / SIOPI após a 1ª medição'
-                      : '📌 Verifique o % acumulado das medições no app Habitação Caixa / SIOPI'}
-                  </p>
-
-                  {/* Juros evolutivos calculados */}
-                  {isMCMV && financiado > 0 && jurosEvo1 > 0 && (
-                    <div style={{
-                      marginTop: '12px', background: '#eff6ff',
-                      border: '1px solid #bfdbfe', borderRadius: '10px',
-                      padding: '10px 14px',
-                    }}>
-                      <p style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.55 }}>
-                        📊 Juros evolutivos estimados para o {estagio === 'lancamento' ? '1º mês após assinatura' : 'mês atual'}:{' '}
-                        <strong>~{formatBRL(jurosEvo1)}/mês</strong>
-                        {estagio === 'lancamento' && ' — calculado sobre o valor do terreno liberado pela CEF'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Valor do imóvel */}
@@ -911,41 +798,40 @@ function NaPlantaContent() {
                 />
               )}
 
-              {/* Juros evolutivos MCMV */}
-              {isMCMV && jurosEvo1 > 0 && (
-                <>
-                  <LinhaDetalhe
-                    label={`Juros evolutivos — ${estagio === 'lancamento' ? '1º mês após assinatura' : 'mês atual'} (ao banco)`}
-                    valor={`~${formatBRL(jurosEvo1)}/mês`}
-                    sub={`${Math.round(siopiInicial * 100)}% do financiamento liberado pela CEF · ${formatBRL(Math.round(financiado * siopiInicial))}`}
-                  />
-                  <LinhaDetalhe
-                    label="Juros evolutivos — média estimada"
-                    valor={`~${formatBRL(jurosEvoMedio)}/mês`}
-                    sub="Cresce conforme o progresso da obra (curva SIOPI)"
-                  />
-
-                  {/* Mini visualização curva SIOPI */}
-                  <div style={{ background: 'var(--bg)', borderRadius: '10px', padding: '12px 14px', marginTop: '10px' }}>
-                    <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
-                      Evolução SIOPI — % financiamento liberado
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '48px' }}>
-                      {siopiPontos.map(({ pct, mes }, i) => (
-                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                          <span style={{ fontSize: '9px', color: 'var(--text-faint)' }}>{pct}%</span>
-                          <div style={{
-                            width: '100%', borderRadius: '3px 3px 0 0',
-                            background: i === 0 ? '#94a3b8' : 'var(--primary)',
-                            height: `${(pct / 100) * 32}px`,
-                            opacity: i === 0 ? 0.5 : 0.3 + (i / siopiPontos.length) * 0.7,
-                          }} />
-                          <span style={{ fontSize: '9px', color: 'var(--text-faint)' }}>m{mes}</span>
+              {/* Juros evolutivos MCMV — nota informativa (pagamento paralelo à Caixa) */}
+              {isMCMV && jurosEvoMedio > 0 && (
+                <div style={{
+                  marginTop: '12px', background: '#eff6ff',
+                  border: '1px solid #bfdbfe', borderRadius: '12px',
+                  padding: '14px 16px',
+                }}>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '18px', flexShrink: 0 }}>🏦</span>
+                    <div>
+                      <p style={{ fontSize: '12px', fontWeight: '800', color: '#1e40af', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Pagamento paralelo à Caixa Econômica Federal
+                      </p>
+                      <p style={{ fontSize: '13px', color: '#1e3a8a', lineHeight: 1.6, marginBottom: '8px' }}>
+                        No MCMV, após assinar o financiamento, você paga <strong>juros evolutivos mensais diretamente à Caixa</strong> — em paralelo às parcelas à construtora acima. A Caixa vai liberando o dinheiro à construtora conforme o avanço da obra, e você paga juros sobre o valor já liberado.
+                      </p>
+                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: '8px', padding: '8px 12px' }}>
+                          <p style={{ fontSize: '10px', color: '#6b7280', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Juros evolutivos (média)</p>
+                          <p style={{ fontSize: '16px', fontWeight: '800', color: '#1e40af' }}>~{formatBRL(jurosEvoMedio)}/mês</p>
+                          <p style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>Cresce do início até a entrega</p>
                         </div>
-                      ))}
+                        <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: '8px', padding: '8px 12px' }}>
+                          <p style={{ fontSize: '10px', color: '#6b7280', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>1º mês (estimativa)</p>
+                          <p style={{ fontSize: '16px', fontWeight: '800', color: '#1e40af' }}>~{formatBRL(jurosEvo1)}/mês</p>
+                          <p style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>Sobre liberação inicial (~15%)</p>
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '11px', color: '#3b82f6', marginTop: '10px', lineHeight: 1.5 }}>
+                        📌 Este valor <strong>não está incluído</strong> nas parcelas à construtora acima — são dois pagamentos distintos durante a obra.
+                      </p>
                     </div>
                   </div>
-                </>
+                </div>
               )}
 
               {/* 30% rule */}
