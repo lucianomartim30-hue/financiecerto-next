@@ -58,11 +58,12 @@ Você não é um chatbot, FAQ ou árvore de respostas. Você é uma inteligênci
 
 **SBPE — Sistema Brasileiro de Poupança e Empréstimo**
 - Usa recursos da caderneta de poupança
-- Taxas de mercado: ≈ 10,5% a.a. + TR (referência 2026, varia por banco)
+- Taxa Caixa Econômica Federal 2026: 11,19% a.a. + TR (correntista) / 11,49% a.a. + TR (balcão) — varia por banco e perfil
+- IMPORTANTE: A taxa SBPE não é 10,5% — esse valor é exclusivo do MCMV Faixa 4. SBPE começa em 11,19%
 - Para imóveis acima dos tetos MCMV ou renda acima de R$ 13.000
 - SFH: imóveis até R$ 2,25 milhões (teto atualizado out/2025) — permite uso do FGTS, taxa máxima 12% a.a.
-- SFI: imóveis acima de R$ 2,25 milhões — sem FGTS, taxas livres de mercado
-- LTV máximo: geralmente 80%
+- SFI: imóveis acima de R$ 2,25 milhões — sem FGTS, taxas livres de mercado (~12,5% a.a.)
+- LTV máximo SFH: geralmente 80% (Price) ou 80% (SAC)
 
 **SAC vs Price (Tabela Price)**
 - SAC: amortização constante → parcelas decrescentes → menor custo total → 1ª parcela mais alta

@@ -116,7 +116,7 @@ function BtnPrimario({ label, onClick, disabled }: { label: string; onClick: () 
 // Hero escuro — mesmo estilo da na-planta
 function Hero({ etapa }: { etapa: number }) {
   const heroCopy: Record<number, { tag: string; titulo: string; sub: string }> = {
-    0: { tag: 'Simulador FinancieCerto 2026', titulo: 'Primeiro entenda\nseu perfil.', sub: 'MCMV · SBPE · FGTS · subsídio — antes de ver qualquer imóvel.' },
+    0: { tag: 'Simulador FinancieCerto 2026', titulo: 'Primeiro entenda\nseu perfil.', sub: 'Qualquer renda, qualquer imóvel — identificamos MCMV, SBPE ou SFI e mostramos taxas e teto reais.' },
     1: { tag: 'Passo 1 de 6', titulo: 'Qual é a sua\nrenda familiar?', sub: 'Usamos a renda bruta para calcular faixa, taxa e comprometimento.' },
     2: { tag: 'Passo 2 de 6', titulo: 'Você tem FGTS\ndisponível?', sub: 'O FGTS amplia seu poder de compra e reduz o valor financiado.' },
     3: { tag: 'Passo 3 de 6', titulo: 'Tem entrada\noutra reserva?', sub: 'Entrada própria reduz o financiamento e pode melhorar a aprovação.' },
@@ -187,11 +187,11 @@ function BadgeModalidade({ renda }: { renda: number }) {
   }
   return (
     <div style={{ marginBottom: 20 }}>
-      <span style={{ display: 'inline-block', padding: '4px 14px', borderRadius: 99, background: '#E6F1FB', color: '#185FA5', fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-        SBPE (SFH) · {TAXA_SBPE_ANUAL}% a.a. + TR
+      <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 99, background: '#E6F1FB', color: '#185FA5', fontSize: 14, fontWeight: 800, marginBottom: 8, border: '1.5px solid #185FA544' }}>
+        💼 Perfil SBPE · {TAXA_SBPE_ANUAL}% a.a. + TR
       </span>
       <p style={{ fontSize: 12, color: 'var(--text-faint)', margin: 0 }}>
-        Renda acima do MCMV · Caixa Econômica Federal · imóveis até {formatBRL(TETO_SFH)}
+        Financiamento bancário convencional · imóveis SFH até {formatBRL(TETO_SFH)} · FGTS permitido · também opera no SFI acima desse valor
       </p>
     </div>
   );
@@ -377,10 +377,10 @@ function SimuladorInner() {
     <Etapa etapa={0}>
       <div style={{ display: 'grid', gap: 10, marginBottom: 32 }}>
         {[
-          { ico: '📊', txt: 'Faixa MCMV, SBPE ou SFI — detectados pelo seu perfil', cor: '#2563eb', bg: '#EFF6FF' },
-          { ico: '🏦', txt: 'Taxa real da Caixa Econômica Federal + subsídio estimado', cor: '#0F6E56', bg: '#F0FDF9' },
-          { ico: '🏗️', txt: 'Simule imóvel pronto, em obras ou na planta', cor: '#7C3AED', bg: '#F5F3FF' },
-          { ico: '🏠', txt: 'Veja imóveis compatíveis com seu perfil ao final', cor: '#B45309', bg: '#FFFBEB' },
+          { ico: '📊', txt: 'Renda define seu perfil: MCMV (F1–F4), SBPE ou SFI — detectados automaticamente', cor: '#2563eb', bg: '#EFF6FF' },
+          { ico: '🏦', txt: 'Taxa real: SBPE 11,19% + TR (Caixa), MCMV subsidiado ou SFI — nunca estimativa genérica', cor: '#0F6E56', bg: '#F0FDF9' },
+          { ico: '🏗️', txt: 'Simule imóvel pronto, em obras ou na planta — para qualquer faixa de renda', cor: '#7C3AED', bg: '#F5F3FF' },
+          { ico: '🏠', txt: 'Imóveis compatíveis com seu poder de compra real ao final da simulação', cor: '#B45309', bg: '#FFFBEB' },
         ].map(({ ico, txt, cor, bg }) => (
           <div key={txt} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 16px', background: bg, borderRadius: 12, borderLeft: `4px solid ${cor}` }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>{ico}</span>

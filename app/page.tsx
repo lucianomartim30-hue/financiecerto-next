@@ -2,9 +2,9 @@ import Link from 'next/link';
 
 const STATS = [
   { value: '2.000+', label: 'Empreendimentos', href: '/imoveis' },
-  { value: '4 faixas', label: 'MCMV 2026', href: '/guia' },
+  { value: 'MCMV · SBPE · SFI', label: 'Todos os perfis de renda', href: '/simulador' },
   { value: '35 anos', label: 'Prazo máximo', href: '/simulador' },
-  { value: 'R$ 55k', label: 'Subsídio máximo', href: '/guia' },
+  { value: 'R$ 55k', label: 'Subsídio MCMV máximo', href: '/guia' },
 ];
 
 const STEPS = [
@@ -18,13 +18,13 @@ const STEPS = [
     num: '02',
     icon: '🧮',
     title: 'Calculamos seu perfil',
-    desc: 'Detectamos sua faixa MCMV, capacidade de financiamento e parcela máxima.',
+    desc: 'Identificamos seu perfil por renda: MCMV (Faixas 1–4), SBPE ou SFI. Calculamos taxa real, teto e parcela.',
   },
   {
     num: '03',
     icon: '📊',
     title: 'Cenários comparados',
-    desc: 'MCMV vs SBPE, pronto ou na planta — com dados reais de taxas e subsídios 2026.',
+    desc: 'MCMV, SBPE e SFI — pronto ou na planta — com taxas reais 2026 e comparativo Price × SAC.',
   },
   {
     num: '04',
@@ -37,8 +37,8 @@ const STEPS = [
 const FEATURES = [
   {
     icon: '🏠',
-    title: 'Simulador MCMV 2026',
-    desc: 'Faixas 1 a 4, subsídios reais, taxa TR, evolução de obra e crédito associativo.',
+    title: 'Simulador de Financiamento 2026',
+    desc: 'Do MCMV (Faixas 1–4 · taxas subsidiadas) ao SBPE (11,19% + TR) e SFI — para todos os perfis.',
     color: 'var(--primary-light)',
     textColor: 'var(--primary)',
   },
@@ -149,8 +149,11 @@ export default function Home() {
             <Link href="/simulador" className="btn-primary" style={{ fontSize: '16px', padding: '15px 32px' }}>
               Descobrir meu perfil →
             </Link>
-            <Link href="/imoveis" className="btn-outline" style={{ fontSize: '16px', padding: '14px 32px' }}>
-              Ver imóveis
+            <Link href="/simulador/na-planta" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
+              🌱 Simular na planta
+            </Link>
+            <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
+              🏠 Simular pronto
             </Link>
           </div>
 
@@ -294,7 +297,7 @@ export default function Home() {
               {
                 icon: '🎯',
                 title: 'Baseado na realidade',
-                desc: 'Usamos as faixas, taxas e limites reais do MCMV 2026, não estimativas genéricas.',
+                desc: 'Taxas reais: MCMV 2026 (subsidiadas), SBPE Caixa (11,19% a.a. + TR) e SFI — não estimativas genéricas.',
               },
               {
                 icon: '🏗️',
@@ -344,8 +347,11 @@ export default function Home() {
             <Link href="/simulador" className="btn-primary" style={{ fontSize: '16px', padding: '16px 36px' }}>
               Descobrir meu perfil →
             </Link>
-            <Link href="/guia" className="btn-outline" style={{ fontSize: '16px', padding: '15px 28px' }}>
-              📘 Ver o guia completo
+            <Link href="/simulador/na-planta" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
+              🌱 Simular na planta
+            </Link>
+            <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
+              🏠 Simular pronto
             </Link>
           </div>
         </div>

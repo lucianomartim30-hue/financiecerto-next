@@ -467,7 +467,7 @@ function NaPlantaContent() {
               {rendaDigitada > 0 && !faixaRenda && (
                 <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 14px', marginTop: '-8px' }}>
                   <p style={{ fontSize: '13px', color: '#1d4ed8' }}>
-                    ℹ️ Renda acima dos limites MCMV — modalidade <strong>SBPE</strong> (10,5% a.a.)
+                    💼 <strong>Perfil SBPE</strong> — taxa Caixa {TAXA_SBPE_ANUAL.toFixed(2).replace('.', ',')}% a.a. + TR · imóveis SFH até R$ 2,25M · FGTS permitido
                   </p>
                 </div>
               )}
