@@ -303,16 +303,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Erro ao buscar imoveis.' }, { status: 500 });
   }
 }
-    console.error('[api/orulo]', message);
-    if (message.includes('não configurados'))
-      return NextResponse.json({ error: 'Integracao Orulo nao configurada.' }, { status: 500 });
-    if (message.includes('401') || message.includes('403')) {
-      _tokenCache = { token: null, expiresAt: 0 };
-      return NextResponse.json({ error: 'Credenciais Orulo invalidas.' }, { status: 401 });
-    }
-    return NextResponse.json({ error: 'Erro ao buscar imóveis.' }, { status: 500 });
-  }
-}
-
-  }
-}
+   
