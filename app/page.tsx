@@ -263,8 +263,11 @@ export default function Home() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '22px',
                   marginBottom: '16px',
+                  overflow: 'hidden',
                 }}>
-                  {f.icon}
+                  {f.title === 'Consultor João'
+                    ? <img src="/avatar-joao.png" alt="João" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : f.icon}
                 </div>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--text)' }}>
                   {f.title}
@@ -317,7 +320,11 @@ export default function Home() {
                 border: '1px solid rgba(37,99,235,.12)',
                 boxShadow: '0 2px 12px rgba(37,99,235,.06)',
               }}>
-                <div style={{ fontSize: '28px', marginBottom: '14px' }}>{item.icon}</div>
+                <div style={{ fontSize: '28px', marginBottom: '14px', width: '40px', height: '40px', borderRadius: '10px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {item.title === 'IA contextual'
+                    ? <img src="/avatar-joao.png" alt="João" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : item.icon}
+                </div>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px' }}>{item.title}</h3>
                 <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.65' }}>{item.desc}</p>
               </div>
