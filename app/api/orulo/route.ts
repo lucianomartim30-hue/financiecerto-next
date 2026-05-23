@@ -36,15 +36,13 @@ async function getToken(): Promise<string> {
 // ── Normalização ──────────────────────────────────────────────────────────────
 
 function normalizeStatus(raw: string): string {
-  const s = (raw || '').toLowerCase().trim();
-  // Na Planta
-  if (s.includes('planta') || s === 'pre lancamento' || s === 'pré-lançamento') return 'na planta';
-  // Lançamento
-  if (s.includes('lança') || s.includes('lanca') || s === 'lancamento')         return 'lançamento';
+  const s = (raw || '').toLowerCase().replace(/[áàãâ]/g,'a').replace(/[éèê]/g,'e').replace(/[íìî]/g,'i').replace(/[óòõô]/g,'o').replace(/[úùû]/g,'u').replace(/ç/g,'c').trim();
+  // Na Planta (inclui Lançamento — mesmo conceito)
+  if (s.includes('planta') || s.includes('lanca') || s.includes('lancamento') || s === 'pre-lancamento') return 'na planta';
   // Em Obras
-  if (s.includes('constru') || s.includes('obra') || s.includes('andamento') || s === 'em construcao' || s === 'em construção') return 'em obras';
-  // Pronto
-  if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui') || s === 'novo' || s === 'new' || s === 'ready') return 'pronto';
+  if (s.includes('obra') || s.includes('constru') || s.includes('andamento')) return 'em obras';
+  // Pronto / Novo
+  if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui') || s === 'novo' || s === 'new') return 'pronto';
   return s;
 }
 

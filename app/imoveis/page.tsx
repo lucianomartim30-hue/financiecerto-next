@@ -24,17 +24,18 @@ interface Imovel {
 }
 
 const STATUS_CFG: Record<string, { cor: string; label: string }> = {
-  'na planta':  { cor: '#2563eb', label: 'Na Planta' },
-  'lançamento': { cor: '#7c3aed', label: 'Lançamento' },
-  'em obras':   { cor: '#d97706', label: 'Em Obras' },
-  'pronto':     { cor: '#16a34a', label: 'Pronto' },
+  'na planta': { cor: '#2563eb', label: 'Na Planta' },
+  'em obras':  { cor: '#d97706', label: 'Em Obras'  },
+  'pronto':    { cor: '#16a34a', label: 'Pronto'    },
 };
 function getStatus(s: string) {
-  const k = (s || '').toLowerCase().trim();
+  const k = (s || '').toLowerCase()
+    .replace(/[áàãâ]/g,'a').replace(/[éèê]/g,'e').replace(/[óòõô]/g,'o').replace(/[úùû]/g,'u').replace(/ç/g,'c')
+    .trim();
   if (STATUS_CFG[k]) return STATUS_CFG[k];
-  if (k.includes('planta') || k.includes('lança')) return STATUS_CFG['na planta'];
-  if (k.includes('constru') || k.includes('obra') || k.includes('andamento')) return STATUS_CFG['em obras'];
-  if (k.includes('pronto') || k.includes('entreg') || k.includes('conclui')) return STATUS_CFG['pronto'];
+  if (k.includes('planta') || k.includes('lanca') || k.includes('lancamento')) return STATUS_CFG['na planta'];
+  if (k.includes('obra') || k.includes('constru') || k.includes('andamento'))  return STATUS_CFG['em obras'];
+  if (k.includes('pronto') || k.includes('entreg') || k.includes('conclui') || k === 'novo') return STATUS_CFG['pronto'];
   return { cor: '#475569', label: s || 'Outros' };
 }
 function fmtRange(min: number | null, max: number | null, unit: string) {
@@ -213,7 +214,8 @@ function ImoveisContent() {
   const openDrop = useCallback((name: string, e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const dropWidth = name === 'mais' ? 318 : 215;
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - dropWidth - 8));
+    // Alinha pela borda DIREITA do botão; garante que fica dentro da tela
+    const left = Math.max(8, Math.min(rect.right - dropWidth, window.innerWidth - dropWidth - 8));
     setDropdownPos({ top: rect.bottom + 6, left });
     setOpenDropdown(prev => prev === name ? null : name);
   }, []);
@@ -245,11 +247,10 @@ function ImoveisContent() {
       {openDropdown === 'status' && (
         <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '210px' }}>
           {[
-            { val: '',           label: 'Todos os estágios' },
-            { val: 'na planta',  label: '🌱 Na Planta' },
-            { val: 'lançamento', label: '🚀 Lançamento' },
-            { val: 'em obras',   label: '🏗 Em Obras' },
-            { val: 'pronto',     label: '✅ Pronto / Entregue' },
+            { val: '',          label: 'Todos os estágios' },
+            { val: 'na planta', label: '🌱 Na Planta' },
+            { val: 'em obras',  label: '🏗 Em Obras' },
+            { val: 'pronto',    label: '✅ Pronto / Novo' },
           ].map(({ val, label }) => (
             <button key={val} onClick={() => { setFilterStatus(val); setOpenDropdown(null); }}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: filterStatus === val ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: filterStatus === val ? '700' : '400', color: filterStatus === val ? 'var(--primary)' : '#374151', textAlign: 'left' }}>

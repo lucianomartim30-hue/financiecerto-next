@@ -152,10 +152,17 @@ const COORDS: Record<string, { lat: number; lng: number }> = {
 };
 
 function normalizeKey(s: string): string {
-  return (s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  if (!s) return '';
+  // Substituição direta de caracteres acentuados → ASCII
+  // (mais confiável do que regex Unicode em diferentes ambientes)
+  return s.toLowerCase()
+    .replace(/[áàãâä]/g, 'a')
+    .replace(/[éèêë]/g,  'e')
+    .replace(/[íìîï]/g,  'i')
+    .replace(/[óòõôö]/g, 'o')
+    .replace(/[úùûü]/g,  'u')
+    .replace(/[ç]/g,     'c')
+    .replace(/[ñ]/g,     'n')
     .trim();
 }
 
@@ -171,5 +178,6 @@ export function lookupSPCoords(
   if (n && COORDS[n]) return COORDS[n];
   const c = normalizeKey(city);
   if (c && COORDS[c]) return COORDS[c];
-  return null;
+  // Fallback final: centróide de São Paulo para garantir que todo imóvel apareça no mapa
+  return COORDS['sao paulo'];
 }
