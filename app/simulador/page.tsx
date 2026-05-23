@@ -691,6 +691,13 @@ function SimuladorInner() {
           </div>
         )}
 
+        {/* Nota: renda F1/F2 mas imóvel em F3/F4 — explica por que não há subsídio */}
+        {sim.isMCMV && sim.faixa && sim.faixa.numero >= 3 && sim.faixaRenda && sim.faixaRenda.numero <= 2 && (
+          <div style={{ padding: '12px 14px', background: '#FAEEDA', borderLeft: '3px solid #EF9F27', borderRadius: '0 8px 8px 0', marginBottom: 14, fontSize: 13, color: '#633806' }}>
+            💡 Sua renda se enquadra na <strong>{sim.faixaRenda.label}</strong> (subsídio até {formatBRL(sim.faixaRenda.subsidioMax)}), mas o imóvel de {formatBRL(sim.valorImovel)} supera o teto {sim.faixaRenda.label} ({formatBRL(sim.faixaRenda.teto)}) — mesmo descontando o subsídio estimado. Por isso aplica-se a <strong>{sim.faixa.label} MCMV</strong> (sem subsídio, taxa {sim.faixa.taxaRef}% a.a.). Para ter acesso ao subsídio, busque imóveis até {formatBRL(sim.faixaRenda.teto)}.
+          </div>
+        )}
+
         {/* ── Plano de Compra Personalizado ───────────────────────────── */}
         <div style={{ marginBottom: 20, padding: '18px 18px 14px', background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 14 }}>

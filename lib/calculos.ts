@@ -305,12 +305,28 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   const faixaRenda   = detectarFaixaMCMV(rendaBruta);
   const mcmvElegivel = faixaRenda !== null && !temImovelMunicipio && !jaRecebeuBeneficio;
 
-  // "Poder de compra": encontra a menor faixa MCMV onde a renda qualifica E o imóvel cabe no teto.
-  // Ex: renda R$4k está na Faixa 2 (teto R$275k), mas imóvel de R$300k → sobe para Faixa 3 (teto R$400k).
-  // Se nenhuma faixa acomoda o imóvel → isMCMV = false → SBPE ou SFI.
-  const faixa  = mcmvElegivel
-    ? (FAIXAS_MCMV.find(f => rendaBruta <= f.rendaMax && valorImovel <= f.teto) ?? null)
-    : null;
+  // "Poder de compra": encontra a faixa MCMV mais vantajosa para o cliente.
+  // Para cada faixa onde a renda qualifica (da menor para a maior):
+  //   a) Se o imóvel cabe diretamente no teto → usa essa faixa.
+  //   b) Se o subsídio estimado da faixa "bridga" a diferença (valorImovel - subsídio ≤ teto) → usa essa faixa.
+  //   c) Caso contrário → tenta a próxima faixa (maior teto, menor subsídio).
+  // Ex: renda R$4k (F2, teto R$275k), imóvel R$300k, subsídio F2 ≈ R$25k:
+  //   300k - 25k = 275k ≤ 275k → fica em F2 (6,5% + subsídio) em vez de F3 (7,66% sem subsídio).
+  let faixa: FaixaMCMV | null = null;
+  if (mcmvElegivel) {
+    for (const f of FAIXAS_MCMV) {
+      if (rendaBruta > f.rendaMax) continue;
+      if (valorImovel <= f.teto) {
+        faixa = f; break;
+      }
+      if (f.subsidioMax > 0) {
+        const subsidioTeste = calcSubsidioEstimado(f, rendaBruta, valorImovel, cotista, primeiroImovel, jaRecebeuBeneficio, dependentes);
+        if (subsidioTeste > 0 && valorImovel - subsidioTeste <= f.teto) {
+          faixa = f; break;
+        }
+      }
+    }
+  }
   const isMCMV = faixa !== null;
 
   const fgtsElegivel   = cotista && primeiroImovel && !temImovelMunicipio;
