@@ -219,8 +219,11 @@ function NaPlantaContent() {
   const renda = rendaUrl > 0 ? rendaUrl : rendaDigitada;
   const temPerfil = renda > 0;
 
-  const fgts          = fgtsUrl;
-  const proprios      = propriosUrl;
+  // Permitem edição manual mesmo quando vindos do perfil via URL
+  const [fgtsRaw, setFgtsRaw]       = useState(() => fgtsUrl > 0     ? fi(String(fgtsUrl))     : '');
+  const [propriosRaw, setPropiosRaw] = useState(() => propriosUrl > 0 ? fi(String(propriosUrl)) : '');
+  const fgts          = p(fgtsRaw);
+  const proprios      = p(propriosRaw);
   const recursosTotal = fgts + proprios;
 
   // ── Estágio do empreendimento ────────────────────────────────────────────────
@@ -504,6 +507,41 @@ function NaPlantaContent() {
               </div>
             )}
 
+          </div>
+
+          {/* ── Recursos para a entrada ─────────────────────────────────── */}
+          <div style={{ marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid var(--border)' }}>
+            <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>
+              Recursos para a entrada
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '600' }}>💰 FGTS disponível</p>
+                <CampoCompacto value={fgtsRaw} onChange={v => setFgtsRaw(fi(v))} placeholder="0" />
+                <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '5px', lineHeight: 1.4 }}>
+                  Válido no MCMV e SBPE/SFH. Não se aplica ao SFI (acima de R$ 2,25M).
+                </p>
+              </div>
+              <div>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '600' }}>💵 Recursos próprios</p>
+                <CampoCompacto value={propriosRaw} onChange={v => setPropiosRaw(fi(v))} placeholder="0" />
+                <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '5px', lineHeight: 1.4 }}>
+                  Poupança, investimentos ou outros valores disponíveis.
+                </p>
+              </div>
+            </div>
+            {recursosTotal > 0 && (
+              <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text)', margin: 0 }}>
+                  Total disponível: <strong>{formatBRL(recursosTotal)}</strong>
+                  {fgts > 0 && proprios > 0 && (
+                    <span style={{ fontSize: '11px', color: 'var(--text-faint)', marginLeft: '6px' }}>
+                      (FGTS {formatBRL(fgts)} + próprios {formatBRL(proprios)})
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Valor do imóvel */}
