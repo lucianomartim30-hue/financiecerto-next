@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   formatBRL, parcelaPrice, calcularSeguros,
-  TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE,
+  TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, calcSubsidioEstimado,
 } from '@/lib/calculos';
 import Link from 'next/link';
 
@@ -262,25 +262,36 @@ function NaPlantaContent() {
   const [qtdAnuais,   setQtdAnuais]   = useState(2);
   const [unicaRaw,    setUnicaRaw]    = useState('');
 
-  // ── Cálculos de financiamento ────────────────────────────────────────────────
+  // ── Cálculos de financiamento e contribuição total ───────────────────────────
   // detectarFaixaMCMV retorna null para renda=0 (desconhecida) — nunca assume Faixa 1
   const faixaRenda  = detectarFaixaMCMV(renda);
   const isMCMV      = faixaRenda !== null && valor > 0 && valor <= faixaRenda.teto;
   const taxa        = isMCMV && faixaRenda ? faixaRenda.taxaRef : TAXA_SBPE_ANUAL;
-  // Motivo detalhado quando não é MCMV (renda alta OU valor acima do teto da faixa)
   const motivo = (!isMCMV && renda > 0 && valor > 0) ? motivoSBPE(renda, valor) : null;
 
-  // Financiamento aprovado pelo perfil; se standalone, usa 90% do valor
+  // Teto bancário: máximo que o banco empresta (LTV)
   const maxFinPerfil = isMCMV ? maxFinMcmv : maxFinSbpe;
-  const maxFinAuto   = valor > 0 ? Math.round(valor * 0.90) : 0;
-  const financiado   = maxFinPerfil > 0
-    ? Math.min(maxFinPerfil, Math.max(0, valor * (isMCMV ? 0.90 : 0.80)))
-    : maxFinAuto;
-  const entradaNecessaria = Math.max(0, valor - financiado);
-  const temRecursos       = recursosTotal > 0 && recursosTotal >= entradaNecessaria;
-  const faltaRecursos     = Math.max(0, entradaNecessaria - recursosTotal);
+  const ltvPct       = isMCMV ? 0.90 : 0.80;
+  const maxFinBanco  = valor > 0
+    ? (maxFinPerfil > 0 ? Math.min(maxFinPerfil, Math.round(valor * ltvPct)) : Math.round(valor * ltvPct))
+    : 0;
+  // Entrada mínima exigida pelo banco (piso fixo — independente do que o comprador aporta)
+  const entradaMinima = Math.max(0, valor - maxFinBanco);
 
-  // ── Totais da estrutura de entrada ──────────────────────────────────────────
+  // ── Subsídio estimado ────────────────────────────────────────────────────────
+  // Disponível apenas para MCMV Faixa 1 (renda ≤ R$3.200) e Faixa 2 (renda ≤ R$5.000)
+  // Faixa 3+, SBPE e renda acima dos limites: sem subsídio
+  // Assume cotista FGTS 3+ anos + primeiro imóvel (condições padrão do programa)
+  const subsidioEstimado = isMCMV && faixaRenda && faixaRenda.subsidioMax > 0 && valor > 0
+    ? calcSubsidioEstimado(faixaRenda, renda, valor, true, true, false, 0)
+    : 0;
+  const temSubsidio = subsidioEstimado > 0;
+
+  // Recursos que cobrem a entrada SEM precisar pagar à construtora:
+  //   FGTS + próprios (dinheiro do comprador) + subsídio (grant do governo)
+  const recursosExternos = recursosTotal + subsidioEstimado;
+
+  // ── Totais da estrutura de entrada (pagos à construtora durante a obra) ──────
   const ato          = p(atoRaw);
   const iniciais     = p(iniciaisRaw) * (modo !== 'basico' ? qtdIniciais : 0);
   const mensalUnit   = p(mensalRaw);
@@ -289,8 +300,24 @@ function NaPlantaContent() {
   const totalAnuais  = anuaisUnit * (modo !== 'basico' ? qtdAnuais : 0);
   const unica        = p(unicaRaw) * (modo === 'completo' ? 1 : 0);
   const totalEstrutura = ato + iniciais + totalMensais + totalAnuais + unica;
-  const diferenca      = totalEstrutura - entradaNecessaria;
-  const estruturaOk    = entradaNecessaria > 0 && Math.abs(diferenca) < entradaNecessaria * 0.05;
+
+  // ── Contribuição total = FGTS + próprios + subsídio + estrutura construtora ───
+  const totalContribuicao = recursosExternos + totalEstrutura;
+  // Financiamento real = valor − tudo que o comprador/governo aporta (capped no teto bancário)
+  const financiado = valor > 0
+    ? Math.max(0, Math.min(maxFinBanco, valor - totalContribuicao))
+    : 0;
+
+  // ── Verificador da estrutura de entrada ──────────────────────────────────────
+  // Quanto da entrada mínima ainda falta cobrir após recursos externos (FGTS + subsídio + próprios)
+  const entradaFaltaAposRecursos = Math.max(0, entradaMinima - recursosExternos);
+  const precisaPagarConstrutora  = entradaFaltaAposRecursos > 0;
+  // Superávit(+) ou déficit(-) da estrutura vs o que falta
+  const diferenca   = totalEstrutura - entradaFaltaAposRecursos;
+  // OK quando: recursos externos já cobrem tudo OU estrutura fecha dentro de 5% de tolerância
+  const estruturaOk = !precisaPagarConstrutora
+    ? true
+    : Math.abs(diferenca) < Math.max(1, entradaFaltaAposRecursos * 0.05);
 
   // ── Juros evolutivos ─────────────────────────────────────────────────────────
   const seguros       = calcularSeguros(financiado);
@@ -303,10 +330,10 @@ function NaPlantaContent() {
   const burden   = mensalUnit + jurosEvo1;
   const ok30     = burden <= limite30 || mensalUnit === 0;
 
-  // Saldos
-  const saldoAposAto    = entradaNecessaria - ato;
-  const saldoNaEntrega  = Math.max(0, entradaNecessaria - ato - iniciais - totalMensais - totalAnuais);
-  const valido          = valor > 0 && renda > 0 && ato > 0 && mensalUnit > 0;
+  // Saldos durante a obra (baseados no que falta após recursos externos serem aplicados)
+  const saldoAposAto   = Math.max(0, entradaFaltaAposRecursos - ato);
+  const saldoNaEntrega = Math.max(0, entradaFaltaAposRecursos - ato - iniciais - totalMensais - totalAnuais);
+  const valido         = valor > 0 && renda > 0 && ato > 0;
 
   // ── saveSimContext para o João ────────────────────────────────────────────────
   useEffect(() => {
@@ -324,13 +351,21 @@ function NaPlantaContent() {
         modalidade: isMCMV ? 'MCMV Crédito Associativo' : 'SBPE',
       },
       resultado: {
-        valorImovel:    valor,
-        valorFinanciado: financiado,
-        taxaAnual:      taxa,
-        parcela:        Math.round(parcelaFin + seguros.total),
+        valorImovel:        valor,
+        entradaMinima,
+        recursosExternos,
+        fgts,
+        proprios,
+        subsidioEstimado,
+        totalEstrutura,
+        totalContribuicao,
+        precisaPagarConstrutora,
+        valorFinanciado:    financiado,
+        taxaAnual:          taxa,
+        parcela:            Math.round(parcelaFin + seguros.total),
       },
     });
-  }, [valido, valor, renda, estagio, isMCMV, financiado, taxa, fgts, qtdMensais, parcelaFin, seguros.total]);
+  }, [valido, valor, renda, estagio, isMCMV, financiado, taxa, fgts, proprios, subsidioEstimado, qtdMensais, parcelaFin, seguros.total, entradaMinima, recursosExternos, totalContribuicao, totalEstrutura, precisaPagarConstrutora]);
 
   // ──────────────────────────────────────────────────────────────────────────────
   // Render
@@ -530,16 +565,59 @@ function NaPlantaContent() {
                 </p>
               </div>
             </div>
-            {recursosTotal > 0 && (
-              <div style={{ marginTop: '12px', padding: '10px 12px', borderRadius: '10px', background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                <p style={{ fontSize: '13px', color: 'var(--text)', margin: 0 }}>
-                  Total disponível: <strong>{formatBRL(recursosTotal)}</strong>
-                  {fgts > 0 && proprios > 0 && (
+            {/* ── Subsídio estimado ──────────────────────────────────── */}
+            {renda > 0 && valor > 0 && (
+              <div style={{ marginTop: '12px' }}>
+                {temSubsidio ? (
+                  <div style={{ padding: '12px 14px', borderRadius: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                    <p style={{ fontSize: '13px', fontWeight: '700', color: '#15803d', marginBottom: '3px' }}>
+                      🏦 Subsídio estimado MCMV {faixaRenda?.label}: <strong>{formatBRL(subsidioEstimado)}</strong>
+                    </p>
+                    <p style={{ fontSize: '11px', color: '#166534', margin: 0 }}>
+                      Aplicado diretamente no financiamento · valor exato confirmado na Caixa Econômica Federal · assume cotista 3+ anos e primeiro imóvel
+                    </p>
+                  </div>
+                ) : isMCMV && faixaRenda ? (
+                  <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#f9fafb', border: '1px solid #e5e7eb' }}>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                      ℹ️ <strong>MCMV {faixaRenda.label} — sem subsídio</strong> · renda acima de R$ 5.000 (Faixa 3+) não tem subsídio habitacional
+                    </p>
+                  </div>
+                ) : renda > 0 && !isMCMV ? (
+                  <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#f9fafb', border: '1px solid #e5e7eb' }}>
+                    <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                      ℹ️ <strong>SBPE — sem subsídio</strong> · programa MCMV não se aplica para este perfil/imóvel
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* ── Total de recursos externos + diagnóstico ───────────────── */}
+            {valor > 0 && renda > 0 && (recursosExternos > 0 || entradaMinima > 0) && (
+              <div style={{
+                marginTop: '14px', padding: '14px 16px', borderRadius: '12px',
+                background: recursosExternos >= entradaMinima ? '#f0fdf4' : '#fffbeb',
+                border: `1px solid ${recursosExternos >= entradaMinima ? '#bbf7d0' : '#fde68a'}`,
+              }}>
+                {recursosExternos > 0 && (
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                    Total de recursos externos:{' '}
+                    <strong style={{ color: 'var(--text)' }}>{formatBRL(recursosExternos)}</strong>
                     <span style={{ fontSize: '11px', color: 'var(--text-faint)', marginLeft: '6px' }}>
-                      (FGTS {formatBRL(fgts)} + próprios {formatBRL(proprios)})
+                      ({[fgts > 0 && `FGTS ${formatBRL(fgts)}`, proprios > 0 && `próprios ${formatBRL(proprios)}`, temSubsidio && `subsídio ${formatBRL(subsidioEstimado)}`].filter(Boolean).join(' + ')})
                     </span>
-                  )}
-                </p>
+                  </p>
+                )}
+                {recursosExternos >= entradaMinima ? (
+                  <p style={{ fontSize: '13px', fontWeight: '700', color: '#15803d', margin: 0 }}>
+                    ✅ Seus recursos cobrem toda a entrada mínima ({formatBRL(entradaMinima)}) — não precisa pagar entrada à construtora! Qualquer ato/parcela reduz ainda mais o financiamento.
+                  </p>
+                ) : entradaMinima > 0 ? (
+                  <p style={{ fontSize: '13px', fontWeight: '700', color: '#92400e', margin: 0 }}>
+                    ℹ️ Faltam <strong>{formatBRL(entradaFaltaAposRecursos)}</strong> para a entrada mínima ({formatBRL(entradaMinima)}) → será pago à construtora via ato e parcelas durante a obra
+                  </p>
+                ) : null}
               </div>
             )}
           </div>
@@ -590,7 +668,7 @@ function NaPlantaContent() {
           )}
 
           {/* Resumo financeiro */}
-          {valor > 0 && financiado > 0 && (
+          {valor > 0 && maxFinBanco > 0 && (
             <div style={{
               background: 'var(--bg)', borderRadius: '14px',
               border: '1px solid var(--border)', padding: '18px', margin: '20px 0',
@@ -599,37 +677,69 @@ function NaPlantaContent() {
                 Composição do pagamento
               </p>
               <LinhaDetalhe label="Valor do imóvel" valor={formatBRL(valor)} />
-              <LinhaDetalhe
-                label={`Financiamento aprovado (${isMCMV ? 'MCMV' : 'SBPE'})`}
-                valor={`− ${formatBRL(financiado)}`}
-                sub={`${((financiado / valor) * 100).toFixed(0)}% do valor · LTV`}
-              />
+              {fgts > 0 && (
+                <LinhaDetalhe
+                  label="FGTS"
+                  valor={`− ${formatBRL(fgts)}`}
+                  sub="Aplicado diretamente na entrada"
+                />
+              )}
+              {proprios > 0 && (
+                <LinhaDetalhe
+                  label="Recursos próprios (poupança)"
+                  valor={`− ${formatBRL(proprios)}`}
+                  sub="Aplicado diretamente na entrada"
+                />
+              )}
+              {subsidioEstimado > 0 && (
+                <LinhaDetalhe
+                  label={`Subsídio estimado MCMV ${faixaRenda?.label ?? ''}`}
+                  valor={`− ${formatBRL(subsidioEstimado)}`}
+                  sub="Grant do governo — confirme o valor exato na Caixa Econômica Federal"
+                />
+              )}
+              {totalEstrutura > 0 && (
+                <LinhaDetalhe
+                  label="Estrutura de entrada (ato + parcelas construtora)"
+                  valor={`− ${formatBRL(totalEstrutura)}`}
+                  sub="Pago à construtora durante a obra"
+                />
+              )}
               <div style={{ borderTop: '2px solid var(--border)', paddingTop: '10px', marginTop: '4px' }}>
                 <LinhaDetalhe
-                  label="Entrada necessária (paga durante a obra)"
-                  valor={formatBRL(entradaNecessaria)}
+                  label={`Financiamento real (${isMCMV ? 'MCMV' : 'SBPE'})`}
+                  valor={formatBRL(financiado)}
+                  sub={`${valor > 0 && financiado > 0 ? ((financiado / valor) * 100).toFixed(0) : 0}% do valor · teto bancário: ${formatBRL(maxFinBanco)}`}
                   destaque
                 />
               </div>
-              {recursosTotal > 0 && (
-                <div style={{
-                  marginTop: '10px', padding: '10px 12px', borderRadius: '10px',
-                  background: temRecursos ? '#f0fdf4' : '#fef2f2',
-                  border: `1px solid ${temRecursos ? '#bbf7d0' : '#fecaca'}`,
-                }}>
-                  <p style={{ fontSize: '12px', color: temRecursos ? '#15803d' : '#dc2626', margin: 0 }}>
-                    {temRecursos
-                      ? `✅ Seus recursos (${formatBRL(recursosTotal)}) cobrem a entrada`
-                      : `⚠️ Faltam ${formatBRL(faltaRecursos)} para cobrir a entrada`}
+              {/* Status: contribuição vs mínimo bancário */}
+              <div style={{
+                marginTop: '10px', padding: '10px 12px', borderRadius: '10px',
+                background: totalContribuicao > entradaMinima ? '#f0fdf4' : totalContribuicao === entradaMinima ? '#eff6ff' : '#fffbeb',
+                border: `1px solid ${totalContribuicao > entradaMinima ? '#bbf7d0' : totalContribuicao === entradaMinima ? '#bfdbfe' : '#fde68a'}`,
+              }}>
+                {totalContribuicao > entradaMinima && financiado < maxFinBanco ? (
+                  <p style={{ fontSize: '12px', color: '#15803d', margin: 0 }}>
+                    ✅ Contribuição acima do mínimo — financiamento reduzido em <strong>{formatBRL(maxFinBanco - financiado)}</strong> vs teto bancário
                   </p>
-                </div>
-              )}
+                ) : totalContribuicao === 0 ? (
+                  <p style={{ fontSize: '12px', color: '#92400e', margin: 0 }}>
+                    ℹ️ Preencha FGTS, recursos próprios e/ou a estrutura de entrada para ver o financiamento real
+                  </p>
+                ) : (
+                  <p style={{ fontSize: '12px', color: '#1d4ed8', margin: 0 }}>
+                    ℹ️ Entrada mínima exigida: <strong>{formatBRL(entradaMinima)}</strong>
+                    {entradaFaltaAposRecursos > 0 && ` · ainda falta cobrir ${formatBRL(entradaFaltaAposRecursos)} via estrutura`}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
 
         {/* ── ESTRUTURA DE PAGAMENTO DA ENTRADA ───────────────────────────── */}
-        {valor > 0 && entradaNecessaria > 0 && estagio !== 'pronto' && (
+        {valor > 0 && entradaMinima > 0 && estagio !== 'pronto' && (
           <div style={{
             background: 'var(--bg-card)', borderRadius: '20px',
             border: '1px solid var(--border)', padding: '28px',
@@ -639,7 +749,10 @@ function NaPlantaContent() {
               Estrutura de pagamento da entrada
             </p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-              Informe os valores da tabela da construtora. O total deve fechar em {formatBRL(entradaNecessaria)}.
+              {precisaPagarConstrutora
+                ? `Entrada mínima: ${formatBRL(entradaMinima)}${recursosExternos > 0 ? ` · já coberto por FGTS${temSubsidio ? '/subsídio' : ''}${proprios > 0 ? '/próprios' : ''}: ${formatBRL(recursosExternos)} · falta via construtora: ${formatBRL(entradaFaltaAposRecursos)}` : ' — informe os valores da tabela da construtora'}.`
+                : `✅ FGTS${temSubsidio ? ' + subsídio' : ''}${proprios > 0 ? ' + próprios' : ''} (${formatBRL(recursosExternos)}) já cobrem a entrada mínima (${formatBRL(entradaMinima)}). Qualquer valor adicional reduz ainda mais o financiamento.`
+              }
             </p>
 
             {/* Seletor de modo */}
@@ -762,23 +875,41 @@ function NaPlantaContent() {
                 border: `1px solid ${estruturaOk ? '#bbf7d0' : diferenca > 0 ? '#fecaca' : '#fde68a'}`,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Total da estrutura</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Total estrutura construtora</span>
                   <strong style={{ fontSize: '13px', color: 'var(--text)' }}>{formatBRL(totalEstrutura)}</strong>
                 </div>
+                {recursosExternos > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                      FGTS{proprios > 0 ? ' + próprios' : ''}{temSubsidio ? ' + subsídio' : ''}
+                    </span>
+                    <strong style={{ fontSize: '13px', color: '#16a34a' }}>+ {formatBRL(recursosExternos)}</strong>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Total contribuição</span>
+                  <strong style={{ fontSize: '13px', color: 'var(--text)' }}>{formatBRL(totalContribuicao)}</strong>
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Entrada necessária</span>
-                  <strong style={{ fontSize: '13px', color: 'var(--text)' }}>{formatBRL(entradaNecessaria)}</strong>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Entrada mínima (banco)</span>
+                  <strong style={{ fontSize: '13px', color: 'var(--text)' }}>{formatBRL(entradaMinima)}</strong>
+                </div>
+                <div style={{ borderTop: '1px solid rgba(0,0,0,.08)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Financiamento real</span>
+                  <strong style={{ fontSize: '14px', color: 'var(--primary)' }}>{formatBRL(financiado)}</strong>
                 </div>
                 <p style={{
                   fontSize: '12px', fontWeight: '700',
                   color: estruturaOk ? '#15803d' : diferenca > 0 ? '#dc2626' : '#b45309',
                   margin: 0,
                 }}>
-                  {estruturaOk
-                    ? '✅ Estrutura fecha com a entrada necessária'
-                    : diferenca > 0
-                      ? `⚠️ Excede em ${formatBRL(diferenca)} — reduza algum componente`
-                      : `⚠️ Faltam ${formatBRL(Math.abs(diferenca))} — adicione mais um componente`}
+                  {!precisaPagarConstrutora
+                    ? `✅ ${temSubsidio ? 'FGTS + subsídio' : 'FGTS + próprios'} cobrem a entrada — ${totalEstrutura > 0 ? `estrutura reduz o financiamento em mais ${formatBRL(totalEstrutura)}` : 'financiamento no mínimo exigido'}`
+                    : estruturaOk
+                      ? '✅ Estrutura fecha com o saldo de entrada'
+                      : diferenca > 0
+                        ? `⚠️ Estrutura excede o necessário em ${formatBRL(diferenca)} — financiamento diminui mais`
+                        : `⚠️ Faltam ${formatBRL(Math.abs(diferenca))} na estrutura para cobrir a entrada mínima`}
                 </p>
               </div>
             )}
