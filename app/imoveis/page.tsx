@@ -213,7 +213,7 @@ function ImoveisContent() {
 
   const openDrop = useCallback((name: string, e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const dropWidth = name === 'mais' ? 318 : 215;
+    const dropWidth = name === 'mais' ? 260 : 215;
     // Alinha pela borda DIREITA do botão; garante que fica dentro da tela
     const left = Math.max(8, Math.min(rect.right - dropWidth, window.innerWidth - dropWidth - 8));
     setDropdownPos({ top: rect.bottom + 6, left });
@@ -275,33 +275,27 @@ function ImoveisContent() {
 
       {/* ── Painel Mais ────────────────────────────────────────────────────── */}
       {openDropdown === 'mais' && (
-        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '20px 20px 16px', zIndex: 9001, width: '310px' }}>
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '18px 18px 14px', zIndex: 9001, width: '260px' }}>
           <NumSelector label="Quartos"   value={filterBedrooms} onChange={setFilterBedrooms} />
           <NumSelector label="Banheiros" value={filterBaths}    onChange={setFilterBaths} />
           <NumSelector label="Vagas"     value={filterVagas}    onChange={setFilterVagas} />
-          <div style={{ marginBottom: '14px' }}>
-            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Preço (R$)</p>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input inputMode="numeric" placeholder="Mínimo" value={minInput} maxLength={10}
-                onChange={e => setMinInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
-              <span style={{ color: '#9ca3af' }}>–</span>
-              <input inputMode="numeric" placeholder="Máximo" value={maxInput} maxLength={10}
-                onChange={e => setMaxInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
-            </div>
+          <div style={{ marginBottom: '12px' }}>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>Preço (R$)</p>
+            <input inputMode="numeric" placeholder="Mínimo" value={minInput} maxLength={10}
+              onChange={e => setMinInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              style={{ width: '100%', boxSizing: 'border-box', height: '38px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', marginBottom: '6px' }} />
+            <input inputMode="numeric" placeholder="Máximo" value={maxInput} maxLength={10}
+              onChange={e => setMaxInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+              style={{ width: '100%', boxSizing: 'border-box', height: '38px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Área (m²)</p>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input inputMode="numeric" placeholder="Mínimo" value={areaMinInput} maxLength={6}
-                onChange={e => setAreaMinInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
-              <span style={{ color: '#9ca3af' }}>–</span>
-              <input inputMode="numeric" placeholder="Máximo" value={areaMaxInput} maxLength={6}
-                onChange={e => setAreaMaxInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
-            </div>
+          <div style={{ marginBottom: '14px' }}>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>Área (m²)</p>
+            <input inputMode="numeric" placeholder="Mínimo" value={areaMinInput} maxLength={6}
+              onChange={e => setAreaMinInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              style={{ width: '100%', boxSizing: 'border-box', height: '38px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit', marginBottom: '6px' }} />
+            <input inputMode="numeric" placeholder="Máximo" value={areaMaxInput} maxLength={6}
+              onChange={e => setAreaMaxInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              style={{ width: '100%', boxSizing: 'border-box', height: '38px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={applyMais} style={{ flex: 1, height: '42px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>Aplicar</button>
