@@ -15,7 +15,7 @@ const NAV_SIMPLE = [
 const SIM_OPTIONS = [
   {
     href:    '/simulador/na-planta',
-    icon:    '🌱',
+    icon:    '📐',
     label:   'Na Planta',
     desc:    'Juros evolutivos e SIOPI — imóvel em construção',
     highlight: true,
@@ -57,7 +57,7 @@ export default function Header() {
         borderBottom: '1px solid var(--border)',
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
-        zIndex: 200,
+        zIndex: 800,
         boxShadow: '0 1px 8px rgba(0,0,0,.06)',
       }}>
         <div className="container" style={{
@@ -140,7 +140,7 @@ export default function Header() {
                     borderRadius: '14px',
                     boxShadow: '0 12px 40px rgba(0,0,0,.13)',
                     overflow: 'hidden',
-                    zIndex: 300,
+                    zIndex: 900,
                     animation: 'dropFade 0.15s ease',
                   }}
                 >
