@@ -145,7 +145,7 @@ function ImoveisContent() {
   }, []);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setDisplayCount(12); }, [bounds, filterStatus, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
+  useEffect(() => { setDisplayCount(12); }, [filterStatus, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
 
 
   const baseFilter = useCallback((b: Imovel) => {
@@ -167,15 +167,9 @@ function ImoveisContent() {
     .map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status })),
   [allBuildings, baseFilter]);
 
-  // Cards filtrados por bounds
-  const visibleBuildings = useMemo(() => {
-    const result = allBuildings.filter(baseFilter);
-    if (bounds) {
-      const inBounds = result.filter(b => b.lat && b.lng && b.lat >= bounds.sw_lat && b.lat <= bounds.ne_lat && b.lng >= bounds.sw_lng && b.lng <= bounds.ne_lng);
-      if (inBounds.length > 0) return inBounds;
-    }
-    return result;
-  }, [allBuildings, bounds, baseFilter]);
+  // Cards: todos os imóveis que passam nos filtros — independente do mapa
+  // O mapa é apenas visual; mover o mapa não filtra os cards
+  const visibleBuildings = useMemo(() => allBuildings.filter(baseFilter), [allBuildings, baseFilter]);
 
   const geocodeAndFly = useCallback(async (query: string) => {
     if (!query.trim()) return;
@@ -371,7 +365,7 @@ function ImoveisContent() {
               <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text)' }}>
                 {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis`}
               </span>
-              <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '6px' }}>{bounds ? 'nesta área' : 'em São Paulo'}</span>
+              <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '6px' }}>em São Paulo</span>
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
               {[{ c: '#2563eb', l: 'Na Planta' }, { c: '#d97706', l: 'Em Obras' }, { c: '#16a34a', l: 'Pronto' }].map(({ c, l }) => (
