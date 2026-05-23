@@ -22,46 +22,48 @@ export async function GET() {
 
     const token = await getToken(clientId, clientSecret);
 
-    const probe = await fetch(
-      `${ORULO_BASE}/api/v2/buildings?state=SP&city=S%C3%A3o+Paulo&per_page=5&page=1`,
+    // Busca só 3 imóveis para analisar a estrutura raw
+    const resp = await fetch(
+      `${ORULO_BASE}/api/v2/buildings?state=SP&city=S%C3%A3o+Paulo&per_page=3&page=1`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
-    if (!probe.ok)
-      return NextResponse.json({ error: `Probe error ${probe.status}` }, { status: 500 });
+    if (!resp.ok)
+      return NextResponse.json({ error: `API error ${resp.status}` }, { status: 500 });
 
-    const probeData = await probe.json();
-    const list = (probeData.buildings ?? probeData.data ?? probeData.results ?? []) as Record<string, unknown>[];
+    const data = await resp.json();
+    const list = (data.buildings ?? data.data ?? data.results ?? []) as Record<string, unknown>[];
 
-    const samples = list.slice(0, 3).map(b => ({
-      id:               b.id,
-      name:             b.name,
-      top_level_keys:   Object.keys(b),
-      // coords top-level
-      latitude:         b.latitude,
-      longitude:        b.longitude,
-      lat:              b.lat,
-      lng:              b.lng,
-      // address
-      address:          b.address,
-      // coordinate objects
-      coordinates:      b.coordinates,
-      coordinate:       b.coordinate,
-      location:         b.location,
-      geo:              b.geo,
-      position:         b.position,
-      // delivery
-      delivery_date:    b.delivery_date,
-      expected_delivery: b.expected_delivery,
-      completion_date:  b.completion_date,
-      launch_date:      b.launch_date,
-      updated_at:       b.updated_at,
-    }));
+    // Retorna os primeiros 2 imóveis completos + análise de coordenadas
+    const coordAnalysis = list.slice(0, 2).map((b: Record<string, unknown>) => {
+      const address = (b.address as Record<string, unknown>) || {};
+      return {
+        id:   b.id,
+        name: b.name,
+        // Todos os campos top-level do building
+        top_level_keys: Object.keys(b),
+        // Candidatos a coordenadas no nível raiz
+        coord_candidates: {
+          latitude:    b.latitude,
+          longitude:   b.longitude,
+          lat:         b.lat,
+          lng:         b.lng,
+          coordinates: b.coordinates,
+          coordinate:  b.coordinate,
+          location:    b.location,
+          geo:         b.geo,
+          position:    b.position,
+        },
+        // Campos do address completo
+        address_keys:   Object.keys(address),
+        address_full:   address,
+      };
+    });
 
     return NextResponse.json({
-      total_count:     probeData.total_count ?? probeData.total ?? '?',
-      total_pages:     probeData.total_pages ?? probeData.pages ?? '?',
-      response_keys:   Object.keys(probeData),
-      samples,
+      total_count:  data.total_count ?? data.total ?? '?',
+      total_pages:  data.total_pages ?? data.pages ?? '?',
+      response_top_keys: Object.keys(data),
+      analysis: coordAnalysis,
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
