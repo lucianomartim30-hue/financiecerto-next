@@ -153,8 +153,8 @@ function ImoveisContent() {
         setOpenDropdown(null);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
   }, []);
 
   const baseFilter = useCallback((b: Imovel) => {
@@ -257,7 +257,7 @@ function ImoveisContent() {
 
         {/* Estágio */}
         <div style={{ position: 'relative' }}>
-          <button style={pillStyle(!!filterStatus)} onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}>
+          <button style={pillStyle(!!filterStatus)} onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'status' ? null : 'status'); }}>
             {filterStatus ? getStatus(filterStatus).label : 'Estágio'} <span style={{ fontSize: '10px' }}>▾</span>
           </button>
           {openDropdown === 'status' && (
@@ -281,7 +281,7 @@ function ImoveisContent() {
 
         {/* Finalidade */}
         <div style={{ position: 'relative' }}>
-          <button style={pillStyle(false)} onClick={() => setOpenDropdown(openDropdown === 'final' ? null : 'final')}>
+          <button style={pillStyle(false)} onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'final' ? null : 'final'); }}>
             Finalidade <span style={{ fontSize: '10px' }}>▾</span>
           </button>
           {openDropdown === 'final' && (
@@ -298,7 +298,7 @@ function ImoveisContent() {
 
         {/* Mais */}
         <div style={{ position: 'relative' }}>
-          <button style={pillStyle(maisCount > 0)} onClick={() => setOpenDropdown(openDropdown === 'mais' ? null : 'mais')}>
+          <button style={pillStyle(maisCount > 0)} onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'mais' ? null : 'mais'); }}>
             {maisCount > 0 ? `Mais (${maisCount})` : 'Mais'} <span style={{ fontSize: '10px' }}>▾</span>
           </button>
           {openDropdown === 'mais' && (
