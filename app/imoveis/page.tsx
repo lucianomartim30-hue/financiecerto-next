@@ -248,7 +248,7 @@ function ImoveisContent() {
         <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '210px' }}>
           {[
             { val: '',          label: 'Todos os estágios' },
-            { val: 'na planta', label: '🌱 Na Planta' },
+            { val: 'na planta', label: '📐 Na Planta' },
             { val: 'em obras',  label: '🏗 Em Obras' },
             { val: 'pronto',    label: '✅ Pronto / Novo' },
           ].map(({ val, label }) => (
