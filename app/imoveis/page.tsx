@@ -212,7 +212,9 @@ function ImoveisContent() {
 
   const openDrop = useCallback((name: string, e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    setDropdownPos({ top: rect.bottom + 6, left: rect.left });
+    const dropWidth = name === 'mais' ? 318 : 215;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - dropWidth - 8));
+    setDropdownPos({ top: rect.bottom + 6, left });
     setOpenDropdown(prev => prev === name ? null : name);
   }, []);
 

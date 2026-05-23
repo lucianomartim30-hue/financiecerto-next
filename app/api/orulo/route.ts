@@ -37,10 +37,14 @@ async function getToken(): Promise<string> {
 
 function normalizeStatus(raw: string): string {
   const s = (raw || '').toLowerCase().trim();
-  if (s.includes('planta'))                                                    return 'na planta';
-  if (s.includes('lança') || s.includes('lanca'))                             return 'lançamento';
-  if (s.includes('constru') || s.includes('obra') || s.includes('andamento')) return 'em obras';
-  if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui'))  return 'pronto';
+  // Na Planta
+  if (s.includes('planta') || s === 'pre lancamento' || s === 'pré-lançamento') return 'na planta';
+  // Lançamento
+  if (s.includes('lança') || s.includes('lanca') || s === 'lancamento')         return 'lançamento';
+  // Em Obras
+  if (s.includes('constru') || s.includes('obra') || s.includes('andamento') || s === 'em construcao' || s === 'em construção') return 'em obras';
+  // Pronto
+  if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui') || s === 'novo' || s === 'new' || s === 'ready') return 'pronto';
   return s;
 }
 
@@ -101,8 +105,8 @@ function normalizeBuilding(b: Record<string, unknown>) {
     photo:         img['520x280'] || img['840x560'] || img['200x140'] || null,
     sharing_url:   (b.sharing_url as string) || null,
     orulo_url:     (b.sharing_url as string) || `${ORULO_BASE}/buildings/${b.id}`,
-    status:        (b.status as string) || '',
-    status_norm:   normalizeStatus((b.status as string) || ''),
+    status:        (b.stage as string) || (b.status as string) || '',
+    status_norm:   normalizeStatus((b.stage as string) || (b.status as string) || ''),
     updated_at:    (b.updated_at as string) || null,
   };
 }

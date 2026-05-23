@@ -34,28 +34,21 @@ export async function GET() {
     const list = (data.buildings ?? data.data ?? data.results ?? []) as Record<string, unknown>[];
 
     // Retorna os primeiros 2 imóveis completos + análise de coordenadas
-    const coordAnalysis = list.slice(0, 2).map((b: Record<string, unknown>) => {
+    const coordAnalysis = list.slice(0, 3).map((b: Record<string, unknown>) => {
       const address = (b.address as Record<string, unknown>) || {};
       return {
-        id:   b.id,
-        name: b.name,
-        // Todos os campos top-level do building
-        top_level_keys: Object.keys(b),
-        // Candidatos a coordenadas no nível raiz
-        coord_candidates: {
-          latitude:    b.latitude,
-          longitude:   b.longitude,
-          lat:         b.lat,
-          lng:         b.lng,
-          coordinates: b.coordinates,
-          coordinate:  b.coordinate,
-          location:    b.location,
-          geo:         b.geo,
-          position:    b.position,
-        },
-        // Campos do address completo
-        address_keys:   Object.keys(address),
-        address_full:   address,
+        id:            b.id,
+        name:          b.name,
+        // Campos de estágio/status — chave para o filtro
+        stage:         b.stage,
+        status:        b.status,
+        finality:      b.finality,
+        delivery_date: b.delivery_date,
+        // Coordenadas
+        address_lat:   address.latitude,
+        address_lng:   address.longitude,
+        neighborhood:  address.area || address.neighborhood,
+        city:          address.city,
       };
     });
 
