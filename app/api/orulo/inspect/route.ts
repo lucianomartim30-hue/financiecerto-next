@@ -23,55 +23,45 @@ export async function GET() {
     const token = await getToken(clientId, clientSecret);
 
     const probe = await fetch(
-      `${ORULO_BASE}/api/v2/buildings?state=SP&city=S%C3%A3o+Paulo&per_page=200&page=1`,
+      `${ORULO_BASE}/api/v2/buildings?state=SP&city=S%C3%A3o+Paulo&per_page=5&page=1`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     if (!probe.ok)
       return NextResponse.json({ error: `Probe error ${probe.status}` }, { status: 500 });
 
-    const probeData  = await probe.json();
-    const totalPages = Math.min(probeData.total_pages ?? probeData.pages ?? 1, 15);
-    const totalCount = probeData.total_count ?? probeData.total ?? '?';
-    const firstList  = (probeData.buildings ?? probeData.data ?? probeData.results ?? []) as Record<string, unknown>[];
+    const probeData = await probe.json();
+    const list = (probeData.buildings ?? probeData.data ?? probeData.results ?? []) as Record<string, unknown>[];
 
-    const restPages = totalPages > 1
-      ? await Promise.all(
-          Array.from({ length: totalPages - 1 }, (_, i) =>
-            fetch(
-              `${ORULO_BASE}/api/v2/buildings?state=SP&city=S%C3%A3o+Paulo&per_page=200&page=${i + 2}`,
-              { headers: { Authorization: `Bearer ${token}` } },
-            )
-              .then(r => r.ok ? r.json() : { buildings: [] })
-              .then(d => (d.buildings ?? d.data ?? d.results ?? []) as Record<string, unknown>[])
-              .catch(() => [] as Record<string, unknown>[]),
-          ),
-        )
-      : [];
-
-    const allBuildings = [...firstList, ...restPages.flat()];
-
-    const neighborhoodMap: Record<string, number> = {};
-    let sample: Record<string, unknown> | null = null;
-
-    for (const b of allBuildings) {
-      const addr = (b.address as Record<string, unknown>) || {};
-      if (!sample && Object.keys(addr).length > 0) sample = addr;
-      const area = (addr.area as string) || (addr.neighborhood as string) || (addr.neighbourhood as string) || '';
-      if (area) neighborhoodMap[area] = (neighborhoodMap[area] || 0) + 1;
-    }
-
-    const neighborhoods = Object.entries(neighborhoodMap)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => ({ name, count }));
+    const samples = list.slice(0, 3).map(b => ({
+      id:               b.id,
+      name:             b.name,
+      top_level_keys:   Object.keys(b),
+      // coords top-level
+      latitude:         b.latitude,
+      longitude:        b.longitude,
+      lat:              b.lat,
+      lng:              b.lng,
+      // address
+      address:          b.address,
+      // coordinate objects
+      coordinates:      b.coordinates,
+      coordinate:       b.coordinate,
+      location:         b.location,
+      geo:              b.geo,
+      position:         b.position,
+      // delivery
+      delivery_date:    b.delivery_date,
+      expected_delivery: b.expected_delivery,
+      completion_date:  b.completion_date,
+      launch_date:      b.launch_date,
+      updated_at:       b.updated_at,
+    }));
 
     return NextResponse.json({
-      total_buildings_fetched: allBuildings.length,
-      total_count_orulo:       totalCount,
-      pages_fetched:           totalPages,
-      address_fields:          sample ? Object.keys(sample) : [],
-      address_sample:          sample,
-      neighborhoods_found:     neighborhoods.length,
-      neighborhoods,
+      total_count:     probeData.total_count ?? probeData.total ?? '?',
+      total_pages:     probeData.total_pages ?? probeData.pages ?? '?',
+      response_keys:   Object.keys(probeData),
+      samples,
     });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
