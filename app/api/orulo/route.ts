@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
 
@@ -65,6 +66,15 @@ function normalizeBuilding(b: Record<string, unknown>) {
   const developer = (b.developer as Record<string, string> | null)?.name || (b.developer_name as string) || '';
   const address   = (b.address   as Record<string, unknown>) || {};
   const img       = (b.default_image as Record<string, string>) || {};
+
+  // Coordenadas: tenta campos da API, depois fallback por bairro
+  let lat = parseCoord(b.latitude ?? b.lat ?? (b.coordinates as Record<string,unknown>)?.lat ?? (b.coordinate as Record<string,unknown>)?.lat ?? (b.location as Record<string,unknown>)?.lat ?? address.latitude ?? address.lat);
+  let lng = parseCoord(b.longitude ?? b.lng ?? (b.coordinates as Record<string,unknown>)?.lng ?? (b.coordinate as Record<string,unknown>)?.lng ?? (b.location as Record<string,unknown>)?.lng ?? address.longitude ?? address.lng);
+  if (!lat || !lng) {
+    const fb = lookupSPCoords(extractNeighborhood(address), (address.city as string) || '');
+    if (fb) { lat = fb.lat; lng = fb.lng; }
+  }
+
   return {
     id:            String(b.id),
     name:          (b.name as string) || 'Empreendimento',
@@ -85,8 +95,8 @@ function normalizeBuilding(b: Record<string, unknown>) {
     number:        (address.number  as string) || '',
     city:          (address.city    as string) || '',
     state:         (address.state   as string) || '',
-    lat:           parseCoord(b.latitude ?? b.lat ?? (b.coordinates as Record<string,unknown>)?.lat ?? (b.coordinate as Record<string,unknown>)?.lat ?? (b.location as Record<string,unknown>)?.lat ?? address.latitude ?? address.lat),
-    lng:           parseCoord(b.longitude ?? b.lng ?? (b.coordinates as Record<string,unknown>)?.lng ?? (b.coordinate as Record<string,unknown>)?.lng ?? (b.location as Record<string,unknown>)?.lng ?? address.longitude ?? address.lng),
+    lat,
+    lng,
     delivery_date: (b.delivery_date as string) ?? (b.expected_delivery as string) ?? (b.completion_date as string) ?? null,
     photo:         img['520x280'] || img['840x560'] || img['200x140'] || null,
     sharing_url:   (b.sharing_url as string) || null,

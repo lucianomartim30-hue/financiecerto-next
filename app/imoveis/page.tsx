@@ -122,6 +122,7 @@ function ImoveisContent() {
   const [filterAreaMax,  setFilterAreaMax]  = useState(0);
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [search, setSearch] = useState('');
   const [geocoding, setGeocoding] = useState(false);
   const [geoMsg, setGeoMsg] = useState('');
@@ -131,7 +132,6 @@ function ImoveisContent() {
   const [areaMaxInput, setAreaMaxInput] = useState('');
 
   const mapRef = useRef<MapViewHandle>(null);
-  const filterBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -146,16 +146,6 @@ function ImoveisContent() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setDisplayCount(12); }, [bounds, filterStatus, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
 
-  // Fechar dropdown ao clicar fora — usa mousedown para funcionar antes do click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (filterBarRef.current && !filterBarRef.current.contains(e.target as Node)) {
-        setOpenDropdown(null);
-      }
-    };
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
-  }, []);
 
   const baseFilter = useCallback((b: Imovel) => {
     if (filterMin     && (b.min_price    ?? 0)  < filterMin)     return false;
@@ -220,6 +210,12 @@ function ImoveisContent() {
     setOpenDropdown(null);
   }, []);
 
+  const openDrop = useCallback((name: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDropdownPos({ top: rect.bottom + 6, left: rect.left });
+    setOpenDropdown(prev => prev === name ? null : name);
+  }, []);
+
   const hasFilters = !!(filterStatus || filterMin || filterMax || filterBedrooms || filterVagas || filterBaths || filterAreaMin || filterAreaMax);
   const maisCount = [filterBedrooms, filterVagas, filterBaths, filterMin, filterMax, filterAreaMin, filterAreaMax].filter(Boolean).length;
 
@@ -236,11 +232,76 @@ function ImoveisContent() {
   });
 
   return (
-    // ── Container externo: SEM overflow:hidden para não clipar os dropdowns
     <div style={{ display: 'flex', flexDirection: 'column', height: `calc(100vh - var(--header-h))`, background: 'var(--bg)' }}>
 
+      {/* ── Overlay: fecha dropdown ao clicar fora ─────────────────────────── */}
+      {openDropdown && (
+        <div onClick={() => setOpenDropdown(null)} style={{ position: 'fixed', inset: 0, zIndex: 9000 }} />
+      )}
+
+      {/* ── Painel Estágio ─────────────────────────────────────────────────── */}
+      {openDropdown === 'status' && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '210px' }}>
+          {[
+            { val: '',           label: 'Todos os estágios' },
+            { val: 'na planta',  label: '🌱 Na Planta' },
+            { val: 'lançamento', label: '🚀 Lançamento' },
+            { val: 'em obras',   label: '🏗 Em Obras' },
+            { val: 'pronto',     label: '✅ Pronto / Entregue' },
+          ].map(({ val, label }) => (
+            <button key={val} onClick={() => { setFilterStatus(val); setOpenDropdown(null); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: filterStatus === val ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: filterStatus === val ? '700' : '400', color: filterStatus === val ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
+              {filterStatus === val && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Painel Finalidade ──────────────────────────────────────────────── */}
+      {openDropdown === 'final' && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '170px' }}>
+          {['🏠 Residencial', '🏢 Comercial'].map(label => (
+            <button key={label} onClick={() => setOpenDropdown(null)}
+              style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', color: '#374151', textAlign: 'left' }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Painel Mais ────────────────────────────────────────────────────── */}
+      {openDropdown === 'mais' && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '20px 20px 16px', zIndex: 9001, width: '310px' }}>
+          <NumSelector label="Quartos"   value={filterBedrooms} onChange={setFilterBedrooms} />
+          <NumSelector label="Banheiros" value={filterBaths}    onChange={setFilterBaths} />
+          <NumSelector label="Vagas"     value={filterVagas}    onChange={setFilterVagas} />
+          <div style={{ marginBottom: '14px' }}>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Preço</p>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input type="text" placeholder="De" value={minInput} onChange={e => setMinInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+              <span style={{ color: '#9ca3af' }}>–</span>
+              <input type="text" placeholder="Até" value={maxInput} onChange={e => setMaxInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+            </div>
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Área (m²)</p>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input type="text" placeholder="De" value={areaMinInput} onChange={e => setAreaMinInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+              <span style={{ color: '#9ca3af' }}>–</span>
+              <input type="text" placeholder="Até" value={areaMaxInput} onChange={e => setAreaMaxInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={applyMais} style={{ flex: 1, height: '42px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>Aplicar</button>
+            <button onClick={() => { setFilterBedrooms(0); setFilterBaths(0); setFilterVagas(0); setFilterMin(0); setFilterMax(0); setFilterAreaMin(0); setFilterAreaMax(0); setMinInput(''); setMaxInput(''); setAreaMinInput(''); setAreaMaxInput(''); }}
+              style={{ height: '42px', padding: '0 16px', background: 'transparent', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>Limpar</button>
+          </div>
+        </div>
+      )}
+
       {/* ── Filter bar ─────────────────────────────────────────────────────── */}
-      <div ref={filterBarRef} style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '10px 20px', display: 'flex', gap: '10px', alignItems: 'center', zIndex: 300, flexShrink: 0, position: 'relative' }}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '10px 20px', display: 'flex', gap: '10px', alignItems: 'center', zIndex: 9002, flexShrink: 0, position: 'relative' }}>
 
         {/* Campo de localização compacto */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -256,80 +317,19 @@ function ImoveisContent() {
         </div>
 
         {/* Estágio */}
-        <div style={{ position: 'relative' }}>
-          <button style={pillStyle(!!filterStatus)} onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'status' ? null : 'status'); }}>
-            {filterStatus ? getStatus(filterStatus).label : 'Estágio'} <span style={{ fontSize: '10px' }}>▾</span>
-          </button>
-          {openDropdown === 'status' && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.12)', padding: '6px', zIndex: 9999, minWidth: '200px' }}>
-              {[
-                { val: '',           label: 'Todos os estágios' },
-                { val: 'na planta',  label: '🌱 Na Planta' },
-                { val: 'lançamento', label: '🚀 Lançamento' },
-                { val: 'em obras',   label: '🏗 Em Obras' },
-                { val: 'pronto',     label: '✅ Pronto / Entregue' },
-              ].map(({ val, label }) => (
-                <button key={val} onClick={() => { setFilterStatus(val); setOpenDropdown(null); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: filterStatus === val ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: filterStatus === val ? '700' : '400', color: filterStatus === val ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
-                  {filterStatus === val && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <button style={pillStyle(!!filterStatus)} onClick={(e) => openDrop('status', e)}>
+          {filterStatus ? getStatus(filterStatus).label : 'Estágio'} <span style={{ fontSize: '10px' }}>▾</span>
+        </button>
 
         {/* Finalidade */}
-        <div style={{ position: 'relative' }}>
-          <button style={pillStyle(false)} onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'final' ? null : 'final'); }}>
-            Finalidade <span style={{ fontSize: '10px' }}>▾</span>
-          </button>
-          {openDropdown === 'final' && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.12)', padding: '6px', zIndex: 9999, minWidth: '170px' }}>
-              {['🏢 Comercial', '🏠 Residencial'].map(label => (
-                <button key={label} onClick={() => setOpenDropdown(null)}
-                  style={{ display: 'block', width: '100%', padding: '10px 14px', background: 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', color: '#374151', textAlign: 'left' }}>
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <button style={pillStyle(false)} onClick={(e) => openDrop('final', e)}>
+          Finalidade <span style={{ fontSize: '10px' }}>▾</span>
+        </button>
 
         {/* Mais */}
-        <div style={{ position: 'relative' }}>
-          <button style={pillStyle(maisCount > 0)} onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'mais' ? null : 'mais'); }}>
-            {maisCount > 0 ? `Mais (${maisCount})` : 'Mais'} <span style={{ fontSize: '10px' }}>▾</span>
-          </button>
-          {openDropdown === 'mais' && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.12)', padding: '20px 20px 16px', zIndex: 9999, width: '310px' }}>
-              <NumSelector label="Quartos"   value={filterBedrooms} onChange={setFilterBedrooms} />
-              <NumSelector label="Banheiros" value={filterBaths}    onChange={setFilterBaths} />
-              <NumSelector label="Vagas"     value={filterVagas}    onChange={setFilterVagas} />
-              <div style={{ marginBottom: '14px' }}>
-                <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Preço</p>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input type="text" placeholder="De" value={minInput} onChange={e => setMinInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
-                  <span style={{ color: '#9ca3af' }}>–</span>
-                  <input type="text" placeholder="Até" value={maxInput} onChange={e => setMaxInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
-                </div>
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Área (m²)</p>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input type="text" placeholder="De" value={areaMinInput} onChange={e => setAreaMinInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
-                  <span style={{ color: '#9ca3af' }}>–</span>
-                  <input type="text" placeholder="Até" value={areaMaxInput} onChange={e => setAreaMaxInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={applyMais} style={{ flex: 1, height: '42px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>Aplicar</button>
-                <button onClick={() => { setFilterBedrooms(0); setFilterBaths(0); setFilterVagas(0); setFilterMin(0); setFilterMax(0); setFilterAreaMin(0); setFilterAreaMax(0); setMinInput(''); setMaxInput(''); setAreaMinInput(''); setAreaMaxInput(''); }}
-                  style={{ height: '42px', padding: '0 16px', background: 'transparent', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: '10px', fontSize: '13px', cursor: 'pointer' }}>Limpar</button>
-              </div>
-            </div>
-          )}
-        </div>
+        <button style={pillStyle(maisCount > 0)} onClick={(e) => openDrop('mais', e)}>
+          {maisCount > 0 ? `Mais (${maisCount})` : 'Mais'} <span style={{ fontSize: '10px' }}>▾</span>
+        </button>
 
         {hasFilters && (
           <button onClick={clearAll} style={{ height: '42px', padding: '0 16px', borderRadius: '21px', border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
