@@ -306,7 +306,7 @@ function ImoveisContent() {
       )}
 
       {/* ── Filter bar ─────────────────────────────────────────────────────── */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '10px 20px', display: 'flex', gap: '10px', alignItems: 'center', zIndex: 9002, flexShrink: 0, position: 'relative' }}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '10px 20px', display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0, position: 'relative' }}>
 
         {/* Campo de localização compacto */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
