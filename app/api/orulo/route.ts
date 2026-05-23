@@ -54,6 +54,13 @@ function extractNeighborhood(address: Record<string, unknown>): string {
   );
 }
 
+// Converte qualquer valor (string, number, null) em número de coordenada ou null
+function parseCoord(v: unknown): number | null {
+  if (v === null || v === undefined || v === '' || v === 0) return null;
+  const n = typeof v === 'number' ? v : parseFloat(String(v));
+  return isFinite(n) && n !== 0 ? n : null;
+}
+
 function normalizeBuilding(b: Record<string, unknown>) {
   const developer = (b.developer as Record<string, string> | null)?.name || (b.developer_name as string) || '';
   const address   = (b.address   as Record<string, unknown>) || {};
@@ -78,8 +85,8 @@ function normalizeBuilding(b: Record<string, unknown>) {
     number:        (address.number  as string) || '',
     city:          (address.city    as string) || '',
     state:         (address.state   as string) || '',
-    lat:           (b.latitude as number) ?? (b.lat as number) ?? ((b.coordinates as Record<string,number>)?.lat) ?? ((b.coordinate as Record<string,number>)?.lat) ?? ((b.location as Record<string,number>)?.lat) ?? (address.latitude as number) ?? (address.lat as number) ?? null,
-    lng:           (b.longitude as number) ?? (b.lng as number) ?? ((b.coordinates as Record<string,number>)?.lng) ?? ((b.coordinate as Record<string,number>)?.lng) ?? ((b.location as Record<string,number>)?.lng) ?? (address.longitude as number) ?? (address.lng as number) ?? null,
+    lat:           parseCoord(b.latitude ?? b.lat ?? (b.coordinates as Record<string,unknown>)?.lat ?? (b.coordinate as Record<string,unknown>)?.lat ?? (b.location as Record<string,unknown>)?.lat ?? address.latitude ?? address.lat),
+    lng:           parseCoord(b.longitude ?? b.lng ?? (b.coordinates as Record<string,unknown>)?.lng ?? (b.coordinate as Record<string,unknown>)?.lng ?? (b.location as Record<string,unknown>)?.lng ?? address.longitude ?? address.lng),
     delivery_date: (b.delivery_date as string) ?? (b.expected_delivery as string) ?? (b.completion_date as string) ?? null,
     photo:         img['520x280'] || img['840x560'] || img['200x140'] || null,
     sharing_url:   (b.sharing_url as string) || null,
