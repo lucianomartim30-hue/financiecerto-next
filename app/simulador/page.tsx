@@ -867,7 +867,8 @@ function SimuladorInner() {
 
     const sc = SAUDE[sim.saudeLabel];
     const economiasSAC = Math.max(0, sim.totalPagoPrice - sim.totalPagoSAC);
-    const modalLabel = sim.isMCMV ? (perfil?.faixa ? `${perfil.faixa.label} MCMV` : 'MCMV') : sim.isSFI ? 'SFI' : 'SBPE (SFH)';
+    // Usa sim.faixa (faixa real do imóvel — pode ser superior à faixa base da renda)
+    const modalLabel = sim.isMCMV ? (sim.faixa ? `${sim.faixa.label} MCMV` : 'MCMV') : sim.isSFI ? 'SFI' : 'SBPE (SFH)';
 
     return (
       <Etapa etapa={etapa}>
@@ -878,8 +879,8 @@ function SimuladorInner() {
           <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '2.5px', marginBottom: 6 }}>{sc.emoji} {modalLabel}</div>
           {!sim.isMCMV && !sim.isSFI && (
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 10, lineHeight: 1.5 }}>
-              ℹ️ {sim.faixa
-                ? `Imóvel (${formatBRL(sim.valorImovel)}) acima do teto MCMV ${sim.faixa.label} (${formatBRL(sim.faixa.teto)})`
+              ℹ️ {sim.faixaRenda
+                ? `Imóvel (${formatBRL(sim.valorImovel)}) acima do teto máximo MCMV para sua renda — Faixa 4 cobre até ${formatBRL(600000)}`
                 : `Renda acima do limite MCMV (máx. ${formatBRL(13000)}/mês)`}
               {' '}— financiamento SBPE
             </div>

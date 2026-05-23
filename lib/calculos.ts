@@ -241,6 +241,8 @@ export interface ResultadoSimulacao {
   isSFI: boolean;
   modalidade: 'MCMV' | 'SBPE' | 'SFI';
   faixa: FaixaMCMV | null;
+  /** Faixa determinada apenas pela renda (independente do imóvel) — usada para mensagens explicativas */
+  faixaRenda: FaixaMCMV | null;
   valorImovel: number;
   valorFinanciado: number;
   entrada: number;
@@ -299,9 +301,17 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   const prazoMeses       = Math.min(prazoAnos * 12, Math.min(prazoMaxPorIdade, PRAZO_MAX_MESES));
   const prazoObraMeses   = prazoObraAnos * 12;
 
-  const faixa        = detectarFaixaMCMV(rendaBruta);
-  const mcmvElegivel = faixa !== null && !temImovelMunicipio && !jaRecebeuBeneficio;
-  const isMCMV       = mcmvElegivel && valorImovel <= (faixa?.teto ?? 0);
+  // Faixa baseada apenas na renda (menor faixa onde renda ≤ rendaMax)
+  const faixaRenda   = detectarFaixaMCMV(rendaBruta);
+  const mcmvElegivel = faixaRenda !== null && !temImovelMunicipio && !jaRecebeuBeneficio;
+
+  // "Poder de compra": encontra a menor faixa MCMV onde a renda qualifica E o imóvel cabe no teto.
+  // Ex: renda R$4k está na Faixa 2 (teto R$275k), mas imóvel de R$300k → sobe para Faixa 3 (teto R$400k).
+  // Se nenhuma faixa acomoda o imóvel → isMCMV = false → SBPE ou SFI.
+  const faixa  = mcmvElegivel
+    ? (FAIXAS_MCMV.find(f => rendaBruta <= f.rendaMax && valorImovel <= f.teto) ?? null)
+    : null;
+  const isMCMV = faixa !== null;
 
   const fgtsElegivel   = cotista && primeiroImovel && !temImovelMunicipio;
   const fgtsUsado      = fgtsElegivel ? fgts : 0;
@@ -364,7 +374,7 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   }
 
   return {
-    isMCMV, isSFI, modalidade, faixa,
+    isMCMV, isSFI, modalidade, faixa, faixaRenda,
     valorImovel, valorFinanciado,
     entrada: entradaTotal, fgts, subsidioEstimado,
     prazoMeses, taxaAnual,
