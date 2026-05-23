@@ -280,19 +280,27 @@ function ImoveisContent() {
           <NumSelector label="Banheiros" value={filterBaths}    onChange={setFilterBaths} />
           <NumSelector label="Vagas"     value={filterVagas}    onChange={setFilterVagas} />
           <div style={{ marginBottom: '14px' }}>
-            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Preço</p>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Preço (R$)</p>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input type="text" placeholder="De" value={minInput} onChange={e => setMinInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+              <input inputMode="numeric" placeholder="Mínimo" value={minInput} maxLength={10}
+                onChange={e => setMinInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
               <span style={{ color: '#9ca3af' }}>–</span>
-              <input type="text" placeholder="Até" value={maxInput} onChange={e => setMaxInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+              <input inputMode="numeric" placeholder="Máximo" value={maxInput} maxLength={10}
+                onChange={e => setMaxInput(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
             </div>
           </div>
           <div style={{ marginBottom: '16px' }}>
             <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Área (m²)</p>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input type="text" placeholder="De" value={areaMinInput} onChange={e => setAreaMinInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+              <input inputMode="numeric" placeholder="Mínimo" value={areaMinInput} maxLength={6}
+                onChange={e => setAreaMinInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
               <span style={{ color: '#9ca3af' }}>–</span>
-              <input type="text" placeholder="Até" value={areaMaxInput} onChange={e => setAreaMaxInput(e.target.value)} style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+              <input inputMode="numeric" placeholder="Máximo" value={areaMaxInput} maxLength={6}
+                onChange={e => setAreaMaxInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                style={{ flex: 1, height: '40px', padding: '0 12px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
