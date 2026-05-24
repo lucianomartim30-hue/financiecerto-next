@@ -17,6 +17,8 @@ interface Tipologia {
   private_area: string;
   total_area: string;
   price: string;
+  stock: number | null;
+  total_units: number | null;
   photo: string | null;
   blueprint: string | null;
 }
@@ -46,6 +48,13 @@ interface ImovelDetalhe {
   longitude: number | null;
   status: string;
   delivery_date: string | null;
+  launch_date: string | null;
+  total_units: number | null;
+  stock: number | null;
+  number_of_floors: number | null;
+  number_of_towers: number | null;
+  virtual_tour: string | null;
+  finality: string | null;
   description: string;
   photos: string[];
   blueprints: Blueprint[];
@@ -623,8 +632,22 @@ function SecaoTipologias({ typologies }: { typologies: Tipologia[] }) {
                 {t.vagas !== null && <SpecChip icon="🚗" label={`${t.vagas} vaga${t.vagas !== 1 ? 's' : ''}`} />}
                 {t.bathrooms !== null && <SpecChip icon="🚿" label={`${t.bathrooms} ban.`} />}
               </div>
-              {t.price && Number(t.price) > 0 && (
-                <p style={{ fontSize: '15px', fontWeight: '900', color: 'var(--primary)' }}>{formatBRL(Number(t.price))}</p>
+              {t.price && t.price !== 'Consultar' && (
+                <p style={{ fontSize: '15px', fontWeight: '900', color: 'var(--primary)', marginBottom: '6px' }}>{t.price}</p>
+              )}
+              {(t.stock !== null || t.total_units !== null) && (
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
+                  {t.stock !== null && (
+                    <span style={{ fontSize: '10px', fontWeight: '700', color: (t.stock ?? 0) > 0 ? '#16a34a' : '#dc2626', background: (t.stock ?? 0) > 0 ? '#f0fdf4' : '#fef2f2', border: `1px solid ${(t.stock ?? 0) > 0 ? '#86efac' : '#fca5a5'}`, borderRadius: '6px', padding: '2px 8px' }}>
+                      🔑 {t.stock} disponíveis
+                    </span>
+                  )}
+                  {t.total_units !== null && (
+                    <span style={{ fontSize: '10px', color: 'var(--text-faint)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '2px 8px' }}>
+                      {t.total_units} total
+                    </span>
+                  )}
+                </div>
               )}
               {t.blueprint && (
                 <a href={t.blueprint} target="_blank" rel="noopener noreferrer"
@@ -854,6 +877,10 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
     faixaRange(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos') && { icon: '🛏', label: faixaRange(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos')! },
     faixaRange(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')  && { icon: '🚿', label: faixaRange(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')! },
     faixaRange(imovel.vagas_min, imovel.vagas_max, 'vagas')         && { icon: '🚗', label: faixaRange(imovel.vagas_min, imovel.vagas_max, 'vagas')! },
+    imovel.total_units                                               && { icon: '🏢', label: `${imovel.total_units} unidades` },
+    imovel.stock !== null && imovel.stock !== undefined              && { icon: '🔑', label: `${imovel.stock} disponíveis` },
+    imovel.number_of_floors                                          && { icon: '⬆️', label: `${imovel.number_of_floors} andares` },
+    imovel.number_of_towers && imovel.number_of_towers > 1          && { icon: '🏗️', label: `${imovel.number_of_towers} torres` },
   ].filter(Boolean) as { icon: string; label: string }[];
 
   return (
@@ -902,6 +929,16 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
               {imovel.delivery_date && (
                 <span style={{ fontSize: '12px', color: 'var(--text-faint)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '3px 10px' }}>
                   🗓️ Entrega: {imovel.delivery_date}
+                </span>
+              )}
+              {imovel.launch_date && (
+                <span style={{ fontSize: '12px', color: 'var(--text-faint)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', padding: '3px 10px' }}>
+                  🚀 Lançamento: {imovel.launch_date}
+                </span>
+              )}
+              {imovel.stock !== null && imovel.stock !== undefined && (
+                <span style={{ fontSize: '12px', fontWeight: '700', color: imovel.stock > 0 ? '#16a34a' : '#dc2626', background: imovel.stock > 0 ? '#f0fdf4' : '#fef2f2', border: `1px solid ${imovel.stock > 0 ? '#86efac' : '#fca5a5'}`, borderRadius: '20px', padding: '3px 10px' }}>
+                  {imovel.stock > 0 ? `✅ ${imovel.stock} unid. disponíveis` : '❌ Sem unidades disponíveis'}
                 </span>
               )}
             </div>
@@ -978,6 +1015,15 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
                       </a>
                     ))}
                   </div>
+                </div>
+              )}
+              {/* Tour Virtual */}
+              {imovel.virtual_tour && (
+                <div style={{ marginTop: '20px' }}>
+                  <a href={imovel.virtual_tour} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #7c3aed, #2563eb)', color: '#fff', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', boxShadow: '0 4px 12px rgba(124,58,237,.3)' }}>
+                    🥽 Tour Virtual 360°
+                  </a>
                 </div>
               )}
             </div>

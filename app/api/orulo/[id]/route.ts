@@ -54,9 +54,24 @@ function getMock(id: string) {
   return mocks[id] || null;
 }
 
+// Monta a URL de uma imagem Orulo a partir do ID numérico.
+// A API retorna apenas o ID nos arrays de images/floor_plans;
+// as URLs seguem o padrão estático documentado abaixo.
+const ORULO_IMG_BASE = 'https://static.orulo.com.br/images/properties';
+function imageUrl(id: string | number): string {
+  return `${ORULO_IMG_BASE}/featured_modern_without_watermark/${id}.jpg`;
+}
+function imageLargeUrl(id: string | number): string {
+  return `${ORULO_IMG_BASE}/large/${id}.jpg`;
+}
+
 function pickUrl(obj: Record<string, string> | null | undefined): string {
   if (!obj) return '';
-  return obj['1200x628'] || obj['840x560'] || obj['520x280'] || obj['200x140'] || obj.url || obj.image_url || '';
+  // Se tem ID numérico mas não tem URL, monta a URL
+  if (obj.id && !obj['520x280'] && !obj['840x560'] && !obj['1200x628']) {
+    return imageUrl(obj.id);
+  }
+  return obj['1200x628'] || obj['1024x1024'] || obj['840x560'] || obj['520x280'] || obj['200x140'] || obj.url || obj.image_url || '';
 }
 
 export async function GET(
@@ -90,60 +105,80 @@ export async function GET(
     const developer_website = (devObj.website as string) || null;
 
     const address = (b.address as Record<string, unknown>) || {};
-    const images = (b.images as Record<string, string>[] | null) || [];
-    const defaultImg = (b.default_image as Record<string, string>) || {};
 
-    // Fotos (até 20)
+    // ── Fotos ──────────────────────────────────────────────────────────────────
+    // A default_image vem com URLs completas; o array images[] vem só com IDs.
     const photos: string[] = [];
-    const mainPhoto = pickUrl(defaultImg as Record<string, string>);
+    const defaultImg = (b.default_image as Record<string, string>) || {};
+    const mainPhoto = pickUrl(defaultImg);
     if (mainPhoto) photos.push(mainPhoto);
-    for (const img of images.slice(0, 20)) {
-      const url = pickUrl(img as Record<string, string>);
+
+    const imagesRaw = (b.images as Record<string, unknown>[]) || [];
+    for (const img of imagesRaw.slice(0, 30)) {
+      // Cada item pode ter: { id, description, type, associations } — sem URL
+      const imgId = (img.id ?? img['image_id']) as string | number | undefined;
+      const url = imgId
+        ? imageUrl(imgId)
+        : pickUrl(img as Record<string, string>);
       if (url && !photos.includes(url)) photos.push(url);
     }
 
-    // Plantas (blueprints)
-    const bpRaw = (b.blueprints ?? b.floor_plans ?? b.plants ?? []) as Record<string, unknown>[];
-    const blueprints = bpRaw.map(bp => ({
-      name: (bp.name ?? bp.label ?? bp.description ?? '') as string,
-      url: pickUrl((bp.image ?? bp) as Record<string, string>),
-    })).filter(bp => bp.url);
+    // ── Plantas baixas ─────────────────────────────────────────────────────────
+    // floor_plans[] tem a mesma estrutura: { id, description, type, associations }
+    const floorPlansRaw = (b.floor_plans ?? b.blueprints ?? b.plants ?? []) as Record<string, unknown>[];
+    const blueprints = floorPlansRaw.map(bp => {
+      const bpId = (bp.id ?? bp['image_id']) as string | number | undefined;
+      const url = bpId
+        ? imageLargeUrl(bpId)   // plantas em alta resolução
+        : pickUrl((bp.image ?? bp) as Record<string, string>);
+      return {
+        name: (bp.description ?? bp.name ?? bp.label ?? 'Planta') as string,
+        url,
+      };
+    }).filter(bp => bp.url);
 
-    // Amenidades
+    // ── Amenidades / Diferenciais ──────────────────────────────────────────────
+    // A API retorna features como array de strings simples
     const amenities: string[] = [];
-    const feats = (b.amenities ?? b.features ?? b.differentials ?? []) as Record<string, unknown>[];
-    for (const f of feats) {
-      if (f.name) amenities.push(f.name as string);
-      else if (typeof f === 'string') amenities.push(f);
+    const featsRaw = (b.features ?? b.amenities ?? b.building_features ?? b.differentials ?? []) as unknown[];
+    for (const f of featsRaw) {
+      if (typeof f === 'string') amenities.push(f);
+      else if (f && typeof f === 'object') {
+        const fo = f as Record<string, unknown>;
+        if (fo.name) amenities.push(fo.name as string);
+      }
     }
 
-    // Tipologias enriquecidas
+    // ── Tipologias ─────────────────────────────────────────────────────────────
     const typologies = ((b.typologies ?? b.apartments ?? []) as Record<string, unknown>[]).map((t) => {
-      const tImg = (t.images as Record<string, string>[])?.[0] ?? (t.image as Record<string, string>) ?? null;
-      const tBp = (t.blueprints as Record<string, string>[])?.[0] ?? null;
+      // Tipologias não têm imagens embutidas — photo fica null
+      const price = (t.discount_price ?? t.original_price ?? t.price ?? null) as number | null;
       return {
-        type: (t.name ?? t.type ?? `${t.bedrooms ?? '?'} dorms`) as string,
-        bedrooms: (t.bedrooms ?? t.rooms ?? null) as number | null,
+        type: (t.type ?? t.name ?? `${t.bedrooms ?? '?'} dorms`) as string,
+        bedrooms:  (t.bedrooms ?? t.rooms ?? null) as number | null,
         bathrooms: (t.bathrooms ?? t.baths ?? null) as number | null,
-        vagas: (t.garages ?? t.parking_spots ?? t.vagas ?? null) as number | null,
-        suites: (t.suites ?? null) as number | null,
-        area: t.area ? `${t.area} m²` : (t.private_area ? `${t.private_area} m²` : ''),
-        private_area: t.private_area ? `${t.private_area} m²` : '',
-        total_area: t.total_area ? `${t.total_area} m²` : '',
-        price: t.price ? `R$ ${Number(t.price).toLocaleString('pt-BR')}` : 'Consultar',
-        photo: tImg ? pickUrl(tImg) : null,
-        blueprint: tBp ? pickUrl(tBp) : null,
+        vagas:     (t.parking ?? t.garages ?? t.parking_spots ?? t.vagas ?? null) as number | null,
+        suites:    (t.suites ?? null) as number | null,
+        area:         t.private_area ? `${t.private_area}` : (t.area ? `${t.area}` : ''),
+        private_area: t.private_area ? `${t.private_area}` : '',
+        total_area:   t.total_area   ? `${t.total_area}`   : '',
+        price:        price ? `R$ ${price.toLocaleString('pt-BR')}` : 'Consultar',
+        stock:        (t.stock ?? null) as number | null,   // unidades disponíveis
+        total_units:  (t.total_units ?? null) as number | null,
+        photo:        null,
+        blueprint:    null,
       };
     });
 
-    // Coordenadas (para mapa)
-    const latitude = (address.latitude ?? b.latitude ?? null) as number | null;
+    // ── Coordenadas ────────────────────────────────────────────────────────────
+    const latitude  = (address.latitude  ?? b.latitude  ?? null) as number | null;
     const longitude = (address.longitude ?? b.longitude ?? null) as number | null;
 
-    // Previsão de entrega
-    const delivery_date = (b.delivery_date ?? b.ready_at ?? b.expected_delivery ?? b.delivered_at ?? null) as string | null;
+    // ── Datas ──────────────────────────────────────────────────────────────────
+    const delivery_date = (b.delivery_date ?? b.ready_at ?? b.opening_date ?? b.expected_delivery ?? b.delivered_at ?? null) as string | null;
+    const launch_date   = (b.launch_date   ?? b.opening_date ?? null) as string | null;
 
-    // CEP
+    // ── CEP ────────────────────────────────────────────────────────────────────
     const zipcode = (address.zipcode ?? address.zip ?? address.postal_code ?? '') as string;
 
     return NextResponse.json({
@@ -154,29 +189,36 @@ export async function GET(
       developer_website,
       min_price: (b.min_price as number) ?? null,
       max_price: (b.max_price as number) ?? null,
-      bedrooms_min: (b.min_bedrooms as number) ?? null,
-      bedrooms_max: (b.max_bedrooms as number) ?? null,
-      area_min: (b.min_area as number) ?? null,
-      area_max: (b.max_area as number) ?? null,
+      bedrooms_min:  (b.min_bedrooms  as number) ?? null,
+      bedrooms_max:  (b.max_bedrooms  as number) ?? null,
+      area_min:      (b.min_area      as number) ?? null,
+      area_max:      (b.max_area      as number) ?? null,
       bathrooms_min: (b.min_bathrooms as number) ?? null,
       bathrooms_max: (b.max_bathrooms as number) ?? null,
-      vagas_min: (b.min_parking_spots as number) ?? (b.min_garages as number) ?? (b.parking_spots_min as number) ?? null,
-      vagas_max: (b.max_parking_spots as number) ?? (b.max_garages as number) ?? (b.parking_spots_max as number) ?? null,
+      vagas_min: (b.min_parking as number) ?? (b.min_parking_spots as number) ?? (b.min_garages as number) ?? null,
+      vagas_max: (b.max_parking as number) ?? (b.max_parking_spots as number) ?? (b.max_garages as number) ?? null,
       neighborhood: (address.area ?? address.neighborhood ?? '') as string,
-      city: (address.city ?? '') as string,
-      state: (address.state ?? '') as string,
+      city:    (address.city  ?? '') as string,
+      state:   (address.state ?? '') as string,
       zipcode,
-      address_full: [address.street, address.number, address.area ?? address.neighborhood, address.city].filter(Boolean).join(', '),
+      address_full: [address.street_type, address.street, address.number, address.area ?? address.neighborhood, address.city].filter(Boolean).join(' '),
       latitude,
       longitude,
-      status: (b.status as string) || '',
+      status:        (b.stage  as string) || (b.status as string) || '',
       delivery_date,
+      launch_date,
+      total_units:      (b.total_units      as number) ?? null,
+      stock:            (b.stock            as number) ?? null,   // unidades disponíveis (total)
+      number_of_floors: (b.number_of_floors as number) ?? null,
+      number_of_towers: (b.number_of_towers as number) ?? null,
+      virtual_tour:     (b.virtual_tour     as string) || null,
+      finality:         (b.finality         as string) || null,   // Residencial / Comercial
       description: (b.description as string) || '',
       photos,
       blueprints,
       amenities,
       typologies,
-      sharing_url: (b.sharing_url as string) || null,
+      sharing_url: (b.orulo_url as string) || (b.sharing_url as string) || null,
     });
 
   } catch (err) {
