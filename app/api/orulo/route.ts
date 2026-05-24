@@ -168,7 +168,15 @@ async function fetchCityPage(
 // páginas restantes em paralelo (até MAX_CITY_PAGES).
 // Assim não buscamos páginas além do que a API tem.
 
-const MAX_CITY_PAGES = 15; // teto de segurança: 15 × 200 = 3.000 imóveis
+// Orulo free plan: retorna no máximo 10 imóveis por página (ignora per_page).
+// 204 páginas × 10 = 2038 imóveis. Para cobrir o máximo possível dentro do
+// timeout do Vercel, buscamos em 2 lotes paralelos de BATCH_SIZE páginas cada.
+const BATCH_SIZE    = 35;  // páginas por lote (35 × 10 = 350 imóveis/lote)
+const MAX_CITY_PAGES = 70; // teto: 70 × 10 = 700 imóveis (2 lotes de 35)
+
+async function fetchBatch(token: string, city: string, pages: number[]): Promise<PageResult[]> {
+  return Promise.all(pages.map(p => fetchCityPage(token, city, p)));
+}
 
 async function fetchByLocation(
   token: string,
@@ -193,14 +201,16 @@ async function fetchByLocation(
   const totalPagesFromAPI = p1.rawPages > 0 ? p1.rawPages : MAX_CITY_PAGES;
   const pagesToFetch      = Math.min(totalPagesFromAPI, MAX_CITY_PAGES);
 
-  // ── Passo 2: busca páginas 2..N em paralelo ────────────────────────────────
-  const restResults: PageResult[] = pagesToFetch > 1
-    ? await Promise.all(
-        Array.from({ length: pagesToFetch - 1 }, (_, i) =>
-          fetchCityPage(token, cityTarget, i + 2),
-        ),
-      )
-    : [];
+  // ── Passo 2: busca restante em 2 lotes paralelos para não sobrecarregar API ─
+  const remainingPages = Array.from({ length: pagesToFetch - 1 }, (_, i) => i + 2);
+  const batch1 = remainingPages.slice(0, BATCH_SIZE);
+  const batch2 = remainingPages.slice(BATCH_SIZE);
+
+  const [res1, res2] = await Promise.all([
+    fetchBatch(token, cityTarget, batch1),
+    fetchBatch(token, cityTarget, batch2),
+  ]);
+  const restResults: PageResult[] = [...res1, ...res2];
 
   const allResults = [p1, ...restResults];
   const rawSample  = allResults.find(r => r.rawSample)?.rawSample ?? null;
@@ -213,8 +223,7 @@ async function fetchByLocation(
   const seen = new Set<string>();
   all = all.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
 
-  // ── Filtro leve de sanidade (preço > 0 OU sem preço — mantém imóveis consultar) ──
-  all = all.filter(b => b.min_price == null || b.min_price >= 1000);
+  // Sem filtro de preço mínimo — a API retorna imóveis legítimos sem preço definido
 
   // Bairros únicos
   const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
