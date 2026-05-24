@@ -1,33 +1,44 @@
 /**
  * GET /api/orulo/sync
  *
- * Sincronização do catálogo Orulo → Vercel KV.
+ * Sincronização INCREMENTAL do catálogo Orulo → Vercel KV.
  *
- * Estratégia ATÔMICA (não apaga o catálogo antigo antes de ter o novo pronto):
- *  1. Busca todas as páginas enquanto o catálogo antigo permanece disponível
- *  2. Grava os chunks novos sobreescrevendo os antigos
- *  3. Só após gravar tudo atualiza a contagem (swap atômico)
+ * Estratégia:
+ *  1. Busca todos os IDs ativos + updated_at via /api/v2/buildings/ids/active
+ *     (~4 chamadas para 2000 imóveis — muito mais rápido que o endpoint de busca)
+ *  2. Compara com o catálogo em cache:
+ *     - IDs novos ou com updated_at mais recente → re-busca os detalhes
+ *     - IDs removidos da lista ativa → remove do catálogo
+ *     - Demais → mantém como estão (zero chamadas extras)
+ *  3. Merge e salva — catálogo antigo permanece válido até o final (swap atômico)
  *
- * Isso evita que um timeout do Vercel (60s Hobby) deixe o site com zero imóveis.
+ * Resultado: primeira execução faz o full-sync, as seguintes só buscam o que mudou.
+ * Timeout-safe: se a busca de detalhes for interrompida aos 48s, o catálogo parcial
+ * já é salvo. O cron seguinte completa o restante.
  *
  * Parâmetros:
  *  secret=xxx    — proteção
- *  city=xxx      — cidade opcional (sem valor = todo o estado SP)
+ *  full=true     — ignora cache e re-busca todos os detalhes (forçar full-sync)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken, invalidateToken, fetchSearchPage, SITE_BASE } from '@/lib/orulo-api';
-import { kvSetCatalog, kvSetMeta } from '@/lib/orulo-kv';
+import {
+  getToken,
+  invalidateToken,
+  fetchAllActiveIds,
+  fetchBuildingsBatch,
+  SITE_BASE,
+} from '@/lib/orulo-api';
+import { kvGetCatalog, kvSetCatalog, kvSetMeta } from '@/lib/orulo-kv';
 
 export const maxDuration = 60;
 
-const MAX_PAGES = 250; // teto de segurança
-const PARALLEL  = 30;  // lotes menores para caber nos 60s do Hobby
+const BATCH_SIZE = 20; // detalhes buscados por lote paralelo
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const providedSecret   = searchParams.get('secret') ?? '';
-  const city             = searchParams.get('city') || null; // null = todo SP
+  const forceFull        = searchParams.get('full') === 'true';
 
   const syncSecret = process.env.ORULO_SYNC_SECRET ?? '';
   if (syncSecret && providedSecret !== syncSecret) {
@@ -38,56 +49,85 @@ export async function GET(req: NextRequest) {
     const startTime = Date.now();
     const token     = await getToken();
 
-    // ── Passo 1: descobrir quantas páginas existem ─────────────────────────────
-    const p1         = await fetchSearchPage(token, city, 1);
-    const totalPages = Math.min(p1.rawPages > 0 ? p1.rawPages : MAX_PAGES, MAX_PAGES);
+    // ── Passo 1: buscar todos os IDs ativos (rápido — ~4 chamadas) ────────────
+    const activeIdEntries = await fetchAllActiveIds(token);
+    const totalActive     = activeIdEntries.length;
 
-    // ── Passo 2: buscar páginas em lotes menores (respeita timeout 60s) ────────
-    // Nota: a API Orulo retorna ~10 imóveis/página independente de per_page
-    const remaining  = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
-    const allResults = [p1];
-
-    for (let i = 0; i < remaining.length; i += PARALLEL) {
-      // Verifica se ainda temos tempo (~10s de margem para gravar no KV)
-      if (Date.now() - startTime > 48_000) {
-        console.warn(`[sync] approaching timeout after ${i + 1} pages — saving partial catalog`);
-        break;
-      }
-      const batch   = remaining.slice(i, i + PARALLEL);
-      const fetched = await Promise.all(batch.map(p => fetchSearchPage(token, city, p)));
-      allResults.push(...fetched);
+    if (totalActive === 0) {
+      return NextResponse.json({ error: 'Orulo retornou 0 IDs ativos — possível problema de autenticação ou API.' }, { status: 502 });
     }
 
-    // ── Passo 3: agregar e deduplicar ──────────────────────────────────────────
-    const seen    = new Set<string>();
-    const catalog = allResults
-      .flatMap(r => r.buildings)
-      .filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
+    const activeIdSet = new Set(activeIdEntries.map(e => String(e.id)));
+    const activeIdMap = new Map(activeIdEntries.map(e => [String(e.id), e.updated_at]));
 
-    // ── Passo 4: gravar no KV (swap atômico — catálogo antigo permanece válido
-    //             até que kvSetCatalog conclua e atualize o count) ──────────────
-    await kvSetCatalog(catalog);
+    // ── Passo 2: catálogo atual no KV ─────────────────────────────────────────
+    const existing    = (!forceFull && await kvGetCatalog()) ?? [];
+    const existingMap = new Map(existing.map(b => [b.id, b]));
+
+    // ── Passo 3: identificar o que precisa ser (re)buscado ────────────────────
+    const toFetch: string[] = [];
+    for (const [id, updatedAt] of activeIdMap) {
+      const cached = existingMap.get(id);
+      if (!cached || !cached.updated_at || updatedAt > cached.updated_at) {
+        toFetch.push(id);
+      }
+    }
+
+    // ── Passo 4: remover os que saíram da lista ativa ─────────────────────────
+    const retained = existing.filter(b => activeIdSet.has(b.id));
+
+    // ── Passo 5: buscar detalhes dos novos/atualizados (com guarda de timeout) ─
+    const fetched: Awaited<ReturnType<typeof fetchBuildingsBatch>> = [];
+    let   fetchedCount = 0;
+    let   timedOut     = false;
+
+    for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
+      if (Date.now() - startTime > 48_000) {
+        timedOut = true;
+        console.warn(`[sync] timeout atingido após ${fetchedCount} detalhes — salvando catálogo parcial`);
+        break;
+      }
+      const results = await fetchBuildingsBatch(token, toFetch.slice(i, i + BATCH_SIZE), BATCH_SIZE);
+      fetched.push(...results);
+      fetchedCount += results.length;
+    }
+
+    // ── Passo 6: merge — retained + recém-buscados ────────────────────────────
+    const fetchedMap = new Map(fetched.map(b => [b.id, b]));
+
+    // Atualizar os que já estavam no catálogo e foram re-buscados
+    const merged = retained.map(b => fetchedMap.get(b.id) ?? b);
+
+    // Adicionar os IDs que eram novos (não estavam no catálogo anterior)
+    for (const b of fetched) {
+      if (!existingMap.has(b.id)) merged.push(b);
+    }
+
+    // ── Passo 7: salvar (catálogo antigo permanece válido até aqui) ───────────
+    await kvSetCatalog(merged);
     await kvSetMeta({
-      total_ids:     catalog.length,
-      synced_count:  catalog.length,
-      is_complete:   true,
+      total_ids:     totalActive,
+      synced_count:  merged.length,
+      is_complete:   !timedOut,
       started_at:    new Date().toISOString(),
       last_chunk_at: new Date().toISOString(),
     });
 
-    const elapsed    = Date.now() - startTime;
-    const pagesUsed  = allResults.filter(r => r.rawCount > 0).length;
-    const isPartial  = pagesUsed < totalPages;
+    const elapsed = Date.now() - startTime;
 
     return NextResponse.json({
-      status:        isPartial ? 'partial' : 'complete',
-      catalog_size:  catalog.length,
-      pages_fetched: pagesUsed,
-      total_pages:   totalPages,
-      city:          city ?? 'todo SP',
-      elapsed_ms:    elapsed,
-      site_base:     SITE_BASE,
-      note:          isPartial ? 'Catálogo parcial salvo. Execute novamente para completar.' : undefined,
+      status:          timedOut ? 'partial' : 'complete',
+      catalog_size:    merged.length,
+      total_active:    totalActive,
+      fetched_details: fetchedCount,
+      retained:        retained.length,
+      removed:         existing.length - retained.length,
+      to_fetch_total:  toFetch.length,
+      elapsed_ms:      elapsed,
+      site_base:       SITE_BASE,
+      note: timedOut
+        ? `Parcial: ${fetchedCount}/${toFetch.length} detalhes buscados. Execute novamente para completar.`
+        : undefined,
     });
 
   } catch (err) {
