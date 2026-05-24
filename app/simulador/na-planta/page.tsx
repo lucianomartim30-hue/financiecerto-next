@@ -266,13 +266,27 @@ function NaPlantaContent() {
   // ── Cálculos de financiamento e contribuição total ───────────────────────────
   // detectarFaixaMCMV retorna null para renda=0 (desconhecida) — nunca assume Faixa 1
   const faixaRenda  = detectarFaixaMCMV(renda);
-  const isMCMV      = faixaRenda !== null && valor > 0 && valor <= faixaRenda.teto;
+
+  // isMCMV: igual ao simulador principal — considera subsídio como "bridge" para o teto
+  // Ex: renda R$5k (F2 teto R$275k), imóvel R$280k, subsídio estimado R$10k → 280-10=270k ≤ 275k → MCMV
+  const isMCMV = (() => {
+    if (!faixaRenda || valor <= 0) return false;
+    if (valor <= faixaRenda.teto) return true;
+    if (faixaRenda.subsidioMax > 0) {
+      const subsidioTeste = calcSubsidioEstimado(faixaRenda, renda, valor, true, true, false, 0);
+      if (subsidioTeste > 0 && (valor - subsidioTeste) <= faixaRenda.teto) return true;
+    }
+    return false;
+  })();
+
   const taxa        = isMCMV && faixaRenda ? faixaRenda.taxaRef : TAXA_SBPE_ANUAL;
   const motivo = (!isMCMV && renda > 0 && valor > 0) ? motivoSBPE(renda, valor) : null;
 
   // Teto bancário: máximo que o banco empresta (LTV)
+  // MCMV: usa ltvMax da faixa (F1=95%, F2=90%, F3/4=80%)
+  // SBPE: 80% (SAC) — mais favorável para crédito associativo na planta
   const maxFinPerfil = isMCMV ? maxFinMcmv : maxFinSbpe;
-  const ltvPct       = isMCMV ? 0.90 : 0.80;
+  const ltvPct       = isMCMV ? (faixaRenda?.ltvMax ?? 0.80) : 0.80;
   const maxFinBanco  = valor > 0
     ? (maxFinPerfil > 0 ? Math.min(maxFinPerfil, Math.round(valor * ltvPct)) : Math.round(valor * ltvPct))
     : 0;
@@ -377,7 +391,7 @@ function NaPlantaContent() {
     siopiInfo: string; aviso?: string;
   }> = {
     lancamento: {
-      label: 'Lançamento',
+      label: 'Na planta',
       desc: 'Obra não iniciada',
       color: '#2563eb',
       siopiInfo: 'Na assinatura do contrato, a CEF realiza a medição do terreno no mês seguinte e libera esse valor à construtora. Os juros evolutivos do 1º mês são calculados sobre esse valor liberado. O percentual varia conforme o terreno do projeto — normalmente entre 10% e 25% do financiamento. O valor exato só é conhecido após a 1ª medição; consulte o app Habitação Caixa / SIOPI.',

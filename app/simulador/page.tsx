@@ -407,7 +407,7 @@ function SimuladorInner() {
 
   function avancar() {
     if (etapa === 4) calcularPerfil();
-    if (etapa === 5 && e.valorImovel) calcularSim();
+    if (etapa === 6 && e.valorImovel) calcularSim(); // calcula ao sair do etapa de escolha do imóvel
     setEtapa(n => Math.min(n + 1, 7));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -693,7 +693,7 @@ function SimuladorInner() {
         )}
 
         {/* Nota: renda F1/F2 mas imóvel em F3/F4 — explica por que não há subsídio */}
-        {sim.isMCMV && sim.faixa && sim.faixa.numero >= 3 && sim.faixaRenda && sim.faixaRenda.numero <= 2 && (
+        {sim && sim.isMCMV && sim.faixa && sim.faixa.numero >= 3 && sim.faixaRenda && sim.faixaRenda.numero <= 2 && (
           <div style={{ padding: '12px 14px', background: '#FAEEDA', borderLeft: '3px solid #EF9F27', borderRadius: '0 8px 8px 0', marginBottom: 14, fontSize: 13, color: '#633806' }}>
             💡 Sua renda se enquadra na <strong>{sim.faixaRenda.label}</strong> (subsídio até {formatBRL(sim.faixaRenda.subsidioMax)}), mas o imóvel de {formatBRL(sim.valorImovel)} supera o teto {sim.faixaRenda.label} ({formatBRL(sim.faixaRenda.teto)}) — mesmo descontando o subsídio estimado. Por isso aplica-se a <strong>{sim.faixa.label} MCMV</strong> (sem subsídio, taxa {sim.faixa.taxaRef}% a.a.). Para ter acesso ao subsídio, busque imóveis até {formatBRL(sim.faixaRenda.teto)}.
           </div>
@@ -819,7 +819,7 @@ function SimuladorInner() {
             {[
               { id: 'pronto', ico: '🏠', label: 'Pronto / Novo / Usado', sub: 'Entrega imediata — sem fase de obra', naPlanta: false },
               { id: 'obras',  ico: '🏗️', label: 'Em Obras', sub: 'Medições ativas — pode entrar no crédito associativo', naPlanta: true },
-              { id: 'planta', ico: '🌱', label: 'Na Planta / Lançamento', sub: 'Obra não iniciada — crédito associativo MCMV / SBPE', naPlanta: true },
+              { id: 'planta', ico: '🌱', label: 'Na Planta', sub: 'Obra não iniciada — crédito associativo MCMV / SBPE', naPlanta: true },
             ].map(({ id, ico, label, sub, naPlanta: np }) => {
               const selecionado = np === false ? !e.naPlanta : e.naPlanta && (
                 id === 'planta' ? !e.temImovelMunicipio : e.temImovelMunicipio
@@ -985,7 +985,4 @@ function SimuladorInner() {
 export default function SimuladorPage() {
   return (
     <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
-      <SimuladorInner />
-    </Suspense>
-  );
-}
+     

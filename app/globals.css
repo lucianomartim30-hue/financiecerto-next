@@ -265,78 +265,15 @@ button, input, select, textarea { font-family: inherit; }
   body { background: #fff !important; }
 }
 
-/* ── Mobile responsive — Simuladores ──────────────────────────────────────── */
-@media (max-width: 540px) {
-  /* BRL input: fonte grande demais em tela pequena */
-  .fc-input-brl        { font-size: clamp(22px, 7vw, 36px)   !important; }
-  .fc-input-brl-prefix { font-size: clamp(16px, 4.5vw, 26px) !important; }
-
-  /* Título do simulador */
-  .fc-titulo { font-size: clamp(22px, 7vw, 34px) !important; }
-
-  /* Padding interno do card principal */
-  .fc-card-inner { padding: 24px 18px !important; }
-
-  /* Header sangrado dentro do card — deve bater com o padding horizontal do fc-card-inner */
-  .fc-header-bleed {
-    margin-left:  -18px !important;
-    margin-right: -18px !important;
-    margin-top:   -24px !important;
-  }
-
-  /* Grid 3 colunas → coluna única (seletor de estágio na-planta) */
-  .fc-grid-3 { grid-template-columns: 1fr !important; }
-
-  /* Grid 2 colunas → coluna única (Price×SAC, FGTS×próprios) */
-  .fc-grid-2 { grid-template-columns: 1fr !important; }
-
-  /* Hero na-planta: reduz padding vertical */
-  .fc-hero-np { padding: 48px 20px 60px !important; }
-
-  /* Wrapper de conteúdo na-planta */
-  .fc-content-np { padding: 0 12px 60px !important; }
-}
-
 /* ── Header responsive ─────────────────────────────────────────────────────── */
-@media (max-width: 720px) {
-  /* Hide desktop nav on mobile — use hamburger drawer instead */
-  .desktop-nav { display: none !important; }
-  /* Show hamburger button */
+@media (max-width: 768px) {
+  .desktop-nav  { display: none !important; }
   .hamburger-btn { display: flex !important; }
-  /* Hide the "Descobrir perfil" CTA on very small screens to save space */
 }
 
-/* ── Mobile responsive ─────────────────────────────────────────────────────── */
+/* ── Mobile responsive — Simuladores e Homepage ───────────────────────────── */
 @media (max-width: 540px) {
-  /* Simulator large BRL input — clamp to readable size */
-  .fc-input-brl        { font-size: clamp(22px, 7vw, 36px)  !important; }
-  .fc-input-brl-prefix { font-size: clamp(16px, 4.5vw, 26px) !important; }
-
-  /* Simulator titles */
-  .fc-titulo { font-size: clamp(22px, 7vw, 34px) !important; }
-
-  /* Simulator card inner padding */
-  .fc-card-inner { padding: 24px 18px !important; }
-
-  /* Result header bleed — must match fc-card-inner horizontal padding */
-  .fc-header-bleed { margin-left: -18px !important; margin-right: -18px !important; margin-top: -24px !important; }
-
-  /* 3-col grid → single column */
-  .fc-grid-3 { grid-template-columns: 1fr !important; }
-
-  /* 2-col grid → single column */
-  .fc-grid-2 { grid-template-columns: 1fr !important; }
-
-  /* Na-planta hero padding */
-  .fc-hero-np { padding: 48px 20px 60px !important; }
-
-  /* Na-planta content wrapper */
-  .fc-content-np { padding: 0 12px 60px !important; }
-}
-
-/* ── Mobile responsive — Simuladores ──────────────────────────────────────── */
-@media (max-width: 540px) {
-  /* BRL input: fonte grande demais em tela pequena */
+  /* BRL input: font grande demais em tela pequena */
   .fc-input-brl        { font-size: clamp(22px, 7vw, 36px)   !important; }
   .fc-input-brl-prefix { font-size: clamp(16px, 4.5vw, 26px) !important; }
 
@@ -346,7 +283,7 @@ button, input, select, textarea { font-family: inherit; }
   /* Padding interno do card principal */
   .fc-card-inner { padding: 24px 18px !important; }
 
-  /* Header sangrado dentro do card — deve bater com o padding horizontal do fc-card-inner */
+  /* Header sangrado dentro do card */
   .fc-header-bleed {
     margin-left:  -18px !important;
     margin-right: -18px !important;
@@ -360,8 +297,18 @@ button, input, select, textarea { font-family: inherit; }
   .fc-grid-2 { grid-template-columns: 1fr !important; }
 
   /* Hero na-planta: reduz padding vertical */
-  .fc-hero-np { padding: 48px 20px 60px !important; }
+  .fc-hero-np { padding: 40px 16px 52px !important; }
 
   /* Wrapper de conteúdo na-planta */
   .fc-content-np { padding: 0 12px 60px !important; }
+
+  /* Homepage CTAs em coluna no mobile */
+  .home-ctas {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .home-ctas a {
+    text-align: center;
+    justify-content: center;
+  }
 }

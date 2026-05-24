@@ -87,7 +87,7 @@ export default function Home() {
       <section style={{
         background: 'linear-gradient(160deg, #eff6ff 0%, #fafaf9 55%, #f0fdf4 100%)',
         borderBottom: '1px solid var(--border)',
-        padding: 'calc(var(--header-h) + 72px) 24px 80px',
+        padding: '72px 24px 80px',
         textAlign: 'center',
       }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -145,7 +145,7 @@ export default function Home() {
           </p>
 
           {/* CTAs */}
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="home-ctas" style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/simulador" className="btn-primary" style={{ fontSize: '16px', padding: '15px 32px' }}>
               Descobrir meu perfil →
             </Link>
@@ -350,7 +350,7 @@ export default function Home() {
             Gratuito, sem cadastro e resultado em menos de 2 minutos.
             Nossa inteligência financeira analisa seu perfil e encontra os melhores caminhos.
           </p>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="home-ctas" style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/simulador" className="btn-primary" style={{ fontSize: '16px', padding: '16px 36px' }}>
               Descobrir meu perfil →
             </Link>
