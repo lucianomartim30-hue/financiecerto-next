@@ -59,11 +59,12 @@ function InputBRL({
     <div style={{ marginBottom: 28 }}>
       <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--primary)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '1px' }}>{label}</label>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 10, borderBottom: `3px solid ${focused ? 'var(--primary)' : '#D1D5DB'}`, transition: 'border-color .2s' }}>
-        <span style={{ fontSize: 26, fontWeight: 400, color: focused ? 'var(--primary)' : '#9CA3AF', transition: 'color .2s', flexShrink: 0 }}>{prefix}</span>
+        <span className="fc-input-brl-prefix" style={{ fontSize: 26, fontWeight: 400, color: focused ? 'var(--primary)' : '#9CA3AF', transition: 'color .2s', flexShrink: 0 }}>{prefix}</span>
         <input
           type="text" inputMode="numeric" value={value} placeholder={placeholder}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           onChange={e => onChange(fmtInput(e.target.value))}
+          className="fc-input-brl"
           style={{ flex: 1, border: 'none', outline: 'none', fontSize: 36, fontWeight: 700, background: 'transparent', color: '#111827', fontFamily: 'inherit', width: '100%' }}
         />
       </div>
@@ -145,7 +146,7 @@ function Etapa({ children, etapa }: { children: React.ReactNode; etapa?: number 
     <div style={{ background: '#F1F5F9', minHeight: 'calc(100vh - var(--header-h))' }}>
       {etapa !== undefined && <Hero etapa={etapa} />}
       <div style={{ maxWidth: 520, margin: etapa !== undefined ? '-40px auto 0' : '0 auto', padding: '0 16px 80px', position: 'relative', zIndex: 1 }}>
-        <div style={{ background: 'var(--bg-card)', borderRadius: 20, border: '1px solid var(--border)', boxShadow: '0 4px 40px rgba(0,0,0,.10)', padding: '32px 28px' }}>
+        <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: 20, border: '1px solid var(--border)', boxShadow: '0 4px 40px rgba(0,0,0,.10)', padding: '32px 28px' }}>
           {children}
         </div>
       </div>
@@ -154,7 +155,7 @@ function Etapa({ children, etapa }: { children: React.ReactNode; etapa?: number 
 }
 
 function Titulo({ children }: { children: React.ReactNode }) {
-  return <h1 style={{ fontSize: 34, fontWeight: 800, color: '#111827', lineHeight: 1.2, marginBottom: 14, marginTop: 0 }}>{children}</h1>;
+  return <h1 className="fc-titulo" style={{ fontSize: 34, fontWeight: 800, color: '#111827', lineHeight: 1.2, marginBottom: 14, marginTop: 0 }}>{children}</h1>;
 }
 function Sub({ children }: { children: React.ReactNode }) {
   return <p style={{ fontSize: 16, color: '#4B5563', lineHeight: 1.65, marginBottom: 32, marginTop: 0 }}>{children}</p>;
@@ -882,7 +883,7 @@ function SimuladorInner() {
         <BtnVoltar onClick={voltar} />
 
         {/* Header */}
-        <div style={{ margin: '-32px -28px 28px', padding: '36px 28px 32px', background: `linear-gradient(135deg, ${sc.cor} 0%, ${sc.cor}CC 100%)`, borderRadius: '20px 20px 0 0', textAlign: 'center' }}>
+        <div className="fc-header-bleed" style={{ margin: '-32px -28px 28px', padding: '36px 28px 32px', background: `linear-gradient(135deg, ${sc.cor} 0%, ${sc.cor}CC 100%)`, borderRadius: '20px 20px 0 0', textAlign: 'center' }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '2.5px', marginBottom: 6 }}>{sc.emoji} {modalLabel}</div>
           {!sim.isMCMV && !sim.isSFI && (
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 10, lineHeight: 1.5 }}>
@@ -897,7 +898,7 @@ function SimuladorInner() {
         </div>
 
         {/* Price vs SAC */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+        <div className="fc-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
           <div style={{ padding: '18px', background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)', borderRadius: 14, border: '2px solid #2563eb' }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>Tabela Price</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: '#111827' }}>{formatBRL(sim.parcelaPrimeiro)}</div>

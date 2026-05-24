@@ -74,7 +74,7 @@ function CampoValor({
         borderBottom: `2px solid ${focused ? 'var(--primary)' : 'var(--border)'}`,
         transition: 'border-color 0.2s',
       }}>
-        <span style={{
+        <span className="fc-input-brl-prefix" style={{
           fontSize: '22px', fontWeight: '300', lineHeight: 1,
           color: focused ? 'var(--primary)' : 'var(--text-faint)',
           transition: 'color 0.2s', flexShrink: 0,
@@ -86,6 +86,7 @@ function CampoValor({
           placeholder={placeholder ?? '0'}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          className="fc-input-brl"
           style={{
             flex: 1, border: 'none', outline: 'none',
             fontSize: '26px', fontWeight: '700', color: 'var(--text)',
@@ -400,7 +401,7 @@ function NaPlantaContent() {
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section style={{
+      <section className="fc-hero-np" style={{
         background: 'linear-gradient(160deg, #0f172a 0%, #1a2e4a 55%, #0f172a 100%)',
         padding: '64px 24px 80px',
         textAlign: 'center',
@@ -461,10 +462,10 @@ function NaPlantaContent() {
       </section>
 
       {/* ── Content ───────────────────────────────────────────────────────── */}
-      <div style={{ maxWidth: '680px', margin: '-40px auto 0', padding: '0 16px 80px', position: 'relative', zIndex: 1 }}>
+      <div className="fc-content-np" style={{ maxWidth: '680px', margin: '-40px auto 0', padding: '0 16px 80px', position: 'relative', zIndex: 1 }}>
 
         {/* ── CARD PRINCIPAL ──────────────────────────────────────────────── */}
-        <div style={{
+        <div className="fc-card-inner" style={{
           background: 'var(--bg-card)', borderRadius: '20px',
           border: '1px solid var(--border)',
           padding: '32px 28px',
@@ -510,7 +511,7 @@ function NaPlantaContent() {
             <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>
               Estágio do empreendimento
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+            <div className="fc-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
               {(Object.entries(estagioConfig) as [Estagio, typeof estagioConfig[Estagio]][]).map(([key, cfg]) => (
                 <button
                   key={key}
@@ -549,7 +550,7 @@ function NaPlantaContent() {
             <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>
               Recursos para a entrada
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="fc-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: '600' }}>💰 FGTS disponível</p>
                 <CampoCompacto value={fgtsRaw} onChange={v => setFgtsRaw(fi(v))} placeholder="0" />
@@ -740,7 +741,7 @@ function NaPlantaContent() {
 
         {/* ── ESTRUTURA DE PAGAMENTO DA ENTRADA ───────────────────────────── */}
         {valor > 0 && entradaMinima > 0 && estagio !== 'pronto' && (
-          <div style={{
+          <div className="fc-card-inner" style={{
             background: 'var(--bg-card)', borderRadius: '20px',
             border: '1px solid var(--border)', padding: '28px',
             boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px',
@@ -918,7 +919,7 @@ function NaPlantaContent() {
 
         {/* ── FLUXO DE PAGAMENTO ───────────────────────────────────────────── */}
         {valido && (
-          <div style={{
+          <div className="fc-card-inner" style={{
             background: 'var(--bg-card)', borderRadius: '20px',
             border: '1px solid var(--border)', padding: '28px',
             boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px',
