@@ -48,21 +48,22 @@ function fmtRange(min: number | null, max: number | null, unit: string) {
 function ImovelCard({ im }: { im: Imovel }) {
   const sc = getStatus(im.status_norm || im.status || '');
   return (
-    <Link href={`/imoveis/${im.id}`} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>
-      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', height: '100%', display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.15s, border-color 0.15s' }}
+    <Link href={`/imoveis/${im.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column', transition: 'box-shadow 0.15s, border-color 0.15s' }}
         onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.boxShadow = '0 4px 18px rgba(37,99,235,.13)'; d.style.borderColor = 'rgba(37,99,235,.35)'; }}
         onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.boxShadow = ''; d.style.borderColor = 'var(--border)'; }}
       >
-        <div style={{ width: '100%', height: '140px', background: '#E2E8F0', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
+        <div style={{ width: '100%', height: '130px', background: '#E2E8F0', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
           {im.photo
-            ? <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={e => { const t = e.currentTarget; t.style.display = 'none'; const p = t.parentElement; if (p) { p.style.display = 'flex'; p.style.alignItems = 'center'; p.style.justifyContent = 'center'; p.innerHTML = '<span style="font-size:28px;color:#94a3b8">🏢</span>'; } }} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#94a3b8' }}>🏢</div>
           }
           <span style={{ position: 'absolute', top: '8px', left: '8px', background: sc.cor, color: '#fff', fontSize: '9px', fontWeight: '800', padding: '3px 8px', borderRadius: '7px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
             {sc.label}
           </span>
         </div>
-        <div style={{ padding: '10px 12px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+        <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text)', lineHeight: '1.35', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{im.name}</p>
           <p style={{ fontSize: '10px', color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{im.neighborhood || im.city}</p>
           <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginTop: '3px' }}>{im.min_price ? formatBRL(im.min_price) : 'Consultar'}</p>
@@ -219,12 +220,12 @@ function ImoveisContent() {
 
   // Pill button inline
   const pillStyle = (active: boolean): React.CSSProperties => ({
-    height: '42px', padding: '0 18px', borderRadius: '21px',
+    height: '38px', padding: '0 14px', borderRadius: '19px',
     border: `1.5px solid ${active ? 'var(--primary)' : '#d1d5db'}`,
     background: active ? 'var(--primary-light)' : '#fff',
     color: active ? 'var(--primary)' : '#374151',
-    fontSize: '14px', fontWeight: active ? '700' : '500',
-    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px',
+    fontSize: '13px', fontWeight: active ? '700' : '500',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
     whiteSpace: 'nowrap' as const, flexShrink: 0 as unknown as number,
     transition: 'all 0.15s',
   });
@@ -300,7 +301,7 @@ function ImoveisContent() {
       )}
 
       {/* ── Filter bar ─────────────────────────────────────────────────────── */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '10px 20px', display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0, position: 'relative' }}>
+      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '10px 12px', display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0, position: 'relative', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }} className="filter-bar">
 
         {/* Campo de localização compacto */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -309,7 +310,7 @@ function ImoveisContent() {
             type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar local"
             onKeyDown={e => { if (e.key === 'Enter') { geocodeAndFly(search); setOpenDropdown(null); } }}
-            style={{ width: '185px', paddingLeft: '34px', paddingRight: '12px', height: '42px', border: '1.5px solid #d1d5db', borderRadius: '21px', fontSize: '14px', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit' }}
+            style={{ width: '150px', paddingLeft: '34px', paddingRight: '12px', height: '38px', border: '1.5px solid #d1d5db', borderRadius: '19px', fontSize: '13px', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit' }}
             onFocus={e => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.background = '#fff'; }}
             onBlur={e => { e.currentTarget.style.borderColor = '#d1d5db'; e.currentTarget.style.background = '#f9fafb'; }}
           />
@@ -343,8 +344,8 @@ function ImoveisContent() {
         </div>
       )}
 
-      {/* ── Mapa 50% + Cards 50% — este container tem overflow:hidden ──────── */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'hidden', minHeight: 0 }} className="imoveis-grid">
+      {/* ── Mapa 50% + Cards 50% ────────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'hidden', minHeight: 0, alignItems: 'start' }} className="imoveis-grid">
 
         {/* Mapa */}
         <div style={{ position: 'relative', height: '100%', overflow: 'hidden' }}>
@@ -407,9 +408,12 @@ function ImoveisContent() {
       </div>
 
       <style>{`
-        @media (max-width:900px){.imoveis-grid{grid-template-columns:1fr!important;grid-template-rows:45vh 55vh}}
+        @media (max-width:900px){.imoveis-grid{grid-template-columns:1fr!important;grid-template-rows:42vh auto}}
         @media (max-width:900px){.cards-grid{grid-template-columns:repeat(2,1fr)!important}}
-        @media (max-width:600px){.cards-grid{grid-template-columns:1fr!important}}
+        @media (max-width:600px){.cards-grid{grid-template-columns:repeat(2,1fr)!important}}
+        @media (max-width:400px){.cards-grid{grid-template-columns:1fr!important}}
+        .filter-bar::-webkit-scrollbar{display:none}
+        .filter-bar{-ms-overflow-style:none;scrollbar-width:none}
       `}</style>
     </div>
   );
