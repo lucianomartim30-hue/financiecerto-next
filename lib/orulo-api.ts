@@ -241,11 +241,13 @@ export interface PageResult {
 
 export async function fetchSearchPage(
   token: string,
-  city:  string,
+  city:  string | null,
   page:  number,
 ): Promise<PageResult> {
   try {
-    const qs   = new URLSearchParams({ state: 'SP', city, per_page: '200', page: String(page) });
+    const params: Record<string, string> = { state: 'SP', per_page: '200', page: String(page) };
+    if (city) params.city = city;
+    const qs   = new URLSearchParams(params);
     const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },
       signal:  AbortSignal.timeout(8000),

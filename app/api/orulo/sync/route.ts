@@ -3,14 +3,14 @@
  *
  * Sincronização do catálogo Orulo → Vercel KV.
  *
- * Estratégia: usa a API de busca paginada (?city=São Paulo, 10/página × ~204 páginas)
- * em paralelo — a mesma abordagem que comprovadamente retorna 700-2000 imóveis.
- * Resultado é armazenado no Vercel KV para leituras rápidas.
+ * Estratégia: usa a API de busca paginada (todo o estado SP, sem filtro de cidade,
+ * 10/página × ~250 páginas) em paralelo — retorna todos os imóveis do estado.
+ * Resultado é armazenado no Vercel KV em chunks de 300 para leituras rápidas.
  *
  * Parâmetros:
  *  secret=xxx   — proteção
  *  reset=true   — reinicia o KV e refaz tudo
- *  city=xxx     — cidade (padrão: São Paulo)
+ *  city=xxx     — cidade opcional (sem valor = todo o estado SP)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const providedSecret   = searchParams.get('secret') ?? '';
   const reset            = searchParams.get('reset') === 'true';
-  const city             = searchParams.get('city')   ?? 'São Paulo';
+  // city=null → busca todo o estado SP (sem filtro de município)
+  const city             = searchParams.get('city') || null;
 
   const syncSecret = process.env.ORULO_SYNC_SECRET ?? '';
   if (syncSecret && providedSecret !== syncSecret) {
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
       .flatMap(r => r.buildings)
       .filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
 
-    // ── Passo 4: gravar no KV ─────────────────────────────────────────────────
+    // ── Passo 4: gravar no KV em chunks ──────────────────────────────────────
     await kvSetCatalog(catalog);
     await kvSetMeta({
       total_ids:     catalog.length,
@@ -72,13 +73,13 @@ export async function GET(req: NextRequest) {
     const elapsed = Date.now() - startTime;
 
     return NextResponse.json({
-      status:       'complete',
-      catalog_size: catalog.length,
+      status:        'complete',
+      catalog_size:  catalog.length,
       pages_fetched: allResults.filter(r => r.rawCount > 0).length,
-      total_pages:  totalPages,
-      city,
-      elapsed_ms:   elapsed,
-      site_base:    SITE_BASE,
+      total_pages:   totalPages,
+      city:          city ?? 'todo SP',
+      elapsed_ms:    elapsed,
+      site_base:     SITE_BASE,
     });
 
   } catch (err) {
