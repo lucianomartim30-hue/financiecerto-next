@@ -111,27 +111,52 @@ function normalizeBuilding(b: Record<string, unknown>) {
 
 type NormalizedBuilding = ReturnType<typeof normalizeBuilding>;
 
+// ── Resultado de uma página ───────────────────────────────────────────────────
+interface PageResult {
+  buildings:   NormalizedBuilding[];
+  rawCount:    number;   // qtd bruta devolvida pela API (antes de filtros)
+  rawTotal:    number;   // total_count da API (se disponível)
+  rawPages:    number;   // total_pages da API (se disponível)
+  httpStatus:  number;
+  rawSample:   Record<string, unknown> | null;
+  error?:      string;
+}
+
 // ── Busca uma página da cidade ─────────────────────────────────────────────────
 async function fetchCityPage(
   token: string,
   city: string,
   page: number,
-): Promise<{ buildings: NormalizedBuilding[]; rawSample: Record<string, unknown> | null }> {
+): Promise<PageResult> {
   try {
     const qs = new URLSearchParams({ state: 'SP', city, per_page: '200', page: String(page) });
     const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },
+      // Timeout explícito para evitar que uma página trave as outras
+      signal: AbortSignal.timeout(12000),
     });
-    if (!resp.ok) return { buildings: [], rawSample: null };
+    if (!resp.ok) return { buildings: [], rawCount: 0, rawTotal: 0, rawPages: 0, httpStatus: resp.status, rawSample: null, error: `HTTP ${resp.status}` };
+
     const raw = await resp.json();
     const list = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
-    const buildings = list
-      .map(normalizeBuilding)
-      .filter(b => b.min_price && b.min_price >= 1000);
-    const rawSample = list[0] ?? null;
-    return { buildings, rawSample };
-  } catch {
-    return { buildings: [], rawSample: null };
+
+    // Tenta extrair totais da resposta da API
+    const rawTotal = Number(raw.total_count ?? raw.total ?? raw.meta?.total ?? 0);
+    const rawPages = Number(raw.total_pages ?? raw.pages ?? raw.meta?.total_pages ?? 0);
+
+    // Normaliza sem filtrar por preço aqui — filtro agressivo foi movido para fora
+    const buildings = list.map(normalizeBuilding);
+
+    return {
+      buildings,
+      rawCount:   list.length,
+      rawTotal,
+      rawPages,
+      httpStatus: resp.status,
+      rawSample:  list[0] ?? null,
+    };
+  } catch (e) {
+    return { buildings: [], rawCount: 0, rawTotal: 0, rawPages: 0, httpStatus: 0, rawSample: null, error: String(e) };
   }
 }
 
@@ -139,14 +164,11 @@ async function fetchCityPage(
 //
 // ARQUITETURA: Vercel é stateless. Sem cache de módulo para o catálogo.
 //
-// Estratégia: dispara 11 páginas × 200 = até 2.200 imóveis TODOS EM PARALELO
-// (sem esperar a pg 1 para descobrir o total_pages).
-// Tempo: ~1-2 s independentemente do número de páginas existentes.
-// Catálogo atual via client_credentials = ~2.031 imóveis → 11 páginas cobre tudo.
-//
-// Páginas além do total real da cidade retornam vazio e são descartadas.
+// Estratégia: busca p1 para descobrir total_pages real, depois dispara as
+// páginas restantes em paralelo (até MAX_CITY_PAGES).
+// Assim não buscamos páginas além do que a API tem.
 
-const MAX_CITY_PAGES = 11; // 11 × 200 = 2.200 imóveis (cobre catálogo completo ~2.031)
+const MAX_CITY_PAGES = 15; // teto de segurança: 15 × 200 = 3.000 imóveis
 
 async function fetchByLocation(
   token: string,
@@ -164,22 +186,49 @@ async function fetchByLocation(
 ): Promise<NextResponse> {
   const cityTarget = city || 'São Paulo';
 
-  // ── Dispara todas as páginas em paralelo imediatamente ────────────────────
-  const results = await Promise.all(
-    Array.from({ length: MAX_CITY_PAGES }, (_, i) =>
-      fetchCityPage(token, cityTarget, i + 1),
-    ),
-  );
+  // ── Passo 1: busca página 1 para descobrir quantas páginas existem ────────
+  const p1 = await fetchCityPage(token, cityTarget, 1);
 
-  const rawSample    = results.find(r => r.rawSample)?.rawSample ?? null;
+  // total_pages real da API (ou teto de segurança)
+  const totalPagesFromAPI = p1.rawPages > 0 ? p1.rawPages : MAX_CITY_PAGES;
+  const pagesToFetch      = Math.min(totalPagesFromAPI, MAX_CITY_PAGES);
+
+  // ── Passo 2: busca páginas 2..N em paralelo ────────────────────────────────
+  const restResults: PageResult[] = pagesToFetch > 1
+    ? await Promise.all(
+        Array.from({ length: pagesToFetch - 1 }, (_, i) =>
+          fetchCityPage(token, cityTarget, i + 2),
+        ),
+      )
+    : [];
+
+  const allResults = [p1, ...restResults];
+  const rawSample  = allResults.find(r => r.rawSample)?.rawSample ?? null;
   const addressDebug = rawSample ? (rawSample.address as Record<string, unknown>) ?? {} : null;
 
-  let all = results.flatMap(r => r.buildings);
+  // Agrega e deduplica
+  let all = allResults.flatMap(r => r.buildings);
 
-  // Bairros únicos (debug / autocomplete)
+  // Remove duplicatas por id (antes de qualquer filtro)
+  const seen = new Set<string>();
+  all = all.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
+
+  // ── Filtro leve de sanidade (preço > 0 OU sem preço — mantém imóveis consultar) ──
+  all = all.filter(b => b.min_price == null || b.min_price >= 1000);
+
+  // Bairros únicos
   const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
 
-  // ── Filtros ───────────────────────────────────────────────────────────────
+  // Debug detalhado por página
+  const perPageDebug = allResults.map((r, i) => ({
+    page:       i + 1,
+    http:       r.httpStatus,
+    raw:        r.rawCount,
+    normalized: r.buildings.length,
+    error:      r.error,
+  }));
+
+  // ── Filtros do usuário ────────────────────────────────────────────────────
   if (neighborhood) {
     const nb = neighborhood.toLowerCase();
     all = all.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
@@ -195,9 +244,17 @@ async function fetchByLocation(
     if (byStatus.length > 0) all = byStatus;
   }
 
-  // Remove duplicatas por id
-  const seen = new Set<string>();
-  all = all.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
+  const debugBlock = {
+    total_after_filters:  all.length,
+    api_total_count:      p1.rawTotal,
+    api_total_pages:      p1.rawPages,
+    pages_fetched:        allResults.filter(r => r.rawCount > 0).length,
+    pages_with_errors:    allResults.filter(r => r.error).length,
+    unique_neighborhoods: uniqueNeighborhoods.length,
+    per_page:             perPageDebug,
+    address_keys:         addressDebug ? Object.keys(addressDebug) : [],
+    raw_sample_keys:      rawSample ? Object.keys(rawSample) : [],
+  };
 
   // all=1: retorna todos sem paginação (para mapa client-side)
   if (returnAll) {
@@ -208,6 +265,7 @@ async function fetchByLocation(
       pages:     1,
       source:    'location_all',
       city:      cityTarget,
+      _debug:    debugBlock,
     });
   }
 
@@ -223,13 +281,7 @@ async function fetchByLocation(
     source:              'location',
     city:                cityTarget,
     neighborhood_filter: neighborhood || null,
-    _debug: {
-      total_fetched:        all.length,
-      pages_fetched:        results.filter(r => r.buildings.length > 0).length,
-      unique_neighborhoods: uniqueNeighborhoods.slice(0, 80),
-      address_keys:         addressDebug ? Object.keys(addressDebug) : [],
-      address_sample:       addressDebug,
-    },
+    _debug:              debugBlock,
   });
 }
 
