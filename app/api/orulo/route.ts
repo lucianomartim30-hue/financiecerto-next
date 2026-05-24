@@ -1,9 +1,36 @@
+/**
+ * GET /api/orulo
+ *
+ * Serve o catálogo de empreendimentos Orulo.
+ *
+ * Estratégia em camadas:
+ *  1. Vercel KV  → catálogo completo em cache (< 10ms)
+ *  2. API ao vivo → fallback quando KV está vazio ou indisponível
+ *
+ * Parâmetros de query suportados:
+ *  all=1             → retorna todos os imóveis sem paginação (usado pelo mapa)
+ *  city=São Paulo    → filtro de cidade
+ *  neighborhood=...  → filtro de bairro (substring)
+ *  min_price=N       → preço mínimo
+ *  max_price=N       → preço máximo
+ *  bedrooms_min=N    → dormitórios mínimos
+ *  bedrooms_max=N    → dormitórios máximos
+ *  status=...        → status normalizado (na planta | em obras | pronto)
+ *  page=N            → página (20 por página)
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  getToken, invalidateToken,
+  normalizeBuilding, normalizeStatus, fetchSearchPage,
+  type NormalizedBuilding,
+} from '@/lib/orulo-api';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
+import { kvGetCatalog } from '@/lib/orulo-kv';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
+// ── Mock data (USE_MOCK=true) ─────────────────────────────────────────────────
 const MOCK_BUILDINGS = [
   { id: '1', name: 'Residencial Vila Madalena', developer: 'Construtora ABC', min_price: 320000, max_price: 450000, bedrooms_min: 2, bedrooms_max: 3, area_min: 62, area_max: 85, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Vila Madalena', city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Pronto' },
   { id: '2', name: 'Jardins Exclusive',         developer: 'MRV Engenharia',  min_price: 280000, max_price: 380000, bedrooms_min: 1, bedrooms_max: 2, area_min: 38, area_max: 58, bathrooms_min: 1, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jardins',       city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
@@ -12,286 +39,74 @@ const MOCK_BUILDINGS = [
   { id: '5', name: 'Jabaquara Residences',      developer: 'Trisul',          min_price: 250000, max_price: 350000, bedrooms_min: 2, bedrooms_max: 2, area_min: 55, area_max: 70, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jabaquara',     city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
 ];
 
-// ── Token (warm cache por instância — ok para Vercel) ─────────────────────────
-let _tokenCache = { token: null as string | null, expiresAt: 0 };
+// ── Filtros sobre o catálogo ──────────────────────────────────────────────────
 
-async function getToken(): Promise<string> {
-  const now = Date.now();
-  if (_tokenCache.token && now < _tokenCache.expiresAt) return _tokenCache.token;
-  const clientId     = process.env.ORULO_CLIENT_ID;
-  const clientSecret = process.env.ORULO_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error('ORULO_CLIENT_ID ou ORULO_CLIENT_SECRET não configurados.');
-  const resp = await fetch(`${ORULO_BASE}/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, grant_type: 'client_credentials' }).toString(),
-  });
-  if (!resp.ok) throw new Error(`Orulo token error ${resp.status}`);
-  const data = await resp.json();
-  if (!data.access_token) throw new Error('Token nao retornado.');
-  _tokenCache = { token: data.access_token, expiresAt: now + 20 * 60 * 60 * 1000 };
-  return data.access_token;
-}
-
-// ── Normalização ──────────────────────────────────────────────────────────────
-
-function normalizeStatus(raw: string): string {
-  const s = (raw || '').toLowerCase().replace(/[áàãâ]/g,'a').replace(/[éèê]/g,'e').replace(/[íìî]/g,'i').replace(/[óòõô]/g,'o').replace(/[úùû]/g,'u').replace(/ç/g,'c').trim();
-  // Na Planta (inclui Lançamento — mesmo conceito)
-  if (s.includes('planta') || s.includes('lanca') || s.includes('lancamento') || s === 'pre-lancamento') return 'na planta';
-  // Em Obras
-  if (s.includes('obra') || s.includes('constru') || s.includes('andamento')) return 'em obras';
-  // Pronto / Novo
-  if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui') || s === 'novo' || s === 'new') return 'pronto';
-  return s;
-}
-
-function extractNeighborhood(address: Record<string, unknown>): string {
-  return (
-    (address.area         as string) ||
-    (address.neighborhood as string) ||
-    (address.neighbourhood as string) ||
-    (address.district      as string) ||
-    (address.region        as string) ||
-    ''
-  );
-}
-
-// Converte qualquer valor (string, number, null) em número de coordenada ou null
-function parseCoord(v: unknown): number | null {
-  if (v === null || v === undefined || v === '' || v === 0) return null;
-  const n = typeof v === 'number' ? v : parseFloat(String(v));
-  return isFinite(n) && n !== 0 ? n : null;
-}
-
-function normalizeBuilding(b: Record<string, unknown>) {
-  const developer = (b.developer as Record<string, string> | null)?.name || (b.developer_name as string) || '';
-  const address   = (b.address   as Record<string, unknown>) || {};
-  const img       = (b.default_image as Record<string, string>) || {};
-
-  // Coordenadas: tenta campos da API, depois fallback por bairro
-  let lat = parseCoord(b.latitude ?? b.lat ?? (b.coordinates as Record<string,unknown>)?.lat ?? (b.coordinate as Record<string,unknown>)?.lat ?? (b.location as Record<string,unknown>)?.lat ?? address.latitude ?? address.lat);
-  let lng = parseCoord(b.longitude ?? b.lng ?? (b.coordinates as Record<string,unknown>)?.lng ?? (b.coordinate as Record<string,unknown>)?.lng ?? (b.location as Record<string,unknown>)?.lng ?? address.longitude ?? address.lng);
-  if (!lat || !lng) {
-    const fb = lookupSPCoords(extractNeighborhood(address), (address.city as string) || '');
-    if (fb) { lat = fb.lat; lng = fb.lng; }
-  }
-
-  return {
-    id:            String(b.id),
-    name:          (b.name as string) || 'Empreendimento',
-    developer,
-    min_price:     (b.min_price     as number) ?? null,
-    max_price:     (b.max_price     as number) ?? null,
-    bedrooms_min:  (b.min_bedrooms  as number) ?? null,
-    bedrooms_max:  (b.max_bedrooms  as number) ?? null,
-    area_min:      (b.min_area      as number) ?? (b.area_min  as number) ?? null,
-    area_max:      (b.max_area      as number) ?? (b.area_max  as number) ?? null,
-    bathrooms_min: (b.min_bathrooms as number) ?? (b.bathrooms_min as number) ?? null,
-    bathrooms_max: (b.max_bathrooms as number) ?? (b.bathrooms_max as number) ?? null,
-    vagas_min:     (b.min_parking_spots as number) ?? (b.min_garages as number) ?? (b.parking_spots_min as number) ?? (b.min_parking as number) ?? (b.vagas_min as number) ?? (b.garagens_min as number) ?? null,
-    vagas_max:     (b.max_parking_spots as number) ?? (b.max_garages as number) ?? (b.parking_spots_max as number) ?? (b.max_parking as number) ?? (b.vagas_max as number) ?? (b.garagens_max as number) ?? null,
-    neighborhood:  extractNeighborhood(address),
-    address_full:  [address.street as string, address.number as string].filter(Boolean).join(', ') || '',
-    street:        (address.street  as string) || '',
-    number:        (address.number  as string) || '',
-    city:          (address.city    as string) || '',
-    state:         (address.state   as string) || '',
-    lat,
-    lng,
-    delivery_date: (b.delivery_date as string) ?? (b.expected_delivery as string) ?? (b.completion_date as string) ?? null,
-    photo:         img['520x280'] || img['840x560'] || img['200x140'] || null,
-    sharing_url:   (b.sharing_url as string) || null,
-    orulo_url:     (b.sharing_url as string) || `${ORULO_BASE}/buildings/${b.id}`,
-    status:        (b.stage as string) || (b.status as string) || '',
-    status_norm:   normalizeStatus((b.stage as string) || (b.status as string) || ''),
-    updated_at:    (b.updated_at as string) || null,
-  };
-}
-
-type NormalizedBuilding = ReturnType<typeof normalizeBuilding>;
-
-// ── Resultado de uma página ───────────────────────────────────────────────────
-interface PageResult {
-  buildings:   NormalizedBuilding[];
-  rawCount:    number;   // qtd bruta devolvida pela API (antes de filtros)
-  rawTotal:    number;   // total_count da API (se disponível)
-  rawPages:    number;   // total_pages da API (se disponível)
-  httpStatus:  number;
-  rawSample:   Record<string, unknown> | null;
-  error?:      string;
-}
-
-// ── Busca uma página da cidade ─────────────────────────────────────────────────
-async function fetchCityPage(
-  token: string,
-  city: string,
-  page: number,
-): Promise<PageResult> {
-  try {
-    const qs = new URLSearchParams({ state: 'SP', city, per_page: '200', page: String(page) });
-    const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
-      headers: { Authorization: `Bearer ${token}` },
-      // Timeout explícito para evitar que uma página trave as outras
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!resp.ok) return { buildings: [], rawCount: 0, rawTotal: 0, rawPages: 0, httpStatus: resp.status, rawSample: null, error: `HTTP ${resp.status}` };
-
-    const raw = await resp.json();
-    const list = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
-
-    // Tenta extrair totais da resposta da API
-    const rawTotal = Number(raw.total_count ?? raw.total ?? raw.meta?.total ?? 0);
-    const rawPages = Number(raw.total_pages ?? raw.pages ?? raw.meta?.total_pages ?? 0);
-
-    // Normaliza sem filtrar por preço aqui — filtro agressivo foi movido para fora
-    const buildings = list.map(normalizeBuilding);
-
-    return {
-      buildings,
-      rawCount:   list.length,
-      rawTotal,
-      rawPages,
-      httpStatus: resp.status,
-      rawSample:  list[0] ?? null,
-    };
-  } catch (e) {
-    return { buildings: [], rawCount: 0, rawTotal: 0, rawPages: 0, httpStatus: 0, rawSample: null, error: String(e) };
-  }
-}
-
-// ── Busca por localização ─────────────────────────────────────────────────────
-//
-// ARQUITETURA: Vercel é stateless. Sem cache de módulo para o catálogo.
-//
-// Estratégia: busca p1 para descobrir total_pages real, depois dispara as
-// páginas restantes em paralelo (até MAX_CITY_PAGES).
-// Assim não buscamos páginas além do que a API tem.
-
-// A Orulo retorna 10 imóveis por página (comportamento fixo da API).
-// 204 páginas × 10 = 2038 imóveis. Buscamos TODAS as páginas em paralelo —
-// cada requisição leva ~500ms-1s, e em paralelo o tempo total é o da mais lenta.
-const BATCH_SIZE     = 100; // tamanho de cada sub-lote paralelo
-const MAX_CITY_PAGES = 250; // teto de segurança (API tem ~204 páginas)
-
-async function fetchBatch(token: string, city: string, pages: number[]): Promise<PageResult[]> {
-  return Promise.all(pages.map(p => fetchCityPage(token, city, p)));
-}
-
-async function fetchByLocation(
-  token: string,
-  city: string,
-  neighborhood: string,
-  filters: {
-    minPrice?: string | null;
-    maxPrice?: string | null;
-    bedroomsMin?: string | null;
-    bedroomsMax?: string | null;
-    status?: string | null;
+function applyFilters(
+  buildings: NormalizedBuilding[],
+  {
+    neighborhood,
+    minPrice, maxPrice,
+    bedroomsMin, bedroomsMax,
+    status,
+    q,
+  }: {
+    neighborhood?: string | null;
+    minPrice?:     string | null;
+    maxPrice?:     string | null;
+    bedroomsMin?:  string | null;
+    bedroomsMax?:  string | null;
+    status?:       string | null;
+    q?:            string | null;
   },
-  page: number,
-  returnAll = false,
-): Promise<NextResponse> {
-  const cityTarget = city || 'São Paulo';
+): NormalizedBuilding[] {
+  let all = buildings;
 
-  // ── Passo 1: busca página 1 para descobrir quantas páginas existem ────────
-  const p1 = await fetchCityPage(token, cityTarget, 1);
-
-  // total_pages real da API (ou teto de segurança)
-  const totalPagesFromAPI = p1.rawPages > 0 ? p1.rawPages : MAX_CITY_PAGES;
-  const pagesToFetch      = Math.min(totalPagesFromAPI, MAX_CITY_PAGES);
-
-  // ── Passo 2: busca restante em 2 lotes paralelos para não sobrecarregar API ─
-  const remainingPages = Array.from({ length: pagesToFetch - 1 }, (_, i) => i + 2);
-  const batch1 = remainingPages.slice(0, BATCH_SIZE);
-  const batch2 = remainingPages.slice(BATCH_SIZE);
-
-  const [res1, res2] = await Promise.all([
-    fetchBatch(token, cityTarget, batch1),
-    fetchBatch(token, cityTarget, batch2),
-  ]);
-  const restResults: PageResult[] = [...res1, ...res2];
-
-  const allResults = [p1, ...restResults];
-  const rawSample  = allResults.find(r => r.rawSample)?.rawSample ?? null;
-  const addressDebug = rawSample ? (rawSample.address as Record<string, unknown>) ?? {} : null;
-
-  // Agrega e deduplica
-  let all = allResults.flatMap(r => r.buildings);
-
-  // Remove duplicatas por id (antes de qualquer filtro)
-  const seen = new Set<string>();
-  all = all.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
-
-  // Sem filtro de preço mínimo — a API retorna imóveis legítimos sem preço definido
-
-  // Bairros únicos
-  const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
-
-  // Debug detalhado por página
-  const perPageDebug = allResults.map((r, i) => ({
-    page:       i + 1,
-    http:       r.httpStatus,
-    raw:        r.rawCount,
-    normalized: r.buildings.length,
-    error:      r.error,
-  }));
-
-  // ── Filtros do usuário ────────────────────────────────────────────────────
   if (neighborhood) {
     const nb = neighborhood.toLowerCase();
     all = all.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
   }
-
-  if (filters.minPrice)    all = all.filter(b => (b.min_price  ?? 0) >= Number(filters.minPrice));
-  if (filters.maxPrice)    all = all.filter(b => (b.min_price  ?? 0) <= Number(filters.maxPrice));
-  if (filters.bedroomsMin) all = all.filter(b => (b.bedrooms_max ?? 99) >= Number(filters.bedroomsMin));
-  if (filters.bedroomsMax && filters.bedroomsMax !== '99')
-                           all = all.filter(b => (b.bedrooms_min ?? 0) <= Number(filters.bedroomsMax));
-  if (filters.status) {
-    const byStatus = all.filter(b => b.status_norm === filters.status);
+  if (q && !neighborhood) {
+    const lq = q.toLowerCase();
+    all = all.filter(b => [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase().includes(lq));
+  }
+  if (minPrice)    all = all.filter(b => (b.min_price ?? 0) >= Number(minPrice));
+  if (maxPrice)    all = all.filter(b => (b.min_price ?? 0) <= Number(maxPrice));
+  if (bedroomsMin) all = all.filter(b => (b.bedrooms_max ?? 99) >= Number(bedroomsMin));
+  if (bedroomsMax && bedroomsMax !== '99')
+                   all = all.filter(b => (b.bedrooms_min ?? 0) <= Number(bedroomsMax));
+  if (status) {
+    const byStatus = all.filter(b => b.status_norm === status);
     if (byStatus.length > 0) all = byStatus;
   }
 
-  const debugBlock = {
-    total_after_filters:  all.length,
-    api_total_count:      p1.rawTotal,
-    api_total_pages:      p1.rawPages,
-    pages_fetched:        allResults.filter(r => r.rawCount > 0).length,
-    pages_with_errors:    allResults.filter(r => r.error).length,
-    unique_neighborhoods: uniqueNeighborhoods.length,
-    per_page:             perPageDebug,
-    address_keys:         addressDebug ? Object.keys(addressDebug) : [],
-    raw_sample_keys:      rawSample ? Object.keys(rawSample) : [],
-  };
+  return all;
+}
 
-  // all=1: retorna todos sem paginação (para mapa client-side)
-  if (returnAll) {
-    return NextResponse.json({
-      buildings: all,
-      total:     all.length,
-      page:      1,
-      pages:     1,
-      source:    'location_all',
-      city:      cityTarget,
-      _debug:    debugBlock,
-    });
-  }
+// ── Fallback: busca ao vivo via API de pesquisa ───────────────────────────────
+// Usado quando o KV não está disponível ou vazio.
 
-  // Paginação server-side (20 por página)
-  const PER_PAGE = 20;
-  const start    = (page - 1) * PER_PAGE;
+const BATCH_SIZE     = 100;
+const MAX_CITY_PAGES = 250;
 
-  return NextResponse.json({
-    buildings:           all.slice(start, start + PER_PAGE),
-    total:               all.length,
-    page,
-    pages:               Math.ceil(all.length / PER_PAGE) || 1,
-    source:              'location',
-    city:                cityTarget,
-    neighborhood_filter: neighborhood || null,
-    _debug:              debugBlock,
-  });
+async function fetchLiveCatalog(token: string, city: string): Promise<NormalizedBuilding[]> {
+  const p1 = await fetchSearchPage(token, city, 1);
+  const totalPages   = p1.rawPages > 0 ? p1.rawPages : MAX_CITY_PAGES;
+  const pagesToFetch = Math.min(totalPages, MAX_CITY_PAGES);
+
+  const remaining = Array.from({ length: pagesToFetch - 1 }, (_, i) => i + 2);
+  const b1 = remaining.slice(0, BATCH_SIZE);
+  const b2 = remaining.slice(BATCH_SIZE);
+
+  const [res1, res2] = await Promise.all([
+    Promise.all(b1.map(p => fetchSearchPage(token, city, p))),
+    Promise.all(b2.map(p => fetchSearchPage(token, city, p))),
+  ]);
+
+  const all = [p1, ...res1, ...res2].flatMap(r => r.buildings);
+
+  // Deduplicar
+  const seen = new Set<string>();
+  return all.filter(b => { if (seen.has(b.id)) return false; seen.add(b.id); return true; });
 }
 
 // ── Handler principal ─────────────────────────────────────────────────────────
@@ -311,38 +126,92 @@ export async function GET(req: NextRequest) {
     const statusReq    = searchParams.get('status');
     const q            = searchParams.get('q');
 
-    // ── Mock ──────────────────────────────────────────────────────────────────
+    // ── Mock ────────────────────────────────────────────────────────────────
     if (process.env.USE_MOCK === 'true') {
-      let buildings = MOCK_BUILDINGS.map(b => ({ ...b, status_norm: normalizeStatus(b.status) }));
-      if (minPrice)                            buildings = buildings.filter(b => (b.min_price ?? 0) >= Number(minPrice));
-      if (maxPrice)                            buildings = buildings.filter(b => (b.min_price ?? 0) <= Number(maxPrice));
-      if (bedroomsMin)                         buildings = buildings.filter(b => (b.bedrooms_max ?? 0) >= Number(bedroomsMin));
-      if (bedroomsMax && bedroomsMax !== '99') buildings = buildings.filter(b => (b.bedrooms_min ?? 0) <= Number(bedroomsMax));
-      if (statusReq)    buildings = buildings.filter(b => b.status_norm === statusReq);
-      if (neighborhood) buildings = buildings.filter(b => (b.neighborhood || '').toLowerCase().includes(neighborhood.toLowerCase()));
-      else if (q)       buildings = buildings.filter(b => [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase().includes(q.toLowerCase()));
+      let buildings = MOCK_BUILDINGS.map(b => ({ ...b, status_norm: normalizeStatus(b.status), lat: null as number | null, lng: null as number | null }));
+      buildings = applyFilters(buildings as unknown as NormalizedBuilding[], { neighborhood, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q }) as unknown as typeof buildings;
       return NextResponse.json({ buildings, total: buildings.length, page: 1, pages: 1, source: 'mock' });
     }
 
     const token = await getToken();
 
-    // ── Com localização → busca + filtro server-side ──────────────────────────
-    // all=1: retorna todos sem paginação (usado pelo mapa client-side)
-    if (neighborhood || city || returnAll) {
-      return fetchByLocation(
-        token, city || 'São Paulo', neighborhood,
-        { minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq },
+    // ── Camada 1: Catálogo do KV ─────────────────────────────────────────────
+    const cached = await kvGetCatalog();
+
+    if (cached && cached.length > 0) {
+      let all = cached;
+
+      // Filtra por cidade se especificada
+      if (city) {
+        const lc = city.toLowerCase();
+        all = all.filter(b => (b.city || '').toLowerCase().includes(lc));
+      }
+
+      all = applyFilters(all, { neighborhood, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q });
+
+      const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
+
+      if (returnAll) {
+        return NextResponse.json({
+          buildings: all,
+          total:     all.length,
+          page:      1,
+          pages:     1,
+          source:    'kv_cache',
+          neighborhoods: uniqueNeighborhoods,
+        });
+      }
+
+      const PER_PAGE = 20;
+      const start    = (page - 1) * PER_PAGE;
+      return NextResponse.json({
+        buildings:    all.slice(start, start + PER_PAGE),
+        total:        all.length,
         page,
-        returnAll,
-      );
+        pages:        Math.ceil(all.length / PER_PAGE) || 1,
+        source:       'kv_cache',
+        neighborhoods: uniqueNeighborhoods,
+      });
     }
 
-    // ── Sem localização → query direta à Orulo (suporta filtros nativos) ──────
+    // ── Camada 2: API ao vivo (fallback — KV vazio ou não configurado) ────────
+    const cityTarget = city || 'São Paulo';
+
+    if (neighborhood || returnAll) {
+      // Busca completa multi-página
+      const liveBuildings = await fetchLiveCatalog(token, cityTarget);
+      let all = applyFilters(liveBuildings, { neighborhood, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q });
+      const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
+
+      if (returnAll) {
+        return NextResponse.json({
+          buildings: all,
+          total:     all.length,
+          page:      1,
+          pages:     1,
+          source:    'live_api',
+          neighborhoods: uniqueNeighborhoods,
+          _hint:     'Execute /api/orulo/sync para ativar o cache KV.',
+        });
+      }
+
+      const PER_PAGE = 20;
+      const start    = (page - 1) * PER_PAGE;
+      return NextResponse.json({
+        buildings:    all.slice(start, start + PER_PAGE),
+        total:        all.length,
+        page,
+        pages:        Math.ceil(all.length / PER_PAGE) || 1,
+        source:       'live_api',
+        neighborhoods: uniqueNeighborhoods,
+      });
+    }
+
+    // ── Busca direta na Orulo (sem localização específica) ────────────────────
     const qs = new URLSearchParams();
     qs.set('page',     String(page));
     qs.set('per_page', '50');
     qs.set('state',    state);
-
     if (minPrice)                            qs.set('min_price',    minPrice);
     if (maxPrice)                            qs.set('max_price',    maxPrice);
     if (city)                                qs.set('city',         city);
@@ -357,11 +226,11 @@ export async function GET(req: NextRequest) {
 
     const raw     = await resp.json();
     const rawList = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
-    let buildings = rawList.map(normalizeBuilding).filter(b => b.min_price && b.min_price >= 1000);
+    let   buildings = rawList.map(normalizeBuilding);
 
     if (statusReq) {
-      const filtered = buildings.filter(b => b.status_norm === statusReq);
-      if (filtered.length > 0) buildings = filtered;
+      const byStatus = buildings.filter(b => b.status_norm === statusReq);
+      if (byStatus.length > 0) buildings = byStatus;
     }
 
     return NextResponse.json({
@@ -369,19 +238,18 @@ export async function GET(req: NextRequest) {
       total:  raw.total       ?? buildings.length,
       page,
       pages:  raw.total_pages ?? raw.pages ?? 1,
-      source: 'orulo',
+      source: 'orulo_search',
     });
 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro desconhecido';
     console.error('[api/orulo]', message);
     if (message.includes('não configurados'))
-      return NextResponse.json({ error: 'Integracao Orulo nao configurada.' }, { status: 500 });
+      return NextResponse.json({ error: 'Integração Orulo não configurada.' }, { status: 500 });
     if (message.includes('401') || message.includes('403')) {
-      _tokenCache = { token: null, expiresAt: 0 };
-      return NextResponse.json({ error: 'Credenciais Orulo invalidas.' }, { status: 401 });
+      invalidateToken();
+      return NextResponse.json({ error: 'Credenciais Orulo inválidas.' }, { status: 401 });
     }
-    return NextResponse.json({ error: 'Erro ao buscar imoveis.' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao buscar imóveis.' }, { status: 500 });
   }
 }
-   
