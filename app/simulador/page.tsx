@@ -985,4 +985,7 @@ function SimuladorInner() {
 export default function SimuladorPage() {
   return (
     <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
-     
+      <SimuladorInner />
+    </Suspense>
+  );
+}
