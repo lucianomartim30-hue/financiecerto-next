@@ -133,7 +133,7 @@ async function fetchCityPage(
     const resp = await fetch(`${ORULO_BASE}/api/v2/buildings?${qs}`, {
       headers: { Authorization: `Bearer ${token}` },
       // Timeout explícito para evitar que uma página trave as outras
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(8000),
     });
     if (!resp.ok) return { buildings: [], rawCount: 0, rawTotal: 0, rawPages: 0, httpStatus: resp.status, rawSample: null, error: `HTTP ${resp.status}` };
 
@@ -168,11 +168,11 @@ async function fetchCityPage(
 // páginas restantes em paralelo (até MAX_CITY_PAGES).
 // Assim não buscamos páginas além do que a API tem.
 
-// Orulo free plan: retorna no máximo 10 imóveis por página (ignora per_page).
-// 204 páginas × 10 = 2038 imóveis. Para cobrir o máximo possível dentro do
-// timeout do Vercel, buscamos em 2 lotes paralelos de BATCH_SIZE páginas cada.
-const BATCH_SIZE    = 35;  // páginas por lote (35 × 10 = 350 imóveis/lote)
-const MAX_CITY_PAGES = 70; // teto: 70 × 10 = 700 imóveis (2 lotes de 35)
+// A Orulo retorna 10 imóveis por página (comportamento fixo da API).
+// 204 páginas × 10 = 2038 imóveis. Buscamos TODAS as páginas em paralelo —
+// cada requisição leva ~500ms-1s, e em paralelo o tempo total é o da mais lenta.
+const BATCH_SIZE     = 100; // tamanho de cada sub-lote paralelo
+const MAX_CITY_PAGES = 250; // teto de segurança (API tem ~204 páginas)
 
 async function fetchBatch(token: string, city: string, pages: number[]): Promise<PageResult[]> {
   return Promise.all(pages.map(p => fetchCityPage(token, city, p)));
