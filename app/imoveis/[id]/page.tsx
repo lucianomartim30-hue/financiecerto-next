@@ -739,10 +739,10 @@ function SecaoRelacionados({ neighborhood, currentId }: { neighborhood: string; 
 
   useEffect(() => {
     if (!neighborhood) return;
-    fetch(`/api/orulo?bairro=${encodeURIComponent(neighborhood)}&per_page=7`)
+    fetch(`/api/orulo?neighborhood=${encodeURIComponent(neighborhood)}`)
       .then(r => r.json())
-      .then((data: RelatedImovel[]) => {
-        setRelacionados(data.filter(im => im.id !== currentId).slice(0, 6));
+      .then((data: { buildings?: RelatedImovel[] }) => {
+        setRelacionados((data.buildings || []).filter(im => im.id !== currentId).slice(0, 6));
       })
       .catch(() => {})
       .finally(() => setLoading(false));

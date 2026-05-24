@@ -75,8 +75,7 @@ function applyFilters(
   if (bedroomsMax && bedroomsMax !== '99')
                    all = all.filter(b => (b.bedrooms_min ?? 0) <= Number(bedroomsMax));
   if (status) {
-    const byStatus = all.filter(b => b.status_norm === status);
-    if (byStatus.length > 0) all = byStatus;
+    all = all.filter(b => b.status_norm === status);
   }
 
   return all;
@@ -229,8 +228,7 @@ export async function GET(req: NextRequest) {
     let   buildings = rawList.map(normalizeBuilding);
 
     if (statusReq) {
-      const byStatus = buildings.filter(b => b.status_norm === statusReq);
-      if (byStatus.length > 0) buildings = byStatus;
+      buildings = buildings.filter(b => b.status_norm === statusReq);
     }
 
     return NextResponse.json({
