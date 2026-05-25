@@ -70,6 +70,7 @@ interface Imovel {
   area_min: number | null; area_max: number | null;
   neighborhood: string; city: string; photo: string | null;
   status: string; status_norm: string;
+  finality?: string; finality_norm?: string;
   lat: number | null; lng: number | null;
   delivery_date: string | null;
 }
@@ -173,6 +174,7 @@ function ImoveisContent() {
   const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
 
   const [filterStatus,   setFilterStatus]   = useState(searchParams.get('status') || '');
+  const [filterFinality, setFilterFinality] = useState('');
   const [filterMin,      setFilterMin]      = useState(Number(searchParams.get('min') || 0));
   const [filterMax,      setFilterMax]      = useState(Number(searchParams.get('max') || 0));
   const [filterBedrooms, setFilterBedrooms] = useState(0);
@@ -258,7 +260,7 @@ function ImoveisContent() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { setDisplayCount(12); }, [filterStatus, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
+  useEffect(() => { setDisplayCount(12); }, [filterStatus, filterFinality, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
 
   const baseFilter = useCallback((b: Imovel) => {
     if (filterMin      && (b.min_price    ?? 0)  < filterMin)     return false;
@@ -269,8 +271,9 @@ function ImoveisContent() {
     if (filterAreaMin  && (b.area_max     ?? 0)  < filterAreaMin) return false;
     if (filterAreaMax  && (b.area_min     ?? 0)  > filterAreaMax) return false;
     if (filterStatus   && b.status_norm !== filterStatus)         return false;
+    if (filterFinality && (b.finality_norm || '') !== filterFinality) return false;
     return true;
-  }, [filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus]);
+  }, [filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality]);
 
   const mapPins = useMemo(() => allBuildings
     .filter(b => b.lat && b.lng)
@@ -335,7 +338,7 @@ function ImoveisContent() {
   }, [minInput, maxInput, areaMinInput, areaMaxInput]);
 
   const clearAll = useCallback(() => {
-    setFilterStatus(''); setFilterMin(0); setFilterMax(0);
+    setFilterStatus(''); setFilterFinality(''); setFilterMin(0); setFilterMax(0);
     setFilterBedrooms(0); setFilterVagas(0); setFilterBaths(0);
     setFilterAreaMin(0); setFilterAreaMax(0);
     setMinInput(''); setMaxInput(''); setAreaMinInput(''); setAreaMaxInput('');
@@ -344,7 +347,7 @@ function ImoveisContent() {
 
   const openDrop = useCallback((name: string, e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const maxW = name === 'mais' ? 270 : 215;
+    const maxW = name === 'mais' ? 270 : 220;
     // Cabe dentro da tela: garante margem de 8px nas bordas
     const dropWidth = Math.min(maxW, window.innerWidth - 16);
     const left = Math.max(8, Math.min(rect.right - dropWidth, window.innerWidth - dropWidth - 8));
@@ -352,7 +355,7 @@ function ImoveisContent() {
     setOpenDropdown(prev => prev === name ? null : name);
   }, []);
 
-  const hasFilters = !!(filterStatus || filterMin || filterMax || filterBedrooms || filterVagas || filterBaths || filterAreaMin || filterAreaMax);
+  const hasFilters = !!(filterStatus || filterFinality || filterMin || filterMax || filterBedrooms || filterVagas || filterBaths || filterAreaMin || filterAreaMax);
   const maisCount = [filterBedrooms, filterVagas, filterBaths, filterMin, filterMax, filterAreaMin, filterAreaMax].filter(Boolean).length;
 
   const pillStyle = (active: boolean): React.CSSProperties => ({
@@ -426,6 +429,25 @@ function ImoveisContent() {
             <button key={val} onClick={() => { setFilterStatus(val); setOpenDropdown(null); }}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: filterStatus === val ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: filterStatus === val ? '700' : '400', color: filterStatus === val ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
               {filterStatus === val && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Dropdown Tipo ───────────────────────────────────────────────────── */}
+      {openDropdown === 'tipo' && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '210px' }}>
+          {[
+            { val: '',             icon: '🏘', label: 'Todos os tipos' },
+            { val: 'residencial',  icon: '🏠', label: 'Residencial' },
+            { val: 'nr',           icon: '🏢', label: 'NR – Não Residencial' },
+            { val: 'lojas',        icon: '🛒', label: 'Lojas' },
+          ].map(({ val, icon, label }) => (
+            <button key={val} onClick={() => { setFilterFinality(val); setOpenDropdown(null); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: filterFinality === val ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: filterFinality === val ? '700' : '400', color: filterFinality === val ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
+              {filterFinality === val && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
+              <span>{icon}</span>
               {label}
             </button>
           ))}
@@ -516,6 +538,14 @@ function ImoveisContent() {
         {/* Estágio */}
         <button style={pillStyle(!!filterStatus)} onClick={(e) => openDrop('status', e)}>
           {filterStatus ? getStatus(filterStatus).label : 'Estágio'} <span style={{ fontSize: '10px' }}>▾</span>
+        </button>
+
+        {/* Tipo */}
+        <button style={pillStyle(!!filterFinality)} onClick={(e) => openDrop('tipo', e)}>
+          {filterFinality === 'residencial' ? '🏠 Residencial'
+            : filterFinality === 'nr'       ? '🏢 NR'
+            : filterFinality === 'lojas'    ? '🛒 Lojas'
+            : 'Tipo'} <span style={{ fontSize: '10px' }}>▾</span>
         </button>
 
         {/* Mais filtros */}

@@ -37,6 +37,21 @@ export function invalidateToken() {
 
 // ── Normalização ──────────────────────────────────────────────────────────────
 
+export function normalizeFinality(raw: string): string {
+  const s = (raw || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .trim();
+  if (s.includes('loja') || s.includes('retail')) return 'lojas';
+  if (s.includes('residencial') || s === 'residential') return 'residencial';
+  if (
+    s.includes('nao residencial') || s.includes('nr') ||
+    s.includes('comercial') || s === 'commercial' ||
+    s.includes('misto') || s.includes('mixed')
+  ) return 'nr';
+  return s;
+}
+
 export function normalizeStatus(raw: string): string {
   const s = (raw || '')
     .toLowerCase()
@@ -118,6 +133,8 @@ export function normalizeBuilding(b: Record<string, unknown>) {
     orulo_url:     (b.sharing_url as string) || `${ORULO_BASE}/buildings/${b.id}`,
     status:        (b.stage  as string) || (b.status as string) || '',
     status_norm:   normalizeStatus((b.stage as string) || (b.status as string) || ''),
+    finality:      (b.finality as string) || '',
+    finality_norm: normalizeFinality((b.finality as string) || ''),
     updated_at:    (b.updated_at as string) || null,
   };
 }
