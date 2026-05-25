@@ -280,6 +280,16 @@ function ImoveisContent() {
     return true;
   }, [filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality]);
 
+  // Conta quantos imóveis existem para cada tipo de finalidade no catálogo
+  const finalityCounts = useMemo(() => {
+    const counts: Record<string, number> = { residencial: 0, nr: 0, lojas: 0 };
+    allBuildings.forEach(b => {
+      const fn = (b.finality_norm || '') === '' ? 'residencial' : (b.finality_norm || '');
+      if (fn in counts) counts[fn]++;
+    });
+    return counts;
+  }, [allBuildings]);
+
   const mapPins = useMemo(() => allBuildings
     .filter(b => b.lat && b.lng)
     .filter(baseFilter)
@@ -444,16 +454,20 @@ function ImoveisContent() {
       {openDropdown === 'tipo' && (
         <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '210px' }}>
           {[
-            { val: '',             icon: '🏘', label: 'Todos os tipos' },
-            { val: 'residencial',  icon: '🏠', label: 'Residencial' },
-            { val: 'nr',           icon: '🏢', label: 'NR – Não Residencial' },
-            { val: 'lojas',        icon: '🛒', label: 'Lojas' },
-          ].map(({ val, icon, label }) => (
+            { val: '',             icon: '🏘', label: 'Todos os tipos',       count: allBuildings.length },
+            { val: 'residencial',  icon: '🏠', label: 'Residencial',          count: finalityCounts.residencial },
+            { val: 'nr',           icon: '🏢', label: 'NR – Não Residencial', count: finalityCounts.nr },
+            { val: 'lojas',        icon: '🛒', label: 'Lojas',                count: finalityCounts.lojas },
+          ]
+            // Oculta opções sem imóveis (exceto "Todos")
+            .filter(o => o.val === '' || o.count > 0)
+            .map(({ val, icon, label, count }) => (
             <button key={val} onClick={() => { setFilterFinality(val); setOpenDropdown(null); }}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: filterFinality === val ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: filterFinality === val ? '700' : '400', color: filterFinality === val ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
               {filterFinality === val && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
               <span>{icon}</span>
-              {label}
+              <span style={{ flex: 1 }}>{label}</span>
+              {val !== '' && <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '400' }}>{count}</span>}
             </button>
           ))}
         </div>
