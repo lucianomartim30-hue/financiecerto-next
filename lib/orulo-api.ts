@@ -52,6 +52,32 @@ export function normalizeFinality(raw: string): string {
   return s;
 }
 
+/**
+ * Infere a finalidade pelo nome do empreendimento quando a API Orulo
+ * não retorna o campo finality.
+ * Usa palavras-chave inequivocamente comerciais para evitar falsos
+ * positivos em imóveis residenciais.
+ */
+export function inferFinalityFromName(name: string, developer = ''): string {
+  const t = `${name} ${developer}`
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (
+    t.includes('sala comercial') || t.includes('salas comerciais') ||
+    t.includes('sala de escritorio') || t.includes('salas de escritorio') ||
+    t.includes('escritorio') ||
+    /\bloja\b/.test(t) || /\blojas\b/.test(t) ||
+    /\boffice\b/.test(t) ||
+    t.includes('centro empresarial') || t.includes('centro comercial') ||
+    t.includes('torre comercial') || t.includes('torres comerciais') ||
+    t.includes('nao residencial') ||
+    /\bnr\b/.test(t) ||
+    t.includes('salas nr') ||
+    t.includes('laje corporativa') || t.includes('corporate')
+  ) return 'comercial';
+  return '';
+}
+
 export function normalizeStatus(raw: string): string {
   const s = (raw || '')
     .toLowerCase()
@@ -133,8 +159,29 @@ export function normalizeBuilding(b: Record<string, unknown>) {
     orulo_url:     (b.sharing_url as string) || `${ORULO_BASE}/buildings/${b.id}`,
     status:        (b.stage  as string) || (b.status as string) || '',
     status_norm:   normalizeStatus((b.stage as string) || (b.status as string) || ''),
-    finality:      (b.finality as string) || '',
-    finality_norm: normalizeFinality((b.finality as string) || ''),
+    // A Orulo pode retornar finalidade em campos com nomes variados.
+    // Tenta todos os candidatos antes de cair no fallback por nome.
+    finality: (
+      (b.finality as string) ||
+      (b.finality_type as string) ||
+      (b.property_type as string) ||
+      (b.type as string) ||
+      ''
+    ),
+    finality_norm: (() => {
+      const raw =
+        (b.finality      as string) ||
+        (b.finality_type as string) ||
+        (b.property_type as string) ||
+        (b.type          as string) ||
+        '';
+      const norm = normalizeFinality(raw);
+      if (norm === 'residencial' || norm === 'comercial') return norm;
+      // Último recurso: inferir pelo nome quando a API não informa
+      const name      = (b.name      as string) || '';
+      const developer = (b.developer as Record<string,string>|null)?.name || (b.developer_name as string) || '';
+      return inferFinalityFromName(name, developer);
+    })(),
     updated_at:    (b.updated_at as string) || null,
   };
 }

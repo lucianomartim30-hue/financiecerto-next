@@ -68,7 +68,8 @@ export async function GET(req: NextRequest) {
     const toFetch: string[] = [];
     for (const [id, updatedAt] of activeIdMap) {
       const cached = existingMap.get(id);
-      if (!cached || !cached.updated_at || updatedAt > cached.updated_at) {
+      const needsFinality = cached && (cached.finality === undefined || cached.finality === null);
+      if (!cached || !cached.updated_at || updatedAt > cached.updated_at || needsFinality) {
         toFetch.push(id);
       }
     }

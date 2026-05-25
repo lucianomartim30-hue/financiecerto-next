@@ -76,11 +76,13 @@ interface Imovel {
 }
 
 // Calcula finality no cliente — lê finality_norm se disponível,
-// senão calcula diretamente do campo finality bruto da Orulo.
+// senão calcula do campo finality bruto e, como último recurso, infere pelo nome.
 // Necessário porque o KV cache pode ter sido gerado antes do campo ser adicionado.
 function getEffectiveFinality(b: Imovel): string {
   const norm = b.finality_norm || '';
-  if (norm) return norm;
+  if (norm === 'residencial' || norm === 'comercial') return norm;
+
+  // Tenta calcular a partir do campo bruto
   const raw = (b.finality || '').toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
   if (raw.includes('residencial') || raw === 'residential') return 'residencial';
@@ -88,6 +90,23 @@ function getEffectiveFinality(b: Imovel): string {
     raw.includes('comercial') || raw.includes('loja') || raw === 'commercial' ||
     raw.includes('nr') || raw.includes('nao residencial') || raw.includes('misto')
   ) return 'comercial';
+
+  // Último recurso: inferir pelo nome (cobre cache gerado antes de finality ser adicionado)
+  const t = `${b.name} ${b.developer || ''}`.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (
+    t.includes('sala comercial') || t.includes('salas comerciais') ||
+    t.includes('sala de escritorio') || t.includes('salas de escritorio') ||
+    t.includes('escritorio') ||
+    /\bloja\b/.test(t) || /\blojas\b/.test(t) ||
+    /\boffice\b/.test(t) ||
+    t.includes('centro empresarial') || t.includes('centro comercial') ||
+    t.includes('torre comercial') || t.includes('torres comerciais') ||
+    t.includes('nao residencial') ||
+    /\bnr\b/.test(t) ||
+    t.includes('laje corporativa') || t.includes('corporate')
+  ) return 'comercial';
+
   return ''; // vazio → tratado como residencial no filtro
 }
 
