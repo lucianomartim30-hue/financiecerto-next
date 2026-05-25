@@ -220,7 +220,8 @@ function ImoveisContent() {
     boundsTimer.current = setTimeout(() => setDebouncedBounds(b), 350);
   }, []);
 
-  const mapRef = useRef<MapViewHandle>(null);
+  const mapRef   = useRef<MapViewHandle>(null);
+  const inputRef  = useRef<HTMLInputElement>(null);
 
   // Detectar mobile
   useEffect(() => {
@@ -369,8 +370,8 @@ function ImoveisContent() {
     const qNorm = normStr(query);
     const catalogMatch = allBuildings.find(b => b.lat && b.lng && normStr(b.neighborhood + ' ' + b.city).includes(qNorm));
     if (catalogMatch) {
-      if (isMobile) setMobileView('map');
-      mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 13);
+      // Mobile: fica na lista (cards já filtrados). Desktop: mapa voa para o bairro.
+      if (!isMobile) mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 13);
       return;
     }
 
@@ -379,8 +380,7 @@ function ImoveisContent() {
     try {
       const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', São Paulo, Brasil')}&format=json&limit=3&countrycodes=br&accept-language=pt-BR`);
       const data = await r.json();
-      if (data.length > 0) {
-        if (isMobile) setMobileView('map');
+      if (data.length > 0 && !isMobile) {
         mapRef.current?.flyTo(parseFloat(data[0].lat), parseFloat(data[0].lon), 13);
       }
     } catch { /* silencioso */ }
@@ -560,16 +560,24 @@ function ImoveisContent() {
                 onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
                 placeholder="Bairro ou cidade"
                 onKeyDown={e => {
-                  if (e.key === 'Enter') geocodeAndFly(search);
-                  if (e.key === 'Escape') setShowSuggestions(false);
+                  if (e.key === 'Enter') { inputRef.current?.blur(); geocodeAndFly(search); }
+                  if (e.key === 'Escape') { setShowSuggestions(false); inputRef.current?.blur(); }
                 }}
                 onFocus={e => { e.currentTarget.style.background = '#fff'; setShowSuggestions(true); }}
                 onBlur={e => { e.currentTarget.style.background = '#f9fafb'; }}
-                style={{ width: '130px', paddingLeft: '28px', paddingRight: '6px', height: '34px', border: 'none', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '13px' }}
+                ref={inputRef}
+                style={{ width: isMobile ? '150px' : '130px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '13px' }}
               />
             </div>
+            {/* Botão × para limpar busca — útil no mobile */}
+            {search && (
+              <button
+                onClick={() => { setSearch(''); setActiveLocation(''); setShowSuggestions(false); inputRef.current?.focus(); }}
+                style={{ width: '22px', height: '34px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: '-4px' }}
+              >×</button>
+            )}
             <button
-              onClick={() => geocodeAndFly(search)}
+              onClick={() => { inputRef.current?.blur(); geocodeAndFly(search); }}
               disabled={geocoding}
               style={{ width: '34px', height: '34px', background: geocoding ? '#e5e7eb' : 'var(--primary)', color: '#fff', border: 'none', cursor: geocoding ? 'default' : 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
             >
@@ -582,12 +590,19 @@ function ImoveisContent() {
               {filteredSuggestions.map(nb => (
                 <button
                   key={nb.name}
-                  onMouseDown={e => { e.preventDefault(); setSearch(nb.name); geocodeAndFly(nb.name); }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '7px', width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '13px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
+                  // onClick funciona em mouse E touch — não usa onMouseDown para evitar
+                  // conflito com scroll em iOS e para permitir fechar o teclado corretamente
+                  onClick={() => {
+                    setSearch(nb.name);
+                    setShowSuggestions(false);
+                    inputRef.current?.blur(); // fecha teclado no mobile
+                    geocodeAndFly(nb.name);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '7px', width: '100%', padding: '11px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '14px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
                 >
-                  <span style={{ fontSize: '12px', opacity: 0.5 }}>📍</span>
+                  <span style={{ fontSize: '13px', opacity: 0.5 }}>📍</span>
                   <span style={{ flex: 1 }}>{nb.name}</span>
-                  {nb.hasCatalog && <span style={{ fontSize: '10px', background: '#eff6ff', color: '#2563eb', borderRadius: '4px', padding: '1px 5px', fontWeight: '700', flexShrink: 0 }}>imóveis</span>}
+                  {nb.hasCatalog && <span style={{ fontSize: '10px', background: '#eff6ff', color: '#2563eb', borderRadius: '4px', padding: '2px 6px', fontWeight: '700', flexShrink: 0 }}>imóveis</span>}
                 </button>
               ))}
             </div>
