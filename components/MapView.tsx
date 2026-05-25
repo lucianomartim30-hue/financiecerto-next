@@ -142,28 +142,23 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       validPins.forEach(pin => {
         const color = pinColor(pin.status);
 
-        // Elemento visual do pin (bolha de preço)
+        // Pin leve: círculo colorido pequeno sem texto (muito mais rápido que bolha de preço)
         const el = document.createElement('div');
         el.style.cssText = [
+          'width:13px',
+          'height:13px',
+          'border-radius:50%',
           `background:${color}`,
-          'color:#fff',
-          'font-size:10px',
-          'font-weight:700',
-          'padding:3px 8px',
-          'border-radius:12px',
-          'white-space:nowrap',
-          'box-shadow:0 2px 8px rgba(0,0,0,.28)',
-          'border:2px solid #fff',
+          'border:2.5px solid #fff',
+          `box-shadow:0 1px 4px rgba(0,0,0,.35)`,
           'cursor:pointer',
-          'user-select:none',
           'transition:transform .1s',
         ].join(';');
-        el.textContent = pin.price;
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.12)'; });
+        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.5)'; });
         el.addEventListener('mouseleave', () => { el.style.transform = ''; });
 
-        // Popup ao clicar no pin
-        const popup = new Popup({ offset: 14, closeButton: false, maxWidth: '220px' })
+        // Popup ao clicar no pin (mantém todas as informações)
+        const popup = new Popup({ offset: 10, closeButton: false, maxWidth: '220px' })
           .setHTML(
             `<div style="font-family:system-ui,sans-serif;padding:2px 0">
               <div style="font-weight:700;font-size:13px;margin-bottom:3px;color:#111">${pin.name}</div>
@@ -180,7 +175,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
           .setPopup(popup)
           .addTo(mapRef.current);
 
-        // Click direto leva à página do imóvel (sem precisar abrir popup)
+        // Click abre popup (que tem o link para a página do imóvel)
         el.addEventListener('click', () => {
           if (onPinClick) onPinClick(pin.id);
         });
@@ -214,17 +209,39 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
         </div>
       )}
 
-      {/* Badge com contagem de pins */}
+      {/* Badge contagem + legenda de cores */}
       {mapReady && pinCount > 0 && (
         <div style={{
           position: 'absolute', top: 10, right: 10,
-          background: 'rgba(37,99,235,.9)', color: '#fff',
-          borderRadius: 20, padding: '4px 12px',
-          fontSize: 12, fontWeight: 700,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px',
           zIndex: 500, pointerEvents: 'none',
-          boxShadow: '0 2px 8px rgba(0,0,0,.2)',
         }}>
-          {pinCount} no mapa
+          {/* Contagem */}
+          <div style={{
+            background: 'rgba(15,23,42,.82)', color: '#fff',
+            borderRadius: 20, padding: '4px 12px',
+            fontSize: 12, fontWeight: 700,
+            boxShadow: '0 2px 8px rgba(0,0,0,.25)',
+          }}>
+            {pinCount} imóveis
+          </div>
+          {/* Legenda */}
+          <div style={{
+            background: 'rgba(255,255,255,.92)', borderRadius: 10, padding: '6px 10px',
+            display: 'flex', flexDirection: 'column', gap: '4px',
+            boxShadow: '0 2px 8px rgba(0,0,0,.15)', fontSize: 11, fontWeight: 600, color: '#374151',
+          }}>
+            {[
+              { color: '#2563eb', label: 'Na Planta' },
+              { color: '#d97706', label: 'Em Obras'  },
+              { color: '#16a34a', label: 'Pronto'    },
+            ].map(({ color, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,.3)', flexShrink: 0 }} />
+                {label}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

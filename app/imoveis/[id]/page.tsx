@@ -611,7 +611,7 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
         )}
 
         {/* CTA WhatsApp */}
-        <a href={`https://wa.me/5511999999999?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+        <a href={`https://wa.me/5511933661403?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
           <span>💬</span> Falar com consultor
         </a>
