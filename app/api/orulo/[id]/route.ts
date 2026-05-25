@@ -170,6 +170,13 @@ export async function GET(
       };
     });
 
+    // ── Vagas (fallback a partir das tipologias se nível do empreendimento for null) ──
+    const vagasBldgMin = (b.min_parking as number) ?? (b.min_parking_spots as number) ?? (b.min_garages as number) ?? null;
+    const vagasBldgMax = (b.max_parking as number) ?? (b.max_parking_spots as number) ?? (b.max_garages as number) ?? null;
+    const vagasFromTypos = typologies.map(t => t.vagas).filter((v): v is number => v !== null);
+    const vagas_min = vagasBldgMin ?? (vagasFromTypos.length > 0 ? Math.min(...vagasFromTypos) : null);
+    const vagas_max = vagasBldgMax ?? (vagasFromTypos.length > 0 ? Math.max(...vagasFromTypos) : null);
+
     // ── Coordenadas ────────────────────────────────────────────────────────────
     const latitude  = (address.latitude  ?? b.latitude  ?? null) as number | null;
     const longitude = (address.longitude ?? b.longitude ?? null) as number | null;
@@ -195,8 +202,8 @@ export async function GET(
       area_max:      (b.max_area      as number) ?? null,
       bathrooms_min: (b.min_bathrooms as number) ?? null,
       bathrooms_max: (b.max_bathrooms as number) ?? null,
-      vagas_min: (b.min_parking as number) ?? (b.min_parking_spots as number) ?? (b.min_garages as number) ?? null,
-      vagas_max: (b.max_parking as number) ?? (b.max_parking_spots as number) ?? (b.max_garages as number) ?? null,
+      vagas_min,
+      vagas_max,
       neighborhood: (address.area ?? address.neighborhood ?? '') as string,
       city:    (address.city  ?? '') as string,
       state:   (address.state ?? '') as string,

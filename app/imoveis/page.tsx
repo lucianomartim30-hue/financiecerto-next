@@ -10,6 +10,57 @@ import type { MapViewHandle, Bounds } from '@/components/MapView';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
+// ─── Lista estática de bairros de São Paulo (para autocomplete completo) ───────
+const SP_BAIRROS: string[] = [
+  // Centro / Centro Expandido
+  'Bela Vista','Bom Retiro','Brás','Cambuci','Consolação','Higienópolis',
+  'Liberdade','República','Santa Cecília','Sé','Luz','Pari','Barra Funda',
+  'Aclimação','Paraíso','Sumaré','Cerqueira César','Carandiru','Limão',
+  // Zona Oeste
+  'Pinheiros','Vila Madalena','Alto de Pinheiros','Perdizes','Pacaembú',
+  'Pompeia','Lapa','Água Branca','Vila Leopoldina','Butantã','Vila Romana',
+  'Raposo Tavares','Jardim Bonfiglioli','Vila São Francisco','Vila Sônia',
+  'Jaguaré','Jardim Boa Vista','Perus','Real Parque',
+  // Zona Sul
+  'Moema','Itaim Bibi','Brooklin','Campo Belo','Vila Mariana','Chácara Klabin',
+  'Saúde','Jabaquara','Ipiranga','Sacomã','Planalto Paulista','Mirandópolis',
+  'Santo Amaro','Campo Grande','Morumbi','Vila Andrade','Interlagos','Socorro',
+  'Granja Julieta','Vila Nova Conceição','Vila Olímpia','Vila Clementino',
+  'Jardim Ana Rosa','Campo Limpo','Capão Redondo','Jardim São Luís',
+  'Cidade Ademar','Pedreira','Guarapiranga','Americanópolis','Água Funda',
+  'Jardim das Imbuias','Cidade Dutra','Grajaú','Parque do Carmo',
+  // Jardins
+  'Jardins','Jardim Paulista','Jardim Paulistano','Jardim Europa',
+  'Jardim América','Jardim Botânico',
+  // Zona Norte
+  'Santana','Casa Verde','Mandaqui','Tucuruvi','Jaçanã','Tremembé',
+  'Pirituba','Freguesia do Ó','Vila Guilherme','Cantareira','Brasilândia',
+  'Lajeado','Horto Florestal','Cangaíba','Vila Medeiros','Vila Mazzei',
+  'Jaçanã','Parque Edu Chaves','Imirim','Lauzane Paulista',
+  // Zona Leste
+  'Tatuapé','Penha','Belém','Mooca','Água Rasa','Vila Matilde',
+  'Vila Formosa','Aricanduva','Anália Franco','Vila Prudente','Sapopemba',
+  'São Miguel Paulista','Itaim Paulista','Ponte Rasa','Engenheiro Goulart',
+  'Ermelino Matarazzo','José Bonifácio','Parque do Carmo','Penha de França',
+  'Vila Carrão','Vila Constância','Artur Alvim','Cidade Patriarca',
+  'Guaianases','Itaquera','José Bonifácio','Parque São Lucas',
+  'São Mateus','Vila Jacuí','Iguatemi','Jardim Anália Franco',
+  // Grande SP
+  'Alphaville','Barueri','Osasco','Guarulhos','São Caetano do Sul',
+  'Santo André','São Bernardo do Campo','Diadema','Mauá','Carapicuíba',
+  'Cotia','Embu das Artes','Granja Viana','Taboão da Serra',
+  'Poá','Ribeirão Pires','Suzano','Ferraz de Vasconcelos',
+  'Santana de Parnaíba','Itaquaquecetuba','Mogi das Cruzes',
+  'Jandira','Itapevi','Vargem Grande Paulista',
+];
+
+// Normaliza string para comparação: minúsculo, sem acentos
+function normStr(s: string): string {
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^\w\s]/g, '');
+}
+
 interface Imovel {
   id: string; name: string; developer: string;
   min_price: number | null; max_price: number | null;
@@ -164,15 +215,38 @@ function ImoveisContent() {
   }, []);
 
   // Atualiza sugestões ao digitar
+  // Mescla lista estática completa + bairros do catálogo (para mostrar todos, não só os com imóveis)
   const allNeighborhoods = useMemo(() => {
-    const set = new Set(allBuildings.map(b => b.neighborhood).filter(Boolean));
-    return [...set].sort();
+    const fromCatalog = allBuildings.map(b => b.neighborhood).filter(Boolean);
+    const merged = new Map<string, boolean>(); // key=normStr → has catalog properties
+    SP_BAIRROS.forEach(nb => merged.set(normStr(nb), false));
+    fromCatalog.forEach(nb => {
+      const k = normStr(nb);
+      merged.set(k, true);        // marca como "tem imóveis"
+    });
+    // Monta lista final com o nome canônico: prefere o do catálogo (já com capitalização real)
+    const catalogByNorm = new Map(fromCatalog.map(nb => [normStr(nb), nb]));
+    return [...merged.keys()].map(k => ({
+      name: catalogByNorm.get(k) || SP_BAIRROS.find(nb => normStr(nb) === k) || k,
+      hasCatalog: merged.get(k) ?? false,
+    })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [allBuildings]);
 
   const filteredSuggestions = useMemo(() => {
-    if (!search.trim()) return [];
-    const q = search.toLowerCase();
-    return allNeighborhoods.filter(n => n.toLowerCase().includes(q)).slice(0, 8);
+    if (!search.trim()) return [] as { name: string; hasCatalog: boolean }[];
+    const q = normStr(search);
+    return allNeighborhoods
+      .filter(n => normStr(n.name).includes(q))
+      .sort((a, b) => {
+        // Bairros com imóveis no catálogo primeiro
+        if (a.hasCatalog !== b.hasCatalog) return a.hasCatalog ? -1 : 1;
+        // Começa com o termo → prioridade
+        const aStarts = normStr(a.name).startsWith(q) ? 0 : 1;
+        const bStarts = normStr(b.name).startsWith(q) ? 0 : 1;
+        if (aStarts !== bStarts) return aStarts - bStarts;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      })
+      .slice(0, 10);
   }, [search, allNeighborhoods]);
 
   useEffect(() => {
@@ -222,12 +296,24 @@ function ImoveisContent() {
   const geocodeAndFly = useCallback(async (query: string) => {
     if (!query.trim()) return;
     setShowSuggestions(false);
+
+    // 1. Tenta usar coordenadas de um imóvel do catálogo no mesmo bairro (instantâneo)
+    const qNorm = normStr(query);
+    const catalogMatch = allBuildings.find(b => b.lat && b.lng && normStr(b.neighborhood).includes(qNorm));
+    if (catalogMatch) {
+      if (isMobile) setMobileView('map');
+      mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 14);
+      setGeoMsg(`📍 ${catalogMatch.neighborhood}`);
+      setTimeout(() => setGeoMsg(''), 4000);
+      return;
+    }
+
+    // 2. Fallback: Nominatim (para bairros sem imóveis no catálogo)
     setGeocoding(true); setGeoMsg('');
     try {
       const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', São Paulo, Brasil')}&format=json&limit=3&countrycodes=br&accept-language=pt-BR`);
       const data = await r.json();
       if (data.length > 0) {
-        // Se estiver no mobile, muda para o mapa automaticamente
         if (isMobile) setMobileView('map');
         mapRef.current?.flyTo(parseFloat(data[0].lat), parseFloat(data[0].lon), 14);
         setGeoMsg(`📍 ${data[0].display_name.split(',').slice(0, 2).join(',')}`);
@@ -238,7 +324,7 @@ function ImoveisContent() {
       }
     } catch { setGeoMsg('❌ Erro ao buscar.'); setTimeout(() => setGeoMsg(''), 3000); }
     finally { setGeocoding(false); }
-  }, [isMobile]);
+  }, [isMobile, allBuildings]);
 
   const applyMais = useCallback(() => {
     setFilterMin(Number(minInput.replace(/\D/g, '')) || 0);
@@ -391,7 +477,7 @@ function ImoveisContent() {
               <input
                 type="text" value={search}
                 onChange={e => { setSearch(e.target.value); setShowSuggestions(true); }}
-                placeholder="Buscar bairro"
+                placeholder="Bairro ou cidade"
                 onKeyDown={e => {
                   if (e.key === 'Enter') geocodeAndFly(search);
                   if (e.key === 'Escape') setShowSuggestions(false);
@@ -411,15 +497,16 @@ function ImoveisContent() {
           </div>
           {/* Dropdown de sugestões */}
           {showSuggestions && filteredSuggestions.length > 0 && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 9002, minWidth: '170px', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 9002, minWidth: '190px', overflow: 'hidden' }}>
               {filteredSuggestions.map(nb => (
                 <button
-                  key={nb}
-                  onMouseDown={e => { e.preventDefault(); setSearch(nb); geocodeAndFly(nb); }}
+                  key={nb.name}
+                  onMouseDown={e => { e.preventDefault(); setSearch(nb.name); geocodeAndFly(nb.name); }}
                   style={{ display: 'flex', alignItems: 'center', gap: '7px', width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '13px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
                 >
                   <span style={{ fontSize: '12px', opacity: 0.5 }}>📍</span>
-                  {nb}
+                  <span style={{ flex: 1 }}>{nb.name}</span>
+                  {nb.hasCatalog && <span style={{ fontSize: '10px', background: '#eff6ff', color: '#2563eb', borderRadius: '4px', padding: '1px 5px', fontWeight: '700', flexShrink: 0 }}>imóveis</span>}
                 </button>
               ))}
             </div>
