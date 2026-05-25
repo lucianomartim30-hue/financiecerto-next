@@ -293,7 +293,7 @@ function NaPlantaContent() {
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--bg)', minHeight: '100vh', overflowX: 'hidden' }}>
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <section className="fc-hero-np" style={{
@@ -481,12 +481,16 @@ function NaPlantaContent() {
                     </p>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '8px', alignItems: 'center' }}>
-                  <CampoCompacto value={mensalRaw} onChange={v => setMensalRaw(fi(v))} placeholder="1.900" />
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>/mês ×</span>
-                  <Select value={qtdMensais} onChange={v => setQtdMensais(Number(v))}>
-                    {[24,26,28,30,36,40,43,48].map(n => <option key={n} value={n}>{n}</option>)}
-                  </Select>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '1', minWidth: '130px' }}>
+                    <CampoCompacto value={mensalRaw} onChange={v => setMensalRaw(fi(v))} placeholder="1.900" />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>/mês ×</span>
+                    <Select value={qtdMensais} onChange={v => setQtdMensais(Number(v))}>
+                      {[24,26,28,30,36,40,43,48].map(n => <option key={n} value={n}>{n}</option>)}
+                    </Select>
+                  </div>
                 </div>
                 {mensalUnit > 0 && (
                   <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -700,6 +704,14 @@ function NaPlantaContent() {
         })()}
 
       </div>
+
+      <style>{`
+        @media (max-width: 480px) {
+          .fc-card-inner  { padding: 20px 16px !important; }
+          .fc-hero-np     { padding: 40px 16px 56px !important; }
+          .fc-input-brl   { font-size: 20px !important; }
+        }
+      `}</style>
     </div>
   );
 }

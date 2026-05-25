@@ -143,7 +143,7 @@ function Hero({ etapa }: { etapa: number }) {
 
 function Etapa({ children, etapa }: { children: React.ReactNode; etapa?: number }) {
   return (
-    <div style={{ background: '#F1F5F9', minHeight: 'calc(100vh - var(--header-h))' }}>
+    <div style={{ background: '#F1F5F9', minHeight: 'calc(100vh - var(--header-h))', overflowX: 'hidden' }}>
       {etapa !== undefined && <Hero etapa={etapa} />}
       <div style={{ maxWidth: 520, margin: etapa !== undefined ? '-40px auto 0' : '0 auto', padding: '0 16px 80px', position: 'relative', zIndex: 1 }}>
         <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: 20, border: '1px solid var(--border)', boxShadow: '0 4px 40px rgba(0,0,0,.10)', padding: '32px 28px' }}>

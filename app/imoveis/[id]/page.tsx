@@ -140,7 +140,9 @@ function isNaPlanta(status: string) {
 function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
   const [current, setCurrent] = useState(0);
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const total = photos.length;
+  const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
+  const validPhotos = photos.filter((_, i) => !imgErrors[i]);
+  const total = validPhotos.length;
 
   useEffect(() => {
     if (lightbox === null) return;
@@ -153,7 +155,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
     return () => window.removeEventListener('keydown', handler);
   }, [lightbox, total]);
 
-  if (!total) return (
+  if (!photos.length || !total) return (
     <div style={{ height: '360px', background: 'linear-gradient(135deg, #E2E8F0, #CBD5E1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>🏙️</div>
   );
 
@@ -161,9 +163,14 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
     <>
       {/* Main hero */}
       <div style={{ position: 'relative', height: 'min(520px, 56vw)', minHeight: '280px', background: '#000', overflow: 'hidden' }}>
-        {photos.map((p, i) => (
+        {validPhotos.map((p, i) => (
           <img key={i} src={p} alt={`${name} foto ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'}
             onClick={() => setLightbox(i)}
+            onError={() => {
+              const origIdx = photos.indexOf(p);
+              setImgErrors(prev => ({ ...prev, [origIdx]: true }));
+              if (current >= total - 1) setCurrent(Math.max(0, total - 2));
+            }}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: i === current ? 1 : 0, transition: 'opacity 0.4s ease', cursor: 'zoom-in' }} />
         ))}
         {/* Gradient overlay */}
@@ -188,7 +195,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
       {/* Thumbnail strip */}
       {total > 1 && (
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '8px 0', scrollbarWidth: 'none' }}>
-          {photos.map((p, i) => (
+          {validPhotos.map((p, i) => (
             <img key={i} src={p} alt="" onClick={() => setCurrent(i)}
               style={{ width: '72px', height: '52px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0, cursor: 'pointer', opacity: i === current ? 1 : 0.55, border: i === current ? '2px solid var(--primary)' : '2px solid transparent', transition: 'all 0.15s' }} />
           ))}
@@ -202,7 +209,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
           <button
             style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}
             onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l - 1 + total) % total : null); }}>‹</button>
-          <img src={photos[lightbox]} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }} />
+          <img src={validPhotos[lightbox]} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }} />
           <button onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l + 1) % total : null); }}
             style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}>›</button>
           <button onClick={() => setLightbox(null)}
@@ -836,6 +843,8 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [copied, setCopied] = useState(false);
+  const [bpLightbox, setBpLightbox] = useState<Blueprint | null>(null);
+  const [bpImgError, setBpImgError] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -1003,10 +1012,11 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
                   <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '10px' }}>Plantas disponíveis</p>
                   <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                     {imovel.blueprints.map((bp, i) => (
-                      <a key={i} href={bp.url} target="_blank" rel="noopener noreferrer"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--primary)30', color: 'var(--primary)', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', textDecoration: 'none' }}>
+                      <button key={i}
+                        onClick={() => { setBpImgError(false); setBpLightbox(bp); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-card)', border: '1px solid var(--primary)', color: 'var(--primary)', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
                         📐 {bp.name}
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -1039,6 +1049,50 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
       </div>
+
+      {/* ── Blueprint lightbox ─────────────────────────────────────────── */}
+      {bpLightbox && (
+        <div onClick={() => setBpLightbox(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 1200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--bg-card)', borderRadius: '16px', overflow: 'hidden', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,.6)' }}>
+            {/* Header */}
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>📐 {bpLightbox.name}</p>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {!bpImgError && (
+                  <a href={bpLightbox.url} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '12px', fontWeight: '600', color: 'var(--primary)', textDecoration: 'none', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 12px' }}>
+                    ↗ Abrir em nova aba
+                  </a>
+                )}
+                <button onClick={() => setBpLightbox(null)}
+                  style={{ background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text)', fontSize: '16px', width: '34px', height: '34px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              </div>
+            </div>
+            {/* Image area */}
+            <div style={{ overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', minHeight: '200px' }}>
+              {bpImgError ? (
+                <div style={{ padding: '48px 32px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '12px' }}>📐</div>
+                  <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>Planta não disponível</p>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>A imagem desta planta não está acessível no momento.</p>
+                  <a href={bpLightbox.url} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: '600' }}>
+                    Tentar abrir diretamente →
+                  </a>
+                </div>
+              ) : (
+                <img
+                  src={bpLightbox.url}
+                  alt={bpLightbox.name}
+                  onError={() => setBpImgError(true)}
+                  style={{ maxWidth: '85vw', maxHeight: '75vh', objectFit: 'contain', display: 'block' }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Responsive styles ──────────────────────────────────────────── */}
       <style>{`
