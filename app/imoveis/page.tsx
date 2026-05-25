@@ -75,6 +75,22 @@ interface Imovel {
   delivery_date: string | null;
 }
 
+// Calcula finality no cliente — lê finality_norm se disponível,
+// senão calcula diretamente do campo finality bruto da Orulo.
+// Necessário porque o KV cache pode ter sido gerado antes do campo ser adicionado.
+function getEffectiveFinality(b: Imovel): string {
+  const norm = b.finality_norm || '';
+  if (norm) return norm;
+  const raw = (b.finality || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  if (raw.includes('residencial') || raw === 'residential') return 'residencial';
+  if (
+    raw.includes('comercial') || raw.includes('loja') || raw === 'commercial' ||
+    raw.includes('nr') || raw.includes('nao residencial') || raw.includes('misto')
+  ) return 'comercial';
+  return ''; // vazio → tratado como residencial no filtro
+}
+
 const STATUS_CFG: Record<string, { cor: string; label: string }> = {
   'na planta': { cor: '#2563eb', label: 'Na Planta' },
   'em obras':  { cor: '#d97706', label: 'Em Obras'  },
@@ -274,7 +290,7 @@ function ImoveisContent() {
     if (filterFinality) {
       // A Orulo classifica como Residencial ou Comercial.
       // Imóveis sem finality definida são tratados como Residencial (padrão).
-      const fn = b.finality_norm || '';
+      const fn = getEffectiveFinality(b);
       const effectiveFn = fn === '' ? 'residencial' : fn;
       if (effectiveFn !== filterFinality) return false;
     }
@@ -285,7 +301,7 @@ function ImoveisContent() {
   const finalityCounts = useMemo(() => {
     const counts: Record<string, number> = { residencial: 0, comercial: 0 };
     allBuildings.forEach(b => {
-      const fn = (b.finality_norm || '') === '' ? 'residencial' : (b.finality_norm || '');
+      const fn = getEffectiveFinality(b) || 'residencial';
       if (fn in counts) counts[fn]++;
     });
     return counts;
@@ -458,16 +474,13 @@ function ImoveisContent() {
             { val: '',            icon: '🏘', label: 'Todos os tipos', count: allBuildings.length },
             { val: 'residencial', icon: '🏠', label: 'Residencial',    count: finalityCounts.residencial },
             { val: 'comercial',   icon: '🏢', label: 'Comercial',      count: finalityCounts.comercial },
-          ]
-            // Oculta opções sem imóveis (exceto "Todos")
-            .filter(o => o.val === '' || o.count > 0)
-            .map(({ val, icon, label, count }) => (
+          ].map(({ val, icon, label, count }) => (
             <button key={val} onClick={() => { setFilterFinality(val); setOpenDropdown(null); }}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: filterFinality === val ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: filterFinality === val ? '700' : '400', color: filterFinality === val ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
               {filterFinality === val && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
               <span>{icon}</span>
               <span style={{ flex: 1 }}>{label}</span>
-              {val !== '' && <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '400' }}>{count}</span>}
+              {val !== '' && count > 0 && <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '400' }}>{count}</span>}
             </button>
           ))}
         </div>
