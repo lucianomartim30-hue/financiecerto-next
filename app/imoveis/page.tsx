@@ -182,7 +182,6 @@ function ImoveisContent() {
 
   const [allBuildings, setAllBuildings] = useState<Imovel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [bounds, setBounds] = useState<Bounds | null>(null);
   const [displayCount, setDisplayCount] = useState(12);
 
   // Responsive state
@@ -199,17 +198,27 @@ function ImoveisContent() {
   const [filterAreaMin,  setFilterAreaMin]  = useState(0);
   const [filterAreaMax,  setFilterAreaMax]  = useState(0);
 
+  // Localização buscada (texto commitado — filtra cards + mapa)
+  const [activeLocation, setActiveLocation] = useState(searchParams.get('q') || '');
+
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('q') || '');
   const [geocoding, setGeocoding] = useState(false);
-  const [geoMsg, setGeoMsg] = useState('');
   const [minInput, setMinInput] = useState('');
   const [maxInput, setMaxInput] = useState('');
   const [areaMinInput, setAreaMinInput] = useState('');
   const [areaMaxInput, setAreaMaxInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  // Bounds debounçados: o mapa atualiza a cada pan, mas os cards só re-filtram 350ms depois
+  const [debouncedBounds, setDebouncedBounds] = useState<Bounds | null>(null);
+  const boundsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleBoundsChange = useCallback((b: Bounds) => {
+    if (boundsTimer.current) clearTimeout(boundsTimer.current);
+    boundsTimer.current = setTimeout(() => setDebouncedBounds(b), 350);
+  }, []);
 
   const mapRef = useRef<MapViewHandle>(null);
 
@@ -276,9 +285,15 @@ function ImoveisContent() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { setDisplayCount(12); }, [filterStatus, filterFinality, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
+  useEffect(() => { setDisplayCount(12); }, [activeLocation, filterStatus, filterFinality, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
 
   const baseFilter = useCallback((b: Imovel) => {
+    // ── Filtro de localização (bairro / cidade digitado pelo usuário) ──────────
+    if (activeLocation) {
+      const q = normStr(activeLocation);
+      const haystack = normStr(`${b.neighborhood} ${b.city} ${b.name}`);
+      if (!haystack.includes(q)) return false;
+    }
     if (filterMin      && (b.min_price    ?? 0)  < filterMin)     return false;
     if (filterMax      && (b.min_price    ?? 0)  > filterMax)     return false;
     if (filterBedrooms && (b.bedrooms_max ?? 99) < filterBedrooms) return false;
@@ -288,14 +303,12 @@ function ImoveisContent() {
     if (filterAreaMax  && (b.area_min     ?? 0)  > filterAreaMax) return false;
     if (filterStatus   && b.status_norm !== filterStatus)         return false;
     if (filterFinality) {
-      // A Orulo classifica como Residencial ou Comercial.
-      // Imóveis sem finality definida são tratados como Residencial (padrão).
       const fn = getEffectiveFinality(b);
       const effectiveFn = fn === '' ? 'residencial' : fn;
       if (effectiveFn !== filterFinality) return false;
     }
     return true;
-  }, [filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality]);
+  }, [activeLocation, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality]);
 
   // Conta quantos imóveis existem para cada tipo de finalidade no catálogo
   const finalityCounts = useMemo(() => {
@@ -307,57 +320,70 @@ function ImoveisContent() {
     return counts;
   }, [allBuildings]);
 
-  const mapPins = useMemo(() => allBuildings
-    .filter(b => b.lat && b.lng)
-    .filter(baseFilter)
-    .map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status })),
-  [allBuildings, baseFilter]);
+  // Pins do mapa: mostra só os do viewport atual (performance — evita 2000 DOM nodes)
+  // Quando há busca de localização, baseFilter já restringe o conjunto.
+  const mapPins = useMemo(() => {
+    const filtered = allBuildings.filter(b => b.lat && b.lng).filter(baseFilter);
+    // Se há localização buscada → mostra todos os pins do bairro
+    if (activeLocation) {
+      return filtered.map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status }));
+    }
+    // Sem localização: limita ao viewport + margem de 20% para suavidade ao pan
+    if (debouncedBounds) {
+      const latPad = (debouncedBounds.ne_lat - debouncedBounds.sw_lat) * 0.2;
+      const lngPad = (debouncedBounds.ne_lng - debouncedBounds.sw_lng) * 0.2;
+      const viewport = filtered.filter(b =>
+        b.lat! >= debouncedBounds.sw_lat - latPad && b.lat! <= debouncedBounds.ne_lat + latPad &&
+        b.lng! >= debouncedBounds.sw_lng - lngPad && b.lng! <= debouncedBounds.ne_lng + lngPad
+      );
+      if (viewport.length > 0) return viewport.map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status }));
+    }
+    return filtered.slice(0, 300).map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status }));
+  }, [allBuildings, baseFilter, activeLocation, debouncedBounds]);
 
-  // No desktop, filtra os cards pelo viewport do mapa (bounds)
+  // Cards: quando há localização buscada → mostra todos os matches (ignora viewport)
+  // Sem localização → filtra pelo viewport do mapa (desktop)
   const visibleBuildings = useMemo(() => {
     const filtered = allBuildings.filter(baseFilter);
-    if (!isMobile && bounds) {
+    if (activeLocation) return filtered; // localização define o conjunto
+    if (!isMobile && debouncedBounds) {
       const inBounds = filtered.filter(b =>
         b.lat && b.lng &&
-        b.lat >= bounds.sw_lat && b.lat <= bounds.ne_lat &&
-        b.lng >= bounds.sw_lng && b.lng <= bounds.ne_lng
+        b.lat >= debouncedBounds.sw_lat && b.lat <= debouncedBounds.ne_lat &&
+        b.lng >= debouncedBounds.sw_lng && b.lng <= debouncedBounds.ne_lng
       );
-      // Só aplica o filtro de bounds se houver imóveis com coordenadas na área
       if (inBounds.length > 0) return inBounds;
     }
     return filtered;
-  }, [allBuildings, baseFilter, isMobile, bounds]);
+  }, [allBuildings, baseFilter, activeLocation, isMobile, debouncedBounds]);
 
   const geocodeAndFly = useCallback(async (query: string) => {
     if (!query.trim()) return;
     setShowSuggestions(false);
 
+    // Commita a localização → filtra cards imediatamente
+    setActiveLocation(query.trim());
+    setDisplayCount(12);
+
     // 1. Tenta usar coordenadas de um imóvel do catálogo no mesmo bairro (instantâneo)
     const qNorm = normStr(query);
-    const catalogMatch = allBuildings.find(b => b.lat && b.lng && normStr(b.neighborhood).includes(qNorm));
+    const catalogMatch = allBuildings.find(b => b.lat && b.lng && normStr(b.neighborhood + ' ' + b.city).includes(qNorm));
     if (catalogMatch) {
       if (isMobile) setMobileView('map');
-      mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 14);
-      setGeoMsg(`📍 ${catalogMatch.neighborhood}`);
-      setTimeout(() => setGeoMsg(''), 4000);
+      mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 13);
       return;
     }
 
     // 2. Fallback: Nominatim (para bairros sem imóveis no catálogo)
-    setGeocoding(true); setGeoMsg('');
+    setGeocoding(true);
     try {
       const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', São Paulo, Brasil')}&format=json&limit=3&countrycodes=br&accept-language=pt-BR`);
       const data = await r.json();
       if (data.length > 0) {
         if (isMobile) setMobileView('map');
-        mapRef.current?.flyTo(parseFloat(data[0].lat), parseFloat(data[0].lon), 14);
-        setGeoMsg(`📍 ${data[0].display_name.split(',').slice(0, 2).join(',')}`);
-        setTimeout(() => setGeoMsg(''), 4000);
-      } else {
-        setGeoMsg('❌ Localização não encontrada.');
-        setTimeout(() => setGeoMsg(''), 4000);
+        mapRef.current?.flyTo(parseFloat(data[0].lat), parseFloat(data[0].lon), 13);
       }
-    } catch { setGeoMsg('❌ Erro ao buscar.'); setTimeout(() => setGeoMsg(''), 3000); }
+    } catch { /* silencioso */ }
     finally { setGeocoding(false); }
   }, [isMobile, allBuildings]);
 
@@ -370,6 +396,7 @@ function ImoveisContent() {
   }, [minInput, maxInput, areaMinInput, areaMaxInput]);
 
   const clearAll = useCallback(() => {
+    setActiveLocation(''); setSearch('');
     setFilterStatus(''); setFilterFinality(''); setFilterMin(0); setFilterMax(0);
     setFilterBedrooms(0); setFilterVagas(0); setFilterBaths(0);
     setFilterAreaMin(0); setFilterAreaMax(0);
@@ -387,7 +414,7 @@ function ImoveisContent() {
     setOpenDropdown(prev => prev === name ? null : name);
   }, []);
 
-  const hasFilters = !!(filterStatus || filterFinality || filterMin || filterMax || filterBedrooms || filterVagas || filterBaths || filterAreaMin || filterAreaMax);
+  const hasFilters = !!(activeLocation || filterStatus || filterFinality || filterMin || filterMax || filterBedrooms || filterVagas || filterBaths || filterAreaMin || filterAreaMax);
   const maisCount = [filterBedrooms, filterVagas, filterBaths, filterMin, filterMax, filterAreaMin, filterAreaMax].filter(Boolean).length;
 
   const pillStyle = (active: boolean): React.CSSProperties => ({
@@ -530,7 +557,7 @@ function ImoveisContent() {
               <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
               <input
                 type="text" value={search}
-                onChange={e => { setSearch(e.target.value); setShowSuggestions(true); }}
+                onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
                 placeholder="Bairro ou cidade"
                 onKeyDown={e => {
                   if (e.key === 'Enter') geocodeAndFly(search);
@@ -567,6 +594,14 @@ function ImoveisContent() {
           )}
         </div>
 
+        {/* Chip de localização ativa */}
+        {activeLocation && (
+          <button onClick={() => { setActiveLocation(''); setSearch(''); }}
+            style={{ height: '36px', padding: '0 10px', borderRadius: '18px', border: '1.5px solid var(--primary)', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            📍 {activeLocation} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
+          </button>
+        )}
+
         {/* Estágio */}
         <button style={pillStyle(!!filterStatus)} onClick={(e) => openDrop('status', e)}>
           {filterStatus ? getStatus(filterStatus).label : 'Estágio'} <span style={{ fontSize: '10px' }}>▾</span>
@@ -590,13 +625,6 @@ function ImoveisContent() {
           </button>
         )}
       </div>
-
-      {/* Mensagem geocoding */}
-      {geoMsg && (
-        <div style={{ background: geoMsg.startsWith('❌') ? '#fef2f2' : '#f0fdf4', borderBottom: `1px solid ${geoMsg.startsWith('❌') ? '#fca5a5' : '#86efac'}`, padding: '5px 16px', fontSize: '13px', color: geoMsg.startsWith('❌') ? '#dc2626' : '#166534', fontWeight: '500', flexShrink: 0 }}>
-          {geoMsg}
-        </div>
-      )}
 
       {/* ── MOBILE: Tabs Lista / Mapa ────────────────────────────────────────── */}
       {isMobile && (
@@ -624,7 +652,7 @@ function ImoveisContent() {
       {/* ── MOBILE: Conteúdo ─────────────────────────────────────────────────── */}
       {isMobile && mobileView === 'map' && (
         <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-          <MapView ref={mapRef} pins={mapPins} onBoundsChange={setBounds} onPinClick={id => router.push(`/imoveis/${id}`)} />
+          <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} onPinClick={id => router.push(`/imoveis/${id}`)} />
           {loading && renderLoadingOverlay()}
         </div>
       )}
@@ -655,7 +683,7 @@ function ImoveisContent() {
 
           {/* Mapa */}
           <div style={{ position: 'relative', overflow: 'hidden' }}>
-            <MapView ref={mapRef} pins={mapPins} onBoundsChange={setBounds} onPinClick={id => router.push(`/imoveis/${id}`)} />
+            <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} onPinClick={id => router.push(`/imoveis/${id}`)} />
             {loading && renderLoadingOverlay()}
           </div>
 
@@ -666,7 +694,7 @@ function ImoveisContent() {
               <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text)' }}>
                 {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis`}
                 <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
-                  {bounds ? 'na área visível' : 'em São Paulo'}
+                  {activeLocation ? `em ${activeLocation}` : debouncedBounds ? 'na área visível' : 'em São Paulo'}
                 </span>
               </span>
               <div style={{ display: 'flex', gap: '8px' }}>
