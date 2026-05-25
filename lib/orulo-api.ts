@@ -42,13 +42,13 @@ export function normalizeFinality(raw: string): string {
     .toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .trim();
-  if (s.includes('loja') || s.includes('retail')) return 'lojas';
   if (s.includes('residencial') || s === 'residential') return 'residencial';
   if (
-    s.includes('nao residencial') || s.includes('nr') ||
     s.includes('comercial') || s === 'commercial' ||
+    s.includes('loja') || s.includes('retail') ||
+    s.includes('nr') || s.includes('nao residencial') ||
     s.includes('misto') || s.includes('mixed')
-  ) return 'nr';
+  ) return 'comercial';
   return s;
 }
 

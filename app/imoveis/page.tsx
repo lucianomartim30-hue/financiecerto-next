@@ -272,7 +272,8 @@ function ImoveisContent() {
     if (filterAreaMax  && (b.area_min     ?? 0)  > filterAreaMax) return false;
     if (filterStatus   && b.status_norm !== filterStatus)         return false;
     if (filterFinality) {
-      // Imóveis sem finality definida são tratados como Residencial (padrão da Orulo)
+      // A Orulo classifica como Residencial ou Comercial.
+      // Imóveis sem finality definida são tratados como Residencial (padrão).
       const fn = b.finality_norm || '';
       const effectiveFn = fn === '' ? 'residencial' : fn;
       if (effectiveFn !== filterFinality) return false;
@@ -282,7 +283,7 @@ function ImoveisContent() {
 
   // Conta quantos imóveis existem para cada tipo de finalidade no catálogo
   const finalityCounts = useMemo(() => {
-    const counts: Record<string, number> = { residencial: 0, nr: 0, lojas: 0 };
+    const counts: Record<string, number> = { residencial: 0, comercial: 0 };
     allBuildings.forEach(b => {
       const fn = (b.finality_norm || '') === '' ? 'residencial' : (b.finality_norm || '');
       if (fn in counts) counts[fn]++;
@@ -454,10 +455,9 @@ function ImoveisContent() {
       {openDropdown === 'tipo' && (
         <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '210px' }}>
           {[
-            { val: '',             icon: '🏘', label: 'Todos os tipos',       count: allBuildings.length },
-            { val: 'residencial',  icon: '🏠', label: 'Residencial',          count: finalityCounts.residencial },
-            { val: 'nr',           icon: '🏢', label: 'NR – Não Residencial', count: finalityCounts.nr },
-            { val: 'lojas',        icon: '🛒', label: 'Lojas',                count: finalityCounts.lojas },
+            { val: '',            icon: '🏘', label: 'Todos os tipos', count: allBuildings.length },
+            { val: 'residencial', icon: '🏠', label: 'Residencial',    count: finalityCounts.residencial },
+            { val: 'comercial',   icon: '🏢', label: 'Comercial',      count: finalityCounts.comercial },
           ]
             // Oculta opções sem imóveis (exceto "Todos")
             .filter(o => o.val === '' || o.count > 0)
@@ -562,8 +562,7 @@ function ImoveisContent() {
         {/* Tipo */}
         <button style={pillStyle(!!filterFinality)} onClick={(e) => openDrop('tipo', e)}>
           {filterFinality === 'residencial' ? '🏠 Residencial'
-            : filterFinality === 'nr'       ? '🏢 NR'
-            : filterFinality === 'lojas'    ? '🛒 Lojas'
+            : filterFinality === 'comercial' ? '🏢 Comercial'
             : 'Tipo'} <span style={{ fontSize: '10px' }}>▾</span>
         </button>
 
