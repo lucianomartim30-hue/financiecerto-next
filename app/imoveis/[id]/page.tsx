@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, use } from 'react';
+import { useEffect, useState, useRef, useMemo, use } from 'react';
 import Link from 'next/link';
 import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, type FaixaMCMV } from '@/lib/calculos';
 
@@ -140,9 +140,16 @@ function isNaPlanta(status: string) {
 function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
   const [current, setCurrent] = useState(0);
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const [imgErrors, setImgErrors] = useState<Record<number, boolean>>({});
-  const validPhotos = photos.filter((_, i) => !imgErrors[i]);
+  // Key errors por URL (não por índice) — evita cascade quando o array muda de tamanho
+  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
+
+  const validPhotos = useMemo(
+    () => photos.filter(p => p && !imgErrors.has(p)),
+    [photos, imgErrors],
+  );
   const total = validPhotos.length;
+  // Clamp current para não ficar fora do array quando fotos são filtradas
+  const safeCurrent = Math.min(current, Math.max(0, total - 1));
 
   useEffect(() => {
     if (lightbox === null) return;
@@ -164,14 +171,11 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
       {/* Main hero */}
       <div style={{ position: 'relative', height: 'min(520px, 56vw)', minHeight: '280px', background: '#000', overflow: 'hidden' }}>
         {validPhotos.map((p, i) => (
-          <img key={i} src={p} alt={`${name} foto ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'}
+          // key=URL garante que o <img> não é reusado para outra URL quando o array encolhe
+          <img key={p} src={p} alt={`${name} foto ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'}
             onClick={() => setLightbox(i)}
-            onError={() => {
-              const origIdx = photos.indexOf(p);
-              setImgErrors(prev => ({ ...prev, [origIdx]: true }));
-              if (current >= total - 1) setCurrent(Math.max(0, total - 2));
-            }}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: i === current ? 1 : 0, transition: 'opacity 0.4s ease', cursor: 'zoom-in' }} />
+            onError={() => setImgErrors(prev => new Set([...prev, p]))}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: i === safeCurrent ? 1 : 0, transition: 'opacity 0.4s ease', cursor: 'zoom-in' }} />
         ))}
         {/* Gradient overlay */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.5) 0%, transparent 40%)' }} />
@@ -188,7 +192,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
 
         {/* Counter */}
         <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: '12px', fontWeight: '600', padding: '4px 10px', borderRadius: '20px' }}>
-          {current + 1} / {total}
+          {safeCurrent + 1} / {total}
         </div>
       </div>
 
@@ -196,14 +200,14 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
       {total > 1 && (
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '8px 0', scrollbarWidth: 'none' }}>
           {validPhotos.map((p, i) => (
-            <img key={i} src={p} alt="" onClick={() => setCurrent(i)}
-              style={{ width: '72px', height: '52px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0, cursor: 'pointer', opacity: i === current ? 1 : 0.55, border: i === current ? '2px solid var(--primary)' : '2px solid transparent', transition: 'all 0.15s' }} />
+            <img key={p} src={p} alt="" onClick={() => setCurrent(i)}
+              style={{ width: '72px', height: '52px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0, cursor: 'pointer', opacity: i === safeCurrent ? 1 : 0.55, border: i === safeCurrent ? '2px solid var(--primary)' : '2px solid transparent', transition: 'all 0.15s' }} />
           ))}
         </div>
       )}
 
       {/* Lightbox */}
-      {lightbox !== null && (
+      {lightbox !== null && lightbox < total && (
         <div onClick={() => setLightbox(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <button
