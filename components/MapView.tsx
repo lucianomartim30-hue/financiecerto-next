@@ -137,48 +137,33 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     import('maplibre-gl').then((mod: any) => {
-      const { Marker, Popup } = mod;
+      const { Marker } = mod;
 
       validPins.forEach(pin => {
         const color = pinColor(pin.status);
 
-        // Pin leve: círculo colorido pequeno sem texto (muito mais rápido que bolha de preço)
+        // ── Pin estilo balão (sem texto, leve) ─────────────────────────────
         const el = document.createElement('div');
-        el.style.cssText = [
-          'width:13px',
-          'height:13px',
-          'border-radius:50%',
-          `background:${color}`,
-          'border:2.5px solid #fff',
-          `box-shadow:0 1px 4px rgba(0,0,0,.35)`,
-          'cursor:pointer',
-          'transition:transform .1s',
-        ].join(';');
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.5)'; });
+        el.style.cssText = 'cursor:pointer;transition:transform .12s;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))';
+        // SVG balão: círculo com ponta para baixo, cor por status, ícone branco no centro
+        el.innerHTML = `<svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 2C7.925 2 3 6.925 3 13c0 7.5 11 21 11 21s11-13.5 11-21c0-6.075-4.925-11-11-11z"
+            fill="${color}" stroke="white" stroke-width="2"/>
+          <circle cx="14" cy="13" r="4.5" fill="rgba(255,255,255,0.85)"/>
+        </svg>`;
+
+        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.2) translateY(-2px)'; });
         el.addEventListener('mouseleave', () => { el.style.transform = ''; });
 
-        // Popup ao clicar no pin (mantém todas as informações)
-        const popup = new Popup({ offset: 10, closeButton: false, maxWidth: '220px' })
-          .setHTML(
-            `<div style="font-family:system-ui,sans-serif;padding:2px 0">
-              <div style="font-weight:700;font-size:13px;margin-bottom:3px;color:#111">${pin.name}</div>
-              <div style="font-size:11px;color:#64748b;margin-bottom:6px">${pin.neighborhood}</div>
-              <div style="font-size:15px;font-weight:800;color:${color};margin-bottom:10px">${pin.price}</div>
-              <a href="/imoveis/${pin.id}" style="display:block;text-align:center;background:${color};color:#fff;padding:7px 10px;border-radius:8px;font-size:12px;text-decoration:none;font-weight:700">
-                Ver detalhes →
-              </a>
-            </div>`,
-          );
-
-        const marker = new Marker({ element: el })
-          .setLngLat([pin.lng, pin.lat])
-          .setPopup(popup)
-          .addTo(mapRef.current);
-
-        // Click abre popup (que tem o link para a página do imóvel)
+        // Clique direto → abre perfil do imóvel
         el.addEventListener('click', () => {
           if (onPinClick) onPinClick(pin.id);
+          window.location.href = `/imoveis/${pin.id}`;
         });
+
+        const marker = new Marker({ element: el, anchor: 'bottom' })
+          .setLngLat([pin.lng, pin.lat])
+          .addTo(mapRef.current);
 
         markersRef.current.push(marker);
       });
