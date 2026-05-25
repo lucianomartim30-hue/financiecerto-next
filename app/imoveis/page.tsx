@@ -810,10 +810,9 @@ function ImoveisContent() {
       {!isMobile && (
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'hidden', minHeight: 0 }}>
 
-          {/* Mapa */}
+          {/* Mapa — no desktop a busca fica na filter bar do topo */}
           <div style={{ position: 'relative', overflow: 'hidden' }}>
             <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} onPinClick={id => router.push(`/imoveis/${id}`)} />
-            {renderMapSearch()}
             {loading && renderLoadingOverlay()}
           </div>
 
