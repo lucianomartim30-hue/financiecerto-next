@@ -4,6 +4,8 @@ import "./globals.css";
 import Header from "@/components/Header";
 import ChatFab from "@/components/ChatFab";
 import Footer from "@/components/Footer";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "FinancieCerto — Plataforma Inteligente de Descoberta Imobiliária",
@@ -48,6 +50,8 @@ export default function RootLayout({
         </main>
         <Footer />
         <ChatFab />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
