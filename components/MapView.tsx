@@ -37,15 +37,25 @@ function pinColor(status: string) {
   return '#2563eb';
 }
 
+function statusLabel(status: string) {
+  const s = (status || '').toLowerCase();
+  if (s.includes('planta') || s.includes('lanca')) return 'Na Planta';
+  if (s.includes('obra')   || s.includes('constru') || s.includes('andamento')) return 'Em Obras';
+  if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui')) return 'Pronto';
+  return status || 'Outros';
+}
+
 const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   { pins, onPinClick, onBoundsChange },
   ref,
 ) {
-  const containerRef  = useRef<HTMLDivElement>(null);
+  const containerRef   = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mapRef        = useRef<any>(null);
+  const mapRef         = useRef<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const markersRef    = useRef<any[]>([]);
+  const markersRef     = useRef<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activePopupRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
   const [pinCount,  setPinCount]  = useState(0);
   const onBoundsRef = useRef(onBoundsChange);
@@ -88,7 +98,6 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const map: any = new Map({
         container: containerRef.current,
-        // OpenFreeMap — vector tiles gratuitos, sem API key
         style:  'https://tiles.openfreemap.org/styles/liberty',
         center: [-46.63, -23.55],
         zoom:   11,
@@ -99,6 +108,14 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left');
 
       mapRef.current = map;
+
+      // Clique no mapa (fora de um pin) fecha o popup aberto
+      map.on('click', () => {
+        if (activePopupRef.current) {
+          activePopupRef.current.remove();
+          activePopupRef.current = null;
+        }
+      });
 
       const reportBounds = () => {
         const b = map.getBounds();
@@ -130,9 +147,10 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
 
-    // Remove pins antigos
+    // Remove pins antigos e fecha popup aberto
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
+    if (activePopupRef.current) { activePopupRef.current.remove(); activePopupRef.current = null; }
 
     const validPins = pins.filter(p => p.lat && p.lng);
     setPinCount(validPins.length);
@@ -140,31 +158,58 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     import('maplibre-gl').then((mod: any) => {
-      const { Marker } = mod;
+      const { Marker, Popup } = mod;
 
       validPins.forEach(pin => {
         const color = pinColor(pin.status);
+        const label = statusLabel(pin.status);
 
-        // ── Pin estilo balão (sem texto, leve) ─────────────────────────────
+        // ── Bolinha simples colorida por status ────────────────────────────
         const el = document.createElement('div');
-        el.style.cssText = 'cursor:pointer;transition:transform .12s;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))';
-        // SVG balão: círculo com ponta para baixo, cor por status, ícone branco no centro
-        el.innerHTML = `<svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
-          <path d="M14 2C7.925 2 3 6.925 3 13c0 7.5 11 21 11 21s11-13.5 11-21c0-6.075-4.925-11-11-11z"
-            fill="${color}" stroke="white" stroke-width="2"/>
-          <circle cx="14" cy="13" r="4.5" fill="rgba(255,255,255,0.85)"/>
+        el.style.cssText = 'cursor:pointer;transition:transform .12s;filter:drop-shadow(0 1px 4px rgba(0,0,0,.45))';
+        el.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="9" cy="9" r="7" fill="${color}" stroke="white" stroke-width="2.5"/>
         </svg>`;
 
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.2) translateY(-2px)'; });
+        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.4)'; });
         el.addEventListener('mouseleave', () => { el.style.transform = ''; });
 
-        // Clique direto → abre perfil do imóvel
-        el.addEventListener('click', () => {
+        // Clique → fecha popup anterior e abre o deste imóvel
+        el.addEventListener('click', (e) => {
+          e.stopPropagation(); // não propaga pro mapa (evita fechar o popup recém-aberto)
+
+          if (activePopupRef.current) {
+            activePopupRef.current.remove();
+            activePopupRef.current = null;
+          }
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const popup: any = new Popup({
+            closeButton: true,
+            closeOnClick: false,
+            maxWidth: '240px',
+            offset: 14,
+          })
+            .setLngLat([pin.lng, pin.lat])
+            .setHTML(`
+              <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:2px 0 4px;">
+                <span style="display:inline-block;background:${color};color:#fff;font-size:9px;font-weight:800;padding:2px 8px;border-radius:5px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">${label}</span>
+                <p style="font-weight:800;font-size:13px;margin:0 0 3px;color:#111827;line-height:1.35;">${pin.name}</p>
+                <p style="font-size:11px;color:#6b7280;margin:0 0 7px;">📍 ${pin.neighborhood}</p>
+                <p style="font-size:16px;font-weight:900;color:#2563eb;margin:0 0 11px;">${pin.price}</p>
+                <a href="/imoveis/${pin.id}"
+                  style="display:block;background:#2563eb;color:#fff;text-align:center;padding:9px 12px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:.2px;">
+                  Ver imóvel →
+                </a>
+              </div>
+            `)
+            .addTo(mapRef.current);
+
+          activePopupRef.current = popup;
           if (onPinClick) onPinClick(pin.id);
-          window.location.href = `/imoveis/${pin.id}`;
         });
 
-        const marker = new Marker({ element: el, anchor: 'bottom' })
+        const marker = new Marker({ element: el, anchor: 'center' })
           .setLngLat([pin.lng, pin.lat])
           .addTo(mapRef.current);
 
@@ -232,6 +277,24 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
           </div>
         </div>
       )}
+
+      {/* Estilo do popup MapLibre */}
+      <style>{`
+        .maplibregl-popup-content {
+          border-radius: 12px !important;
+          box-shadow: 0 8px 28px rgba(0,0,0,.18) !important;
+          padding: 14px 16px !important;
+          border: 1px solid #e5e7eb !important;
+        }
+        .maplibregl-popup-close-button {
+          font-size: 18px !important;
+          color: #9ca3af !important;
+          padding: 4px 8px !important;
+          line-height: 1 !important;
+        }
+        .maplibregl-popup-close-button:hover { color: #374151 !important; }
+        .maplibregl-popup-tip { border-top-color: #fff !important; }
+      `}</style>
     </div>
   );
 });

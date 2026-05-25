@@ -220,8 +220,11 @@ function ImoveisContent() {
     boundsTimer.current = setTimeout(() => setDebouncedBounds(b), 350);
   }, []);
 
-  const mapRef   = useRef<MapViewHandle>(null);
-  const inputRef  = useRef<HTMLInputElement>(null);
+  const mapRef       = useRef<MapViewHandle>(null);
+  const inputRef     = useRef<HTMLInputElement>(null);
+  const mapSearchRef = useRef<HTMLDivElement>(null);
+  const [mapSearch, setMapSearch] = useState('');
+  const [showMapSuggestions, setShowMapSuggestions] = useState(false);
 
   // Detectar mobile
   useEffect(() => {
@@ -231,12 +234,13 @@ function ImoveisContent() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Fechar autocomplete ao clicar fora
+  // Fechar autocomplete ao clicar fora (filter bar e busca flutuante no mapa)
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-      }
+      const outFilter = !searchRef.current    || !searchRef.current.contains(e.target as Node);
+      const outMap    = !mapSearchRef.current || !mapSearchRef.current.contains(e.target as Node);
+      if (outFilter) setShowSuggestions(false);
+      if (outMap)    setShowMapSuggestions(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -259,6 +263,21 @@ function ImoveisContent() {
       hasCatalog: merged.get(k) ?? false,
     })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [allBuildings]);
+
+  const filteredMapSuggestions = useMemo(() => {
+    if (!mapSearch.trim()) return [] as { name: string; hasCatalog: boolean }[];
+    const q = normStr(mapSearch);
+    return allNeighborhoods
+      .filter(n => normStr(n.name).includes(q))
+      .sort((a, b) => {
+        if (a.hasCatalog !== b.hasCatalog) return a.hasCatalog ? -1 : 1;
+        const aS = normStr(a.name).startsWith(q) ? 0 : 1;
+        const bS = normStr(b.name).startsWith(q) ? 0 : 1;
+        if (aS !== bS) return aS - bS;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      })
+      .slice(0, 8);
+  }, [mapSearch, allNeighborhoods]);
 
   const filteredSuggestions = useMemo(() => {
     if (!search.trim()) return [] as { name: string; hasCatalog: boolean }[];
@@ -396,7 +415,7 @@ function ImoveisContent() {
   }, [minInput, maxInput, areaMinInput, areaMaxInput]);
 
   const clearAll = useCallback(() => {
-    setActiveLocation(''); setSearch('');
+    setActiveLocation(''); setSearch(''); setMapSearch('');
     setFilterStatus(''); setFilterFinality(''); setFilterMin(0); setFilterMax(0);
     setFilterBedrooms(0); setFilterVagas(0); setFilterBaths(0);
     setFilterAreaMin(0); setFilterAreaMax(0);
@@ -457,6 +476,81 @@ function ImoveisContent() {
         </>
       )}
     </>
+  );
+
+  // ── Busca flutuante sobre o mapa ─────────────────────────────────────────
+  const renderMapSearch = () => (
+    <div
+      ref={mapSearchRef}
+      style={{
+        position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
+        zIndex: 600, width: 'calc(100% - 24px)', maxWidth: '380px',
+      }}
+    >
+      <div style={{
+        display: 'flex', background: '#fff', borderRadius: '12px',
+        boxShadow: '0 4px 20px rgba(0,0,0,.22)', border: '1.5px solid #e5e7eb', overflow: 'visible',
+      }}>
+        <span style={{ padding: '0 10px', display: 'flex', alignItems: 'center', fontSize: '15px', flexShrink: 0 }}>📍</span>
+        <input
+          type="text"
+          value={mapSearch}
+          onChange={e => { setMapSearch(e.target.value); setShowMapSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
+          placeholder={activeLocation ? activeLocation : 'Buscar por bairro ou cidade...'}
+          onKeyDown={e => {
+            if (e.key === 'Enter') { setShowMapSuggestions(false); (e.target as HTMLInputElement).blur(); geocodeAndFly(mapSearch); }
+            if (e.key === 'Escape') setShowMapSuggestions(false);
+          }}
+          onFocus={() => setShowMapSuggestions(true)}
+          style={{ flex: 1, height: '44px', border: 'none', outline: 'none', fontSize: '14px', color: '#111827', fontFamily: 'inherit', background: 'transparent', minWidth: 0 }}
+        />
+        {(mapSearch || activeLocation) && (
+          <button onClick={() => { setMapSearch(''); setActiveLocation(''); setShowMapSuggestions(false); }}
+            style={{ width: '34px', height: '44px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#9ca3af', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            ×
+          </button>
+        )}
+        <button
+          onClick={() => { setShowMapSuggestions(false); geocodeAndFly(mapSearch); }}
+          disabled={geocoding || !mapSearch.trim()}
+          style={{ width: '46px', height: '44px', background: (geocoding || !mapSearch.trim()) ? '#e5e7eb' : 'var(--primary)', color: '#fff', border: 'none', cursor: (geocoding || !mapSearch.trim()) ? 'default' : 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '0 10px 10px 0' }}
+        >
+          {geocoding ? <span style={{ fontSize: '10px' }}>...</span> : '🔍'}
+        </button>
+      </div>
+
+      {/* Chip de localização ativa */}
+      {activeLocation && !mapSearch && (
+        <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--primary)', color: '#fff', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(37,99,235,.35)' }}>
+            📍 {activeLocation}
+            <button onClick={() => { setActiveLocation(''); setSearch(''); setMapSearch(''); }}
+              style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center' }}>×</button>
+          </div>
+        </div>
+      )}
+
+      {/* Autocomplete */}
+      {showMapSuggestions && filteredMapSuggestions.length > 0 && (
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 8px 28px rgba(0,0,0,.14)', marginTop: '6px', overflow: 'hidden' }}>
+          {filteredMapSuggestions.map(nb => (
+            <button
+              key={nb.name}
+              onClick={() => {
+                setMapSearch('');
+                setShowMapSuggestions(false);
+                geocodeAndFly(nb.name);
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '14px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
+            >
+              <span style={{ fontSize: '13px', opacity: 0.45 }}>📍</span>
+              <span style={{ flex: 1 }}>{nb.name}</span>
+              {nb.hasCatalog && <span style={{ fontSize: '10px', background: '#eff6ff', color: '#2563eb', borderRadius: '4px', padding: '2px 6px', fontWeight: '700', flexShrink: 0 }}>imóveis</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 
   // ── Loading overlay (usado no mapa) ───────────────────────────────────────
@@ -668,6 +762,7 @@ function ImoveisContent() {
       {isMobile && mobileView === 'map' && (
         <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
           <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} onPinClick={id => router.push(`/imoveis/${id}`)} />
+          {renderMapSearch()}
           {loading && renderLoadingOverlay()}
         </div>
       )}
@@ -699,6 +794,7 @@ function ImoveisContent() {
           {/* Mapa */}
           <div style={{ position: 'relative', overflow: 'hidden' }}>
             <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} onPinClick={id => router.push(`/imoveis/${id}`)} />
+            {renderMapSearch()}
             {loading && renderLoadingOverlay()}
           </div>
 
