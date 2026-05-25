@@ -81,7 +81,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
       if (destroyed || !containerRef.current) return;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { Map } = await import('maplibre-gl') as any;
+      const { Map, NavigationControl } = await import('maplibre-gl') as any;
 
       if (destroyed || !containerRef.current) return;
 
@@ -94,6 +94,9 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
         zoom:   11,
         attributionControl: { compact: true },
       });
+
+      // Controles de zoom + bússola (botões + e −)
+      map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left');
 
       mapRef.current = map;
 
