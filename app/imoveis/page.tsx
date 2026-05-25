@@ -271,7 +271,12 @@ function ImoveisContent() {
     if (filterAreaMin  && (b.area_max     ?? 0)  < filterAreaMin) return false;
     if (filterAreaMax  && (b.area_min     ?? 0)  > filterAreaMax) return false;
     if (filterStatus   && b.status_norm !== filterStatus)         return false;
-    if (filterFinality && (b.finality_norm || '') !== filterFinality) return false;
+    if (filterFinality) {
+      // Imóveis sem finality definida são tratados como Residencial (padrão da Orulo)
+      const fn = b.finality_norm || '';
+      const effectiveFn = fn === '' ? 'residencial' : fn;
+      if (effectiveFn !== filterFinality) return false;
+    }
     return true;
   }, [filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality]);
 
