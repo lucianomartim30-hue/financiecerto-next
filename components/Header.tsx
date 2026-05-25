@@ -266,7 +266,7 @@ export default function Header() {
           style={{
             position: 'fixed', inset: 0,
             background: 'rgba(0,0,0,.45)',
-            zIndex: 300,
+            zIndex: 1001,
             backdropFilter: 'blur(2px)',
             animation: 'fadeIn 0.2s ease',
           }}
@@ -280,7 +280,7 @@ export default function Header() {
         width: '72vw', maxWidth: '280px',
         height: '100vh',
         background: 'var(--bg-card)',
-        zIndex: 400,
+        zIndex: 1002,
         transition: 'right 0.25s cubic-bezier(.4,0,.2,1)',
         boxShadow: '-8px 0 32px rgba(0,0,0,.15)',
         display: 'flex',

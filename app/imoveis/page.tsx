@@ -139,6 +139,8 @@ function ImoveisContent() {
   const [maxInput, setMaxInput] = useState('');
   const [areaMinInput, setAreaMinInput] = useState('');
   const [areaMaxInput, setAreaMaxInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   const mapRef = useRef<MapViewHandle>(null);
 
@@ -149,6 +151,29 @@ function ImoveisContent() {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // Fechar autocomplete ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Atualiza sugestões ao digitar
+  const allNeighborhoods = useMemo(() => {
+    const set = new Set(allBuildings.map(b => b.neighborhood).filter(Boolean));
+    return [...set].sort();
+  }, [allBuildings]);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!search.trim()) return [];
+    const q = search.toLowerCase();
+    return allNeighborhoods.filter(n => n.toLowerCase().includes(q)).slice(0, 8);
+  }, [search, allNeighborhoods]);
 
   useEffect(() => {
     setLoading(true);
@@ -179,10 +204,24 @@ function ImoveisContent() {
     .map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status })),
   [allBuildings, baseFilter]);
 
-  const visibleBuildings = useMemo(() => allBuildings.filter(baseFilter), [allBuildings, baseFilter]);
+  // No desktop, filtra os cards pelo viewport do mapa (bounds)
+  const visibleBuildings = useMemo(() => {
+    const filtered = allBuildings.filter(baseFilter);
+    if (!isMobile && bounds) {
+      const inBounds = filtered.filter(b =>
+        b.lat && b.lng &&
+        b.lat >= bounds.sw_lat && b.lat <= bounds.ne_lat &&
+        b.lng >= bounds.sw_lng && b.lng <= bounds.ne_lng
+      );
+      // Só aplica o filtro de bounds se houver imóveis com coordenadas na área
+      if (inBounds.length > 0) return inBounds;
+    }
+    return filtered;
+  }, [allBuildings, baseFilter, isMobile, bounds]);
 
   const geocodeAndFly = useCallback(async (query: string) => {
     if (!query.trim()) return;
+    setShowSuggestions(false);
     setGeocoding(true); setGeoMsg('');
     try {
       const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', São Paulo, Brasil')}&format=json&limit=3&countrycodes=br&accept-language=pt-BR`);
@@ -344,26 +383,47 @@ function ImoveisContent() {
         className="filter-bar"
         style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '8px 12px', display: 'flex', gap: '7px', alignItems: 'center', flexShrink: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
       >
-        {/* Busca + botão */}
-        <div style={{ display: 'flex', flexShrink: 0, borderRadius: '8px', overflow: 'hidden', border: '1.5px solid #d1d5db' }}>
-          <div style={{ position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
-            <input
-              type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar bairro"
-              onKeyDown={e => { if (e.key === 'Enter') geocodeAndFly(search); }}
-              style={{ width: '130px', paddingLeft: '28px', paddingRight: '6px', height: '34px', border: 'none', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '13px' }}
-              onFocus={e => { e.currentTarget.style.background = '#fff'; }}
-              onBlur={e => { e.currentTarget.style.background = '#f9fafb'; }}
-            />
+        {/* Busca + autocomplete + botão */}
+        <div ref={searchRef} style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
+          <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid #d1d5db' }}>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
+              <input
+                type="text" value={search}
+                onChange={e => { setSearch(e.target.value); setShowSuggestions(true); }}
+                placeholder="Buscar bairro"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') geocodeAndFly(search);
+                  if (e.key === 'Escape') setShowSuggestions(false);
+                }}
+                onFocus={e => { e.currentTarget.style.background = '#fff'; setShowSuggestions(true); }}
+                onBlur={e => { e.currentTarget.style.background = '#f9fafb'; }}
+                style={{ width: '130px', paddingLeft: '28px', paddingRight: '6px', height: '34px', border: 'none', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '13px' }}
+              />
+            </div>
+            <button
+              onClick={() => geocodeAndFly(search)}
+              disabled={geocoding}
+              style={{ width: '34px', height: '34px', background: geocoding ? '#e5e7eb' : 'var(--primary)', color: '#fff', border: 'none', cursor: geocoding ? 'default' : 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            >
+              {geocoding ? <span style={{ fontSize: '10px' }}>...</span> : '🔍'}
+            </button>
           </div>
-          <button
-            onClick={() => geocodeAndFly(search)}
-            disabled={geocoding}
-            style={{ width: '34px', height: '34px', background: geocoding ? '#e5e7eb' : 'var(--primary)', color: '#fff', border: 'none', cursor: geocoding ? 'default' : 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-          >
-            {geocoding ? <span style={{ fontSize: '10px' }}>...</span> : '🔍'}
-          </button>
+          {/* Dropdown de sugestões */}
+          {showSuggestions && filteredSuggestions.length > 0 && (
+            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 9002, minWidth: '170px', overflow: 'hidden' }}>
+              {filteredSuggestions.map(nb => (
+                <button
+                  key={nb}
+                  onMouseDown={e => { e.preventDefault(); setSearch(nb); geocodeAndFly(nb); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '7px', width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '13px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
+                >
+                  <span style={{ fontSize: '12px', opacity: 0.5 }}>📍</span>
+                  {nb}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Estágio */}
@@ -457,7 +517,9 @@ function ImoveisContent() {
             <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', background: '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text)' }}>
                 {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis`}
-                <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>em São Paulo</span>
+                <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
+                  {bounds ? 'na área visível' : 'em São Paulo'}
+                </span>
               </span>
               <div style={{ display: 'flex', gap: '8px' }}>
                 {[{ c: '#2563eb', l: 'Na Planta' }, { c: '#d97706', l: 'Em Obras' }, { c: '#16a34a', l: 'Pronto' }].map(({ c, l }) => (

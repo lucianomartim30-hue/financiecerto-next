@@ -897,12 +897,6 @@ export default function ImovelDetailPage({ params }: { params: Promise<{ id: str
             <span style={{ color: 'var(--text)' }}>{imovel.name}</span>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            {imovel.sharing_url && (
-              <a href={imovel.sharing_url} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 12px', textDecoration: 'none' }}>
-                🔗 Ver original
-              </a>
-            )}
             <button
               onClick={() => { navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
               style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '600', color: copied ? '#16a34a' : 'var(--text-muted)', background: copied ? '#E1F5EE' : 'var(--bg-card)', border: `1px solid ${copied ? '#86EFAC' : 'var(--border)'}`, borderRadius: '8px', padding: '5px 12px', cursor: 'pointer', transition: 'all 0.2s' }}>
