@@ -146,6 +146,9 @@ function NaPlantaContent() {
   const rendaDigitada = p(rendaRaw);
   const renda = rendaUrl > 0 ? rendaUrl : rendaDigitada;
 
+  // Tipo de imóvel
+  const [tipoImovel, setTipoImovel] = useState<'residencial' | 'comercial'>('residencial');
+
   // Estágio
   const [estagio, setEstagio] = useState<Estagio>('lancamento');
   const [siopiPctRaw, setSiopiPctRaw] = useState<string>('15');
@@ -385,6 +388,23 @@ function NaPlantaContent() {
                 <p style={{ fontSize: '12px', color: '#92400e', lineHeight: 1.55 }}>⚠️ {estagioConfig[estagio].aviso}</p>
               </div>
             )}
+          </div>
+
+          {/* ── Tipo de imóvel ────────────────────────────────────────── */}
+          <div style={{ marginTop: '28px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+            <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '12px' }}>Tipo de imóvel</p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {([
+                { val: 'residencial' as const, icon: '🏠', label: 'Residencial' },
+                { val: 'comercial'   as const, icon: '🏢', label: 'Comercial' },
+              ]).map(({ val, icon, label }) => (
+                <button key={val} onClick={() => setTipoImovel(val)}
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: '12px', cursor: 'pointer', border: `2px solid ${tipoImovel === val ? 'var(--primary)' : 'var(--border)'}`, background: tipoImovel === val ? 'rgba(37,99,235,.08)' : 'var(--bg)', textAlign: 'center', transition: 'all 0.15s' }}>
+                  <p style={{ fontSize: '18px', marginBottom: '3px' }}>{icon}</p>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: tipoImovel === val ? 'var(--primary)' : 'var(--text-muted)' }}>{label}</p>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -691,7 +711,7 @@ function NaPlantaContent() {
           const minFiltro = Math.round(valor * 0.75);
           const maxFiltro = isMCMV && faixaRenda ? faixaRenda.teto : Math.round(valor * 1.25);
           return (
-            <Link href={`/imoveis?min=${minFiltro}&max=${maxFiltro}&status=na planta`} style={{ textDecoration: 'none', display: 'block' }}>
+            <Link href={`/imoveis?min=${minFiltro}&max=${maxFiltro}&status=na planta&tipo=${tipoImovel}`} style={{ textDecoration: 'none', display: 'block' }}>
               <div style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
                 <div>
                   <p style={{ fontSize: '15px', fontWeight: '800', color: '#fff', marginBottom: '3px' }}>🏘️ Ver imóveis na planta compatíveis</p>

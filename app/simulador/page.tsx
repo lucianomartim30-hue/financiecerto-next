@@ -294,6 +294,7 @@ function SimuladorInner() {
   const [sim, setSim] = useState<ResultadoSimulacao | null>(null);
   // Qual painel o usuário quer ver na revelação: mcmv | sbpe | sfi
   const [painelAtivo, setPainelAtivo] = useState<'mcmv' | 'sbpe' | 'sfi'>('mcmv');
+  const [tipoImovel,  setTipoImovel]  = useState<'residencial' | 'comercial'>('residencial');
 
   // Lê URL params vindos da página do imóvel e vai direto ao resultado
   useEffect(() => {
@@ -754,9 +755,26 @@ function SimuladorInner() {
           </div>
         </div>
 
+        {/* Tipo de imóvel */}
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Tipo de imóvel que busca</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {([
+              { val: 'residencial' as const, icon: '🏠', label: 'Residencial' },
+              { val: 'comercial'   as const, icon: '🏢', label: 'Comercial' },
+            ]).map(({ val, icon, label }) => (
+              <button key={val} onClick={() => setTipoImovel(val)}
+                style={{ flex: 1, padding: '12px 8px', borderRadius: 12, cursor: 'pointer', border: `2px solid ${tipoImovel === val ? 'var(--primary)' : 'var(--border)'}`, background: tipoImovel === val ? 'rgba(37,99,235,.08)' : 'var(--bg-card)', textAlign: 'center', transition: 'all .15s', fontFamily: 'inherit' }}>
+                <div style={{ fontSize: 18, marginBottom: 3 }}>{icon}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: tipoImovel === val ? 'var(--primary)' : 'var(--text-muted)' }}>{label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* CTAs */}
         <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
-          <Link href={`/imoveis?min=${Math.round(dados.valorMaxImovel * 0.5)}&max=${dados.valorMaxImovel}`}
+          <Link href={`/imoveis?min=${Math.round(dados.valorMaxImovel * 0.5)}&max=${dados.valorMaxImovel}&tipo=${tipoImovel}`}
             style={{ display: 'block', padding: '16px 0', borderRadius: 12, background: 'var(--primary)', color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
             🏠 Ver imóveis compatíveis — {dados.label}
           </Link>
@@ -966,7 +984,7 @@ function SimuladorInner() {
         </p>
 
         <div style={{ display: 'grid', gap: 12 }}>
-          <Link href={`/imoveis?min=${Math.round(sim.valorImovel * 0.75)}&max=${Math.round(sim.valorImovel * 1.20)}${sim.naPlanta ? '&status=na planta' : ''}`}
+          <Link href={`/imoveis?min=${Math.round(sim.valorImovel * 0.75)}&max=${Math.round(sim.valorImovel * 1.20)}${sim.naPlanta ? '&status=na planta' : ''}&tipo=${tipoImovel}`}
             style={{ display: 'block', padding: '16px 0', borderRadius: 12, background: 'var(--primary)', color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
             🏠 Ver imóveis compatíveis — {formatBRL(Math.round(sim.valorImovel * 0.75))} a {formatBRL(Math.round(sim.valorImovel * 1.20))}
           </Link>

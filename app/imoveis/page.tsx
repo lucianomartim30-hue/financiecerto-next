@@ -174,7 +174,7 @@ function ImoveisContent() {
   const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
 
   const [filterStatus,   setFilterStatus]   = useState(searchParams.get('status') || '');
-  const [filterFinality, setFilterFinality] = useState('');
+  const [filterFinality, setFilterFinality] = useState(searchParams.get('tipo') || '');
   const [filterMin,      setFilterMin]      = useState(Number(searchParams.get('min') || 0));
   const [filterMax,      setFilterMax]      = useState(Number(searchParams.get('max') || 0));
   const [filterBedrooms, setFilterBedrooms] = useState(0);
