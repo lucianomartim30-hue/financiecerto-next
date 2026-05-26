@@ -12,6 +12,18 @@ const BASE = 'https://www.financiecerto.com.br';
 
 export const dynamic = 'force-dynamic';
 
+/** Converte qualquer valor de data para ISO 8601 válido, ou retorna fallback. */
+function safeIso(val: string | null | undefined, fallback: string): string {
+  if (!val) return fallback;
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return fallback;
+    return d.toISOString();
+  } catch {
+    return fallback;
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString();
 
@@ -32,7 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (catalog && catalog.length > 0) {
       buildingPages = catalog.map(b => ({
         url:             `${BASE}/imoveis/${b.id}`,
-        lastModified:    b.updated_at ?? now,
+        lastModified:    safeIso(b.updated_at, now),
         changeFrequency: 'weekly' as const,
         priority:        0.7,
       }));
