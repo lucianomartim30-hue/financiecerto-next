@@ -31,10 +31,13 @@ import {
 } from '@/lib/orulo-api';
 import { kvGetCatalog, kvSetCatalog, kvSetMeta } from '@/lib/orulo-kv';
 
-// Vercel Pro suporta até 300s. Com 2000 imóveis × 50 paralelos: ~80-160s por run.
+// Vercel Pro suporta até 300s. Com 2000 imóveis × 20 paralelos: ~100-150s por run.
 export const maxDuration = 300;
 
-const BATCH_SIZE  = 50;  // imóveis por lote (todos em paralelo)
+// IMPORTANTE: Orulo tem rate limit. Com > 20 paralelos a API rejeita a maioria
+// das requisições silenciosamente (retorna rápido com erro → null). 20 é o
+// limite seguro testado — todos os 2000+ imóveis são buscados em ~100-150s.
+const BATCH_SIZE  = 20;  // imóveis por lote (paralelo)
 const TIMEOUT_MS  = 260_000; // 260s — deixa 40s de buffer para salvar no KV
 
 export async function GET(req: NextRequest) {

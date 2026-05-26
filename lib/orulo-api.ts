@@ -245,6 +245,21 @@ export async function fetchAllActiveIds(token: string): Promise<OruloIdEntry[]> 
 // ── Detalhe de empreendimento individual ─────────────────────────────────────
 // GET /api/v2/buildings/{buildingId}
 
+// Contador de erros por status (diagnóstico de rate limit)
+const _errCount: Record<number, number> = {};
+let   _errLogTimer: ReturnType<typeof setTimeout> | null = null;
+function _logErr(status: number) {
+  _errCount[status] = (_errCount[status] ?? 0) + 1;
+  if (!_errLogTimer) {
+    _errLogTimer = setTimeout(() => {
+      if (Object.keys(_errCount).length > 0)
+        console.warn('[building-detail] erros acumulados:', JSON.stringify(_errCount));
+      Object.keys(_errCount).forEach(k => delete _errCount[Number(k)]);
+      _errLogTimer = null;
+    }, 5000);
+  }
+}
+
 export async function fetchBuildingDetail(
   token: string,
   id: string | number,
@@ -254,7 +269,7 @@ export async function fetchBuildingDetail(
       `${ORULO_BASE}/api/v2/buildings/${id}`,
       { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(4000) },
     );
-    if (!resp.ok) return null;
+    if (!resp.ok) { _logErr(resp.status); return null; }
     const data = await resp.json() as Record<string, unknown>;
     return normalizeBuilding(data);
   } catch {
