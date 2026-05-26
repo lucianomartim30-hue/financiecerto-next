@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/orulo/sync?secret=sync2024fc",
-      "schedule": "0 4 * * *"
+      "schedule": "0 */6 * * *"
     }
   ]
 }

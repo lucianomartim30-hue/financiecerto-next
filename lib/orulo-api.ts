@@ -199,6 +199,7 @@ export interface OruloIdEntry {
 }
 
 export async function fetchAllActiveIds(token: string): Promise<OruloIdEntry[]> {
+  const PER_PAGE = 500;
   const allIds: OruloIdEntry[] = [];
   let page = 1;
   let totalPages = 1;
@@ -206,15 +207,31 @@ export async function fetchAllActiveIds(token: string): Promise<OruloIdEntry[]> 
   while (page <= totalPages) {
     try {
       const resp = await fetch(
-        `${ORULO_BASE}/api/v2/buildings/ids/active?results_per_page=500&page=${page}`,
-        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(12000) },
+        `${ORULO_BASE}/api/v2/buildings/ids/active?results_per_page=${PER_PAGE}&page=${page}`,
+        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) },
       );
       if (!resp.ok) { console.error('[ids/active] HTTP', resp.status, 'page', page); break; }
       const data = await resp.json();
+
       // A API pode retornar building_ids ou buildings (ambos são suportados)
       const list = (data.building_ids ?? data.buildings ?? []) as OruloIdEntry[];
       allIds.push(...list);
-      totalPages = Number(data.total_pages ?? 1);
+
+      // Tenta ler total_pages por vários nomes de campo possíveis.
+      // Fallback: calcula a partir de total / PER_PAGE.
+      const rawTotalPages =
+        data.total_pages ?? data.totalPages ?? data.pages ??
+        data.meta?.total_pages ?? data.meta?.pages;
+      const rawTotal =
+        data.total ?? data.total_count ?? data.meta?.total;
+
+      if (rawTotalPages != null) {
+        totalPages = Math.max(totalPages, Number(rawTotalPages));
+      } else if (rawTotal != null) {
+        totalPages = Math.max(totalPages, Math.ceil(Number(rawTotal) / PER_PAGE));
+      }
+
+      console.log(`[ids/active] page ${page}/${totalPages} → ${list.length} IDs (total: ${allIds.length})`);
       page++;
     } catch (e) {
       console.error('[ids/active] error page', page, e);

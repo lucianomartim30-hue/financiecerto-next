@@ -33,7 +33,7 @@ import { kvGetCatalog, kvSetCatalog, kvSetMeta } from '@/lib/orulo-kv';
 
 export const maxDuration = 60;
 
-const BATCH_SIZE = 20; // detalhes buscados por lote paralelo
+const BATCH_SIZE = 50; // detalhes buscados por lote paralelo (50 × paralelo = ~1000/run)
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
         console.warn(`[sync] timeout atingido após ${fetchedCount} detalhes — salvando catálogo parcial`);
         break;
       }
-      const results = await fetchBuildingsBatch(token, toFetch.slice(i, i + BATCH_SIZE), BATCH_SIZE);
+      const results = await fetchBuildingsBatch(token, toFetch.slice(i, i + BATCH_SIZE), 50);
       fetched.push(...results);
       fetchedCount += results.length;
     }

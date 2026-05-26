@@ -25,7 +25,7 @@ export const KV_PROGRESS_KEY = 'orulo:progress';   // number (IDs já processado
 export const KV_META_KEY     = 'orulo:meta';        // SyncMeta
 
 // TTLs
-export const KV_TTL_CATALOG  = 86400;      // 24 h — catálogo
+export const KV_TTL_CATALOG  = 86400 * 7;  // 7 dias — catálogo (evita expiração entre runs do cron)
 export const KV_TTL_IDS      = 86400 * 7;  // 7 dias — lista de IDs
 
 // Tamanho de cada chunk (imóveis por chave KV)
