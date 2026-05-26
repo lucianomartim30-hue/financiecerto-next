@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useMemo, useCallback, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { formatBRL } from '@/lib/calculos';
@@ -196,7 +196,6 @@ function NumSelector({ label, value, onChange }: { label: string; value: number;
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 function ImoveisContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [allBuildings, setAllBuildings] = useState<Imovel[]>([]);
@@ -780,7 +779,7 @@ function ImoveisContent() {
       {/* ── MOBILE: Conteúdo ─────────────────────────────────────────────────── */}
       {isMobile && mobileView === 'map' && (
         <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-          <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} onPinClick={id => router.push(`/imoveis/${id}`)} />
+          <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} />
           {renderMapSearch()}
           {loading && renderLoadingOverlay()}
         </div>
@@ -812,7 +811,7 @@ function ImoveisContent() {
 
           {/* Mapa — no desktop a busca fica na filter bar do topo */}
           <div style={{ position: 'relative', overflow: 'hidden' }}>
-            <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} onPinClick={id => router.push(`/imoveis/${id}`)} />
+            <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} />
             {loading && renderLoadingOverlay()}
           </div>
 

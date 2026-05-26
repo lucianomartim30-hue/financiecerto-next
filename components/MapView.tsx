@@ -206,7 +206,6 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
             .addTo(mapRef.current);
 
           activePopupRef.current = popup;
-          if (onPinClick) onPinClick(pin.id);
         });
 
         const marker = new Marker({ element: el, anchor: 'center' })
@@ -249,16 +248,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
           display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px',
           zIndex: 500, pointerEvents: 'none',
         }}>
-          {/* Contagem */}
-          <div style={{
-            background: 'rgba(15,23,42,.82)', color: '#fff',
-            borderRadius: 20, padding: '4px 12px',
-            fontSize: 12, fontWeight: 700,
-            boxShadow: '0 2px 8px rgba(0,0,0,.25)',
-          }}>
-            {pinCount} imóveis
-          </div>
-          {/* Legenda */}
+          {/* Legenda de cores apenas — contagem já está no painel de cards */}
           <div style={{
             background: 'rgba(255,255,255,.92)', borderRadius: 10, padding: '6px 10px',
             display: 'flex', flexDirection: 'column', gap: '4px',

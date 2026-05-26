@@ -1,25 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const ORULO_BASE = 'https://www.orulo.com.br';
-
-let _tokenCache = { token: null as string | null, expiresAt: 0 };
-
-async function getToken(): Promise<string> {
-  const now = Date.now();
-  if (_tokenCache.token && now < _tokenCache.expiresAt) return _tokenCache.token;
-  const clientId     = process.env.ORULO_CLIENT_ID;
-  const clientSecret = process.env.ORULO_CLIENT_SECRET;
-  if (!clientId || !clientSecret) throw new Error('ORULO_CLIENT_ID ou ORULO_CLIENT_SECRET não configurados.');
-  const resp = await fetch(`${ORULO_BASE}/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: clientId, client_secret: clientSecret, grant_type: 'client_credentials' }).toString(),
-  });
-  if (!resp.ok) throw new Error(`Orulo token error ${resp.status}`);
-  const data = await resp.json();
-  _tokenCache = { token: data.access_token, expiresAt: now + 20 * 60 * 60 * 1000 };
-  return data.access_token;
-}
+import { getToken, invalidateToken, ORULO_BASE } from '@/lib/orulo-api';
 
 export async function GET(
   _req: NextRequest,
@@ -82,6 +62,7 @@ export async function GET(
     return NextResponse.json({ building });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro';
+    if (message.includes('401') || message.includes('403')) invalidateToken();
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
