@@ -72,8 +72,9 @@ interface RelatedImovel {
   bedrooms_min: number | null;
   bedrooms_max: number | null;
   area_min: number | null;
-  photos: string[];
+  photo: string | null;
   status: string;
+  status_norm?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -835,27 +836,66 @@ function SecaoLocalizacao({ imovel }: { imovel: ImovelDetalhe }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Imóveis relacionados
 // ─────────────────────────────────────────────────────────────────────────────
-function SecaoRelacionados({ neighborhood, currentId }: { neighborhood: string; currentId: string }) {
+function SecaoRelacionados({
+  neighborhood, currentId, minPrice, bedroomsMin, bedroomsMax,
+}: {
+  neighborhood: string;
+  currentId: string;
+  minPrice: number | null;
+  bedroomsMin: number | null;
+  bedroomsMax: number | null;
+}) {
   const [relacionados, setRelacionados] = useState<RelatedImovel[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!neighborhood) return;
-    fetch(`/api/orulo?neighborhood=${encodeURIComponent(neighborhood)}`)
+
+    const params = new URLSearchParams({ neighborhood });
+
+    // Filtra por faixa de preço ±40% do imóvel atual
+    if (minPrice) {
+      params.set('min_price', String(Math.round(minPrice * 0.60)));
+      params.set('max_price', String(Math.round(minPrice * 1.40)));
+    }
+
+    // Filtra por quartos compatíveis (aceita ±1 quarto)
+    if (bedroomsMin !== null) {
+      params.set('bedrooms_min', String(Math.max(1, bedroomsMin - 1)));
+    }
+    if (bedroomsMax !== null) {
+      params.set('bedrooms_max', String(bedroomsMax + 1));
+    }
+
+    fetch(`/api/orulo?${params}`)
       .then(r => r.json())
       .then((data: { buildings?: RelatedImovel[] }) => {
-        setRelacionados((data.buildings || []).filter(im => im.id !== currentId).slice(0, 6));
+        const lista = (data.buildings || []).filter(im => im.id !== currentId);
+        // Ordena: mesmo bairro primeiro, depois por proximidade de preço
+        lista.sort((a, b) => {
+          const aBairro = (a.neighborhood || '').toLowerCase() === neighborhood.toLowerCase() ? 0 : 1;
+          const bBairro = (b.neighborhood || '').toLowerCase() === neighborhood.toLowerCase() ? 0 : 1;
+          if (aBairro !== bBairro) return aBairro - bBairro;
+          if (minPrice && a.min_price && b.min_price) {
+            return Math.abs(a.min_price - minPrice) - Math.abs(b.min_price - minPrice);
+          }
+          return 0;
+        });
+        setRelacionados(lista.slice(0, 6));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [neighborhood, currentId]);
+  }, [neighborhood, currentId, minPrice, bedroomsMin, bedroomsMax]);
 
   if (loading) return null;
   if (!relacionados.length) return null;
 
   return (
     <div id="relacionados" style={{ scrollMarginTop: '100px' }}>
-      <SectionHeader title="Imóveis no mesmo bairro" subtitle={`Mais opções em ${neighborhood}`} />
+      <SectionHeader
+        title="Imóveis similares"
+        subtitle={`Mesma faixa de preço e perfil em ${neighborhood} e arredores`}
+      />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
         {relacionados.map(im => {
           const sc = getStatus(im.status || '');
@@ -863,8 +903,8 @@ function SecaoRelacionados({ neighborhood, currentId }: { neighborhood: string; 
             <Link key={im.id} href={`/imoveis/${im.id}`}
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', textDecoration: 'none', transition: 'box-shadow 0.2s', display: 'block' }}>
               <div style={{ height: '140px', background: '#E2E8F0', position: 'relative', overflow: 'hidden' }}>
-                {im.photos?.[0] ? (
-                  <img src={im.photos[0]} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {im.photo ? (
+                  <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>🏢</div>
                 )}
@@ -1111,7 +1151,13 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             <SecaoTipologias typologies={imovel.typologies} />
             <SecaoDiferenciais amenities={imovel.amenities} />
             <SecaoLocalizacao imovel={imovel} />
-            <SecaoRelacionados neighborhood={imovel.neighborhood} currentId={imovel.id} />
+            <SecaoRelacionados
+              neighborhood={imovel.neighborhood}
+              currentId={imovel.id}
+              minPrice={imovel.min_price}
+              bedroomsMin={imovel.bedrooms_min}
+              bedroomsMax={imovel.bedrooms_max}
+            />
           </div>
 
           {/* ── RIGHT: sticky financial card ──────────────────────────── */}
