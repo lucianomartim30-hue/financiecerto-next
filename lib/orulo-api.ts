@@ -264,17 +264,34 @@ export async function fetchBuildingDetail(
   token: string,
   id: string | number,
 ): Promise<NormalizedBuilding | null> {
-  try {
-    const resp = await fetch(
-      `${ORULO_BASE}/api/v2/buildings/${id}`,
-      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(4000) },
-    );
-    if (!resp.ok) { _logErr(resp.status); return null; }
-    const data = await resp.json() as Record<string, unknown>;
-    return normalizeBuilding(data);
-  } catch {
-    return null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const resp = await fetch(
+        `${ORULO_BASE}/api/v2/buildings/${id}`,
+        { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) },
+      );
+      // Rate limit — espera e tenta de novo (até 2 vezes)
+      if (resp.status === 429) {
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+          continue;
+        }
+        _logErr(429);
+        return null;
+      }
+      if (!resp.ok) { _logErr(resp.status); return null; }
+      const data = await resp.json() as Record<string, unknown>;
+      return normalizeBuilding(data);
+    } catch {
+      // timeout ou erro de rede — tenta mais uma vez com pequeno delay
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 500));
+        continue;
+      }
+      return null;
+    }
   }
+  return null;
 }
 
 // ── Busca em lote paralela ────────────────────────────────────────────────────

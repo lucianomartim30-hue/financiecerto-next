@@ -31,14 +31,16 @@ import {
 } from '@/lib/orulo-api';
 import { kvGetCatalog, kvSetCatalog, kvSetMeta } from '@/lib/orulo-kv';
 
-// Vercel Pro suporta até 300s. Com 2000 imóveis × 20 paralelos: ~100-150s por run.
+// Vercel Pro suporta até 300s. Com 2000 imóveis × 20 paralelos + 300ms delay: ~120-180s por run.
 export const maxDuration = 300;
 
 // IMPORTANTE: Orulo tem rate limit. Com > 20 paralelos a API rejeita a maioria
-// das requisições silenciosamente (retorna rápido com erro → null). 20 é o
-// limite seguro testado — todos os 2000+ imóveis são buscados em ~100-150s.
-const BATCH_SIZE  = 20;  // imóveis por lote (paralelo)
-const TIMEOUT_MS  = 260_000; // 260s — deixa 40s de buffer para salvar no KV
+// das requisições silenciosamente. 20 é o limite seguro.
+// BATCH_DELAY_MS = pausa entre lotes para evitar trigger de rate limit:
+// sem delay → Orulo bloqueia ~80% das requisições; com 300ms → quase todas passam.
+const BATCH_SIZE      = 20;    // imóveis por lote (paralelo)
+const BATCH_DELAY_MS  = 300;   // ms de respiro entre lotes — essencial anti rate-limit
+const TIMEOUT_MS      = 240_000; // 240s — deixa 60s de buffer para salvar no KV
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -98,9 +100,13 @@ export async function GET(req: NextRequest) {
         console.warn(`[sync] guarda de tempo atingida após ${fetchedCount} detalhes`);
         break;
       }
+      // Delay entre lotes: evita rajada que dispara rate-limit da Orulo.
+      // Sem esse delay, ~80% das requisições falham silenciosamente.
+      if (i > 0) await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
       const results = await fetchBuildingsBatch(token, toFetch.slice(i, i + BATCH_SIZE), BATCH_SIZE);
       fetched.push(...results);
       fetchedCount += results.length;
+      console.log(`[sync] lote ${Math.floor(i/BATCH_SIZE)+1}/${Math.ceil(toFetch.length/BATCH_SIZE)}: +${results.length} (total: ${fetchedCount})`);
     }
 
     // ── Passo 6: merge ────────────────────────────────────────────────────────
