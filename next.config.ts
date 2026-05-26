@@ -9,6 +9,13 @@ const nextConfig = {
       { protocol: 'https', hostname: '**' },
     ],
   },
+  async redirects() {
+    return [
+      { source: '/index',      destination: '/', permanent: true },
+      { source: '/index.html', destination: '/', permanent: true },
+      { source: '/home',       destination: '/', permanent: true },
+    ];
+  },
 } satisfies NextConfig;
 
 export default nextConfig;
