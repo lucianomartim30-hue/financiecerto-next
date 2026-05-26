@@ -111,30 +111,41 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Passo 7: salvar ───────────────────────────────────────────────────────
+    // Rate-limit da Orulo: ~400 req por janela. Se buscamos menos do que
+    // precisávamos (sem ter estourado o timeout), é sinal de rate-limit.
+    // Nesses casos is_complete=false para o auto-sync continuar tentando.
+    const allFetched  = toFetch.length === 0 || fetchedCount >= toFetch.length;
+    const isComplete  = !timedOut && allFetched;
+    const rateLimited = !timedOut && !allFetched && fetchedCount < toFetch.length;
+
     await kvSetCatalog(merged);
     await kvSetMeta({
       total_ids:     totalActive,
       synced_count:  merged.length,
-      is_complete:   !timedOut,
+      is_complete:   isComplete,
       started_at:    new Date().toISOString(),
       last_chunk_at: new Date().toISOString(),
     });
 
     const elapsed = Date.now() - startTime;
 
-    // ── Passo 8: se parcial, encadeia próxima execução automaticamente ────────
-    // (sem precisar de cron ou intervenção manual)
+    // ── Passo 8: encadeamento apenas em caso de timeout ───────────────────────
+    // Rate-limit: NÃO encadeia imediatamente — o auto-sync com debounce de 5 min
+    // dá tempo ao rate-limit resetar antes de tentar de novo.
     if (timedOut && !isChained) {
       const nextUrl = new URL(req.url);
       nextUrl.searchParams.set('chained', '1');
-      nextUrl.searchParams.delete('full'); // próximas runs são incrementais
-      // Fire-and-forget — não aguarda resposta
+      nextUrl.searchParams.delete('full');
       fetch(nextUrl.toString(), { signal: AbortSignal.timeout(2000) }).catch(() => {});
       console.log(`[sync] encadeando próxima execução: ${merged.length}/${totalActive} imóveis`);
     }
 
+    if (rateLimited) {
+      console.warn(`[sync] rate-limit detectado: ${fetchedCount}/${toFetch.length} buscados em ${elapsed}ms. Catálogo: ${merged.length}/${totalActive}. Auto-sync irá completar.`);
+    }
+
     return NextResponse.json({
-      status:          timedOut ? 'partial' : 'complete',
+      status:          timedOut ? 'partial' : isComplete ? 'complete' : 'partial',
       catalog_size:    merged.length,
       total_active:    totalActive,
       fetched_details: fetchedCount,
@@ -144,9 +155,12 @@ export async function GET(req: NextRequest) {
       elapsed_ms:      elapsed,
       site_base:       SITE_BASE,
       chained:         isChained,
+      rate_limited:    rateLimited,
       note: timedOut
-        ? `Parcial: ${fetchedCount}/${toFetch.length}. Próxima execução encadeada automaticamente.`
-        : `Catálogo completo: ${merged.length} imóveis.`,
+        ? `Parcial (timeout): ${fetchedCount}/${toFetch.length}. Encadeando próxima execução.`
+        : isComplete
+          ? `Catálogo completo: ${merged.length} imóveis.`
+          : `Parcial (rate-limit Orulo): ${fetchedCount}/${toFetch.length} buscados. Catálogo: ${merged.length}/${totalActive}. Auto-sync irá completar nos próximos acessos ao portal.`,
     });
 
   } catch (err) {
