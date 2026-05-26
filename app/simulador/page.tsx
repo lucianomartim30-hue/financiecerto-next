@@ -739,13 +739,17 @@ function SimuladorInner() {
               <span style={{ fontSize: 14, fontWeight: 800, color: dados.cor }}>= 🏠 Poder de compra total</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: dados.cor }}>{formatBRL(totalPoderCompra5)}</span>
             </div>
-            {/* Explicação: por que esse financiamento e esse poder de compra */}
-            <div style={{ marginTop: 12, padding: '11px 14px', background: '#F1F5F9', borderRadius: 10, fontSize: 12, color: '#4B5563', lineHeight: 1.75 }}>
+            {/* Explicação: como o banco calcula (CET / encargo mensal completo) */}
+            <div style={{ marginTop: 12, padding: '12px 14px', background: '#F1F5F9', borderRadius: 10, fontSize: 12, color: '#4B5563', lineHeight: 1.8 }}>
               <strong style={{ color: dados.cor, fontSize: 12 }}>
-                💡 Por que {formatBRL(valorFinanciadoAtivo5)} de financiamento?
+                💡 Como o banco calcula o financiamento
               </strong>
               <br />
-              Sua renda de <strong>{formatBRL(perfil.rendaBruta)}/mês</strong> permite comprometer até 30% = <strong>{formatBRL(Math.round(perfil.rendaBruta * 0.30))}/mês</strong> em parcela. À taxa de <strong>{dados.taxa}% a.a.</strong> em <strong>{prazoAnos} anos</strong>, essa parcela suporta um financiamento de <strong>{formatBRL(valorFinanciadoAtivo5)}</strong>.
+              O banco avalia o <strong>encargo mensal completo</strong> — não o valor bruto liberado. O encargo inclui <strong>amortização + juros (A+J) + seguro de vida (MIP) + seguro do imóvel (DFI) + tarifa de administração</strong>. Esse total não pode ultrapassar <strong>30% da renda bruta</strong> (Res. CMN 4.676/2018 — regra aplicada à CEF e todos os bancos no SFH/MCMV).
+              <br /><br />
+              Renda de <strong>{formatBRL(perfil.rendaBruta)}/mês</strong> × 30% = <strong>{formatBRL(Math.round(perfil.rendaBruta * 0.30))}/mês</strong> de encargo máximo.
+              {' '}Parcela estimada neste perfil: <strong>{formatBRL(dados.parcela)}/mês</strong> ({dados.comprometimento.toFixed(1)}% da renda) — inclui todos os custos.
+              {' '}Portanto o banco aprova <strong>{formatBRL(valorFinanciadoAtivo5)}</strong> de financiamento.
               {(entradaEmDinheiro5 > 0 || fgtsAtivo5 > 0 || subsidioAtivo5 > 0) && (
                 <span>
                   {' '}Somando{' '}
@@ -1026,14 +1030,27 @@ function SimuladorInner() {
               <span style={{ fontSize: 14, fontWeight: 800, color: sc.cor }}>= 🏠 Valor do imóvel</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: sc.cor }}>{formatBRL(sim.valorImovel)}</span>
             </div>
-            {/* Explicação: por que esse financiamento */}
-            <div style={{ marginTop: 12, padding: '11px 14px', background: '#F1F5F9', borderRadius: 10, fontSize: 12, color: '#4B5563', lineHeight: 1.75 }}>
+            {/* Explicação: como o banco calcula (CET / encargo mensal completo) */}
+            <div style={{ marginTop: 12, padding: '12px 14px', background: '#F1F5F9', borderRadius: 10, fontSize: 12, color: '#4B5563', lineHeight: 1.8 }}>
               <strong style={{ color: sc.cor, fontSize: 12 }}>
-                💡 Por que {formatBRL(sim.valorFinanciado)} de financiamento?
+                💡 Como o banco calcula o financiamento
               </strong>
               <br />
-              Renda de <strong>{formatBRL(parseMoeda(e.renda))}/mês</strong> × 30% = <strong>{formatBRL(Math.round(parseMoeda(e.renda) * 0.30))}/mês</strong> de parcela máxima. À taxa de <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong>, o banco aprova financiamento de <strong>{formatBRL(sim.valorFinanciado)}</strong>.
-              {' '}Sua parcela Price inicial é <strong>{formatBRL(sim.parcelaPrimeiro)}/mês</strong> ({sim.comprometimento.toFixed(1)}% da renda{sim.comprometimento > 30 ? ' — acima do limite de 30%, sujeito a reprovação' : ''}).
+              O banco avalia o <strong>encargo mensal completo</strong> — não o valor bruto liberado. O limite é <strong>30% da renda bruta</strong> sobre o encargo total (Res. CMN 4.676/2018).
+              <br /><br />
+              <strong>Renda {formatBRL(parseMoeda(e.renda))}/mês × 30% = {formatBRL(Math.round(parseMoeda(e.renda) * 0.30))}/mês</strong> de encargo máximo.
+              <br />
+              Encargo real desta simulação: <strong>{formatBRL(sim.parcelaPrimeiro)}/mês</strong> ({sim.comprometimento.toFixed(1)}% da renda{sim.comprometimento > 30 ? ' ⚠️ acima do limite' : ''})
+              <br />
+              <span style={{ paddingLeft: 8, display: 'inline-block', color: '#6B7280' }}>
+                ↳ A+J (amort. + juros): {formatBRL(sim.parcelaPrimeiro - sim.seguros.total)}/mês
+              </span>
+              <br />
+              <span style={{ paddingLeft: 8, display: 'inline-block', color: '#6B7280' }}>
+                ↳ MIP (seg. vida) + DFI (seg. imóvel) + tarifa: {formatBRL(sim.seguros.total)}/mês
+              </span>
+              <br />
+              Com esse encargo, o banco aprova <strong>{formatBRL(sim.valorFinanciado)}</strong> de financiamento à taxa de <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong>.
             </div>
           </div>
         </div>

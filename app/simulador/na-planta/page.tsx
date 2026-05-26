@@ -591,14 +591,22 @@ function NaPlantaContent() {
                         <span style={{ fontSize: '13px', fontWeight: '800', color: isMCMV ? '#0f6e56' : '#185fa5' }}>= 🏠 Valor total do imóvel</span>
                         <span style={{ fontSize: '15px', fontWeight: '800', color: isMCMV ? '#0f6e56' : '#185fa5' }}>{formatBRL(valor)}</span>
                       </div>
-                      {/* Explicação: por que esse financiamento */}
+                      {/* Explicação: como o banco calcula (CET / encargo mensal completo) */}
                       {renda > 0 && (
-                        <div style={{ marginTop: '10px', padding: '10px 12px', background: '#F1F5F9', borderRadius: '8px', fontSize: '12px', color: '#4B5563', lineHeight: '1.75' }}>
+                        <div style={{ marginTop: '10px', padding: '10px 12px', background: '#F1F5F9', borderRadius: '8px', fontSize: '12px', color: '#4B5563', lineHeight: '1.8' }}>
                           <strong style={{ color: isMCMV ? '#0f6e56' : '#185fa5' }}>
-                            💡 Por que {formatBRL(financiado)} de financiamento?
+                            💡 Como o banco calcula o financiamento
                           </strong>
                           <br />
-                          Renda de <strong>{formatBRL(renda)}/mês</strong> × 30% = <strong>{formatBRL(Math.round(renda * 0.30))}/mês</strong> de parcela máxima. À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em <strong>35 anos</strong>, o banco financia até <strong>{formatBRL(maxFinBanco)}</strong> (LTV {Math.round(ltvPct * 100)}% do valor do imóvel). Com seus pagamentos à construtora{fgts > 0 ? ` + FGTS de ${formatBRL(fgts)}` : ''}{subsidioEstimado > 0 ? ` + subsídio de ${formatBRL(subsidioEstimado)}` : ''}, o valor financiado fica em <strong>{formatBRL(financiado)}</strong>.
+                          O banco avalia o <strong>encargo mensal completo</strong> — não o valor bruto liberado. O encargo inclui <strong>A+J + MIP + DFI + tarifa</strong> e não pode ultrapassar <strong>30% da renda bruta</strong> (Res. CMN 4.676/2018).
+                          <br /><br />
+                          Renda <strong>{formatBRL(renda)}/mês</strong> × 30% = <strong>{formatBRL(Math.round(renda * 0.30))}/mês</strong> de encargo máximo.
+                          {' '}À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em 35 anos (incluindo seguros), o banco aprova até <strong>{formatBRL(maxFinBanco)}</strong> (LTV {Math.round(ltvPct * 100)}% do imóvel).
+                          {(fgts > 0 || totalContribuicao > 0) && (
+                            <span> Com {[fgts > 0 ? `FGTS de ${formatBRL(fgts)}` : null, subsidioEstimado > 0 ? `subsídio de ${formatBRL(subsidioEstimado)}` : null, totalConstrutora > 0 ? `pagamentos à construtora de ${formatBRL(totalConstrutora)}` : null].filter(Boolean).join(' + ')}, o valor financiado pelo banco fica em <strong>{formatBRL(financiado)}</strong>.</span>
+                          )}
+                          <br />
+                          <span style={{ color: '#6B7280' }}>Parcela pós-obra: <strong>{formatBRL(Math.round(parcelaFin + seguros.total))}/mês</strong> ({((parcelaFin + seguros.total) / renda * 100).toFixed(1)}% da renda) — A+J: {formatBRL(Math.round(parcelaFin))}/mês + seguros: {formatBRL(seguros.total)}/mês.</span>
                         </div>
                       )}
                     </div>
