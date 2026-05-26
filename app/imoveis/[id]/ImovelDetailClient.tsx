@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, type FaixaMCMV } from '@/lib/calculos';
+import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -75,6 +76,8 @@ interface RelatedImovel {
   photo: string | null;
   status: string;
   status_norm?: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -836,14 +839,26 @@ function SecaoLocalizacao({ imovel }: { imovel: ImovelDetalhe }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Imóveis relacionados
 // ─────────────────────────────────────────────────────────────────────────────
+// Distância em km entre dois pontos (Haversine)
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dL = (lat2 - lat1) * Math.PI / 180;
+  const dG = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dL / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dG / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function SecaoRelacionados({
-  neighborhood, currentId, minPrice, bedroomsMin, bedroomsMax,
+  neighborhood, currentId, minPrice, bedroomsMin, bedroomsMax, lat, lng,
 }: {
   neighborhood: string;
   currentId: string;
   minPrice: number | null;
   bedroomsMin: number | null;
   bedroomsMax: number | null;
+  lat: number | null;
+  lng: number | null;
 }) {
   const [relacionados, setRelacionados] = useState<RelatedImovel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -851,57 +866,77 @@ function SecaoRelacionados({
   useEffect(() => {
     if (!neighborhood) return;
 
-    const params = new URLSearchParams({ neighborhood });
+    // Ponto de referência: coordenadas do imóvel atual ou centróide do bairro
+    const originCoords = (lat && lng)
+      ? { lat, lng }
+      : lookupSPCoords(neighborhood, 'São Paulo');
 
-    // Filtra por faixa de preço ±40% do imóvel atual
+    const params = new URLSearchParams({ all: '1' });
+
+    // Faixa de preço ±40%
     if (minPrice) {
       params.set('min_price', String(Math.round(minPrice * 0.60)));
       params.set('max_price', String(Math.round(minPrice * 1.40)));
     }
 
-    // Filtra por quartos compatíveis (aceita ±1 quarto)
-    if (bedroomsMin !== null) {
-      params.set('bedrooms_min', String(Math.max(1, bedroomsMin - 1)));
-    }
-    if (bedroomsMax !== null) {
-      params.set('bedrooms_max', String(bedroomsMax + 1));
-    }
+    // Mesmos quartos — sem variação: o cliente quer 2 quartos, mostra 2 quartos
+    if (bedroomsMin !== null) params.set('bedrooms_min', String(bedroomsMin));
+    if (bedroomsMax !== null) params.set('bedrooms_max', String(bedroomsMax));
 
     fetch(`/api/orulo?${params}`)
       .then(r => r.json())
       .then((data: { buildings?: RelatedImovel[] }) => {
-        const lista = (data.buildings || []).filter(im => im.id !== currentId);
-        // Ordena: mesmo bairro primeiro, depois por proximidade de preço
-        lista.sort((a, b) => {
-          const aBairro = (a.neighborhood || '').toLowerCase() === neighborhood.toLowerCase() ? 0 : 1;
-          const bBairro = (b.neighborhood || '').toLowerCase() === neighborhood.toLowerCase() ? 0 : 1;
-          if (aBairro !== bBairro) return aBairro - bBairro;
-          if (minPrice && a.min_price && b.min_price) {
-            return Math.abs(a.min_price - minPrice) - Math.abs(b.min_price - minPrice);
-          }
-          return 0;
-        });
-        setRelacionados(lista.slice(0, 6));
+        const MAX_KM = 5; // raio máximo: 5km (cobre bairros vizinhos)
+
+        const lista = (data.buildings || [])
+          .filter(im => im.id !== currentId)
+          .map(im => {
+            // Coordenadas do imóvel candidato: usa as próprias ou centróide do bairro
+            const candidateCoords = (im.lat && im.lng)
+              ? { lat: im.lat, lng: im.lng }
+              : lookupSPCoords(im.neighborhood, 'São Paulo');
+
+            const distKm = (originCoords && candidateCoords)
+              ? haversineKm(originCoords.lat, originCoords.lng, candidateCoords.lat, candidateCoords.lng)
+              : 999;
+
+            return { ...im, _distKm: distKm };
+          })
+          // Só mostra até 5km de distância
+          .filter(im => im._distKm <= MAX_KM)
+          // Ordena: mais próximos primeiro (mesmo bairro vem naturalmente no topo)
+          .sort((a, b) => a._distKm - b._distKm)
+          .slice(0, 6);
+
+        setRelacionados(lista);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [neighborhood, currentId, minPrice, bedroomsMin, bedroomsMax]);
+  }, [neighborhood, currentId, minPrice, bedroomsMin, bedroomsMax, lat, lng]);
 
   if (loading) return null;
   if (!relacionados.length) return null;
+
+  // Verifica se há resultados fora do bairro original (para ajustar o subtítulo)
+  const temVizinhos = relacionados.some(
+    im => (im.neighborhood || '').toLowerCase() !== neighborhood.toLowerCase()
+  );
 
   return (
     <div id="relacionados" style={{ scrollMarginTop: '100px' }}>
       <SectionHeader
         title="Imóveis similares"
-        subtitle={`Mesma faixa de preço e perfil em ${neighborhood} e arredores`}
+        subtitle={temVizinhos
+          ? `Mesma faixa em ${neighborhood} e bairros próximos`
+          : `Mais opções em ${neighborhood}`}
       />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
         {relacionados.map(im => {
           const sc = getStatus(im.status || '');
+          const isMesmoBairro = (im.neighborhood || '').toLowerCase() === neighborhood.toLowerCase();
           return (
             <Link key={im.id} href={`/imoveis/${im.id}`}
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', textDecoration: 'none', transition: 'box-shadow 0.2s', display: 'block' }}>
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', textDecoration: 'none', display: 'block' }}>
               <div style={{ height: '140px', background: '#E2E8F0', position: 'relative', overflow: 'hidden' }}>
                 {im.photo ? (
                   <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -914,15 +949,22 @@ function SecaoRelacionados({
               </div>
               <div style={{ padding: '14px' }}>
                 <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{im.name}</p>
-                <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginBottom: '10px' }}>{im.developer}</p>
+                {/* Mostra bairro para imóveis fora do bairro atual */}
+                <p style={{ fontSize: '11px', color: isMesmoBairro ? 'var(--text-faint)' : 'var(--primary)', fontWeight: isMesmoBairro ? '400' : '600', marginBottom: '8px' }}>
+                  {isMesmoBairro ? im.developer : `📍 ${im.neighborhood}`}
+                </p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                  {im.bedrooms_min !== null && <SpecChip icon="🛏" label={`${im.bedrooms_min}${im.bedrooms_min !== im.bedrooms_max && im.bedrooms_max ? `–${im.bedrooms_max}` : ''} qts`} />}
+                  {im.bedrooms_min !== null && (
+                    <SpecChip icon="🛏" label={`${im.bedrooms_min}${im.bedrooms_min !== im.bedrooms_max && im.bedrooms_max ? `–${im.bedrooms_max}` : ''} qts`} />
+                  )}
                   {im.area_min !== null && <SpecChip icon="▦" label={`${im.area_min}m²`} />}
                 </div>
                 {im.min_price && (
                   <p style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)' }}>
                     {formatBRL(im.min_price)}
-                    {im.max_price && im.max_price !== im.min_price && <span style={{ fontWeight: '400', color: 'var(--text-faint)', fontSize: '11px' }}> – {formatBRL(im.max_price)}</span>}
+                    {im.max_price && im.max_price !== im.min_price && (
+                      <span style={{ fontWeight: '400', color: 'var(--text-faint)', fontSize: '11px' }}> – {formatBRL(im.max_price)}</span>
+                    )}
                   </p>
                 )}
               </div>
@@ -1157,6 +1199,8 @@ export default function ImovelDetailClient({ id }: { id: string }) {
               minPrice={imovel.min_price}
               bedroomsMin={imovel.bedrooms_min}
               bedroomsMax={imovel.bedrooms_max}
+              lat={imovel.latitude}
+              lng={imovel.longitude}
             />
           </div>
 
