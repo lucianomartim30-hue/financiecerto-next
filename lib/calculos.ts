@@ -1,4 +1,6 @@
-// ─── Faixas MCMV (referência São Paulo, maio/2026) ────────────────────────────
+// ─── Faixas MCMV (referência São Paulo — Portaria MCID nº 333/2026) ──────────
+// Fonte: Portaria MCID nº 333, de 30/03/2026 (vigente desde 22/04/2026) e Caixa Econômica Federal
+// F1: até R$ 3.200 | F2: R$ 3.200 – R$ 5.000 | F3: até R$ 9.600 | F4: até R$ 13.000
 export interface FaixaMCMV {
   numero: number;
   rendaMax: number;
@@ -14,24 +16,28 @@ export interface FaixaMCMV {
 
 export const FAIXAS_MCMV: FaixaMCMV[] = [
   {
+    // Faixa 1 — subsídio até R$ 55.000 · juros 4,00–5,00% a.a.
     numero: 1, rendaMax: 3200,
     taxaRef: 4.50, taxaMin: 4.00, taxaMax: 5.00,
     teto: 275000, ltvMax: 0.95, ltvSAC: 0.95, subsidioMax: 55000,
     label: 'Faixa 1',
   },
   {
+    // Faixa 2 — subsídio até R$ 55.000 (decrescente) · juros 5,00–7,00% a.a.
     numero: 2, rendaMax: 5000,
-    taxaRef: 6.50, taxaMin: 4.75, taxaMax: 7.00,
-    teto: 275000, ltvMax: 0.90, ltvSAC: 0.90, subsidioMax: 29000,
+    taxaRef: 6.50, taxaMin: 5.00, taxaMax: 7.00,
+    teto: 275000, ltvMax: 0.90, ltvSAC: 0.90, subsidioMax: 55000,
     label: 'Faixa 2',
   },
   {
+    // Faixa 3 — sem subsídio · juros 7,66–8,16% a.a.
     numero: 3, rendaMax: 9600,
     taxaRef: 7.66, taxaMin: 7.66, taxaMax: 8.16,
     teto: 400000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 0,
     label: 'Faixa 3',
   },
   {
+    // Faixa 4 — sem subsídio · juros até 10,50% a.a.
     numero: 4, rendaMax: 13000,
     taxaRef: 10.50, taxaMin: 9.00, taxaMax: 10.50,
     teto: 600000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 0,
@@ -179,11 +185,16 @@ export function calcSubsidioEstimado(
   if (!cotista || !primeiroImovel || jaRecebeuBeneficio) return 0;
   if (faixa.numero >= 3) return 0;
 
+  // Portaria MCID nº 333/2026 — curva contínua F1→F2
+  // F1 (renda ≤ 3.200): de 1,0 (renda→0) até 0,618 (renda=3.200) → R$55.000 → R$33.990
+  // F2 (3.200–5.000):   de 0,618 até 0,018 (renda=5.000)          → R$33.990 → R$990
+  const F1_TETO = 3200;
+  const F2_TETO = 5000;
   let fator: number;
   if (faixa.numero === 1) {
-    fator = 1.0 - ((rendaBruta / 3200) * 0.45);
+    fator = 1.0 - (rendaBruta / F1_TETO) * 0.382;
   } else {
-    fator = 0.70 - ((rendaBruta - 3200) / 1800) * 0.35;
+    fator = 0.618 - ((rendaBruta - F1_TETO) / (F2_TETO - F1_TETO)) * 0.600;
   }
 
   const numDep = Math.max(0, dependentes);
