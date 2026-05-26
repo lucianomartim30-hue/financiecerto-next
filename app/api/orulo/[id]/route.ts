@@ -58,8 +58,11 @@ function getMock(id: string) {
 // A API retorna apenas o ID nos arrays de images/floor_plans;
 // as URLs seguem o padrão estático documentado abaixo.
 const ORULO_IMG_BASE = 'https://static.orulo.com.br/images/properties';
+// Usa a variante "large" para melhor qualidade nas fotos do detalhe.
+// A variante "featured_modern_without_watermark" é menor e pode ficar
+// pixelada no mosaico; "large" oferece resolução mais alta.
 function imageUrl(id: string | number): string {
-  return `${ORULO_IMG_BASE}/featured_modern_without_watermark/${id}.jpg`;
+  return `${ORULO_IMG_BASE}/large/${id}.jpg`;
 }
 function imageLargeUrl(id: string | number): string {
   return `${ORULO_IMG_BASE}/large/${id}.jpg`;

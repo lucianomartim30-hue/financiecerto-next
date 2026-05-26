@@ -135,12 +135,10 @@ function isNaPlanta(status: string) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Hero Gallery
+// Hero Gallery — mosaico estilo Orulo (1 principal + 2 laterais + lightbox)
 // ─────────────────────────────────────────────────────────────────────────────
 function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
-  const [current, setCurrent] = useState(0);
   const [lightbox, setLightbox] = useState<number | null>(null);
-  // Key errors por URL (não por índice) — evita cascade quando o array muda de tamanho
   const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
 
   const validPhotos = useMemo(
@@ -148,8 +146,6 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
     [photos, imgErrors],
   );
   const total = validPhotos.length;
-  // Clamp current para não ficar fora do array quando fotos são filtradas
-  const safeCurrent = Math.min(current, Math.max(0, total - 1));
 
   useEffect(() => {
     if (lightbox === null) return;
@@ -162,63 +158,135 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
     return () => window.removeEventListener('keydown', handler);
   }, [lightbox, total]);
 
-  if (!photos.length || !total) return (
-    <div style={{ height: '360px', background: 'linear-gradient(135deg, #E2E8F0, #CBD5E1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>🏙️</div>
+  if (!total) return (
+    <div style={{ height: '420px', background: 'linear-gradient(135deg, #E2E8F0, #CBD5E1)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>🏙️</div>
   );
 
   return (
     <>
-      {/* Main hero */}
-      <div style={{ position: 'relative', height: 'min(520px, 56vw)', minHeight: '280px', background: '#000', overflow: 'hidden' }}>
-        {validPhotos.map((p, i) => (
-          // key=URL garante que o <img> não é reusado para outra URL quando o array encolhe
-          <img key={p} src={p} alt={`${name} foto ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'}
-            onClick={() => setLightbox(i)}
-            onError={() => setImgErrors(prev => new Set([...prev, p]))}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: i === safeCurrent ? 1 : 0, transition: 'opacity 0.4s ease', cursor: 'zoom-in' }} />
-        ))}
-        {/* Gradient overlay */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,.5) 0%, transparent 40%)' }} />
+      {/* ── Mosaico principal ─────────────────────────────────────────── */}
+      <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden' }}>
+        <div
+          style={{
+            display: 'grid',
+            height: 'min(480px, 52vw)',
+            minHeight: '240px',
+            gap: '4px',
+            // 1 foto → full width | 2+ fotos → principal (1.75fr) + coluna lateral (1fr)
+            gridTemplateColumns: total >= 2 ? '1.75fr 1fr' : '1fr',
+            // 3+ fotos → coluna lateral divide em 2 linhas
+            gridTemplateRows: total >= 3 ? '1fr 1fr' : '1fr',
+          }}
+        >
+          {/* Foto 1 — principal, ocupa toda a altura à esquerda */}
+          <div
+            onClick={() => setLightbox(0)}
+            style={{
+              gridRow: total >= 3 ? '1 / span 2' : '1',
+              position: 'relative', overflow: 'hidden',
+              cursor: 'zoom-in', background: '#1e293b',
+            }}
+          >
+            <img
+              src={validPhotos[0]}
+              alt={`${name} — foto 1`}
+              loading="eager"
+              onError={() => setImgErrors(prev => new Set([...prev, validPhotos[0]]))}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          </div>
 
-        {/* Nav arrows */}
-        {total > 1 && (
-          <>
-            <button onClick={() => setCurrent(c => (c - 1 + total) % total)}
-              style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,.55)', color: '#fff', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-            <button onClick={() => setCurrent(c => (c + 1) % total)}
-              style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', width: '40px', height: '40px', borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,.55)', color: '#fff', fontSize: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-          </>
-        )}
+          {/* Foto 2 — superior direita */}
+          {total >= 2 && (
+            <div
+              onClick={() => setLightbox(1)}
+              style={{ position: 'relative', overflow: 'hidden', cursor: 'zoom-in', background: '#1e293b' }}
+            >
+              <img
+                src={validPhotos[1]}
+                alt={`${name} — foto 2`}
+                loading="lazy"
+                onError={() => setImgErrors(prev => new Set([...prev, validPhotos[1]]))}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
+          )}
 
-        {/* Counter */}
-        <div style={{ position: 'absolute', bottom: '16px', right: '16px', background: 'rgba(0,0,0,.6)', color: '#fff', fontSize: '12px', fontWeight: '600', padding: '4px 10px', borderRadius: '20px' }}>
-          {safeCurrent + 1} / {total}
+          {/* Foto 3 — inferior direita, com overlay "+N" se houver mais */}
+          {total >= 3 && (
+            <div
+              onClick={() => setLightbox(2)}
+              style={{ position: 'relative', overflow: 'hidden', cursor: 'zoom-in', background: '#1e293b' }}
+            >
+              <img
+                src={validPhotos[2]}
+                alt={`${name} — foto 3`}
+                loading="lazy"
+                onError={() => setImgErrors(prev => new Set([...prev, validPhotos[2]]))}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+              {/* Overlay escuro com contagem de fotos restantes */}
+              {total > 3 && (
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  background: 'rgba(0,0,0,.52)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <span style={{ color: '#fff', fontWeight: '800', fontSize: '20px' }}>+{total - 3}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Botão flutuante "Ver todas as fotos" */}
+        <button
+          onClick={() => setLightbox(0)}
+          style={{
+            position: 'absolute', bottom: '14px', right: '14px',
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: 'rgba(255,255,255,.92)', backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(0,0,0,.1)', borderRadius: '8px',
+            padding: '7px 14px', fontSize: '12px', fontWeight: '700',
+            color: '#0f172a', cursor: 'pointer',
+            boxShadow: '0 2px 12px rgba(0,0,0,.25)',
+          }}
+        >
+          🖼️ Ver todas as fotos ({total})
+        </button>
       </div>
 
-      {/* Thumbnail strip */}
-      {total > 1 && (
-        <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '8px 0', scrollbarWidth: 'none' }}>
-          {validPhotos.map((p, i) => (
-            <img key={p} src={p} alt="" onClick={() => setCurrent(i)}
-              style={{ width: '72px', height: '52px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0, cursor: 'pointer', opacity: i === safeCurrent ? 1 : 0.55, border: i === safeCurrent ? '2px solid var(--primary)' : '2px solid transparent', transition: 'all 0.15s' }} />
-          ))}
-        </div>
-      )}
-
-      {/* Lightbox */}
+      {/* ── Lightbox ──────────────────────────────────────────────────── */}
       {lightbox !== null && lightbox < total && (
-        <div onClick={() => setLightbox(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div
+          onClick={() => setLightbox(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
           <button
             style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}
-            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l - 1 + total) % total : null); }}>‹</button>
-          <img src={validPhotos[lightbox]} alt="" style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }} />
-          <button onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l + 1) % total : null); }}
-            style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}>›</button>
-          <button onClick={() => setLightbox(null)}
-            style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '20px', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer' }}>✕</button>
-          <div style={{ position: 'absolute', bottom: '20px', color: 'rgba(255,255,255,.7)', fontSize: '13px' }}>{lightbox + 1} / {total}</div>
+            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l - 1 + total) % total : null); }}
+          >‹</button>
+
+          {/* Foto em tamanho natural (contain = sem corte) */}
+          <img
+            src={validPhotos[lightbox]}
+            alt={`${name} — foto ${lightbox + 1}`}
+            style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
+          />
+
+          <button
+            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l + 1) % total : null); }}
+            style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}
+          >›</button>
+
+          <button
+            onClick={() => setLightbox(null)}
+            style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '20px', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer' }}
+          >✕</button>
+
+          <div style={{ position: 'absolute', bottom: '20px', color: 'rgba(255,255,255,.7)', fontSize: '13px' }}>
+            {lightbox + 1} / {total}
+          </div>
         </div>
       )}
     </>
