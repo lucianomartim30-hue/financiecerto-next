@@ -30,19 +30,28 @@ import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
 
 // ── Auto-trigger: dispara sync em background quando catálogo está incompleto ──
 // Garante que o catálogo se reconstrói sozinho sem intervenção manual.
-let _lastAutoSync = 0; // timestamp do último disparo (evita avalanche)
+let _lastAutoSync = 0; // timestamp do último disparo (evita avalanche — por instância)
+// Rate limit da Orulo: ~400 req/hora. Debounce de 60 min garante cota recuperada.
+const AUTO_SYNC_DEBOUNCE_MS = 60 * 60 * 1000; // 60 minutos
+
 async function maybeAutoSync(req: NextRequest): Promise<void> {
   const now = Date.now();
-  if (now - _lastAutoSync < 5 * 60 * 1000) return; // debounce de 5 minutos
-  _lastAutoSync = now;
+  // Debounce em memória (evita múltiplos disparos na mesma instância quente)
+  if (now - _lastAutoSync < AUTO_SYNC_DEBOUNCE_MS) return;
   try {
     const meta = await kvGetMeta();
     if (meta?.is_complete) return; // catálogo ok, nada a fazer
+    // Debounce via KV: respeita instâncias diferentes (serverless)
+    if (meta?.last_chunk_at) {
+      const lastSync = new Date(meta.last_chunk_at).getTime();
+      if (now - lastSync < AUTO_SYNC_DEBOUNCE_MS) return;
+    }
+    _lastAutoSync = now;
     const syncSecret = process.env.ORULO_SYNC_SECRET ?? '';
     const syncUrl = new URL('/api/orulo/sync', req.url);
     if (syncSecret) syncUrl.searchParams.set('secret', syncSecret);
     fetch(syncUrl.toString(), { signal: AbortSignal.timeout(2000) }).catch(() => {});
-    console.log('[auto-sync] catálogo incompleto — sync disparado em background');
+    console.log('[auto-sync] catálogo incompleto — sync disparado em background (last:', meta?.last_chunk_at, ')');
   } catch { /* silencioso */ }
 }
 
