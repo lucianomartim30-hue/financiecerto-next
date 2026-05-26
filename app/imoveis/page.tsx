@@ -380,20 +380,12 @@ function ImoveisContent() {
   }, [allBuildings, baseFilter, activeLocation, debouncedBounds]);
 
   // Cards: quando há localização buscada → mostra todos os matches (ignora viewport)
-  // Sem localização → filtra pelo viewport do mapa (desktop)
-  const visibleBuildings = useMemo(() => {
-    const filtered = allBuildings.filter(baseFilter);
-    if (activeLocation) return filtered; // localização define o conjunto
-    if (!isMobile && debouncedBounds) {
-      const inBounds = filtered.filter(b =>
-        b.lat && b.lng &&
-        b.lat >= debouncedBounds.sw_lat && b.lat <= debouncedBounds.ne_lat &&
-        b.lng >= debouncedBounds.sw_lng && b.lng <= debouncedBounds.ne_lng
-      );
-      if (inBounds.length > 0) return inBounds;
-    }
-    return filtered;
-  }, [allBuildings, baseFilter, activeLocation, isMobile, debouncedBounds]);
+  // Cards: todos os imóveis que passam nos filtros — não filtra por viewport
+  // O mapa mostra os pins da área visível; os cards mostram o catálogo completo filtrado.
+  const visibleBuildings = useMemo(
+    () => allBuildings.filter(baseFilter),
+    [allBuildings, baseFilter],
+  );
 
   const geocodeAndFly = useCallback(async (query: string) => {
     if (!query.trim()) return;
@@ -822,7 +814,7 @@ function ImoveisContent() {
               <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text)' }}>
                 {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis`}
                 <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
-                  {activeLocation ? `em ${activeLocation}` : debouncedBounds ? 'na área visível' : 'em São Paulo'}
+                  {activeLocation ? `em ${activeLocation}` : 'em São Paulo'}
                 </span>
               </span>
               <div style={{ display: 'flex', gap: '8px' }}>
