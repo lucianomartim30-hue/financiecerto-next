@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     const activeIdMap = new Map(activeIdEntries.map(e => [String(e.id), e.updated_at]));
 
     // ── Passo 2: catálogo atual no KV ─────────────────────────────────────────
-    const existing    = (!forceFull && await kvGetCatalog()) ?? [];
+    const existing    = forceFull ? [] : ((await kvGetCatalog()) ?? []);
     const existingMap = new Map(existing.map(b => [b.id, b]));
 
     // ── Passo 3: identificar o que precisa ser (re)buscado ────────────────────
