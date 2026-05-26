@@ -607,6 +607,13 @@ function SimuladorInner() {
       { key: 'sfi',  label: 'SFI',        tagBg: '#FAEEDA', tagTxt: '#854F0B' },
     ];
 
+    // Variáveis para o card "Composição do poder de compra" (etapa 5)
+    const entradaEmDinheiro5 = Math.max(0, perfil.entrada - perfil.fgts);
+    const fgtsAtivo5         = painelAtivo === 'sfi' ? 0 : perfil.fgts;
+    const valorFinanciadoAtivo5 = perfil[painelAtivo].valorFinanciado;
+    const subsidioAtivo5     = painelAtivo === 'mcmv' ? subsidioEstimado : 0;
+    const totalPoderCompra5  = valorFinanciadoAtivo5 + entradaEmDinheiro5 + fgtsAtivo5 + subsidioAtivo5;
+
     return (
       <Etapa etapa={etapa}>
         {/* Seletor de modalidade */}
@@ -699,6 +706,41 @@ function SimuladorInner() {
             💡 Sua renda se enquadra na <strong>{sim.faixaRenda.label}</strong> (subsídio até {formatBRL(sim.faixaRenda.subsidioMax)}), mas o imóvel de {formatBRL(sim.valorImovel)} supera o teto {sim.faixaRenda.label} ({formatBRL(sim.faixaRenda.teto)}) — mesmo descontando o subsídio estimado. Por isso aplica-se a <strong>{sim.faixa.label} MCMV</strong> (sem subsídio, taxa {sim.faixa.taxaRef}% a.a.). Para ter acesso ao subsídio, busque imóveis até {formatBRL(sim.faixaRenda.teto)}.
           </div>
         )}
+
+        {/* ── Composição do poder de compra ───────────────────────────── */}
+        <div style={{ marginBottom: 20, background: dados.bg, border: `1.5px solid ${dados.cor}44`, borderRadius: 14, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${dados.cor}22` }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: dados.cor, textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+              📊 Composição do poder de compra — {dados.label}
+            </div>
+          </div>
+          <div style={{ padding: '4px 16px 12px', background: 'var(--bg-card)' }}>
+            {([
+              { emoji: '🏛️', label: 'Financiamento bancário',    valor: valorFinanciadoAtivo5 },
+              { emoji: '💰', label: 'Entrada (ato / dinheiro)',    valor: entradaEmDinheiro5 },
+              ...(fgtsAtivo5 > 0
+                ? [{ emoji: '🏦', label: 'FGTS', valor: fgtsAtivo5 }]
+                : (painelAtivo === 'sfi' && perfil.fgts > 0
+                  ? [{ emoji: '🏦', label: 'FGTS (não permitido no SFI)', valor: 0 }]
+                  : [])),
+              ...(subsidioAtivo5 > 0 ? [{ emoji: '🎁', label: 'Subsídio MCMV (estimado)', valor: subsidioAtivo5 }] : []),
+            ] as { emoji: string; label: string; valor: number }[]).map(({ emoji, label, valor: v }, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px dashed #E2E8F0' }}>
+                <span style={{ fontSize: 13, color: '#374151' }}>
+                  {i > 0 && <span style={{ color: '#9CA3AF', marginRight: 5, fontSize: 11 }}>+</span>}
+                  {emoji} {label}
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: v === 0 ? '#9CA3AF' : '#111827' }}>
+                  {v === 0 ? '—' : formatBRL(v)}
+                </span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0 0', borderTop: `2px solid ${dados.cor}33`, marginTop: 2 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: dados.cor }}>= 🏠 Poder de compra total</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: dados.cor }}>{formatBRL(totalPoderCompra5)}</span>
+            </div>
+          </div>
+        </div>
 
         {/* ── Plano de Compra Personalizado ───────────────────────────── */}
         <div style={{ marginBottom: 20, padding: '18px 18px 14px', background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: 14 }}>
@@ -895,6 +937,8 @@ function SimuladorInner() {
     const economiasSAC = Math.max(0, sim.totalPagoPrice - sim.totalPagoSAC);
     // Usa sim.faixa (faixa real do imóvel — pode ser superior à faixa base da renda)
     const modalLabel = sim.isMCMV ? (sim.faixa ? `${sim.faixa.label} MCMV` : 'MCMV') : sim.isSFI ? 'SFI' : 'SBPE (SFH)';
+    // Decomposição da entrada: dinheiro (ato) + FGTS usado + subsídio = sim.entrada
+    const entradaDinheiro = Math.max(0, sim.entrada - sim.fgtsUsado - sim.subsidioEstimado);
 
     return (
       <Etapa etapa={etapa}>
@@ -931,13 +975,50 @@ function SimuladorInner() {
           </div>
         </div>
 
+        {/* ── Composição do poder de compra ──────────────────────────── */}
+        <div style={{ background: 'var(--bg-card)', border: `1.5px solid ${sc.cor}44`, borderRadius: 14, overflow: 'hidden', marginBottom: 20 }}>
+          <div style={{ padding: '12px 16px', background: sc.bg, borderBottom: `1px solid ${sc.cor}22` }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: sc.cor, textTransform: 'uppercase', letterSpacing: '1.5px' }}>
+              📊 Composição do poder de compra
+            </div>
+          </div>
+          <div style={{ padding: '4px 16px 12px' }}>
+            {([
+              { emoji: '🏛️', label: 'Financiamento bancário',    valor: sim.valorFinanciado },
+              { emoji: '💰', label: 'Entrada (ato / dinheiro)',    valor: entradaDinheiro },
+              ...(sim.fgtsUsado > 0
+                ? [{ emoji: '🏦', label: 'FGTS utilizado', valor: sim.fgtsUsado }]
+                : sim.fgts > 0
+                  ? [{ emoji: '🏦', label: 'FGTS (não elegível / não usado)', valor: 0 }]
+                  : []),
+              ...(sim.subsidioEstimado > 0 ? [{ emoji: '🎁', label: 'Subsídio MCMV (estimado)', valor: sim.subsidioEstimado }] : []),
+            ] as { emoji: string; label: string; valor: number }[]).map(({ emoji, label, valor: v }, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px dashed var(--border)' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-faint)' }}>
+                  {i > 0 && <span style={{ color: '#9CA3AF', marginRight: 5, fontSize: 11 }}>+</span>}
+                  {emoji} {label}
+                </span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: v === 0 ? '#9CA3AF' : 'var(--text)' }}>
+                  {v === 0 ? '—' : formatBRL(v)}
+                </span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0 0', borderTop: `2px solid ${sc.cor}33`, marginTop: 2 }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: sc.cor }}>= 🏠 Valor do imóvel</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: sc.cor }}>{formatBRL(sim.valorImovel)}</span>
+            </div>
+          </div>
+        </div>
+
         {/* Detalhamento */}
         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 16 }}>
           {([
             { l: 'Valor do imóvel', v: formatBRL(sim.valorImovel) },
-            { l: `Entrada total (dinheiro${sim.fgts > 0 ? ' + FGTS' : ''}${sim.subsidioEstimado > 0 ? ' + subsídio' : ''})`, v: formatBRL(sim.entrada) },
-            sim.subsidioEstimado > 0 ? { l: '  ↳ Subsídio estimado MCMV (CEF)', v: formatBRL(sim.subsidioEstimado), destaque: true } : null,
-            { l: 'Valor financiado', v: formatBRL(sim.valorFinanciado) },
+            { l: '  ↳ 💰 Entrada (ato / dinheiro)', v: formatBRL(entradaDinheiro) },
+            sim.fgtsUsado > 0 ? { l: '  ↳ 🏦 FGTS utilizado', v: formatBRL(sim.fgtsUsado) } : null,
+            sim.subsidioEstimado > 0 ? { l: '  ↳ 🎁 Subsídio MCMV (estimado)', v: formatBRL(sim.subsidioEstimado), destaque: true } : null,
+            { l: '  = Total entrada', v: formatBRL(sim.entrada) },
+            { l: '🏛️ Valor financiado (banco)', v: formatBRL(sim.valorFinanciado) },
             { l: 'Taxa de juros nominal', v: `${sim.taxaAnual}% a.a. + ${sim.isSFI ? 'taxa livre' : 'TR'}` },
             { l: 'Prazo', v: `${Math.round(sim.prazoMeses / 12)} anos (${sim.prazoMeses} meses)` },
             { l: 'Parcela A+J (amort. + juros)', v: formatBRL(sim.parcelaPrimeiro - sim.seguros.total) },

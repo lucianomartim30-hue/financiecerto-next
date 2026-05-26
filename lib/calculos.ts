@@ -258,6 +258,7 @@ export interface ResultadoSimulacao {
   valorFinanciado: number;
   entrada: number;
   fgts: number;
+  fgtsUsado: number;
   subsidioEstimado: number;
   prazoMeses: number;
   taxaAnual: number;
@@ -403,7 +404,7 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   return {
     isMCMV, isSFI, modalidade, faixa, faixaRenda,
     valorImovel, valorFinanciado,
-    entrada: entradaTotal, fgts, subsidioEstimado,
+    entrada: entradaTotal, fgts, fgtsUsado, subsidioEstimado,
     prazoMeses, taxaAnual,
     parcelaPrimeiro: Math.round(pmt1 + seguros.total),
     parcelaUltimo:   Math.round(pmtU + seguros.total),

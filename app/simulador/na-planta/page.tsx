@@ -567,6 +567,32 @@ function NaPlantaContent() {
                   <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.7)', marginTop: '4px' }}>valor financiado pelo banco</p>
                 </div>
                 <div style={{ background: 'var(--bg-card)', padding: '16px 18px' }}>
+                  {/* ── Composição do poder de compra ─────────────────────── */}
+                  {valor > 0 && (
+                    <div style={{ marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--border)' }}>
+                      <p style={{ fontSize: '11px', fontWeight: '800', color: isMCMV ? '#0f6e56' : '#185fa5', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>
+                        📊 Composição do poder de compra
+                      </p>
+                      {([
+                        { emoji: '🏛️', label: 'Financiamento bancário', val: financiado },
+                        { emoji: '💰', label: 'Pagamentos à construtora', val: totalConstrutora },
+                        ...(fgts > 0        ? [{ emoji: '🏦', label: 'FGTS', val: fgts }] : []),
+                        ...(subsidioEstimado > 0 ? [{ emoji: '🎁', label: `Subsídio MCMV ${faixaRenda?.label ?? ''}`, val: subsidioEstimado }] : []),
+                      ] as { emoji: string; label: string; val: number }[]).map(({ emoji, label, val }, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--border)' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            {i > 0 && <span style={{ color: '#9CA3AF', marginRight: 4, fontSize: '11px' }}>+</span>}
+                            {emoji} {label}
+                          </span>
+                          <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>{formatBRL(val)}</span>
+                        </div>
+                      ))}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 0' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '800', color: isMCMV ? '#0f6e56' : '#185fa5' }}>= 🏠 Valor total do imóvel</span>
+                        <span style={{ fontSize: '15px', fontWeight: '800', color: isMCMV ? '#0f6e56' : '#185fa5' }}>{formatBRL(valor)}</span>
+                      </div>
+                    </div>
+                  )}
                   {fgts > 0 && <LinhaDetalhe label="FGTS" valor={`− ${formatBRL(fgts)}`} sub="Aplicado na entrada" />}
                   {temSubsidio && <LinhaDetalhe label={`Subsídio MCMV ${faixaRenda?.label}`} valor={`− ${formatBRL(subsidioEstimado)}`} sub="Grant do governo" />}
                   {ato > 0 && <LinhaDetalhe label="Ato (assinatura)" valor={`− ${formatBRL(ato)}`} />}
