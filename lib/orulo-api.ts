@@ -252,7 +252,7 @@ export async function fetchBuildingDetail(
   try {
     const resp = await fetch(
       `${ORULO_BASE}/api/v2/buildings/${id}`,
-      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) },
+      { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(4000) },
     );
     if (!resp.ok) return null;
     const data = await resp.json() as Record<string, unknown>;

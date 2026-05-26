@@ -26,7 +26,25 @@ import {
   type NormalizedBuilding,
 } from '@/lib/orulo-api';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
-import { kvGetCatalog } from '@/lib/orulo-kv';
+import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
+
+// ── Auto-trigger: dispara sync em background quando catálogo está incompleto ──
+// Garante que o catálogo se reconstrói sozinho sem intervenção manual.
+let _lastAutoSync = 0; // timestamp do último disparo (evita avalanche)
+async function maybeAutoSync(req: NextRequest): Promise<void> {
+  const now = Date.now();
+  if (now - _lastAutoSync < 5 * 60 * 1000) return; // debounce de 5 minutos
+  _lastAutoSync = now;
+  try {
+    const meta = await kvGetMeta();
+    if (meta?.is_complete) return; // catálogo ok, nada a fazer
+    const syncSecret = process.env.ORULO_SYNC_SECRET ?? '';
+    const syncUrl = new URL('/api/orulo/sync', req.url);
+    if (syncSecret) syncUrl.searchParams.set('secret', syncSecret);
+    fetch(syncUrl.toString(), { signal: AbortSignal.timeout(2000) }).catch(() => {});
+    console.log('[auto-sync] catálogo incompleto — sync disparado em background');
+  } catch { /* silencioso */ }
+}
 
 const ORULO_BASE = 'https://www.orulo.com.br';
 
@@ -136,6 +154,9 @@ export async function GET(req: NextRequest) {
 
     // ── Camada 1: Catálogo do KV ─────────────────────────────────────────────
     const cached = await kvGetCatalog();
+
+    // Auto-sync em background se catálogo incompleto (fire-and-forget)
+    maybeAutoSync(req);
 
     if (cached && cached.length > 0) {
       let all = cached;
