@@ -591,6 +591,16 @@ function NaPlantaContent() {
                         <span style={{ fontSize: '13px', fontWeight: '800', color: isMCMV ? '#0f6e56' : '#185fa5' }}>= 🏠 Valor total do imóvel</span>
                         <span style={{ fontSize: '15px', fontWeight: '800', color: isMCMV ? '#0f6e56' : '#185fa5' }}>{formatBRL(valor)}</span>
                       </div>
+                      {/* Explicação: por que esse financiamento */}
+                      {renda > 0 && (
+                        <div style={{ marginTop: '10px', padding: '10px 12px', background: '#F1F5F9', borderRadius: '8px', fontSize: '12px', color: '#4B5563', lineHeight: '1.75' }}>
+                          <strong style={{ color: isMCMV ? '#0f6e56' : '#185fa5' }}>
+                            💡 Por que {formatBRL(financiado)} de financiamento?
+                          </strong>
+                          <br />
+                          Renda de <strong>{formatBRL(renda)}/mês</strong> × 30% = <strong>{formatBRL(Math.round(renda * 0.30))}/mês</strong> de parcela máxima. À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em <strong>35 anos</strong>, o banco financia até <strong>{formatBRL(maxFinBanco)}</strong> (LTV {Math.round(ltvPct * 100)}% do valor do imóvel). Com seus pagamentos à construtora{fgts > 0 ? ` + FGTS de ${formatBRL(fgts)}` : ''}{subsidioEstimado > 0 ? ` + subsídio de ${formatBRL(subsidioEstimado)}` : ''}, o valor financiado fica em <strong>{formatBRL(financiado)}</strong>.
+                        </div>
+                      )}
                     </div>
                   )}
                   {fgts > 0 && <LinhaDetalhe label="FGTS" valor={`− ${formatBRL(fgts)}`} sub="Aplicado na entrada" />}

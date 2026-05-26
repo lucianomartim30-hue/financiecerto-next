@@ -739,6 +739,25 @@ function SimuladorInner() {
               <span style={{ fontSize: 14, fontWeight: 800, color: dados.cor }}>= 🏠 Poder de compra total</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: dados.cor }}>{formatBRL(totalPoderCompra5)}</span>
             </div>
+            {/* Explicação: por que esse financiamento e esse poder de compra */}
+            <div style={{ marginTop: 12, padding: '11px 14px', background: '#F1F5F9', borderRadius: 10, fontSize: 12, color: '#4B5563', lineHeight: 1.75 }}>
+              <strong style={{ color: dados.cor, fontSize: 12 }}>
+                💡 Por que {formatBRL(valorFinanciadoAtivo5)} de financiamento?
+              </strong>
+              <br />
+              Sua renda de <strong>{formatBRL(perfil.rendaBruta)}/mês</strong> permite comprometer até 30% = <strong>{formatBRL(Math.round(perfil.rendaBruta * 0.30))}/mês</strong> em parcela. À taxa de <strong>{dados.taxa}% a.a.</strong> em <strong>{prazoAnos} anos</strong>, essa parcela suporta um financiamento de <strong>{formatBRL(valorFinanciadoAtivo5)}</strong>.
+              {(entradaEmDinheiro5 > 0 || fgtsAtivo5 > 0 || subsidioAtivo5 > 0) && (
+                <span>
+                  {' '}Somando{' '}
+                  {[
+                    entradaEmDinheiro5 > 0 ? `entrada de ${formatBRL(entradaEmDinheiro5)}` : null,
+                    fgtsAtivo5 > 0        ? `FGTS de ${formatBRL(fgtsAtivo5)}` : null,
+                    subsidioAtivo5 > 0    ? `subsídio de ${formatBRL(subsidioAtivo5)}` : null,
+                  ].filter(Boolean).join(' + ')}
+                  , o poder de compra total chega a <strong>{formatBRL(totalPoderCompra5)}</strong>.
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1006,6 +1025,15 @@ function SimuladorInner() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0 0', borderTop: `2px solid ${sc.cor}33`, marginTop: 2 }}>
               <span style={{ fontSize: 14, fontWeight: 800, color: sc.cor }}>= 🏠 Valor do imóvel</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: sc.cor }}>{formatBRL(sim.valorImovel)}</span>
+            </div>
+            {/* Explicação: por que esse financiamento */}
+            <div style={{ marginTop: 12, padding: '11px 14px', background: '#F1F5F9', borderRadius: 10, fontSize: 12, color: '#4B5563', lineHeight: 1.75 }}>
+              <strong style={{ color: sc.cor, fontSize: 12 }}>
+                💡 Por que {formatBRL(sim.valorFinanciado)} de financiamento?
+              </strong>
+              <br />
+              Renda de <strong>{formatBRL(parseMoeda(e.renda))}/mês</strong> × 30% = <strong>{formatBRL(Math.round(parseMoeda(e.renda) * 0.30))}/mês</strong> de parcela máxima. À taxa de <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong>, o banco aprova financiamento de <strong>{formatBRL(sim.valorFinanciado)}</strong>.
+              {' '}Sua parcela Price inicial é <strong>{formatBRL(sim.parcelaPrimeiro)}/mês</strong> ({sim.comprometimento.toFixed(1)}% da renda{sim.comprometimento > 30 ? ' — acima do limite de 30%, sujeito a reprovação' : ''}).
             </div>
           </div>
         </div>
