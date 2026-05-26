@@ -10,8 +10,7 @@ import { kvGetCatalog } from '@/lib/orulo-kv';
 
 const BASE = 'https://www.financiecerto.com.br';
 
-export const dynamic = 'force-dynamic'; // sempre atualizado, nunca em cache estático
-export const revalidate = 3600;         // revalida a cada 1h no servidor
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString();
