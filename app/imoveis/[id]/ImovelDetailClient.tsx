@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, type FaixaMCMV } from '@/lib/calculos';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
@@ -183,13 +183,11 @@ function isNaPlanta(status: string) {
 // ─────────────────────────────────────────────────────────────────────────────
 function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
+  // failedInLightbox só afeta o display dentro do lightbox — nunca altera `total`
+  const [failedInLightbox, setFailedInLightbox] = useState<Set<number>>(new Set());
 
-  const validPhotos = useMemo(
-    () => photos.filter(p => p && !imgErrors.has(p)),
-    [photos, imgErrors],
-  );
-  const total = validPhotos.length;
+  // total é FIXO: nunca decresce por causa de erros de carregamento
+  const total = photos.length;
 
   useEffect(() => {
     if (lightbox === null) return;
@@ -232,10 +230,10 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
             }}
           >
             <img
-              src={validPhotos[0]}
+              src={photos[0]}
               alt={`${name} — foto 1`}
               loading="eager"
-              onError={() => setImgErrors(prev => new Set([...prev, validPhotos[0]]))}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           </div>
@@ -247,10 +245,10 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
               style={{ position: 'relative', overflow: 'hidden', cursor: 'zoom-in', background: '#1e293b' }}
             >
               <img
-                src={validPhotos[1]}
+                src={photos[1]}
                 alt={`${name} — foto 2`}
                 loading="lazy"
-                onError={() => setImgErrors(prev => new Set([...prev, validPhotos[1]]))}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
             </div>
@@ -263,10 +261,10 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
               style={{ position: 'relative', overflow: 'hidden', cursor: 'zoom-in', background: '#1e293b' }}
             >
               <img
-                src={validPhotos[2]}
+                src={photos[2]}
                 alt={`${name} — foto 3`}
                 loading="lazy"
-                onError={() => setImgErrors(prev => new Set([...prev, validPhotos[2]]))}
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
               {/* Overlay escuro com contagem de fotos restantes */}
@@ -301,7 +299,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
       </div>
 
       {/* ── Lightbox ──────────────────────────────────────────────────── */}
-      {lightbox !== null && lightbox < total && (
+      {lightbox !== null && (
         <div
           onClick={() => setLightbox(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.92)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -311,12 +309,24 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
             onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l - 1 + total) % total : null); }}
           >‹</button>
 
-          {/* Foto em tamanho natural (contain = sem corte) */}
-          <img
-            src={validPhotos[lightbox]}
-            alt={`${name} — foto ${lightbox + 1}`}
-            style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
-          />
+          {/* Foto em tamanho natural — key força remount ao navegar */}
+          {failedInLightbox.has(lightbox) ? (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'rgba(255,255,255,.45)', userSelect: 'none' }}
+            >
+              <span style={{ fontSize: '52px' }}>🖼️</span>
+              <span style={{ fontSize: '13px' }}>Foto não disponível</span>
+            </div>
+          ) : (
+            <img
+              key={lightbox}
+              src={photos[lightbox]}
+              alt={`${name} — foto ${lightbox + 1}`}
+              onError={() => setFailedInLightbox(prev => new Set([...prev, lightbox]))}
+              style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
+            />
+          )}
 
           <button
             onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l + 1) % total : null); }}

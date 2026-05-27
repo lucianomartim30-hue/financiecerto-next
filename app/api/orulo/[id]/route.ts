@@ -122,11 +122,12 @@ export async function GET(
 
     const imagesRaw = ((b.images ?? b.photos ?? b.building_images ?? b.building_photos ?? []) as Record<string, unknown>[]);
     for (const img of imagesRaw.slice(0, 30)) {
-      // Cada item pode ter: { id, description, type, associations } — sem URL
+      // Cada item pode ter: { id, description, type, associations } — às vezes sem URL explícita.
+      // Tentamos primeiro extrair URL dos campos conhecidos (melhor qualidade);
+      // só usamos o ID para montar URL via CDN se nenhum campo URL estiver presente.
+      const urlFromFields = pickUrl(img as Record<string, string>);
       const imgId = (img.id ?? img['image_id']) as string | number | undefined;
-      const url = imgId
-        ? imageUrl(imgId)
-        : pickUrl(img as Record<string, string>);
+      const url = urlFromFields || (imgId ? imageUrl(imgId) : '');
       if (url && !photos.includes(url)) photos.push(url);
     }
 
