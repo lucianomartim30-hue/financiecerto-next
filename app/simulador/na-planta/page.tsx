@@ -253,10 +253,22 @@ function NaPlantaContent() {
   const precisaPagarConstrutora = faltaParaConstrutora > 0;
 
   // Juros evolutivos
-  const seguros       = calcularSeguros(financiado);
-  const parcelaFin    = parcelaPrice(financiado, taxa, 35 * 12);
-  const jurosEvo1     = isMCMV && financiado > 0 ? calcJurosEvo(financiado, taxa, siopiInicial) : 0;
-  const jurosEvoMedio = isMCMV && financiado > 0 ? Math.round(parcelaFin * 0.655 + seguros.total) : 0;
+  // Dados reais (contrato 878772572708-3, Faixa 3, R$267k, 413 meses):
+  //   1ª liberação: ~22,9% do financiado → encargo inicial ~R$432/mês (juros+seguros+taxas)
+  //   Pico (100% liberado): ~R$1.779/mês  |  Média obra (coef 0,655): ~R$1.190/mês
+  const seguros          = calcularSeguros(financiado);                         // seguros sobre saldo total (pós-entrega)
+  const segurosEvo1      = calcularSeguros(financiado * siopiInicial);          // seguros sobre saldo liberado inicial
+  const segurosMedioEvol = calcularSeguros(financiado * 0.655);                 // seguros sobre saldo médio da obra
+  const parcelaFin       = parcelaPrice(financiado, taxa, 35 * 12);
+  const jurosEvo1        = isMCMV && financiado > 0 && siopiInicial > 0        // total real: juros + seguros + taxas sobre valor liberado
+    ? calcJurosEvo(financiado, taxa, siopiInicial) + segurosEvo1.total
+    : 0;
+  const jurosEvoPico     = isMCMV && financiado > 0                            // evolutivo máximo (100% liberado, meses finais da obra)
+    ? calcJurosEvo(financiado, taxa, 1.0) + seguros.total
+    : 0;
+  const jurosEvoMedio    = isMCMV && financiado > 0                            // média da obra (coef 0,655 = fração média liberada)
+    ? Math.round(parcelaFin * 0.655 + segurosMedioEvol.total)
+    : 0;
 
   // Regra dos 30%
   const limite30 = renda * 0.30;
@@ -526,7 +538,7 @@ function NaPlantaContent() {
                     {!ok30 && (
                       <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700' }}>
                         Excede em {formatBRL(burden - limite30)}/mês
-                        {isMCMV && jurosEvo1 > 0 ? ` (inclui juros evo ~${formatBRL(jurosEvo1)})` : ''}
+                        {isMCMV && jurosEvo1 > 0 ? ` (inclui evo. ao banco ~${formatBRL(jurosEvo1)})` : ''}
                       </span>
                     )}
                   </div>
@@ -639,10 +651,10 @@ function NaPlantaContent() {
                         🏦 Juros evolutivos durante a obra (paralelo à construtora)
                       </p>
                       <p style={{ fontSize: '12px', color: '#1d4ed8' }}>
-                        1º mês: ~{formatBRL(jurosEvo1)}/mês · média da obra: ~{formatBRL(jurosEvoMedio)}/mês
+                        Início: ~{formatBRL(jurosEvo1)}/mês · médio: ~{formatBRL(jurosEvoMedio)}/mês · pico: ~{formatBRL(jurosEvoPico)}/mês
                       </p>
                       <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '3px' }}>
-                        Pago diretamente à Caixa Econômica Federal em paralelo às parcelas à construtora acima
+                        Pago à Caixa em paralelo às parcelas acima · inclui juros, seguros e taxa de administração
                       </p>
                     </div>
                   )}
@@ -692,16 +704,20 @@ function NaPlantaContent() {
                     🏦 Pagamento paralelo à Caixa Econômica Federal
                   </p>
                   <p style={{ fontSize: '13px', color: '#1e3a8a', lineHeight: 1.6, marginBottom: '8px' }}>
-                    No MCMV, você paga <strong>juros evolutivos mensais diretamente à Caixa</strong> em paralelo às parcelas à construtora acima. A Caixa libera recursos conforme o avanço da obra.
+                    No MCMV, você paga <strong>juros evolutivos mensais diretamente à Caixa</strong> em paralelo às parcelas à construtora acima. O valor <strong>começa baixo e cresce</strong> conforme a Caixa libera recursos para a construtora. Inclui juros, seguros e taxa de administração.
                   </p>
                   <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: '8px', padding: '8px 12px' }}>
-                      <p style={{ fontSize: '10px', color: '#6b7280', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>1º mês (estimativa)</p>
+                      <p style={{ fontSize: '10px', color: '#6b7280', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Início da obra</p>
                       <p style={{ fontSize: '16px', fontWeight: '800', color: '#1e40af' }}>~{formatBRL(jurosEvo1)}/mês</p>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: '8px', padding: '8px 12px' }}>
                       <p style={{ fontSize: '10px', color: '#6b7280', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Média da obra</p>
                       <p style={{ fontSize: '16px', fontWeight: '800', color: '#1e40af' }}>~{formatBRL(jurosEvoMedio)}/mês</p>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: '8px', padding: '8px 12px' }}>
+                      <p style={{ fontSize: '10px', color: '#6b7280', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pico (obra pronta)</p>
+                      <p style={{ fontSize: '16px', fontWeight: '800', color: '#2563eb' }}>~{formatBRL(jurosEvoPico)}/mês</p>
                     </div>
                   </div>
                 </div>
@@ -714,7 +730,7 @@ function NaPlantaContent() {
                   </p>
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                     {isMCMV && jurosEvo1 > 0
-                      ? `Mensais: ${formatBRL(mensalUnit)} + Juros banco: ~${formatBRL(jurosEvo1)} = ${formatBRL(burden)}/mês · Limite 30%: ${formatBRL(limite30)}/mês`
+                      ? `Mensais: ${formatBRL(mensalUnit)} + Evo. Caixa: ~${formatBRL(jurosEvo1)} = ${formatBRL(burden)}/mês · Limite 30%: ${formatBRL(limite30)}/mês`
                       : `Mensais: ${formatBRL(mensalUnit)}/mês · Limite 30%: ${formatBRL(limite30)}/mês`}
                   </p>
                 </div>
@@ -737,6 +753,15 @@ function NaPlantaContent() {
 
             {/* Pós-entrega */}
             <BlocoFluxo emoji="📅" titulo="Pós-entrega — parcela do financiamento" cor="#16a34a" ultimo>
+              {isMCMV && jurosEvoMedio > 0 && (
+                <div style={{ marginBottom: '14px', background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '10px', padding: '12px 14px' }}>
+                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#92400e', marginBottom: '4px' }}>⚡ Atenção: mudança de patamar na entrega das chaves</p>
+                  <p style={{ fontSize: '12px', color: '#78350f', lineHeight: 1.6 }}>
+                    Durante a obra você paga evolutivos (~{formatBRL(jurosEvoMedio)}/mês em média, crescendo até ~{formatBRL(jurosEvoPico)}/mês).
+                    {' '}Após as chaves, esse pagamento é <strong>substituído</strong> pela parcela de amortização abaixo — planeje a transição.
+                  </p>
+                </div>
+              )}
               <LinhaDetalhe
                 label={`${taxa.toFixed(2).replace('.', ',')}% a.a. + TR · Price · 35 anos`}
                 valor={`${formatBRL(Math.round(parcelaFin + seguros.total))}/mês`}
