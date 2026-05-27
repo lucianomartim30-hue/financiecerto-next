@@ -301,18 +301,21 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
 // Sticky Section Nav
 // ─────────────────────────────────────────────────────────────────────────────
 const NAV_SECTIONS = [
-  { id: 'visao-geral',  label: 'Visão Geral' },
-  { id: 'financeiro',   label: '💰 Financeiro' },
-  { id: 'tipologias',   label: 'Tipologias' },
-  { id: 'diferenciais', label: 'Diferenciais' },
-  { id: 'localizacao',  label: 'Localização' },
-  { id: 'relacionados', label: 'Similares' },
+  { id: 'visao-geral',      label: 'Visão Geral'     },
+  { id: 'caracteristicas',  label: 'Características' },
+  { id: 'financeiro',       label: '💰 Financeiro'   },
+  { id: 'tipologias',       label: 'Tipologias'      },
+  { id: 'diferenciais',     label: 'Lazer'           },
+  { id: 'empreendimento',   label: 'Empreendimento'  },
+  { id: 'localizacao',      label: 'Localização'     },
+  { id: 'relacionados',     label: 'Similares'       },
 ];
-function StickyNav({ hasTypologies, hasAmenities }: { hasTypologies: boolean; hasAmenities: boolean }) {
+function StickyNav({ hasTypologies, hasAmenities, hasCaracteristicas }: { hasTypologies: boolean; hasAmenities: boolean; hasCaracteristicas: boolean }) {
   const [active, setActive] = useState('visao-geral');
   const sections = NAV_SECTIONS.filter(s =>
-    (s.id !== 'tipologias'   || hasTypologies) &&
-    (s.id !== 'diferenciais' || hasAmenities)
+    (s.id !== 'tipologias'     || hasTypologies)     &&
+    (s.id !== 'diferenciais'   || hasAmenities)      &&
+    (s.id !== 'caracteristicas'|| hasCaracteristicas)
   );
 
   useEffect(() => {
@@ -791,6 +794,118 @@ function SecaoDiferenciais({ amenities }: { amenities: string[] }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Características do Imóvel — specs da unidade com labels legíveis
+// ─────────────────────────────────────────────────────────────────────────────
+function SecaoCaracteristicas({ imovel }: { imovel: ImovelDetalhe }) {
+  const items = [
+    imovel.area_min ? {
+      icon: '▦', label: 'Área',
+      value: imovel.area_max && imovel.area_max !== imovel.area_min
+        ? `${imovel.area_min} – ${imovel.area_max} m²` : `${imovel.area_min} m²`,
+    } : null,
+    imovel.bedrooms_min !== null ? {
+      icon: '🛏', label: 'Quartos',
+      value: imovel.bedrooms_max && imovel.bedrooms_max !== imovel.bedrooms_min
+        ? `${imovel.bedrooms_min} – ${imovel.bedrooms_max}` : `${imovel.bedrooms_min}`,
+    } : null,
+    imovel.bathrooms_min !== null ? {
+      icon: '🚿', label: 'Banheiros',
+      value: imovel.bathrooms_max && imovel.bathrooms_max !== imovel.bathrooms_min
+        ? `${imovel.bathrooms_min} – ${imovel.bathrooms_max}` : `${imovel.bathrooms_min}`,
+    } : null,
+    imovel.vagas_min !== null ? {
+      icon: '🚗', label: 'Vagas',
+      value: imovel.vagas_max && imovel.vagas_max !== imovel.vagas_min
+        ? `${imovel.vagas_min} – ${imovel.vagas_max}` : `${imovel.vagas_min}`,
+    } : null,
+  ].filter(Boolean) as { icon: string; label: string; value: string }[];
+
+  if (!items.length) return null;
+  return (
+    <div id="caracteristicas" style={{ scrollMarginTop: '100px' }}>
+      <SectionHeader title="Características do Imóvel" subtitle="Especificações da unidade" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px' }}>
+        {items.map(({ icon, label, value }) => (
+          <div key={label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: '26px', marginBottom: '8px' }}>{icon}</div>
+            <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>{label}</p>
+            <p style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text)' }}>{value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sobre o Empreendimento — construtora + metadados do empreendimento
+// ─────────────────────────────────────────────────────────────────────────────
+function SecaoEmpreendimento({ imovel }: { imovel: ImovelDetalhe }) {
+  const metaItems = [
+    imovel.status        ? { icon: '📊', label: 'Estágio',             value: getStatus(imovel.status).label } : null,
+    imovel.finality      ? { icon: '🏠', label: 'Finalidade',          value: imovel.finality               } : null,
+    imovel.total_units   ? { icon: '🏢', label: 'Total de unidades',   value: String(imovel.total_units)    } : null,
+    (imovel.stock !== null && imovel.stock !== undefined)
+                         ? { icon: '🔑', label: 'Disponíveis',         value: String(imovel.stock)          } : null,
+    imovel.number_of_floors ? { icon: '⬆️', label: 'Andares',         value: String(imovel.number_of_floors) } : null,
+    (imovel.number_of_towers && imovel.number_of_towers > 1)
+                         ? { icon: '🏗️', label: 'Torres',              value: String(imovel.number_of_towers) } : null,
+    imovel.delivery_date ? { icon: '🗓️', label: 'Entrega prevista',   value: imovel.delivery_date          } : null,
+    imovel.launch_date   ? { icon: '🚀', label: 'Lançamento',          value: imovel.launch_date            } : null,
+  ].filter(Boolean) as { icon: string; label: string; value: string }[];
+
+  if (!imovel.developer && !metaItems.length) return null;
+
+  return (
+    <div id="empreendimento" style={{ scrollMarginTop: '100px' }}>
+      <SectionHeader title="Sobre o Empreendimento" />
+
+      {/* Construtora / Incorporadora */}
+      {imovel.developer && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '14px',
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: '14px', padding: '16px', marginBottom: '16px',
+        }}>
+          {imovel.developer_logo && (
+            <img
+              src={imovel.developer_logo} alt={imovel.developer}
+              style={{ height: '40px', objectFit: 'contain', flexShrink: 0 }}
+            />
+          )}
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '3px' }}>
+              Construtora / Incorporadora
+            </p>
+            <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: imovel.developer_website ? '4px' : 0 }}>
+              {imovel.developer}
+            </p>
+            {imovel.developer_website && (
+              <a href={imovel.developer_website} target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>
+                🌐 Site da construtora →
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Grid de metadados */}
+      {metaItems.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '10px' }}>
+          {metaItems.map(({ icon, label, value }) => (
+            <div key={label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px 16px' }}>
+              <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginBottom: '4px' }}>{icon} {label}</p>
+              <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>{value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Localização contextual
 // ─────────────────────────────────────────────────────────────────────────────
 function SecaoLocalizacao({ imovel }: { imovel: ImovelDetalhe }) {
@@ -1034,15 +1149,12 @@ export default function ImovelDetailClient({ id }: { id: string }) {
   );
 
   const statusCfg = getStatus(imovel.status || '');
+  // Chips de resumo rápido no header — apenas specs da unidade
   const specs = [
     faixaRange(imovel.area_min, imovel.area_max, 'm²')             && { icon: '▦',  label: faixaRange(imovel.area_min, imovel.area_max, 'm²')! },
     faixaRange(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos') && { icon: '🛏', label: faixaRange(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos')! },
     faixaRange(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')  && { icon: '🚿', label: faixaRange(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')! },
     faixaRange(imovel.vagas_min, imovel.vagas_max, 'vagas')         && { icon: '🚗', label: faixaRange(imovel.vagas_min, imovel.vagas_max, 'vagas')! },
-    imovel.total_units                                               && { icon: '🏢', label: `${imovel.total_units} unidades` },
-    imovel.stock !== null && imovel.stock !== undefined              && { icon: '🔑', label: `${imovel.stock} disponíveis` },
-    imovel.number_of_floors                                          && { icon: '⬆️', label: `${imovel.number_of_floors} andares` },
-    imovel.number_of_towers && imovel.number_of_towers > 1          && { icon: '🏗️', label: `${imovel.number_of_towers} torres` },
   ].filter(Boolean) as { icon: string; label: string }[];
 
   return (
@@ -1134,7 +1246,11 @@ export default function ImovelDetailClient({ id }: { id: string }) {
       </div>
 
       {/* ── Sticky Nav ───────────────────────────────────────────────────── */}
-      <StickyNav hasTypologies={imovel.typologies.length > 0} hasAmenities={imovel.amenities.length > 0} />
+      <StickyNav
+        hasTypologies={imovel.typologies.length > 0}
+        hasAmenities={imovel.amenities.length > 0}
+        hasCaracteristicas={!!(imovel.area_min || imovel.bedrooms_min !== null || imovel.bathrooms_min !== null || imovel.vagas_min !== null)}
+      />
 
       {/* ── Two-column content ──────────────────────────────────────────── */}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 24px 80px' }}>
@@ -1148,16 +1264,6 @@ export default function ImovelDetailClient({ id }: { id: string }) {
               <SectionHeader title="Visão Geral" />
               {imovel.description && (
                 <p style={{ fontSize: '14px', lineHeight: '1.7', color: 'var(--text-muted)', marginBottom: '20px' }}>{imovel.description}</p>
-              )}
-              {specs.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
-                  {specs.map(({ icon, label }) => (
-                    <div key={label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '24px', marginBottom: '8px' }}>{icon}</div>
-                      <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>{label}</p>
-                    </div>
-                  ))}
-                </div>
               )}
               {/* Blueprints */}
               {imovel.blueprints.length > 0 && (
@@ -1190,8 +1296,10 @@ export default function ImovelDetailClient({ id }: { id: string }) {
               <BlocoFinanceiro imovel={imovel} />
             </div>
 
+            <SecaoCaracteristicas imovel={imovel} />
             <SecaoTipologias typologies={imovel.typologies} />
             <SecaoDiferenciais amenities={imovel.amenities} />
+            <SecaoEmpreendimento imovel={imovel} />
             <SecaoLocalizacao imovel={imovel} />
             <SecaoRelacionados
               neighborhood={imovel.neighborhood}
