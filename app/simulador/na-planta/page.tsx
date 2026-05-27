@@ -194,7 +194,7 @@ function NaPlantaContent() {
   const anuaisUnit = p(anuaisRaw);
   const totalAnuais = anuaisUnit * qtdAnuais;
 
-  // 6. Parcela final / balão (opcional)
+  // 6. Parcela nas chaves (opcional)
   const [unicaRaw, setUnicaRaw]     = useState('');
   const unica = p(unicaRaw);
 
@@ -316,7 +316,7 @@ function NaPlantaContent() {
             Simule o fluxo real<br />da construtora
           </h1>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.55)', lineHeight: 1.7 }}>
-            Ato · sinais · mensais · anuais · balão · juros evolutivos MCMV · crédito associativo
+            Ato · sinais · mensais · anuais · chaves · juros evolutivos MCMV · crédito associativo
           </p>
           {rendaUrl > 0 && (
             <div style={{ display: 'inline-flex', gap: '16px', marginTop: '24px', background: 'rgba(255,255,255,.08)', borderRadius: '12px', padding: '12px 20px', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -544,13 +544,13 @@ function NaPlantaContent() {
                 {anuaisUnit > 0 && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '5px' }}>Total anuais: {formatBRL(totalAnuais)}</p>}
               </div>
 
-              {/* ⑥ Balão final */}
+              {/* ⑥ Parcela nas chaves */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                   <NumStep n={6} />
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Parcela final / balão — opcional</p>
-                    <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Pagamento maior próximo à entrega das chaves</p>
+                    <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Parcela nas chaves — opcional</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Pagamento maior na entrega das chaves</p>
                   </div>
                 </div>
                 <CampoCompacto value={unicaRaw} onChange={v => setUnicaRaw(fi(v))} placeholder="0" />
@@ -618,7 +618,7 @@ function NaPlantaContent() {
                   {iniciais > 0 && <LinhaDetalhe label={`Sinais × ${qtdIniciais}`} valor={`− ${formatBRL(iniciais)}`} />}
                   {totalMensais > 0 && <LinhaDetalhe label={`Mensais × ${qtdMensais}`} valor={`− ${formatBRL(totalMensais)}`} />}
                   {totalAnuais > 0 && <LinhaDetalhe label={`Anuais × ${qtdAnuais}`} valor={`− ${formatBRL(totalAnuais)}`} />}
-                  {unica > 0 && <LinhaDetalhe label="Balão / parcela final" valor={`− ${formatBRL(unica)}`} />}
+                  {unica > 0 && <LinhaDetalhe label="Parcela nas chaves" valor={`− ${formatBRL(unica)}`} />}
                   <div style={{ borderTop: '2px solid var(--border)', paddingTop: '12px', marginTop: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>Parcela pós-entrega</p>
@@ -716,7 +716,7 @@ function NaPlantaContent() {
 
             {/* Na entrega */}
             <BlocoFluxo emoji="🔑" titulo="Na entrega das chaves (habite-se)" cor="#2563eb">
-              {unica > 0 && <LinhaDetalhe label="Balão / parcela final" valor={formatBRL(unica)} sub="Pago na entrega — reajustado pelo INCC" />}
+              {unica > 0 && <LinhaDetalhe label="Parcela nas chaves" valor={formatBRL(unica)} sub="Pago na entrega — reajustado pelo INCC" />}
               {saldoNaEntrega > 0 && <LinhaDetalhe label="Saldo restante da entrada" valor={formatBRL(saldoNaEntrega)} sub="Reajustado pelo INCC — pago à construtora na entrega" />}
               <LinhaDetalhe label={`Financiamento ${isMCMV ? 'MCMV' : 'SBPE'}`} valor={formatBRL(financiado)} sub={`${valor > 0 && financiado > 0 ? ((financiado / valor) * 100).toFixed(0) : 0}% do valor — Caixa / banco`} destaque />
               <div style={{ background: isMCMV ? '#f0fdf4' : '#eff6ff', border: `1px solid ${isMCMV ? '#bbf7d0' : '#bfdbfe'}`, borderRadius: '10px', padding: '12px 14px', marginTop: '10px' }}>
