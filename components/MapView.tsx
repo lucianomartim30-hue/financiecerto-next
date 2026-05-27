@@ -166,13 +166,13 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
         // ── Bolinha simples colorida por status ────────────────────────────
         const el = document.createElement('div');
-        el.style.cssText = 'cursor:pointer;transition:transform .12s;filter:drop-shadow(0 1px 4px rgba(0,0,0,.45))';
+        el.style.cssText = 'width:18px;height:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s;transform-origin:center;filter:drop-shadow(0 1px 4px rgba(0,0,0,.45))';
         el.innerHTML = `<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
           <circle cx="9" cy="9" r="7" fill="${color}" stroke="white" stroke-width="2.5"/>
         </svg>`;
 
-        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.4)'; });
-        el.addEventListener('mouseleave', () => { el.style.transform = ''; });
+        el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.5)'; });
+        el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
 
         // Clique → fecha popup anterior e abre o deste imóvel
         el.addEventListener('click', (e) => {
