@@ -323,7 +323,7 @@ function ImoveisContent() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { setDisplayCount(12); }, [activeLocation, filterStatus, filterFinality, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
+  useEffect(() => { setDisplayCount(12); }, [activeLocation, filterStatus, filterFinality, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, debouncedBounds]);
 
   const baseFilter = useCallback((b: Imovel) => {
     // ── Filtro de localização (bairro / cidade digitado pelo usuário) ──────────
@@ -379,13 +379,19 @@ function ImoveisContent() {
     return filtered.slice(0, 300).map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status }));
   }, [allBuildings, baseFilter, activeLocation, debouncedBounds]);
 
-  // Cards: quando há localização buscada → mostra todos os matches (ignora viewport)
-  // Cards: todos os imóveis que passam nos filtros — não filtra por viewport
-  // O mapa mostra os pins da área visível; os cards mostram o catálogo completo filtrado.
-  const visibleBuildings = useMemo(
-    () => allBuildings.filter(baseFilter),
-    [allBuildings, baseFilter],
-  );
+  // Cards: quando há localização buscada → todos os matches; senão, alinha ao viewport do mapa
+  const visibleBuildings = useMemo(() => {
+    const filtered = allBuildings.filter(baseFilter);
+    if (activeLocation || !debouncedBounds) return filtered;
+    const latPad = (debouncedBounds.ne_lat - debouncedBounds.sw_lat) * 0.2;
+    const lngPad = (debouncedBounds.ne_lng - debouncedBounds.sw_lng) * 0.2;
+    const inViewport = filtered.filter(b =>
+      b.lat && b.lng &&
+      b.lat >= debouncedBounds.sw_lat - latPad && b.lat <= debouncedBounds.ne_lat + latPad &&
+      b.lng >= debouncedBounds.sw_lng - lngPad && b.lng <= debouncedBounds.ne_lng + lngPad
+    );
+    return inViewport.length > 0 ? inViewport : filtered;
+  }, [allBuildings, baseFilter, activeLocation, debouncedBounds]);
 
   const geocodeAndFly = useCallback(async (query: string) => {
     if (!query.trim()) return;
@@ -782,7 +788,7 @@ function ImoveisContent() {
           {/* Cabeçalho da lista */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
-              {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis em SP`}
+              {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis ${activeLocation ? `em ${activeLocation}` : 'nesta área'}`}
             </span>
             <div style={{ display: 'flex', gap: '6px' }}>
               {[{ c: '#2563eb', l: 'Na Planta' }, { c: '#d97706', l: 'Em Obras' }, { c: '#16a34a', l: 'Pronto' }].map(({ c, l }) => (
@@ -814,7 +820,7 @@ function ImoveisContent() {
               <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text)' }}>
                 {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis`}
                 <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
-                  {activeLocation ? `em ${activeLocation}` : 'em São Paulo'}
+                  {activeLocation ? `em ${activeLocation}` : 'nesta área'}
                 </span>
               </span>
               <div style={{ display: 'flex', gap: '8px' }}>
