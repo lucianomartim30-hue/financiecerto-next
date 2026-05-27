@@ -253,21 +253,20 @@ function NaPlantaContent() {
   const precisaPagarConstrutora = faltaParaConstrutora > 0;
 
   // Juros evolutivos
-  // Dados reais (contrato 878772572708-3, Faixa 3, R$267k, 413 meses):
-  //   1ª liberação: ~22,9% do financiado → encargo inicial ~R$432/mês (juros+seguros+taxas)
-  //   Pico (100% liberado): ~R$1.779/mês  |  Média obra (coef 0,655): ~R$1.190/mês
-  const seguros          = calcularSeguros(financiado);                         // seguros sobre saldo total (pós-entrega)
-  const segurosEvo1      = calcularSeguros(financiado * siopiInicial);          // seguros sobre saldo liberado inicial
-  const segurosMedioEvol = calcularSeguros(financiado * 0.655);                 // seguros sobre saldo médio da obra
-  const parcelaFin       = parcelaPrice(financiado, taxa, 35 * 12);
-  const jurosEvo1        = isMCMV && financiado > 0 && siopiInicial > 0        // total real: juros + seguros + taxas sobre valor liberado
-    ? calcJurosEvo(financiado, taxa, siopiInicial) + segurosEvo1.total
+  // Planilha SIOPI real (contrato 878772572708-3, Faixa 3, R$267k, 413 meses):
+  //   Seguros FIXOS no valor total financiado durante toda a obra — NÃO proporcionais ao liberado.
+  //   MIP R$50,86 + DFI R$24,85 + TX ADM R$25,00 = R$100,71/mês constante (36 meses de obra).
+  //   Encargo real: mês 1 R$480,96 → mês 36 R$1.738,85 → pós-entrega R$1.966,27
+  const seguros      = calcularSeguros(financiado);                            // seguros FIXOS no valor total financiado (obra + pós-entrega)
+  const parcelaFin   = parcelaPrice(financiado, taxa, 35 * 12);
+  const jurosEvo1    = isMCMV && financiado > 0 && siopiInicial > 0           // encargo inicial: juros sobre valor liberado + seguros fixos totais
+    ? calcJurosEvo(financiado, taxa, siopiInicial) + seguros.total
     : 0;
-  const jurosEvoPico     = isMCMV && financiado > 0                            // evolutivo máximo (100% liberado, meses finais da obra)
+  const jurosEvoPico = isMCMV && financiado > 0                               // encargo máximo (100% liberado, últimos meses da obra)
     ? calcJurosEvo(financiado, taxa, 1.0) + seguros.total
     : 0;
-  const jurosEvoMedio    = isMCMV && financiado > 0                            // média da obra (coef 0,655 = fração média liberada)
-    ? Math.round(parcelaFin * 0.655 + segurosMedioEvol.total)
+  const jurosEvoMedio = isMCMV && financiado > 0                              // encargo médio da obra (coef 0,655 = fração média liberada)
+    ? Math.round(parcelaFin * 0.655 + seguros.total)
     : 0;
 
   // Regra dos 30%
