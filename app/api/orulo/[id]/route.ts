@@ -56,24 +56,28 @@ function getMock(id: string) {
 
 // Monta a URL de uma imagem Orulo a partir do ID numérico.
 // A API retorna apenas o ID nos arrays de images/floor_plans;
-// as URLs seguem o padrão estático documentado abaixo.
+// as URLs seguem o padrão CDN confirmado: featured_modern_without_watermark.
+// Nota: o subdirectório "large" foi tentado anteriormente mas não existe de
+// forma consistente no CDN — gerava 404 silenciosos que removiam todas as
+// fotos do álbum via onError, deixando apenas a default_image (total = 1).
 const ORULO_IMG_BASE = 'https://static.orulo.com.br/images/properties';
-// Usa a variante "large" para melhor qualidade nas fotos do detalhe.
-// A variante "featured_modern_without_watermark" é menor e pode ficar
-// pixelada no mosaico; "large" oferece resolução mais alta.
+const ORULO_VARIANT  = 'featured_modern_without_watermark';
+
 function imageUrl(id: string | number): string {
-  return `${ORULO_IMG_BASE}/large/${id}.jpg`;
+  return `${ORULO_IMG_BASE}/${ORULO_VARIANT}/${id}.jpg`;
 }
 function imageLargeUrl(id: string | number): string {
-  return `${ORULO_IMG_BASE}/large/${id}.jpg`;
+  return `${ORULO_IMG_BASE}/${ORULO_VARIANT}/${id}.jpg`;
 }
 
 function pickUrl(obj: Record<string, string> | null | undefined): string {
   if (!obj) return '';
-  // Se tem ID numérico mas não tem URL, monta a URL
+  // Se tem ID mas nenhuma URL de resolução conhecida, monta via CDN
   if (obj.id && !obj['520x280'] && !obj['840x560'] && !obj['1200x628']) {
     return imageUrl(obj.id);
   }
+  // Prefere a maior resolução disponível; imageUrl() usa o mesmo CDN variant,
+  // então a deduplicação entre default_image e images[] funciona corretamente.
   return obj['1200x628'] || obj['1024x1024'] || obj['840x560'] || obj['520x280'] || obj['200x140'] || obj.url || obj.image_url || '';
 }
 
@@ -116,7 +120,7 @@ export async function GET(
     const mainPhoto = pickUrl(defaultImg);
     if (mainPhoto) photos.push(mainPhoto);
 
-    const imagesRaw = (b.images as Record<string, unknown>[]) || [];
+    const imagesRaw = ((b.images ?? b.photos ?? b.building_images ?? b.building_photos ?? []) as Record<string, unknown>[]);
     for (const img of imagesRaw.slice(0, 30)) {
       // Cada item pode ter: { id, description, type, associations } — sem URL
       const imgId = (img.id ?? img['image_id']) as string | number | undefined;
