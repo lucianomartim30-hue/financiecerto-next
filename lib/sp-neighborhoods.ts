@@ -166,6 +166,16 @@ function normalizeKey(s: string): string {
     .trim();
 }
 
+/** Distância em km entre dois pontos geográficos (fórmula Haversine). */
+export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dL = (lat2 - lat1) * Math.PI / 180;
+  const dG = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dL / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dG / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 /**
  * Retorna as coordenadas de centróide para um bairro/município.
  * Tenta o bairro primeiro, depois a cidade como fallback.

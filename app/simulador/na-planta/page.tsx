@@ -7,6 +7,7 @@ import {
   TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, calcSubsidioEstimado,
 } from '@/lib/calculos';
 import Link from 'next/link';
+import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -750,22 +751,8 @@ function NaPlantaContent() {
           </div>
         )}
 
-        {/* ── CTA final ────────────────────────────────────────────────── */}
-        {valido && (() => {
-          const minFiltro = Math.round(valor * 0.75);
-          const maxFiltro = isMCMV && faixaRenda ? faixaRenda.teto : Math.round(valor * 1.25);
-          return (
-            <Link href={`/imoveis?min=${minFiltro}&max=${maxFiltro}&status=na planta&tipo=${tipoImovel}`} style={{ textDecoration: 'none', display: 'block' }}>
-              <div style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))', borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
-                <div>
-                  <p style={{ fontSize: '15px', fontWeight: '800', color: '#fff', marginBottom: '3px' }}>🏘️ Ver imóveis na planta compatíveis</p>
-                  <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.7)' }}>{formatBRL(minFiltro)} – {formatBRL(maxFiltro)} · na planta e em obras</p>
-                </div>
-                <span style={{ color: '#fff', fontSize: '20px' }}>→</span>
-              </div>
-            </Link>
-          );
-        })()}
+        {/* ── Busca inteligente de imóveis ─────────────────────────────── */}
+        {valido && <BuscaImoveisInteligente valorImovel={valor} naPlanta={true} />}
 
       </div>
 

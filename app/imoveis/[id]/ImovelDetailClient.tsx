@@ -873,10 +873,10 @@ function SecaoRelacionados({
 
     const params = new URLSearchParams({ all: '1' });
 
-    // Faixa de preço ±40%
+    // Faixa de preço ±20%
     if (minPrice) {
-      params.set('min_price', String(Math.round(minPrice * 0.60)));
-      params.set('max_price', String(Math.round(minPrice * 1.40)));
+      params.set('min_price', String(Math.round(minPrice * 0.80)));
+      params.set('max_price', String(Math.round(minPrice * 1.20)));
     }
 
     // Mesmos quartos — sem variação: o cliente quer 2 quartos, mostra 2 quartos

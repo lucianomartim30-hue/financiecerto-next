@@ -9,6 +9,7 @@ import {
   BANCOS_SBPE,
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
+import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtInput(v: string): string {
@@ -1109,16 +1110,13 @@ function SimuladorInner() {
           Simulação educativa — regras SFH/MCMV vigentes · mai/2026. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Taxas SBPE: referência de mercado — variam por banco, perfil e LTV. Valores exatos confirmados em cada instituição financeira. Não constitui proposta de crédito.
         </p>
 
-        <div style={{ display: 'grid', gap: 12 }}>
-          <Link href={`/imoveis?min=${Math.round(sim.valorImovel * 0.75)}&max=${Math.round(sim.valorImovel * 1.20)}${sim.naPlanta ? '&status=na planta' : ''}&tipo=${tipoImovel}`}
-            style={{ display: 'block', padding: '16px 0', borderRadius: 12, background: 'var(--primary)', color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
-            🏠 Ver imóveis compatíveis — {formatBRL(Math.round(sim.valorImovel * 0.75))} a {formatBRL(Math.round(sim.valorImovel * 1.20))}
-          </Link>
-          <button onClick={() => { setEtapa(0); setE(E0); setPerfil(null); setSim(null); }}
-            style={{ padding: '15px 0', borderRadius: 12, border: '1.5px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-            Fazer nova simulação
-          </button>
-        </div>
+        {/* Busca inteligente de imóveis com filtro por quartos, vagas e bairro */}
+        <BuscaImoveisInteligente valorImovel={sim.valorImovel} naPlanta={sim.naPlanta} />
+
+        <button onClick={() => { setEtapa(0); setE(E0); setPerfil(null); setSim(null); }}
+          style={{ marginTop: 16, width: '100%', padding: '15px 0', borderRadius: 12, border: '1.5px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Fazer nova simulação
+        </button>
       </Etapa>
     );
   }
