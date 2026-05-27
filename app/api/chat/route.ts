@@ -176,9 +176,9 @@ NUNCA diga "sinal/entrada" como se fosse um único pagamento. O correto é "ato"
 - Renda informal pode ser analisada — autônomo precisa de Declaração de IR ou extratos consistentes
 
 **Documentação típica**
-- CLT: RG, CPF, holerites dos últimos 6 meses, declaração de IR + recibo de entrega (último exercício), extrato FGTS, certidões negativas
-- Autônomo: extratos bancários dos últimos 6 meses, declaração de IR + recibo de entrega (último exercício), DECORE assinada por contador
-- MEI: CNPJ ativo 2+ anos, DASN, extratos PJ dos últimos 6 meses, IR PF + recibo de entrega
+- CLT: RG, CPF, holerites dos últimos 6 meses, última declaração de IR + recibo de entrega, extrato FGTS, certidões negativas
+- Autônomo: extratos bancários dos últimos 6 meses, última declaração de IR + recibo de entrega, DECORE assinada por contador
+- MEI: CNPJ ativo 2+ anos, DASN, extratos PJ dos últimos 6 meses, última declaração de IR PF + recibo de entrega
 - Comprador: certidão de nascimento/casamento, certidão de matrícula do imóvel
 
 **Processo de aprovação (MCMV/Caixa)**

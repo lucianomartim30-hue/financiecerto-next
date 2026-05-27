@@ -83,11 +83,11 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'Quais documentos o trabalhador CLT precisa?',
-        resposta: `Para trabalhador com carteira assinada:\n\n**Pessoais:**\n• RG e CPF (ou CNH)\n• Comprovante de estado civil (certidão de nascimento ou casamento)\n• Comprovante de endereço (últimos 90 dias)\n\n**De renda:**\n• Holerites dos últimos 6 meses\n• Declaração de IR + recibo de entrega (último exercício)\n• Extrato do FGTS (se for usar)\n\n**Do imóvel (para imóvel pronto):**\n• Matrícula atualizada do imóvel\n• IPTU\n• Cópia do compromisso de compra e venda`,
+        resposta: `Para trabalhador com carteira assinada:\n\n**Pessoais:**\n• RG e CPF (ou CNH)\n• Comprovante de estado civil (certidão de nascimento ou casamento)\n• Comprovante de endereço (últimos 90 dias)\n\n**De renda:**\n• Holerites dos últimos 6 meses\n• Última declaração de IR + recibo de entrega\n• Extrato do FGTS (se for usar)\n\n**Do imóvel (para imóvel pronto):**\n• Matrícula atualizada do imóvel\n• IPTU\n• Cópia do compromisso de compra e venda`,
       },
       {
         pergunta: 'E para autônomo ou MEI?',
-        resposta: `Para autônomo:\n• Extrato bancário dos últimos 6 meses\n• Declaração de IR + recibo de entrega (último exercício)\n• Decore (Declaração Comprobatória de Percepção de Rendimentos) assinada por contador\n\nPara MEI:\n• CNPJ ativo há pelo menos 2 anos\n• Declaração Anual do MEI (DASN)\n• Extrato bancário PJ dos últimos 6 meses\n• Declaração de IR PF + recibo de entrega (último exercício)\n\nImportante: bancos costumam aceitar 70% a 80% da renda do autônomo para fins de comprometimento.`,
+        resposta: `Para autônomo:\n• Extrato bancário dos últimos 6 meses\n• Última declaração de IR + recibo de entrega\n• Decore (Declaração Comprobatória de Percepção de Rendimentos) assinada por contador\n\nPara MEI:\n• CNPJ ativo há pelo menos 2 anos\n• Declaração Anual do MEI (DASN)\n• Extrato bancário PJ dos últimos 6 meses\n• Última declaração de IR PF + recibo de entrega\n\nImportante: bancos costumam aceitar 70% a 80% da renda do autônomo para fins de comprometimento.`,
       },
     ],
   },
