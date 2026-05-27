@@ -211,8 +211,8 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
         <div
           style={{
             display: 'grid',
-            height: 'min(480px, 52vw)',
-            minHeight: '240px',
+            height: 'min(560px, 56vw)',
+            minHeight: '260px',
             gap: '4px',
             // 1 foto → full width | 2+ fotos → principal (1.75fr) + coluna lateral (1fr)
             gridTemplateColumns: total >= 2 ? '1.75fr 1fr' : '1fr',

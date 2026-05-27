@@ -55,19 +55,18 @@ function getMock(id: string) {
 }
 
 // Monta a URL de uma imagem Orulo a partir do ID numérico.
-// A API retorna apenas o ID nos arrays de images/floor_plans;
-// as URLs seguem o padrão CDN confirmado: featured_modern_without_watermark.
-// Nota: o subdirectório "large" foi tentado anteriormente mas não existe de
-// forma consistente no CDN — gerava 404 silenciosos que removiam todas as
-// fotos do álbum via onError, deixando apenas a default_image (total = 1).
+// A API retorna apenas o ID nos arrays de images/floor_plans.
+// Usamos a variante "large" para máxima qualidade nas fotos do detalhe.
+// Eventuais 404s são tratados graciosamente no frontend (HeroGallery não usa
+// mais o padrão imgErrors → validPhotos que causava cascata; cada falha oculta
+// apenas aquele elemento sem alterar o total nem remover outras fotos).
 const ORULO_IMG_BASE = 'https://static.orulo.com.br/images/properties';
-const ORULO_VARIANT  = 'featured_modern_without_watermark';
 
 function imageUrl(id: string | number): string {
-  return `${ORULO_IMG_BASE}/${ORULO_VARIANT}/${id}.jpg`;
+  return `${ORULO_IMG_BASE}/large/${id}.jpg`;
 }
 function imageLargeUrl(id: string | number): string {
-  return `${ORULO_IMG_BASE}/${ORULO_VARIANT}/${id}.jpg`;
+  return `${ORULO_IMG_BASE}/large/${id}.jpg`;
 }
 
 function pickUrl(obj: Record<string, string> | null | undefined): string {
