@@ -903,7 +903,7 @@ function SimuladorInner() {
             {[
               { id: 'pronto', ico: '🏠', label: 'Pronto / Novo / Usado', sub: 'Entrega imediata — sem fase de obra', naPlanta: false },
               { id: 'obras',  ico: '🏗️', label: 'Em Obras', sub: 'Medições ativas — pode entrar no crédito associativo', naPlanta: true },
-              { id: 'planta', ico: '🌱', label: 'Na Planta', sub: 'Obra não iniciada — crédito associativo MCMV / SBPE', naPlanta: true },
+              { id: 'planta', ico: '📐', label: 'Na Planta', sub: 'Obra não iniciada — crédito associativo MCMV / SBPE', naPlanta: true },
             ].map(({ id, ico, label, sub, naPlanta: np }) => {
               const selecionado = np === false ? !e.naPlanta : e.naPlanta && (
                 id === 'planta' ? !e.temImovelMunicipio : e.temImovelMunicipio

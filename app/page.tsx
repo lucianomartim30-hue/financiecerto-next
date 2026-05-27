@@ -150,7 +150,7 @@ export default function Home() {
               Descobrir meu perfil →
             </Link>
             <Link href="/simulador/na-planta" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
-              🌱 Simular na planta
+              📐 Simular na planta
             </Link>
             <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
               🏠 Simular pronto
@@ -355,7 +355,7 @@ export default function Home() {
               Descobrir meu perfil →
             </Link>
             <Link href="/simulador/na-planta" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
-              🌱 Simular na planta
+              📐 Simular na planta
             </Link>
             <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
               🏠 Simular pronto
