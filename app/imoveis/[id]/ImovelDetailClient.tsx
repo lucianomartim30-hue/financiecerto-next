@@ -83,6 +83,44 @@ interface RelatedImovel {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Classifica o campo virtual_tour da Orulo.
+ * Retorna 'tour' se for uma plataforma de tour 360° reconhecida,
+ * ou 'site' se for apenas o site/contato da construtora.
+ * O campo é mal usado pela Orulo — às vezes recebe o site da construtora.
+ */
+function classifyTourUrl(url: string): 'tour' | 'site' | null {
+  if (!url) return null;
+  try {
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    const TOUR_PLATFORMS = [
+      'matterport.com', 'my.matterport.com',
+      'kuula.co', 'kuula.com',
+      'roundme.com',
+      'cloudpano.com',
+      'momento360.com',
+      'klapty.com',
+      'lapentor.com',
+      'giraffe360.com',
+      'vtournow.com',
+      'panotour.com',
+      '360cities.net',
+      'youtube.com', 'youtu.be',   // vídeos 360°
+      'vimeo.com',
+      'tours.orulo.com.br',
+      'orulo.com.br',
+    ];
+    const isTour = TOUR_PLATFORMS.some(p => host === p || host.endsWith('.' + p))
+      || host.startsWith('tour.')
+      || host.startsWith('360.')
+      || url.toLowerCase().includes('/tour')
+      || url.toLowerCase().includes('virtual');
+    return isTour ? 'tour' : 'site';
+  } catch {
+    return null;
+  }
+}
+
 function parseMoeda(v: string): number {
   return Number(v.replace(/\./g, '').replace(',', '.')) || 0;
 }
@@ -886,6 +924,16 @@ function SecaoEmpreendimento({ imovel }: { imovel: ImovelDetalhe }) {
                 🌐 Site da construtora →
               </a>
             )}
+            {/* virtual_tour que não é tour 360° → mostra como link de apresentação,
+                evitando expor como "Tour Virtual" (armadilha para o usuário) */}
+            {imovel.virtual_tour
+              && classifyTourUrl(imovel.virtual_tour) === 'site'
+              && imovel.virtual_tour !== imovel.developer_website && (
+              <a href={imovel.virtual_tour} target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '600', textDecoration: 'none', marginLeft: imovel.developer_website ? '12px' : 0 }}>
+                📋 Ver apresentação →
+              </a>
+            )}
           </div>
         </div>
       )}
@@ -1280,8 +1328,8 @@ export default function ImovelDetailClient({ id }: { id: string }) {
                   </div>
                 </div>
               )}
-              {/* Tour Virtual */}
-              {imovel.virtual_tour && (
+              {/* Tour Virtual — só exibe se for plataforma de tour reconhecida */}
+              {imovel.virtual_tour && classifyTourUrl(imovel.virtual_tour) === 'tour' && (
                 <div style={{ marginTop: '20px' }}>
                   <a href={imovel.virtual_tour} target="_blank" rel="noopener noreferrer"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #7c3aed, #2563eb)', color: '#fff', borderRadius: '12px', padding: '12px 20px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', boxShadow: '0 4px 12px rgba(124,58,237,.3)' }}>
