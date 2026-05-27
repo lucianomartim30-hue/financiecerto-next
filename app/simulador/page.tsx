@@ -357,6 +357,7 @@ function SimuladorInner() {
       parseMoeda(e.renda), parseMoeda(e.fgts), parseMoeda(e.entrada),
       e.prazoAnos, Number(e.idade) || 35,
       e.cotista, e.primeiroImovel, e.jaRecebeuBeneficio, e.dependentes,
+      e.temImovelMunicipio,
     );
     setPerfil(r);
     // Define painel padrão: MCMV se elegível, SBPE caso contrário

@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   formatBRL, parcelaPrice, calcularSeguros,
   TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, calcSubsidioEstimado,
+  FAIXAS_MCMV, type FaixaMCMV,
 } from '@/lib/calculos';
 import Link from 'next/link';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
@@ -201,29 +202,35 @@ function NaPlantaContent() {
   // ── Cálculos ──────────────────────────────────────────────────────────────────
   const faixaRenda = detectarFaixaMCMV(renda);
 
-  const isMCMV = (() => {
-    if (!faixaRenda || valor <= 0) return false;
-    if (valor <= faixaRenda.teto) return true;
-    if (faixaRenda.subsidioMax > 0) {
-      const subsidioTeste = calcSubsidioEstimado(faixaRenda, renda, valor, true, true, false, 0);
-      if (subsidioTeste > 0 && (valor - subsidioTeste) <= faixaRenda.teto) return true;
+  // Tenta todas as faixas elegíveis pela renda (igual ao simulador principal)
+  // Renda de R$4k pode usar F2 (teto 275k), F3 (teto 400k) ou F4 (teto 600k)
+  const faixaEfetiva: FaixaMCMV | null = (() => {
+    if (renda <= 0 || valor <= 0) return null;
+    for (const f of FAIXAS_MCMV) {
+      if (renda > f.rendaMax) continue;
+      if (valor <= f.teto) return f;
+      if (f.subsidioMax > 0) {
+        const sub = calcSubsidioEstimado(f, renda, valor, true, true, false, 0);
+        if (sub > 0 && valor - sub <= f.teto) return f;
+      }
     }
-    return false;
+    return null;
   })();
 
-  const taxa   = isMCMV && faixaRenda ? faixaRenda.taxaRef : TAXA_SBPE_ANUAL;
+  const isMCMV = faixaEfetiva !== null;
+  const taxa   = isMCMV && faixaEfetiva ? faixaEfetiva.taxaRef : TAXA_SBPE_ANUAL;
   const motivo = (!isMCMV && renda > 0 && valor > 0) ? motivoSBPE(renda, valor) : null;
 
   const maxFinPerfil = isMCMV ? maxFinMcmv : maxFinSbpe;
-  const ltvPct       = isMCMV ? (faixaRenda?.ltvMax ?? 0.80) : 0.80;
+  const ltvPct       = isMCMV ? (faixaEfetiva?.ltvMax ?? 0.80) : 0.80;
   const maxFinBanco  = valor > 0
     ? (maxFinPerfil > 0 ? Math.min(maxFinPerfil, Math.round(valor * ltvPct)) : Math.round(valor * ltvPct))
     : 0;
   const entradaMinima = Math.max(0, valor - maxFinBanco);
 
   // Subsídio (apenas MCMV F1 e F2 — renda ≤ R$ 5.000)
-  const subsidioEstimado = isMCMV && faixaRenda && faixaRenda.subsidioMax > 0 && valor > 0
-    ? calcSubsidioEstimado(faixaRenda, renda, valor, true, true, false, 0)
+  const subsidioEstimado = isMCMV && faixaEfetiva && faixaEfetiva.subsidioMax > 0 && valor > 0
+    ? calcSubsidioEstimado(faixaEfetiva, renda, valor, true, true, false, 0)
     : 0;
   const temSubsidio = subsidioEstimado > 0;
 
@@ -360,7 +367,7 @@ function NaPlantaContent() {
             <div style={{ marginBottom: '20px', marginTop: '-8px' }}>
               {isMCMV ? (
                 <span style={{ fontSize: '12px', fontWeight: '700', padding: '3px 10px', borderRadius: '99px', display: 'inline-block', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                  ✅ MCMV {faixaRenda!.label} — {faixaRenda!.taxaRef.toFixed(2).replace('.', ',')}% a.a. · teto {formatBRL(faixaRenda!.teto)}
+                  ✅ MCMV {faixaEfetiva!.label} — {faixaEfetiva!.taxaRef.toFixed(2).replace('.', ',')}% a.a. · teto {formatBRL(faixaEfetiva!.teto)}
                 </span>
               ) : (
                 <div>
@@ -438,16 +445,16 @@ function NaPlantaContent() {
                 {temSubsidio && (
                   <div style={{ marginTop: '10px', padding: '10px 14px', borderRadius: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
                     <p style={{ fontSize: '13px', fontWeight: '700', color: '#15803d', marginBottom: '2px' }}>
-                      🏦 + Subsídio MCMV {faixaRenda?.label}: <strong>{formatBRL(subsidioEstimado)}</strong>
+                      🏦 + Subsídio MCMV {faixaEfetiva?.label}: <strong>{formatBRL(subsidioEstimado)}</strong>
                     </p>
                     <p style={{ fontSize: '11px', color: '#166534' }}>
                       Aplicado automaticamente · valor exato confirmado na Caixa Econômica Federal
                     </p>
                   </div>
                 )}
-                {isMCMV && faixaRenda && !temSubsidio && (
+                {isMCMV && faixaEfetiva && !temSubsidio && (
                   <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '6px' }}>
-                    ℹ️ MCMV {faixaRenda.label} — sem subsídio (disponível apenas nas Faixas 1 e 2)
+                    ℹ️ MCMV {faixaEfetiva.label} — sem subsídio (disponível apenas nas Faixas 1 e 2)
                   </p>
                 )}
               </div>
@@ -578,7 +585,7 @@ function NaPlantaContent() {
                         { emoji: '🏛️', label: 'Financiamento bancário', val: financiado },
                         { emoji: '💰', label: 'Pagamentos à construtora', val: totalConstrutora },
                         ...(fgts > 0        ? [{ emoji: '🏦', label: 'FGTS', val: fgts }] : []),
-                        ...(subsidioEstimado > 0 ? [{ emoji: '🎁', label: `Subsídio MCMV ${faixaRenda?.label ?? ''}`, val: subsidioEstimado }] : []),
+                        ...(subsidioEstimado > 0 ? [{ emoji: '🎁', label: `Subsídio MCMV ${faixaEfetiva?.label ?? ''}`, val: subsidioEstimado }] : []),
                       ] as { emoji: string; label: string; val: number }[]).map(({ emoji, label, val }, i) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--border)' }}>
                           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -613,7 +620,7 @@ function NaPlantaContent() {
                     </div>
                   )}
                   {fgts > 0 && <LinhaDetalhe label="FGTS" valor={`− ${formatBRL(fgts)}`} sub="Aplicado na entrada" />}
-                  {temSubsidio && <LinhaDetalhe label={`Subsídio MCMV ${faixaRenda?.label}`} valor={`− ${formatBRL(subsidioEstimado)}`} sub="Grant do governo" />}
+                  {temSubsidio && <LinhaDetalhe label={`Subsídio MCMV ${faixaEfetiva?.label}`} valor={`− ${formatBRL(subsidioEstimado)}`} sub="Grant do governo" />}
                   {ato > 0 && <LinhaDetalhe label="Ato (assinatura)" valor={`− ${formatBRL(ato)}`} />}
                   {iniciais > 0 && <LinhaDetalhe label={`Sinais × ${qtdIniciais}`} valor={`− ${formatBRL(iniciais)}`} />}
                   {totalMensais > 0 && <LinhaDetalhe label={`Mensais × ${qtdMensais}`} valor={`− ${formatBRL(totalMensais)}`} />}
@@ -661,7 +668,7 @@ function NaPlantaContent() {
             <BlocoFluxo emoji="📋" titulo="Na assinatura" cor="#44403c">
               <LinhaDetalhe label="Ato" valor={formatBRL(ato)} sub="Pagamento único na assinatura do contrato" destaque />
               {fgts > 0 && <LinhaDetalhe label="FGTS" valor={formatBRL(fgts)} sub="Aplicado na entrada junto ao banco" />}
-              {temSubsidio && <LinhaDetalhe label={`Subsídio MCMV ${faixaRenda?.label}`} valor={formatBRL(subsidioEstimado)} sub="Grant do governo aplicado na entrada" />}
+              {temSubsidio && <LinhaDetalhe label={`Subsídio MCMV ${faixaEfetiva?.label}`} valor={formatBRL(subsidioEstimado)} sub="Grant do governo aplicado na entrada" />}
             </BlocoFluxo>
 
             {/* Primeiros meses */}

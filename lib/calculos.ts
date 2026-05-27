@@ -463,15 +463,16 @@ export function descobrir(
   primeiroImovel = true,
   jaRecebeuBeneficio = false,
   dependentes = 0,
+  temImovelMunicipio = false,
 ): ResultadoDescobrir {
   const prazoMaxPorIdade = Math.max(60, Math.floor((80.5 - idadeProponente) * 12));
   const prazoMeses = Math.min(prazoAnos * 12, Math.min(prazoMaxPorIdade, PRAZO_MAX_MESES));
-  const fgtsElegivel = cotista && primeiroImovel;
+  const fgtsElegivel = cotista && primeiroImovel && !temImovelMunicipio;
   const fgtsUsado = fgtsElegivel ? fgts : 0;
   const entradaTotal = entrada + fgtsUsado;
 
   const faixa   = detectarFaixaMCMV(rendaBruta);
-  const elegivel = faixa !== null && !jaRecebeuBeneficio;
+  const elegivel = faixa !== null && !jaRecebeuBeneficio && !temImovelMunicipio;
 
   const taxaMCMV = faixa?.taxaRef ?? TAXA_MCMV_ANUAL;
   const tetoMCMV = faixa?.teto   ?? 275000;
