@@ -3,7 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
 import ChatFab from "@/components/ChatFab";
-import Footer from "@/components/Footer";
+import FooterWrapper from "@/components/FooterWrapper";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -48,7 +48,7 @@ export default function RootLayout({
         <main style={{ flex: 1 }}>
           {children}
         </main>
-        <Footer />
+        <FooterWrapper />
         <ChatFab />
         <Analytics />
         <SpeedInsights />
