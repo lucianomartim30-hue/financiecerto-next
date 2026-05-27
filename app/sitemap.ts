@@ -7,6 +7,7 @@
 
 import { MetadataRoute } from 'next';
 import { kvGetCatalog } from '@/lib/orulo-kv';
+import { neighborhoodToSlug } from '@/lib/locations';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -37,21 +38,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/glossario`,           lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
   ];
 
-  // ── Páginas dinâmicas de imóveis ──────────────────────────────────────────
+  // ── Páginas dinâmicas de imóveis + bairros ────────────────────────────────
   let buildingPages: MetadataRoute.Sitemap = [];
+  let bairroPages:   MetadataRoute.Sitemap = [];
   try {
     const catalog = await kvGetCatalog();
     if (catalog && catalog.length > 0) {
+      // Páginas individuais de imóvel
       buildingPages = catalog.map(b => ({
         url:             `${BASE}/imoveis/${b.id}`,
         lastModified:    safeIso(b.updated_at, now),
         changeFrequency: 'weekly' as const,
         priority:        0.7,
       }));
+
+      // Páginas de bairro — uma por bairro único do catálogo
+      const slugsSeen = new Set<string>();
+      for (const b of catalog) {
+        if (!b.neighborhood || !b.state) continue;
+        const slug = neighborhoodToSlug(b.neighborhood, b.state);
+        if (!slugsSeen.has(slug)) {
+          slugsSeen.add(slug);
+          bairroPages.push({
+            url:             `${BASE}/bairro/${slug}`,
+            lastModified:    now,
+            changeFrequency: 'weekly' as const,
+            priority:        0.6,
+          });
+        }
+      }
     }
   } catch {
     // KV indisponível — retorna só as páginas estáticas
   }
 
-  return [...staticPages, ...buildingPages];
+  return [...staticPages, ...buildingPages, ...bairroPages];
 }
