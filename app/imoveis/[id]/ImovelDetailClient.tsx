@@ -68,6 +68,8 @@ interface RelatedImovel {
   name: string;
   developer: string;
   neighborhood: string;
+  address_full?: string;
+  street?: string;
   min_price: number | null;
   max_price: number | null;
   bedrooms_min: number | null;
@@ -1111,10 +1113,14 @@ function SecaoRelacionados({
                 </div>
               </div>
               <div style={{ padding: '14px' }}>
-                <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{im.name}</p>
-                {/* Mostra bairro para imóveis fora do bairro atual */}
-                <p style={{ fontSize: '11px', color: isMesmoBairro ? 'var(--text-faint)' : 'var(--primary)', fontWeight: isMesmoBairro ? '400' : '600', marginBottom: '8px' }}>
-                  {isMesmoBairro ? im.developer : `📍 ${im.neighborhood}`}
+                <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{im.name}</p>
+                {im.developer && (
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {im.developer}
+                  </p>
+                )}
+                <p style={{ fontSize: '10px', color: !isMesmoBairro ? 'var(--primary)' : 'var(--text-faint)', fontWeight: !isMesmoBairro ? '600' : '400', marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  📍 {[im.neighborhood, im.street || im.address_full].filter(Boolean).join(' · ')}
                 </p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
                   {im.bedrooms_min !== null && (

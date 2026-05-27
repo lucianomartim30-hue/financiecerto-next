@@ -69,6 +69,7 @@ interface Imovel {
   vagas_min: number | null; vagas_max: number | null;
   area_min: number | null; area_max: number | null;
   neighborhood: string; city: string; photo: string | null;
+  address_full?: string; street?: string;
   status: string; status_norm: string;
   finality?: string; finality_norm?: string;
   lat: number | null; lng: number | null;
@@ -156,7 +157,10 @@ function ImovelCard({ im }: { im: Imovel }) {
         </div>
         <div style={{ padding: '9px 10px 11px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text)', lineHeight: '1.35', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{im.name}</p>
-          <p style={{ fontSize: '10px', color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{im.neighborhood || im.city}</p>
+          {im.developer && <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{im.developer}</p>}
+          <p style={{ fontSize: '10px', color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            📍 {[im.neighborhood || im.city, im.street].filter(Boolean).join(' · ')}
+          </p>
           <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{im.min_price ? formatBRL(im.min_price) : 'Consultar'}</p>
           <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '2px' }}>
             {fmtRange(im.bedrooms_min, im.bedrooms_max, 'qts') && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>🛏 {fmtRange(im.bedrooms_min, im.bedrooms_max, 'qts')}</span>}
