@@ -82,6 +82,25 @@ export async function GET() {
       status:    b.status,
     }));
 
+    // Inspeciona raw images[] e default_image do 1o imóvel para debug de CDN
+    const sampleId = sample.id as string;
+    let raw_images: unknown[] = [];
+    let raw_default_image: unknown = null;
+    let raw_floor_plans: unknown[] = [];
+    if (sampleId) {
+      try {
+        const bldResp = await fetch(`${ORULO_BASE}/api/v2/buildings/${sampleId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(12000),
+        });
+        const bldRaw = await bldResp.json();
+        const b = (bldRaw.building ?? bldRaw) as Record<string, unknown>;
+        raw_default_image = b.default_image;
+        raw_images = ((b.images ?? b.photos ?? []) as unknown[]).slice(0, 5);
+        raw_floor_plans = ((b.floor_plans ?? b.blueprints ?? []) as unknown[]).slice(0, 3);
+      } catch { /* ignora */ }
+    }
+
     const apiTotal = Number(a1.total_count);
 
     return NextResponse.json({
@@ -107,6 +126,14 @@ export async function GET() {
       building_keys:  Object.keys(sample),
       address_keys:   Object.keys(address),
       price_analysis: priceAnalysis,
+
+      // Debug: estrutura raw das imagens do 1o imóvel
+      image_debug: {
+        building_id:       sampleId,
+        default_image:     raw_default_image,
+        images_sample:     raw_images,
+        floor_plans_sample: raw_floor_plans,
+      },
 
       diagnosis: {
         api_total:     a1.total_count,
