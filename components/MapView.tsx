@@ -52,8 +52,9 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   const containerRef   = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapRef         = useRef<any>(null);
+  // Map<pin.id, Marker> — permite atualização incremental sem limpar tudo
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const markersRef     = useRef<any[]>([]);
+  const markersRef = useRef<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activePopupRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -143,24 +144,36 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
     };
   }, []);
 
-  // ── Atualiza pins quando mudam ───────────────────────────────────────────────
+  // ── Atualiza pins de forma incremental (remove só os que saíram, adiciona os novos) ──
   useEffect(() => {
     if (!mapReady || !mapRef.current) return;
 
-    // Remove pins antigos e fecha popup aberto
-    markersRef.current.forEach(m => m.remove());
-    markersRef.current = [];
-    if (activePopupRef.current) { activePopupRef.current.remove(); activePopupRef.current = null; }
-
     const validPins = pins.filter(p => p.lat && p.lng);
     setPinCount(validPins.length);
-    if (!validPins.length) return;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     import('maplibre-gl').then((mod: any) => {
       const { Marker, Popup } = mod;
 
-      validPins.forEach(pin => {
+      const newPinIds = new Set(validPins.map(p => p.id));
+
+      // Remove markers que já não estão na lista nova
+      for (const [id, marker] of markersRef.current) {
+        if (!newPinIds.has(id)) {
+          marker.remove();
+          markersRef.current.delete(id);
+          // Se o popup aberto pertencia a este pin, fecha-o
+          if (activePopupRef.current && (marker as { _pinId?: string })._pinId === id) {
+            activePopupRef.current.remove();
+            activePopupRef.current = null;
+          }
+        }
+      }
+
+      // Adiciona apenas os pins novos (que ainda não têm marker)
+      for (const pin of validPins) {
+        if (markersRef.current.has(pin.id)) continue; // já existe, não recria
+
         const color = pinColor(pin.status);
         const label = statusLabel(pin.status);
 
@@ -176,7 +189,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
         // Clique → fecha popup anterior e abre o deste imóvel
         el.addEventListener('click', (e) => {
-          e.stopPropagation(); // não propaga pro mapa (evita fechar o popup recém-aberto)
+          e.stopPropagation();
 
           if (activePopupRef.current) {
             activePopupRef.current.remove();
@@ -212,8 +225,8 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
           .setLngLat([pin.lng, pin.lat])
           .addTo(mapRef.current);
 
-        markersRef.current.push(marker);
-      });
+        markersRef.current.set(pin.id, marker);
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pins, mapReady]);

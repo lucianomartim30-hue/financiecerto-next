@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 'use client';
 
-import { useEffect, useState, useRef, useMemo, useCallback, Suspense } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback, Suspense, useDeferredValue } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -239,14 +239,15 @@ function ImoveisContent() {
   const boundsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleBoundsChange = useCallback((b: Bounds) => {
     if (boundsTimer.current) clearTimeout(boundsTimer.current);
-    boundsTimer.current = setTimeout(() => setDebouncedBounds(b), 350);
-  }, []);
+    // Mobile precisa de debounce maior para não re-renderizar durante o pan
+    boundsTimer.current = setTimeout(() => setDebouncedBounds(b), isMobile ? 600 : 350);
+  }, [isMobile]);
 
-  const mapRef       = useRef<MapViewHandle>(null);
-  const inputRef     = useRef<HTMLInputElement>(null);
-  const mapSearchRef = useRef<HTMLDivElement>(null);
-  const [mapSearch, setMapSearch] = useState('');
-  const [showMapSuggestions, setShowMapSuggestions] = useState(false);
+  const mapRef   = useRef<MapViewHandle>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Adiado: sugestões de autocomplete não bloqueiam a digitação
+  const deferredSearch = useDeferredValue(search);
 
   // Detectar mobile
   useEffect(() => {
@@ -256,13 +257,12 @@ function ImoveisContent() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Fechar autocomplete ao clicar fora (filter bar e busca flutuante no mapa)
+  // Fechar autocomplete ao clicar fora da filter bar
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      const outFilter = !searchRef.current    || !searchRef.current.contains(e.target as Node);
-      const outMap    = !mapSearchRef.current || !mapSearchRef.current.contains(e.target as Node);
-      if (outFilter) setShowSuggestions(false);
-      if (outMap)    setShowMapSuggestions(false);
+      if (!searchRef.current || !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -286,24 +286,9 @@ function ImoveisContent() {
     })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [allBuildings]);
 
-  const filteredMapSuggestions = useMemo(() => {
-    if (!mapSearch.trim()) return [] as { name: string; hasCatalog: boolean }[];
-    const q = normStr(mapSearch);
-    return allNeighborhoods
-      .filter(n => normStr(n.name).includes(q))
-      .sort((a, b) => {
-        if (a.hasCatalog !== b.hasCatalog) return a.hasCatalog ? -1 : 1;
-        const aS = normStr(a.name).startsWith(q) ? 0 : 1;
-        const bS = normStr(b.name).startsWith(q) ? 0 : 1;
-        if (aS !== bS) return aS - bS;
-        return a.name.localeCompare(b.name, 'pt-BR');
-      })
-      .slice(0, 8);
-  }, [mapSearch, allNeighborhoods]);
-
   const filteredSuggestions = useMemo(() => {
-    if (!search.trim()) return [] as { name: string; hasCatalog: boolean }[];
-    const q = normStr(search);
+    if (!deferredSearch.trim()) return [] as { name: string; hasCatalog: boolean }[];
+    const q = normStr(deferredSearch);
     return allNeighborhoods
       .filter(n => normStr(n.name).includes(q))
       .sort((a, b) => {
@@ -316,7 +301,7 @@ function ImoveisContent() {
         return a.name.localeCompare(b.name, 'pt-BR');
       })
       .slice(0, 10);
-  }, [search, allNeighborhoods]);
+  }, [deferredSearch, allNeighborhoods]);
 
   useEffect(() => {
     setLoading(true);
@@ -427,7 +412,7 @@ function ImoveisContent() {
   }, [minInput, maxInput, areaMinInput, areaMaxInput]);
 
   const clearAll = useCallback(() => {
-    setActiveLocation(''); setSearch(''); setMapSearch('');
+    setActiveLocation(''); setSearch('');
     setFilterStatus(''); setFilterFinality(''); setFilterMin(0); setFilterMax(0);
     setFilterBedrooms(0); setFilterVagas(0); setFilterBaths(0);
     setFilterAreaMin(0); setFilterAreaMax(0);
@@ -488,81 +473,6 @@ function ImoveisContent() {
         </>
       )}
     </>
-  );
-
-  // ── Busca flutuante sobre o mapa ─────────────────────────────────────────
-  const renderMapSearch = () => (
-    <div
-      ref={mapSearchRef}
-      style={{
-        position: 'absolute', top: '12px', left: '50%', transform: 'translateX(-50%)',
-        zIndex: 600, width: 'calc(100% - 24px)', maxWidth: '380px',
-      }}
-    >
-      <div style={{
-        display: 'flex', background: '#fff', borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0,0,0,.22)', border: '1.5px solid #e5e7eb', overflow: 'visible',
-      }}>
-        <span style={{ padding: '0 10px', display: 'flex', alignItems: 'center', fontSize: '15px', flexShrink: 0 }}>📍</span>
-        <input
-          type="text"
-          value={mapSearch}
-          onChange={e => { setMapSearch(e.target.value); setShowMapSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
-          placeholder={activeLocation ? activeLocation : 'Buscar por bairro ou cidade...'}
-          onKeyDown={e => {
-            if (e.key === 'Enter') { setShowMapSuggestions(false); (e.target as HTMLInputElement).blur(); geocodeAndFly(mapSearch); }
-            if (e.key === 'Escape') setShowMapSuggestions(false);
-          }}
-          onFocus={() => setShowMapSuggestions(true)}
-          style={{ flex: 1, height: '44px', border: 'none', outline: 'none', fontSize: '14px', color: '#111827', fontFamily: 'inherit', background: 'transparent', minWidth: 0 }}
-        />
-        {(mapSearch || activeLocation) && (
-          <button onClick={() => { setMapSearch(''); setActiveLocation(''); setShowMapSuggestions(false); }}
-            style={{ width: '34px', height: '44px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#9ca3af', fontSize: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            ×
-          </button>
-        )}
-        <button
-          onClick={() => { setShowMapSuggestions(false); geocodeAndFly(mapSearch); }}
-          disabled={geocoding || !mapSearch.trim()}
-          style={{ width: '46px', height: '44px', background: (geocoding || !mapSearch.trim()) ? '#e5e7eb' : 'var(--primary)', color: '#fff', border: 'none', cursor: (geocoding || !mapSearch.trim()) ? 'default' : 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '0 10px 10px 0' }}
-        >
-          {geocoding ? <span style={{ fontSize: '10px' }}>...</span> : '🔍'}
-        </button>
-      </div>
-
-      {/* Chip de localização ativa */}
-      {activeLocation && !mapSearch && (
-        <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--primary)', color: '#fff', borderRadius: '20px', padding: '4px 12px', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 8px rgba(37,99,235,.35)' }}>
-            📍 {activeLocation}
-            <button onClick={() => { setActiveLocation(''); setSearch(''); setMapSearch(''); }}
-              style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center' }}>×</button>
-          </div>
-        </div>
-      )}
-
-      {/* Autocomplete */}
-      {showMapSuggestions && filteredMapSuggestions.length > 0 && (
-        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 8px 28px rgba(0,0,0,.14)', marginTop: '6px', overflow: 'hidden' }}>
-          {filteredMapSuggestions.map(nb => (
-            <button
-              key={nb.name}
-              onClick={() => {
-                setMapSearch('');
-                setShowMapSuggestions(false);
-                geocodeAndFly(nb.name);
-              }}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '12px 14px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '14px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
-            >
-              <span style={{ fontSize: '13px', opacity: 0.45 }}>📍</span>
-              <span style={{ flex: 1 }}>{nb.name}</span>
-              {nb.hasCatalog && <span style={{ fontSize: '10px', background: '#eff6ff', color: '#2563eb', borderRadius: '4px', padding: '2px 6px', fontWeight: '700', flexShrink: 0 }}>imóveis</span>}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
   );
 
   // ── Loading overlay (usado no mapa) ───────────────────────────────────────
@@ -672,7 +582,7 @@ function ImoveisContent() {
                 onFocus={e => { e.currentTarget.style.background = '#fff'; setShowSuggestions(true); }}
                 onBlur={e => { e.currentTarget.style.background = '#f9fafb'; }}
                 ref={inputRef}
-                style={{ width: isMobile ? '150px' : '130px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '13px' }}
+                style={{ width: isMobile ? 'min(220px, calc(50vw - 46px))' : '130px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '13px' }}
               />
             </div>
             {/* Botão × para limpar busca — útil no mobile */}
@@ -774,7 +684,6 @@ function ImoveisContent() {
       {isMobile && mobileView === 'map' && (
         <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
           <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} />
-          {renderMapSearch()}
           {loading && renderLoadingOverlay()}
         </div>
       )}
