@@ -183,11 +183,33 @@ function isNaPlanta(status: string) {
 // ─────────────────────────────────────────────────────────────────────────────
 function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
-  // failedInLightbox só afeta o display dentro do lightbox — nunca altera `total`
+  // swappedInLightbox: índices que já usaram fallback de variante
+  const [swappedInLightbox, setSwappedInLightbox] = useState<Set<number>>(new Set());
+  // failedInLightbox: índices onde mesmo o fallback falhou → mostra placeholder
   const [failedInLightbox, setFailedInLightbox] = useState<Set<number>>(new Set());
 
   // total é FIXO: nunca decresce por causa de erros de carregamento
   const total = photos.length;
+
+  // Gera URL de fallback trocando /large/ ou /NxM/ por /featured_modern_without_watermark/
+  // Chamada quando a variante primária retorna 404 — garante que a foto apareça
+  // em qualidade menor em vez de ficar como slot preto.
+  function fallbackUrl(url: string): string {
+    const FBK = 'featured_modern_without_watermark';
+    if (url.includes('/large/'))           return url.replace('/large/', `/${FBK}/`);
+    if (/\/\d+x\d+\//.test(url))          return url.replace(/\/\d+x\d+\//, `/${FBK}/`);
+    return '';
+  }
+
+  // onError para o mosaico: tenta fallback uma vez; se falhar também, esconde o <img>
+  function mosaicOnError(e: React.SyntheticEvent<HTMLImageElement>) {
+    const img = e.currentTarget;
+    if (!img.dataset.retried) {
+      const fb = fallbackUrl(img.src);
+      if (fb) { img.dataset.retried = '1'; img.src = fb; return; }
+    }
+    img.style.display = 'none';
+  }
 
   useEffect(() => {
     if (lightbox === null) return;
@@ -233,7 +255,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
               src={photos[0]}
               alt={`${name} — foto 1`}
               loading="eager"
-              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              onError={mosaicOnError}
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           </div>
@@ -248,7 +270,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
                 src={photos[1]}
                 alt={`${name} — foto 2`}
                 loading="lazy"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                onError={mosaicOnError}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
             </div>
@@ -264,7 +286,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
                 src={photos[2]}
                 alt={`${name} — foto 3`}
                 loading="lazy"
-                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                onError={mosaicOnError}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
               {/* Overlay escuro com contagem de fotos restantes */}
@@ -309,7 +331,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
             onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l - 1 + total) % total : null); }}
           >‹</button>
 
-          {/* Foto em tamanho natural — key força remount ao navegar */}
+          {/* Foto em tamanho natural — key força remount ao navegar para novo índice */}
           {failedInLightbox.has(lightbox) ? (
             <div
               onClick={(e) => e.stopPropagation()}
@@ -321,9 +343,17 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
           ) : (
             <img
               key={lightbox}
-              src={photos[lightbox]}
+              src={swappedInLightbox.has(lightbox) ? (fallbackUrl(photos[lightbox]) || photos[lightbox]) : photos[lightbox]}
               alt={`${name} — foto ${lightbox + 1}`}
-              onError={() => setFailedInLightbox(prev => new Set([...prev, lightbox]))}
+              onError={() => {
+                if (!swappedInLightbox.has(lightbox)) {
+                  const fb = fallbackUrl(photos[lightbox]);
+                  if (fb) setSwappedInLightbox(prev => new Set([...prev, lightbox]));
+                  else    setFailedInLightbox(prev => new Set([...prev, lightbox]));
+                } else {
+                  setFailedInLightbox(prev => new Set([...prev, lightbox]));
+                }
+              }}
               style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
             />
           )}
