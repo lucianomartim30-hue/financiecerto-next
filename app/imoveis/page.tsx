@@ -243,11 +243,17 @@ function ImoveisContent() {
     boundsTimer.current = setTimeout(() => setDebouncedBounds(b), isMobile ? 600 : 350);
   }, [isMobile]);
 
-  const mapRef   = useRef<MapViewHandle>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const mapRef          = useRef<MapViewHandle>(null);
+  const inputRef        = useRef<HTMLInputElement>(null);
+  const mobileInputRef  = useRef<HTMLInputElement>(null);
 
   // Adiado: sugestões de autocomplete não bloqueiam a digitação
   const deferredSearch = useDeferredValue(search);
+
+  // Modal de busca full-screen (mobile)
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [mobileSearchInput, setMobileSearchInput] = useState('');
+  const deferredMobileInput = useDeferredValue(mobileSearchInput);
 
   // Detectar mobile
   useEffect(() => {
@@ -302,6 +308,25 @@ function ImoveisContent() {
       })
       .slice(0, 10);
   }, [deferredSearch, allNeighborhoods]);
+
+  // Sugestões para o modal mobile — quando vazio mostra bairros com imóveis
+  const mobileSuggestions = useMemo(() => {
+    const q = normStr(deferredMobileInput);
+    const base = q
+      ? allNeighborhoods.filter(n => normStr(n.name).includes(q))
+      : allNeighborhoods.filter(n => n.hasCatalog);
+    return base
+      .sort((a, b) => {
+        if (a.hasCatalog !== b.hasCatalog) return a.hasCatalog ? -1 : 1;
+        if (q) {
+          const aS = normStr(a.name).startsWith(q) ? 0 : 1;
+          const bS = normStr(b.name).startsWith(q) ? 0 : 1;
+          if (aS !== bS) return aS - bS;
+        }
+        return a.name.localeCompare(b.name, 'pt-BR');
+      })
+      .slice(0, 25);
+  }, [deferredMobileInput, allNeighborhoods]);
 
   useEffect(() => {
     setLoading(true);
@@ -386,8 +411,7 @@ function ImoveisContent() {
     const qNorm = normStr(query);
     const catalogMatch = allBuildings.find(b => b.lat && b.lng && normStr(b.neighborhood + ' ' + b.city).includes(qNorm));
     if (catalogMatch) {
-      // Mobile: fica na lista (cards já filtrados). Desktop: mapa voa para o bairro.
-      if (!isMobile) mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 13);
+      mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 13);
       return;
     }
 
@@ -396,12 +420,20 @@ function ImoveisContent() {
     try {
       const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', São Paulo, Brasil')}&format=json&limit=3&countrycodes=br&accept-language=pt-BR`);
       const data = await r.json();
-      if (data.length > 0 && !isMobile) {
+      if (data.length > 0) {
         mapRef.current?.flyTo(parseFloat(data[0].lat), parseFloat(data[0].lon), 13);
       }
     } catch { /* silencioso */ }
     finally { setGeocoding(false); }
-  }, [isMobile, allBuildings]);
+  }, [allBuildings]);
+
+  // Commit de busca a partir do modal mobile
+  const commitMobileSearch = useCallback((name: string) => {
+    setShowMobileSearch(false);
+    setMobileSearchInput('');
+    setSearch(name);
+    geocodeAndFly(name);
+  }, [geocodeAndFly]);
 
   const applyMais = useCallback(() => {
     setFilterMin(Number(minInput.replace(/\D/g, '')) || 0);
@@ -487,6 +519,111 @@ function ImoveisContent() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: `calc(100vh - var(--header-h))`, background: 'var(--bg)', overflow: 'hidden' }}>
 
+      {/* ── Modal de busca full-screen (mobile) ─────────────────────────────── */}
+      {showMobileSearch && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10000,
+          background: '#fff', display: 'flex', flexDirection: 'column',
+          paddingTop: 'env(safe-area-inset-top)',
+        }}>
+          {/* Cabeçalho do modal */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '12px 14px', borderBottom: '1px solid #e5e7eb',
+          }}>
+            <button
+              onClick={() => { setShowMobileSearch(false); setMobileSearchInput(''); }}
+              style={{
+                width: '38px', height: '38px', borderRadius: '50%',
+                border: 'none', background: '#f3f4f6', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '20px', color: '#374151', flexShrink: 0,
+              }}
+            >‹</button>
+            <div style={{
+              flex: 1, display: 'flex', alignItems: 'center',
+              background: '#f3f4f6', borderRadius: '10px',
+              border: '1.5px solid #e5e7eb',
+            }}>
+              <span style={{ padding: '0 10px', fontSize: '15px', flexShrink: 0 }}>📍</span>
+              <input
+                ref={mobileInputRef}
+                autoFocus
+                type="search"
+                inputMode="search"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                value={mobileSearchInput}
+                onChange={e => setMobileSearchInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && mobileSearchInput.trim()) {
+                    commitMobileSearch(mobileSearchInput.trim());
+                  }
+                  if (e.key === 'Escape') { setShowMobileSearch(false); setMobileSearchInput(''); }
+                }}
+                placeholder="Bairro ou cidade..."
+                style={{
+                  flex: 1, height: '46px', border: 'none', outline: 'none',
+                  background: 'transparent',
+                  fontSize: '16px', /* 16px evita zoom automático no iOS */
+                  color: '#111827', fontFamily: 'inherit',
+                }}
+              />
+              {mobileSearchInput ? (
+                <button
+                  onClick={() => { setMobileSearchInput(''); mobileInputRef.current?.focus(); }}
+                  style={{ width: '40px', height: '46px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#9ca3af', fontSize: '20px', flexShrink: 0 }}
+                >×</button>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Lista de sugestões */}
+          <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            {!mobileSearchInput && (
+              <div style={{ padding: '14px 16px 6px', fontSize: '11px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Bairros com imóveis
+              </div>
+            )}
+            {mobileSuggestions.map(nb => (
+              <button
+                key={nb.name}
+                onClick={() => commitMobileSearch(nb.name)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  width: '100%', padding: '14px 16px',
+                  background: 'transparent', border: 'none',
+                  borderBottom: '1px solid #f3f4f6',
+                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+                }}
+              >
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '50%',
+                  background: '#eff6ff', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', fontSize: '16px', flexShrink: 0,
+                }}>📍</div>
+                <span style={{ flex: 1, fontSize: '15px', color: '#111827', fontWeight: '500' }}>
+                  {nb.name}
+                </span>
+                {nb.hasCatalog && (
+                  <span style={{
+                    fontSize: '10px', background: '#eff6ff', color: '#2563eb',
+                    borderRadius: '5px', padding: '3px 7px', fontWeight: '700', flexShrink: 0,
+                  }}>imóveis</span>
+                )}
+              </button>
+            ))}
+            {mobileSearchInput && mobileSuggestions.length === 0 && (
+              <div style={{ padding: '40px 16px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
+                Nenhum bairro encontrado
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Overlay: fecha dropdown ao clicar fora ──────────────────────────── */}
       {openDropdown && (
         <div onClick={() => setOpenDropdown(null)} style={{ position: 'fixed', inset: 0, zIndex: 9000 }} />
@@ -566,62 +703,78 @@ function ImoveisContent() {
         className="filter-bar"
         style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '8px 12px', display: 'flex', gap: '7px', alignItems: 'center', flexShrink: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
       >
-        {/* Busca + autocomplete + botão */}
+        {/* Busca: botão que abre modal no mobile / input inline no desktop */}
         <div ref={searchRef} style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
-          <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid #d1d5db' }}>
-            <div style={{ position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
-              <input
-                type="text" value={search}
-                onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
-                placeholder="Bairro ou cidade"
-                onKeyDown={e => {
-                  if (e.key === 'Enter') { inputRef.current?.blur(); geocodeAndFly(search); }
-                  if (e.key === 'Escape') { setShowSuggestions(false); inputRef.current?.blur(); }
-                }}
-                onFocus={e => { e.currentTarget.style.background = '#fff'; setShowSuggestions(true); }}
-                onBlur={e => { e.currentTarget.style.background = '#f9fafb'; }}
-                ref={inputRef}
-                style={{ width: isMobile ? 'min(220px, calc(50vw - 46px))' : '130px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '13px' }}
-              />
-            </div>
-            {/* Botão × para limpar busca — útil no mobile */}
-            {search && (
-              <button
-                onClick={() => { setSearch(''); setActiveLocation(''); setShowSuggestions(false); inputRef.current?.focus(); }}
-                style={{ width: '22px', height: '34px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: '-4px' }}
-              >×</button>
-            )}
+          {isMobile ? (
+            /* Mobile: botão tap-to-search que abre modal full-screen */
             <button
-              onClick={() => { inputRef.current?.blur(); geocodeAndFly(search); }}
-              disabled={geocoding}
-              style={{ width: '34px', height: '34px', background: geocoding ? '#e5e7eb' : 'var(--primary)', color: '#fff', border: 'none', cursor: geocoding ? 'default' : 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              onClick={() => setShowMobileSearch(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                height: '34px', padding: '0 10px',
+                background: '#f9fafb', border: '1.5px solid #d1d5db', borderRadius: '8px',
+                cursor: 'pointer', fontSize: '13px',
+                color: search ? '#111827' : '#9ca3af',
+                width: 'min(200px, calc(50vw - 40px))', overflow: 'hidden',
+                flexShrink: 0,
+              }}
             >
-              {geocoding ? <span style={{ fontSize: '10px' }}>...</span> : '🔍'}
+              <span style={{ flexShrink: 0 }}>📍</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>
+                {search || 'Buscar bairro...'}
+              </span>
             </button>
-          </div>
-          {/* Dropdown de sugestões */}
-          {showSuggestions && filteredSuggestions.length > 0 && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 9002, minWidth: '190px', overflow: 'hidden' }}>
-              {filteredSuggestions.map(nb => (
+          ) : (
+            /* Desktop: input com autocomplete inline */
+            <>
+              <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid #d1d5db' }}>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
+                  <input
+                    type="text" value={search}
+                    onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
+                    placeholder="Bairro ou cidade"
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { inputRef.current?.blur(); geocodeAndFly(search); }
+                      if (e.key === 'Escape') { setShowSuggestions(false); inputRef.current?.blur(); }
+                    }}
+                    onFocus={e => { e.currentTarget.style.background = '#fff'; setShowSuggestions(true); }}
+                    onBlur={e => { e.currentTarget.style.background = '#f9fafb'; }}
+                    ref={inputRef}
+                    style={{ width: '130px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '13px' }}
+                  />
+                </div>
+                {search && (
+                  <button
+                    onClick={() => { setSearch(''); setActiveLocation(''); setShowSuggestions(false); inputRef.current?.focus(); }}
+                    style={{ width: '22px', height: '34px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: '-4px' }}
+                  >×</button>
+                )}
                 <button
-                  key={nb.name}
-                  // onClick funciona em mouse E touch — não usa onMouseDown para evitar
-                  // conflito com scroll em iOS e para permitir fechar o teclado corretamente
-                  onClick={() => {
-                    setSearch(nb.name);
-                    setShowSuggestions(false);
-                    inputRef.current?.blur(); // fecha teclado no mobile
-                    geocodeAndFly(nb.name);
-                  }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '7px', width: '100%', padding: '11px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '14px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
+                  onClick={() => { inputRef.current?.blur(); geocodeAndFly(search); }}
+                  disabled={geocoding}
+                  style={{ width: '34px', height: '34px', background: geocoding ? '#e5e7eb' : 'var(--primary)', color: '#fff', border: 'none', cursor: geocoding ? 'default' : 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
-                  <span style={{ fontSize: '13px', opacity: 0.5 }}>📍</span>
-                  <span style={{ flex: 1 }}>{nb.name}</span>
-                  {nb.hasCatalog && <span style={{ fontSize: '10px', background: '#eff6ff', color: '#2563eb', borderRadius: '4px', padding: '2px 6px', fontWeight: '700', flexShrink: 0 }}>imóveis</span>}
+                  {geocoding ? <span style={{ fontSize: '10px' }}>...</span> : '🔍'}
                 </button>
-              ))}
-            </div>
+              </div>
+              {/* Dropdown de sugestões — desktop only */}
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 9002, minWidth: '190px', overflow: 'hidden' }}>
+                  {filteredSuggestions.map(nb => (
+                    <button
+                      key={nb.name}
+                      onClick={() => { setSearch(nb.name); setShowSuggestions(false); inputRef.current?.blur(); geocodeAndFly(nb.name); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '7px', width: '100%', padding: '11px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '14px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
+                    >
+                      <span style={{ fontSize: '13px', opacity: 0.5 }}>📍</span>
+                      <span style={{ flex: 1 }}>{nb.name}</span>
+                      {nb.hasCatalog && <span style={{ fontSize: '10px', background: '#eff6ff', color: '#2563eb', borderRadius: '4px', padding: '2px 6px', fontWeight: '700', flexShrink: 0 }}>imóveis</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 

@@ -103,9 +103,20 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
         center: [-46.63, -23.55],
         zoom:   11,
         attributionControl: { compact: true },
+        // ── Performance no mobile ──────────────────────────────────────────────
+        fadeDuration: 0,          // tiles aparecem instantaneamente (sem fade)
+        renderWorldCopies: false, // economiza GPU — não renderiza o mundo repetido
+        maxTileCacheSize: 50,     // limita cache na memória (útil em dispositivos com pouca RAM)
+        // Cap DPR em 2× — em telas 3× (iPhone Pro) a diferença visual é mínima
+        // mas o custo de renderizar ~2,25× mais pixels é significativo
+        pixelRatio: Math.min(typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1, 2),
       });
 
-      // Controles de zoom + bússola (botões + e −)
+      // Desabilita rotação por gesto (causa confusão no mobile com dois dedos)
+      map.dragRotate.disable();
+      map.touchZoomRotate.disableRotation();
+
+      // Controles de zoom (botões + e −) — posicionados no canto inferior esquerdo
       map.addControl(new NavigationControl({ showCompass: false }), 'bottom-left');
 
       mapRef.current = map;
@@ -233,7 +244,8 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      {/* touch-action:none impede que o browser intercepte swipes como scroll da página */}
+      <div ref={containerRef} style={{ width: '100%', height: '100%', touchAction: 'none' }} />
 
       {/* Loading state enquanto o mapa GL inicializa */}
       {!mapReady && (
