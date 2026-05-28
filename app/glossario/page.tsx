@@ -58,7 +58,7 @@ const TERMS: Term[] = [
     term: 'TR',
     category: 'indices',
     short: 'Taxa Referencial — indexador do saldo devedor nos financiamentos da Caixa Econômica Federal.',
-    full: 'A TR (Taxa Referencial) é calculada mensalmente pelo Banco Central a partir da TBF (Taxa Básica Financeira) e aplicada como correção monetária sobre o saldo devedor dos contratos SFH. Em períodos de juros baixos, a TR pode ficar zerada. Em abril de 2026, a TR mensal é de aproximadamente 0,1679%. Ao longo de 35 anos, a TR acumula pode elevar significativamente o saldo devedor se não considerada nas simulações.',
+    full: 'A TR (Taxa Referencial) é calculada mensalmente pelo Banco Central a partir da TBF (Taxa Básica Financeira) e aplicada como correção monetária sobre o saldo devedor dos contratos SFH — tanto MCMV quanto SBPE. Atenção: a TR ficou zerada por cerca de 10 anos (2012–2022) devido ao ciclo de juros baixos, o que levou muita gente a acreditar que ela "não existe mais". Isso está errado. Com a alta da Selic, a TR voltou a ser positiva em agosto de 2022 e permanece assim. Em maio de 2026, a TR mensal é de aproximadamente 0,1679%, o que equivale a cerca de 2,06% ao ano. Ao longo de 35 anos, essa correção acumula e pode elevar o saldo devedor significativamente se não for considerada nas simulações.',
   },
   {
     term: 'INCC',
