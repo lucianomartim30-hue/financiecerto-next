@@ -1106,6 +1106,43 @@ function SimuladorInner() {
           <ComparativoBancosSBPE financiado={sim.valorFinanciado} prazoMeses={sim.prazoMeses} />
         )}
 
+        {/* CTA: Histórico TR — só para SFH/MCMV (não SFI, que não usa TR) */}
+        {!sim.isSFI && (
+          <a
+            href={`/simulador/historico-tr?pv=${sim.valorFinanciado}&taxa=${sim.taxaAnual}&prazo=${sim.prazoMeses}`}
+            style={{
+              display: 'block',
+              background: 'linear-gradient(135deg,#FFFBEB 0%,#FEF3C7 100%)',
+              border: '1.5px solid #F59E0B',
+              borderRadius: 14,
+              padding: '16px 18px',
+              marginBottom: 20,
+              textDecoration: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>📈</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#92400E', marginBottom: 4 }}>
+                  Como a TR impactou financiamentos nos últimos 36 meses?
+                </div>
+                <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.65, marginBottom: 10 }}>
+                  Veja mês a mês como a TR corrigiu o saldo devedor e elevou as parcelas
+                  de <strong>{formatBRL(sim.valorFinanciado)}</strong> financiado
+                  a <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong>.
+                </div>
+                <div style={{
+                  display: 'inline-block', background: '#F59E0B', color: '#fff',
+                  fontSize: 12, fontWeight: 700, padding: '6px 14px', borderRadius: 8,
+                }}>
+                  Ver simulação com TR histórica →
+                </div>
+              </div>
+            </div>
+          </a>
+        )}
+
         {/* Nota legal */}
         <p style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 24, marginTop: 16 }}>
           Simulação educativa — regras SFH/MCMV vigentes · mai/2026. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Taxas SBPE: referência de mercado — variam por banco, perfil e LTV. Valores exatos confirmados em cada instituição financeira. Não constitui proposta de crédito.

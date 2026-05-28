@@ -77,6 +77,104 @@ export const TR_MENSAL        = 0.1679;
 export const TETO_MCMV     = 350000;
 export const TAXA_MCMV_ANUAL = 7.66;
 
+// ─── TR histórica — últimos 36 meses (Jun/2023 → Mai/2026) ───────────────────
+// Fonte: Banco Central do Brasil — Série 226 | Atualizado: Mai/2026
+export const TR_HISTORICO_36M: { label: string; tr: number }[] = [
+  { label: 'Jun/23', tr: 0.1799 }, { label: 'Jul/23', tr: 0.1581 },
+  { label: 'Ago/23', tr: 0.2160 }, { label: 'Set/23', tr: 0.1130 },
+  { label: 'Out/23', tr: 0.1056 }, { label: 'Nov/23', tr: 0.0775 },
+  { label: 'Dez/23', tr: 0.0690 }, { label: 'Jan/24', tr: 0.0875 },
+  { label: 'Fev/24', tr: 0.0079 }, { label: 'Mar/24', tr: 0.0331 },
+  { label: 'Abr/24', tr: 0.1023 }, { label: 'Mai/24', tr: 0.0870 },
+  { label: 'Jun/24', tr: 0.0365 }, { label: 'Jul/24', tr: 0.0739 },
+  { label: 'Ago/24', tr: 0.0707 }, { label: 'Set/24', tr: 0.0675 },
+  { label: 'Out/24', tr: 0.0977 }, { label: 'Nov/24', tr: 0.0649 },
+  { label: 'Dez/24', tr: 0.0822 }, { label: 'Jan/25', tr: 0.1690 },
+  { label: 'Fev/25', tr: 0.1324 }, { label: 'Mar/25', tr: 0.1092 },
+  { label: 'Abr/25', tr: 0.1689 }, { label: 'Mai/25', tr: 0.1712 },
+  { label: 'Jun/25', tr: 0.1699 }, { label: 'Jul/25', tr: 0.1758 },
+  { label: 'Ago/25', tr: 0.1722 }, { label: 'Set/25', tr: 0.1742 },
+  { label: 'Out/25', tr: 0.1758 }, { label: 'Nov/25', tr: 0.1634 },
+  { label: 'Dez/25', tr: 0.1742 }, { label: 'Jan/26', tr: 0.1718 },
+  { label: 'Fev/26', tr: 0.1207 }, { label: 'Mar/26', tr: 0.1735 },
+  { label: 'Abr/26', tr: 0.1679 }, { label: 'Mai/26', tr: 0.1687 },
+];
+
+export interface MesHistoricoTR {
+  label: string;
+  tr: number;               // TR do mês (%)
+  saldoInicial: number;     // saldo devedor antes da correção TR
+  correcaoTR: number;       // R$ adicionados ao saldo pela TR
+  saldoCorrigido: number;   // saldo após correção TR
+  amort: number;            // amortização mensal fixa (SAC)
+  jurosComTR: number;       // juros sobre saldo corrigido
+  parcelaComTR: number;     // parcela real (com TR)
+  parcelaSemTR: number;     // parcela hipotética sem TR (comparação)
+  diferencaTR: number;      // impacto da TR nesta parcela (R$)
+}
+
+export interface ResultadoHistoricoTR {
+  meses: MesHistoricoTR[];
+  totalCorrecaoSaldo: number;   // soma das correções mensais ao saldo devedor
+  totalImpactoParcelas: number; // soma dos impactos nas parcelas (total a mais pago)
+  saldoFinalComTR: number;      // saldo devedor ao final do período com TR
+  saldoFinalSemTR: number;      // saldo devedor ao final do período sem TR
+  diferencaSaldo: number;       // saldo maior por causa da TR acumulada
+}
+
+// Simula um financiamento SAC aplicando a TR histórica real mês a mês.
+// Retorna a evolução de 36 meses comparando COM TR vs SEM TR.
+export function simularHistoricoTR(
+  pv: number,
+  taxaAnualPct: number,
+  prazoMeses: number,
+): ResultadoHistoricoTR {
+  const taxaMensal = (1 + taxaAnualPct / 100) ** (1 / 12) - 1;
+  const amort = pv / prazoMeses; // amortização mensal fixa — SAC
+
+  let saldoComTR = pv;
+  let saldoSemTR = pv;
+
+  let totalCorrecaoSaldo = 0;
+  let totalImpactoParcelas = 0;
+
+  const meses: MesHistoricoTR[] = [];
+
+  for (const { label, tr } of TR_HISTORICO_36M) {
+    // ── COM TR ────────────────────────────────────────────────────────────────
+    const saldoInicial   = saldoComTR;
+    const correcaoTR     = saldoComTR * (tr / 100);
+    const saldoCorrigido = saldoComTR + correcaoTR;
+    const jurosComTR     = saldoCorrigido * taxaMensal;
+    const parcelaComTR   = amort + jurosComTR;
+    saldoComTR = Math.max(0, saldoCorrigido - amort);
+
+    // ── SEM TR (hipotético) ───────────────────────────────────────────────────
+    const jurosSemTR   = saldoSemTR * taxaMensal;
+    const parcelaSemTR = amort + jurosSemTR;
+    saldoSemTR = Math.max(0, saldoSemTR - amort);
+
+    totalCorrecaoSaldo   += correcaoTR;
+    totalImpactoParcelas += parcelaComTR - parcelaSemTR;
+
+    meses.push({
+      label, tr,
+      saldoInicial, correcaoTR, saldoCorrigido,
+      amort, jurosComTR, parcelaComTR, parcelaSemTR,
+      diferencaTR: parcelaComTR - parcelaSemTR,
+    });
+  }
+
+  return {
+    meses,
+    totalCorrecaoSaldo,
+    totalImpactoParcelas,
+    saldoFinalComTR: saldoComTR,
+    saldoFinalSemTR: saldoSemTR,
+    diferencaSaldo: saldoComTR - saldoSemTR,
+  };
+}
+
 // ─── Detectar faixa MCMV ─────────────────────────────────────────────────────
 export function detectarFaixaMCMV(rendaBruta: number): FaixaMCMV | null {
   if (rendaBruta <= 0) return null;
