@@ -463,7 +463,7 @@ function ImoveisContent() {
   const renderCards = (cols: number) => (
     <>
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '10px' }}>
           {Array.from({ length: cols * 3 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : visibleBuildings.length === 0 ? (
@@ -475,7 +475,7 @@ function ImoveisContent() {
         </div>
       ) : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '10px' }}>
             {visibleBuildings.slice(0, displayCount).map(im => <ImovelCard key={im.id} im={im} />)}
           </div>
           {visibleBuildings.length > displayCount && (
@@ -780,7 +780,7 @@ function ImoveisContent() {
       )}
 
       {isMobile && mobileView === 'list' && (
-        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px', minHeight: 0 }}>
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '12px', minHeight: 0 }}>
           {/* Cabeçalho da lista */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
