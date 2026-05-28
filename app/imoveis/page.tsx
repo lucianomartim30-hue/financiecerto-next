@@ -372,15 +372,23 @@ function ImoveisContent() {
     return counts;
   }, [allBuildings]);
 
-  // Pins do mapa: mostra só os do viewport atual (performance — evita 2000 DOM nodes)
-  // Quando há busca de localização, baseFilter já restringe o conjunto.
+  // Pins do mapa: mostra só os do viewport atual (performance — evita centenas de DOM nodes)
+  // Quando há busca de localização, baseFilter já restringe o conjunto (normalmente <30 pins).
+  // Sem localização: no mobile limitamos a 50 pins para evitar travamento (criar 300 elementos
+  // DOM de uma vez congela o thread principal no mobile).
   const mapPins = useMemo(() => {
+    const toPin = (b: Imovel) => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status });
     const filtered = allBuildings.filter(b => b.lat && b.lng).filter(baseFilter);
-    // Se há localização buscada → mostra todos os pins do bairro
+
+    // Com localização buscada → mostra todos os pins do bairro (normalmente poucos)
     if (activeLocation) {
-      return filtered.map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status }));
+      return filtered.map(toPin);
     }
-    // Sem localização: limita ao viewport + margem de 20% para suavidade ao pan
+
+    // Sem localização: aplica cap mais apertado no mobile
+    const cap = isMobile ? 50 : 300;
+
+    // Filtra pelo viewport atual + 20% de margem
     if (debouncedBounds) {
       const latPad = (debouncedBounds.ne_lat - debouncedBounds.sw_lat) * 0.2;
       const lngPad = (debouncedBounds.ne_lng - debouncedBounds.sw_lng) * 0.2;
@@ -388,10 +396,10 @@ function ImoveisContent() {
         b.lat! >= debouncedBounds.sw_lat - latPad && b.lat! <= debouncedBounds.ne_lat + latPad &&
         b.lng! >= debouncedBounds.sw_lng - lngPad && b.lng! <= debouncedBounds.ne_lng + lngPad
       );
-      if (viewport.length > 0) return viewport.map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status }));
+      if (viewport.length > 0) return viewport.slice(0, cap).map(toPin);
     }
-    return filtered.slice(0, 300).map(b => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status }));
-  }, [allBuildings, baseFilter, activeLocation, debouncedBounds]);
+    return filtered.slice(0, cap).map(toPin);
+  }, [allBuildings, baseFilter, activeLocation, debouncedBounds, isMobile]);
 
   // Cards: catálogo completo filtrado (não filtra por viewport — o mapa já faz isso nos pins)
   const visibleBuildings = useMemo(
@@ -837,6 +845,31 @@ function ImoveisContent() {
       {isMobile && mobileView === 'map' && (
         <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
           <MapView ref={mapRef} pins={mapPins} onBoundsChange={handleBoundsChange} />
+
+          {/* Dica: busque um bairro para ver todos os imóveis — visível só sem filtro ativo */}
+          {!activeLocation && !loading && (
+            <div style={{
+              position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
+              zIndex: 400, pointerEvents: 'none',
+            }}>
+              <button
+                onPointerDown={e => { e.stopPropagation(); }}
+                onClick={e => { e.stopPropagation(); setShowMobileSearch(true); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                  background: 'rgba(255,255,255,.96)', borderRadius: '22px',
+                  padding: '9px 16px', border: '1px solid #e5e7eb',
+                  boxShadow: '0 3px 12px rgba(0,0,0,.18)',
+                  fontSize: '13px', fontWeight: '600', color: '#2563eb',
+                  cursor: 'pointer', pointerEvents: 'auto', whiteSpace: 'nowrap',
+                  fontFamily: 'inherit',
+                }}
+              >
+                🔍 Busque um bairro para ver todos os imóveis
+              </button>
+            </div>
+          )}
+
           {loading && renderLoadingOverlay()}
         </div>
       )}
