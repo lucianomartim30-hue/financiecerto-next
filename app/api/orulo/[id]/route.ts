@@ -54,12 +54,16 @@ function getMock(id: string) {
   return mocks[id] || null;
 }
 
-// Monta a URL de uma imagem Orulo a partir do ID numérico.
-// A API retorna apenas o ID nos arrays de images/floor_plans.
-// Usamos a variante "large" para máxima qualidade nas fotos do detalhe.
-// Eventuais 404s são tratados graciosamente no frontend (HeroGallery não usa
-// mais o padrão imgErrors → validPhotos que causava cascata; cada falha oculta
-// apenas aquele elemento sem alterar o total nem remover outras fotos).
+// ── CDN Orulo ─────────────────────────────────────────────────────────────────
+// Variantes confirmadas (debug 2026-05-27):
+//   /thumb/                        ← 200×140  (key "200x140")
+//   /featured_modern_without_watermark/ ← 520×280  (key "520x280")
+//   /large/                        ← 1024×1024 (key "1024x1024")
+//   /xlarge/                       ← 2280×1800 (key "2280x1800")
+//
+// Para images[] (só têm id, sem URL explícita) usamos /large/ como primária.
+// O frontend tenta /xlarge/ → /large/ → /featured_modern_without_watermark/
+// antes de mostrar placeholder — 404s individuais não afetam o total da galeria.
 const ORULO_IMG_BASE = 'https://static.orulo.com.br/images/properties';
 
 function imageUrl(id: string | number): string {
@@ -71,13 +75,21 @@ function imageLargeUrl(id: string | number): string {
 
 function pickUrl(obj: Record<string, string> | null | undefined): string {
   if (!obj) return '';
-  // Se tem ID mas nenhuma URL de resolução conhecida, monta via CDN
-  if (obj.id && !obj['520x280'] && !obj['840x560'] && !obj['1200x628']) {
+  // Se tem ID mas nenhuma URL de resolução conhecida, monta via CDN (large)
+  if (obj.id && !obj['520x280'] && !obj['840x560'] && !obj['1024x1024'] && !obj['2280x1800'] && !obj['1200x628']) {
     return imageUrl(obj.id);
   }
-  // Prefere a maior resolução disponível; imageUrl() usa o mesmo CDN variant,
-  // então a deduplicação entre default_image e images[] funciona corretamente.
-  return obj['1200x628'] || obj['1024x1024'] || obj['840x560'] || obj['520x280'] || obj['200x140'] || obj.url || obj.image_url || '';
+  // Prefere a maior resolução disponível (xlarge > large > medium > small)
+  return (
+    obj['2280x1800'] ||   // xlarge — maior qualidade
+    obj['1200x628']  ||   // variante horizontal HD
+    obj['1024x1024'] ||   // large
+    obj['840x560']   ||
+    obj['520x280']   ||   // featured_modern_without_watermark
+    obj['200x140']   ||   // thumb
+    obj.url          ||
+    obj.image_url    || ''
+  );
 }
 
 export async function GET(
