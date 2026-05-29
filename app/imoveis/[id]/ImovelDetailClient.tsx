@@ -184,42 +184,75 @@ function isNaPlanta(status: string) {
 function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
   // lightboxUrlOverrides: URL atual por índice quando diferente de photos[i]
-  // (percorre a cadeia de variantes: large → xlarge → featured_modern → placeholder)
   const [lightboxUrlOverrides, setLightboxUrlOverrides] = useState<Map<number, string>>(new Map());
-  // failedInLightbox: índices onde toda a cadeia foi esgotada → mostra placeholder
-  const [failedInLightbox, setFailedInLightbox] = useState<Set<number>>(new Set());
+  // failedPhotos: índices confirmados como quebrados (todas variantes falharam)
+  const [failedPhotos, setFailedPhotos] = useState<Set<number>>(new Set());
 
-  // total é FIXO: nunca decresce por causa de erros de carregamento
   const total = photos.length;
 
-  // Cadeia de fallback por variante CDN Orulo (qualidade decrescente):
-  //   /large/ → /xlarge/ → /featured_modern_without_watermark/ → ''
-  // Cada chamada avança UM passo na cadeia; retorna '' quando esgotada.
+  // Cadeia de fallback por variante CDN Orulo (qualidade decrescente)
   function nextVariantUrl(url: string): string {
-    if (url.includes('/large/'))                    return url.replace('/large/', '/xlarge/');
-    if (url.includes('/xlarge/'))                   return url.replace('/xlarge/', '/featured_modern_without_watermark/');
-    if (/\/\d+x\d+\//.test(url))                   return url.replace(/\/\d+x\d+\//, '/featured_modern_without_watermark/');
-    return '';  // esgotado — exibir placeholder ou esconder
+    if (url.includes('/large/'))   return url.replace('/large/', '/xlarge/');
+    if (url.includes('/xlarge/'))  return url.replace('/xlarge/', '/featured_modern_without_watermark/');
+    if (/\/\d+x\d+\//.test(url))  return url.replace(/\/\d+x\d+\//, '/featured_modern_without_watermark/');
+    return '';
   }
 
-  // onError do mosaico: percorre a cadeia via data-retry (sem alterar estado React)
-  function mosaicOnError(e: React.SyntheticEvent<HTMLImageElement>) {
+  // Próximo índice válido (pula fotos confirmadas como quebradas)
+  function nextValid(from: number, dir: 1 | -1): number {
+    let idx = (from + dir + total) % total;
+    let tries = 0;
+    while (failedPhotos.has(idx) && tries < total) {
+      idx = (idx + dir + total) % total;
+      tries++;
+    }
+    return idx;
+  }
+
+  // onError do mosaico: tenta variante; se esgotada, oculta e registra falha
+  function mosaicOnError(e: React.SyntheticEvent<HTMLImageElement>, idx: number) {
     const img = e.currentTarget;
     const next = nextVariantUrl(img.src);
     if (next) { img.src = next; return; }
     img.style.display = 'none';
+    setFailedPhotos(prev => new Set([...prev, idx]));
   }
+
+  // onError do lightbox: tenta variante; se esgotada, pula para próxima foto válida
+  function lightboxOnError(idx: number) {
+    const currentUrl = lightboxUrlOverrides.get(idx) ?? photos[idx];
+    const next = nextVariantUrl(currentUrl);
+    if (next) {
+      setLightboxUrlOverrides(prev => new Map(prev).set(idx, next));
+      return;
+    }
+    // Todas variantes falharam — registra e pula automaticamente
+    setFailedPhotos(prev => {
+      const updated = new Set([...prev, idx]);
+      // Calcula próximo válido com o set atualizado
+      let ni = (idx + 1) % total;
+      let tries = 0;
+      while (updated.has(ni) && tries < total) { ni = (ni + 1) % total; tries++; }
+      if (tries < total) setLightbox(ni);
+      else setLightbox(null); // todas falharam — fecha lightbox
+      return updated;
+    });
+  }
+
+  // Contagem real (exclui fotos já confirmadas quebradas)
+  const validCount = total - failedPhotos.size;
 
   useEffect(() => {
     if (lightbox === null) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight') setLightbox(l => l !== null ? (l + 1) % total : null);
-      if (e.key === 'ArrowLeft')  setLightbox(l => l !== null ? (l - 1 + total) % total : null);
+      if (e.key === 'ArrowRight') setLightbox(l => l !== null ? nextValid(l, 1)  : null);
+      if (e.key === 'ArrowLeft')  setLightbox(l => l !== null ? nextValid(l, -1) : null);
       if (e.key === 'Escape')     setLightbox(null);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [lightbox, total]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightbox, total, failedPhotos]);
 
   if (!total) return (
     <div style={{ height: '420px', background: 'linear-gradient(135deg, #E2E8F0, #CBD5E1)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '48px' }}>🏙️</div>
@@ -254,7 +287,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
               src={photos[0]}
               alt={`${name} — foto 1`}
               loading="eager"
-              onError={mosaicOnError}
+              onError={e => mosaicOnError(e, 0)}
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
           </div>
@@ -269,7 +302,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
                 src={photos[1]}
                 alt={`${name} — foto 2`}
                 loading="lazy"
-                onError={mosaicOnError}
+                onError={e => mosaicOnError(e, 1)}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
             </div>
@@ -285,7 +318,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
                 src={photos[2]}
                 alt={`${name} — foto 3`}
                 loading="lazy"
-                onError={mosaicOnError}
+                onError={e => mosaicOnError(e, 2)}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
               {/* Overlay escuro com contagem de fotos restantes */}
@@ -315,7 +348,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
             boxShadow: '0 2px 12px rgba(0,0,0,.25)',
           }}
         >
-          🖼️ Ver todas as fotos ({total})
+          🖼️ Ver todas as fotos ({validCount > 0 ? validCount : total})
         </button>
       </div>
 
@@ -327,38 +360,20 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
         >
           <button
             style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}
-            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l - 1 + total) % total : null); }}
+            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? nextValid(l, -1) : null); }}
           >‹</button>
 
           {/* Foto em tamanho natural — key força remount ao navegar para novo índice */}
-          {failedInLightbox.has(lightbox) ? (
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'rgba(255,255,255,.45)', userSelect: 'none' }}
-            >
-              <span style={{ fontSize: '52px' }}>🖼️</span>
-              <span style={{ fontSize: '13px' }}>Foto não disponível</span>
-            </div>
-          ) : (
-            <img
-              key={lightbox}
-              src={lightboxUrlOverrides.get(lightbox) ?? photos[lightbox]}
-              alt={`${name} — foto ${lightbox + 1}`}
-              onError={() => {
-                const currentUrl = lightboxUrlOverrides.get(lightbox) ?? photos[lightbox];
-                const next = nextVariantUrl(currentUrl);
-                if (next) {
-                  setLightboxUrlOverrides(prev => new Map(prev).set(lightbox, next));
-                } else {
-                  setFailedInLightbox(prev => new Set([...prev, lightbox]));
-                }
-              }}
-              style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
-            />
-          )}
+          <img
+            key={lightbox}
+            src={lightboxUrlOverrides.get(lightbox) ?? photos[lightbox]}
+            alt={`${name} — foto ${lightbox + 1}`}
+            onError={() => lightboxOnError(lightbox)}
+            style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
+          />
 
           <button
-            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? (l + 1) % total : null); }}
+            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? nextValid(l, 1) : null); }}
             style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}
           >›</button>
 
@@ -368,7 +383,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
           >✕</button>
 
           <div style={{ position: 'absolute', bottom: '20px', color: 'rgba(255,255,255,.7)', fontSize: '13px' }}>
-            {lightbox + 1} / {total}
+            {lightbox + 1} / {validCount > 0 ? validCount : total}
           </div>
         </div>
       )}
