@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import nodemailer from 'nodemailer';
 
 // Rate limiting simples (por IP, em memória)
 const rateMap = new Map<string, { count: number; resetAt: number }>();
@@ -30,11 +31,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'E-mail inválido.' }, { status: 400 });
   }
 
-  const RESEND_API_KEY = process.env.RESEND_API_KEY;
-  if (!RESEND_API_KEY) {
-    console.error('RESEND_API_KEY não configurada');
+  const GMAIL_USER = process.env.GMAIL_USER;
+  const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    console.error('GMAIL_USER ou GMAIL_APP_PASSWORD não configurados');
     return NextResponse.json({ error: 'Serviço de email não configurado.' }, { status: 500 });
   }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+  });
 
   // Monta o email
   const html = `
@@ -84,39 +91,25 @@ export async function POST(req: NextRequest) {
 
   try {
     // Envia para o administrador
-    const r1 = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: 'FinancieCerto <contato@financiecerto.com.br>',
-        to:   ['contato@financiecerto.com.br'],
-        subject: `[Contato] ${assunto || 'Nova mensagem'} — ${nome}`,
-        html,
-        reply_to: email,
-      }),
+    await transporter.sendMail({
+      from:     `"FinancieCerto" <${GMAIL_USER}>`,
+      to:       GMAIL_USER,
+      subject:  `[Contato] ${assunto || 'Nova mensagem'} — ${nome}`,
+      html,
+      replyTo:  email,
     });
 
-    if (!r1.ok) {
-      const err = await r1.json();
-      console.error('Resend error:', err);
-      return NextResponse.json({ error: 'Erro ao enviar email. Tente novamente.' }, { status: 500 });
-    }
-
-    // Envia confirmação para o usuário (sem bloquear se falhar)
-    fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from: 'FinancieCerto <contato@financiecerto.com.br>',
-        to:   [email],
-        subject: 'Recebemos sua mensagem — FinancieCerto',
-        html: htmlConfirmacao,
-      }),
-    }).catch(() => {}); // silencioso se falhar
+    // Confirmação para o usuário (silenciosa se falhar)
+    transporter.sendMail({
+      from:    `"FinancieCerto" <${GMAIL_USER}>`,
+      to:      email,
+      subject: 'Recebemos sua mensagem — FinancieCerto',
+      html:    htmlConfirmacao,
+    }).catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error('Erro contato:', e);
-    return NextResponse.json({ error: 'Erro interno. Tente novamente.' }, { status: 500 });
+    return NextResponse.json({ error: 'Erro ao enviar email. Verifique as configurações.' }, { status: 500 });
   }
 }
