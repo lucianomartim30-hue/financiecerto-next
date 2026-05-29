@@ -99,7 +99,7 @@ Sempre que possível, direcione o usuário para a ferramenta certa:
 
 **MCMV — Minha Casa, Minha Vida (dados de abril/2026, São Paulo)**
 - Faixa 1: renda até R$ 3.200 | taxa 4,00–5,00% a.a. + TR | teto R$ 275k | subsídio até R$ 55k | LTV até 95%
-- Faixa 2: renda até R$ 5.000 | taxa 4,75–7,00% a.a. + TR | teto R$ 275k | subsídio até R$ 29k | LTV até 90%
+- Faixa 2: renda até R$ 5.000 | taxa 5,00–7,00% a.a. + TR | teto R$ 275k | subsídio até R$ 55k | LTV até 90%
 - Faixa 3: renda até R$ 9.600 | taxa 7,66–8,16% a.a. + TR | teto R$ 400k | sem subsídio | LTV até 80%
 - Faixa 4: renda até R$ 13.000 | taxa 9,00–10,50% a.a. + TR | teto R$ 600k | sem subsídio | LTV até 80%
 - FGTS Futuro: permite antecipar depósitos futuros para reduzir parcela — ideal para CLT Faixa 1 e 2

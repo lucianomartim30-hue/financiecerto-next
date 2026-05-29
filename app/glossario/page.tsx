@@ -192,7 +192,7 @@ const TERMS: Term[] = [
     term: 'Subsídio MCMV',
     category: 'fgts',
     short: 'Desconto no preço do imóvel pago pelo governo — não é devolvido.',
-    full: 'O subsídio é um benefício não reembolsável concedido pelo governo federal aos compradores do MCMV. Funciona como um desconto no valor do imóvel: o comprador financia apenas o restante. O valor máximo varia por faixa de renda, município e valor do imóvel. Na Faixa 1, o subsídio pode chegar a R$ 55.000; na Faixa 2, até R$ 29.000. O subsídio é concedido uma única vez por família.',
+    full: 'O subsídio é um benefício não reembolsável concedido pelo governo federal aos compradores do MCMV. Funciona como um desconto no valor do imóvel: o comprador financia apenas o restante. O valor máximo varia por faixa de renda, município e valor do imóvel. Na Faixa 1, o subsídio pode chegar a R$ 55.000; na Faixa 2, também até R$ 55.000 (decrescente conforme renda e valor do imóvel). O subsídio é concedido uma única vez por família.',
   },
 
   /* ── Imóvel na Planta ─────────────────────────────────────────── */

@@ -17,11 +17,11 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'O que é o Minha Casa Minha Vida (MCMV)?',
-        resposta: `O MCMV é o programa habitacional do governo federal, operado principalmente pela Caixa Econômica Federal e pelo Banco do Brasil. Ele é dividido em 4 faixas conforme a renda familiar bruta:\n\n• **Faixa 1** (até R$ 3.200/mês): taxa a partir de 4,00% a.a. + TR. Subsídio de até R$ 55.000. Teto do imóvel em São Paulo: R$ 275.000.\n• **Faixa 2** (até R$ 5.000/mês): taxa de 4,75% a 7,00% a.a. + TR. Subsídio de até R$ 29.000. Teto: R$ 275.000 (SP).\n• **Faixa 3** (até R$ 9.600/mês): taxa de 7,66% a 8,16% a.a. + TR. Sem subsídio. Teto: R$ 400.000 (SP).\n• **Faixa 4** (até R$ 13.000/mês): taxa de 9,00% a 10,50% a.a. + TR. Sem subsídio. Teto: R$ 600.000 (SP).\n\nRenda acima de R$ 13.000: use SBPE.`,
+        resposta: `O MCMV é o programa habitacional do governo federal, operado principalmente pela Caixa Econômica Federal e pelo Banco do Brasil. Ele é dividido em 4 faixas conforme a renda familiar bruta:\n\n• **Faixa 1** (até R$ 3.200/mês): taxa a partir de 4,00% a.a. + TR. Subsídio de até R$ 55.000. Teto do imóvel em São Paulo: R$ 275.000.\n• **Faixa 2** (até R$ 5.000/mês): taxa de 5,00% a 7,00% a.a. + TR. Subsídio de até R$ 55.000. Teto: R$ 275.000 (SP).\n• **Faixa 3** (até R$ 9.600/mês): taxa de 7,66% a 8,16% a.a. + TR. Sem subsídio. Teto: R$ 400.000 (SP).\n• **Faixa 4** (até R$ 13.000/mês): taxa de 9,00% a 10,50% a.a. + TR. Sem subsídio. Teto: R$ 600.000 (SP).\n\nRenda acima de R$ 13.000: use SBPE.`,
       },
       {
         pergunta: 'O que é o SBPE / SFH?',
-        resposta: `O SBPE (Sistema Brasileiro de Poupança e Empréstimo) financia imóveis com recursos das cadernetas de poupança. Dentro do SBPE, o SFH (Sistema Financeiro de Habitação) cobre imóveis até R$ 1,5 milhão, com taxa média de 10,5% a.a. Para imóveis acima desse valor, aplica-se o SFI (Sistema Financeiro Imobiliário), com taxas um pouco mais elevadas.\n\nNo SBPE/SFH você pode usar FGTS para amortizar o saldo devedor, reduzindo parcelas ou prazo.`,
+        resposta: `O SBPE (Sistema Brasileiro de Poupança e Empréstimo) financia imóveis com recursos das cadernetas de poupança. Dentro do SBPE, o SFH (Sistema Financeiro de Habitação) cobre imóveis até R$ 2,25 milhões, com taxa a partir de 11,19% a.a. + TR. Para imóveis acima desse valor, aplica-se o SFI (Sistema Financeiro Imobiliário), com taxas um pouco mais elevadas.\n\nNo SBPE/SFH você pode usar FGTS para amortizar o saldo devedor, reduzindo parcelas ou prazo.`,
       },
       {
         pergunta: 'Qual a diferença entre SAC e Tabela Price?',
