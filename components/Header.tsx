@@ -6,6 +6,7 @@ import { useState, useRef } from 'react';
 
 // ── Links simples da nav ───────────────────────────────────────────────────────
 const NAV_SIMPLE = [
+  { href: '/',          label: 'Início',    icon: '🏠' },
   { href: '/imoveis',   label: 'Imóveis',   icon: '🏘️' },
   { href: '/guia',      label: 'Guia',      icon: '📘' },
   { href: '/glossario', label: 'Glossário', icon: '🔤' },
@@ -370,7 +371,7 @@ export default function Header() {
           </div>
 
           {/* Links simples */}
-          {[{ href: '/imoveis', label: 'Imóveis', icon: '🏘️' }, { href: '/guia', label: 'Guia', icon: '📘' }, { href: '/glossario', label: 'Glossário', icon: '🔤' }].map((link) => {
+          {NAV_SIMPLE.map((link) => {
             const active = pathname.startsWith(link.href);
             return (
               <Link
