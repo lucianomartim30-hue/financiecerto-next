@@ -38,9 +38,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Serviço de email não configurado.' }, { status: 500 });
   }
 
+  // Remove espaços da senha de app (o Google exibe com espaços mas aceita sem)
+  const appPass = GMAIL_APP_PASSWORD.replace(/\s/g, '');
+
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: { user: GMAIL_USER, pass: appPass },
+    tls: { rejectUnauthorized: false },
   });
 
   // Monta o email
@@ -108,8 +114,9 @@ export async function POST(req: NextRequest) {
     }).catch(() => {});
 
     return NextResponse.json({ ok: true });
-  } catch (e) {
-    console.error('Erro contato:', e);
-    return NextResponse.json({ error: 'Erro ao enviar email. Verifique as configurações.' }, { status: 500 });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error('Erro contato:', msg);
+    return NextResponse.json({ error: `Erro ao enviar: ${msg}` }, { status: 500 });
   }
 }
