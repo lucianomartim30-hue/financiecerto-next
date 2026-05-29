@@ -144,7 +144,7 @@ export default function Home() {
             capacidade real e recomenda apenas imóveis que você consegue financiar.
           </p>
 
-          {/* CTAs */}
+          {/* CTAs — linha 1 */}
           <div className="home-ctas" style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/simulador" className="btn-primary" style={{ fontSize: '16px', padding: '15px 32px' }}>
               Descobrir meu perfil →
@@ -155,8 +155,19 @@ export default function Home() {
             <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
               🏠 Simular pronto
             </Link>
-            <Link href="/imoveis" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
-              🏘️ Ver imóveis em SP
+          </div>
+
+          {/* CTA verde — para quem já conhece seu perfil */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+            <Link href="/imoveis" style={{
+              display: 'inline-flex', alignItems: 'center', gap: '10px',
+              background: '#16a34a', color: '#fff',
+              border: 'none', borderRadius: '12px',
+              fontSize: '15px', fontWeight: '700',
+              padding: '13px 28px', textDecoration: 'none',
+              boxShadow: '0 2px 8px rgba(22,163,74,.25)',
+            }}>
+              ✅ Já sei meu perfil — buscar imóveis em SP →
             </Link>
           </div>
 
@@ -363,8 +374,17 @@ export default function Home() {
             <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
               🏠 Simular pronto
             </Link>
-            <Link href="/imoveis" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
-              🏘️ Ver imóveis em SP
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
+            <Link href="/imoveis" style={{
+              display: 'inline-flex', alignItems: 'center', gap: '10px',
+              background: '#16a34a', color: '#fff',
+              border: 'none', borderRadius: '12px',
+              fontSize: '15px', fontWeight: '700',
+              padding: '13px 28px', textDecoration: 'none',
+              boxShadow: '0 2px 8px rgba(22,163,74,.25)',
+            }}>
+              ✅ Já sei meu perfil — buscar imóveis em SP →
             </Link>
           </div>
         </div>
