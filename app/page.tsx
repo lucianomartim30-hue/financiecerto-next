@@ -155,6 +155,9 @@ export default function Home() {
             <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
               🏠 Simular pronto
             </Link>
+            <Link href="/imoveis" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
+              🏘️ Ver imóveis em SP
+            </Link>
           </div>
 
           <p style={{ fontSize: '13px', color: 'var(--text-faint)', marginTop: '16px' }}>
@@ -359,6 +362,9 @@ export default function Home() {
             </Link>
             <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
               🏠 Simular pronto
+            </Link>
+            <Link href="/imoveis" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
+              🏘️ Ver imóveis em SP
             </Link>
           </div>
         </div>
