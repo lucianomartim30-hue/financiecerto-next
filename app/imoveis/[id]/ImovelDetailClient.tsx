@@ -786,7 +786,11 @@ function SecaoTipologias({ typologies }: { typologies: Tipologia[] }) {
         {typologies.map((t, i) => (
           <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', transition: 'box-shadow 0.2s' }}>
             {t.photo && (
-              <img src={t.photo} alt={t.type} style={{ width: '100%', height: '140px', objectFit: 'cover' }} />
+              <img
+                src={t.photo} alt={t.type}
+                style={{ width: '100%', height: '140px', objectFit: 'cover' }}
+                onError={e => { e.currentTarget.style.display = 'none'; }}
+              />
             )}
             <div style={{ padding: '16px' }}>
               <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)', marginBottom: '12px' }}>{t.type}</p>
@@ -950,6 +954,7 @@ function SecaoEmpreendimento({ imovel }: { imovel: ImovelDetalhe }) {
             <img
               src={imovel.developer_logo} alt={imovel.developer}
               style={{ height: '40px', objectFit: 'contain', flexShrink: 0 }}
+              onError={e => { e.currentTarget.style.display = 'none'; }}
             />
           )}
           <div style={{ flex: 1 }}>
@@ -1143,7 +1148,15 @@ function SecaoRelacionados({
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', textDecoration: 'none', display: 'block' }}>
               <div style={{ height: '140px', background: '#E2E8F0', position: 'relative', overflow: 'hidden' }}>
                 {im.photo ? (
-                  <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img
+                    src={im.photo} alt={im.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={e => {
+                      e.currentTarget.style.display = 'none';
+                      const p = e.currentTarget.parentElement;
+                      if (p) { p.style.display = 'flex'; p.style.alignItems = 'center'; p.style.justifyContent = 'center'; p.innerHTML = '<span style="font-size:32px">🏢</span>'; }
+                    }}
+                  />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>🏢</div>
                 )}
