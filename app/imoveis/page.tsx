@@ -338,6 +338,8 @@ function ImoveisContent() {
   }, []);
 
   useEffect(() => { setDisplayCount(12); }, [activeLocation, filterStatus, filterFinality, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
+  // Reseta paginação quando o mapa é movido (novos cards aparecem do início)
+  useEffect(() => { if (!activeLocation) setDisplayCount(12); }, [debouncedBounds, activeLocation]);
 
   const baseFilter = useCallback((b: Imovel) => {
     // ── Filtro de localização (bairro / cidade digitado pelo usuário) ──────────
@@ -411,11 +413,27 @@ function ImoveisContent() {
     return mixStatus(filtered).map(toPin);
   }, [allBuildings, baseFilter, activeLocation, debouncedBounds, isMobile]);
 
-  // Cards: catálogo completo filtrado (não filtra por viewport — o mapa já faz isso nos pins)
-  const visibleBuildings = useMemo(
-    () => allBuildings.filter(baseFilter),
-    [allBuildings, baseFilter],
-  );
+  // Cards: filtrados pelo viewport do mapa quando ele está visível.
+  // - Com activeLocation: baseFilter já restringe ao bairro → sem filtro de bounds
+  // - Mobile em lista: mapa não está visível → mostra todos os filtrados
+  // - Desktop / mobile em mapa: filtra por bounds (cards = o que aparece no mapa)
+  const visibleBuildings = useMemo(() => {
+    const base = allBuildings.filter(baseFilter);
+
+    if (activeLocation) return base; // bairro já filtra tudo
+    if (isMobile && mobileView !== 'map') return base; // lista mobile sem mapa visível
+
+    if (debouncedBounds) {
+      const inView = base.filter(b =>
+        b.lat && b.lng &&
+        b.lat >= debouncedBounds.sw_lat && b.lat <= debouncedBounds.ne_lat &&
+        b.lng >= debouncedBounds.sw_lng && b.lng <= debouncedBounds.ne_lng
+      );
+      if (inView.length > 0) return inView;
+    }
+
+    return base;
+  }, [allBuildings, baseFilter, activeLocation, debouncedBounds, isMobile, mobileView]);
 
   const geocodeAndFly = useCallback(async (query: string) => {
     if (!query.trim()) return;
