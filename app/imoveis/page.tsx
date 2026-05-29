@@ -388,6 +388,16 @@ function ImoveisContent() {
     // Sem localização: aplica cap mais apertado no mobile
     const cap = isMobile ? 50 : 300;
 
+    // Distribui cap entre os 3 status → garante bolinhas das 3 cores no mapa
+    function mixStatus(list: Imovel[]): Imovel[] {
+      const st    = (b: Imovel) => (b.status_norm || b.status || '').toLowerCase();
+      const pronto = list.filter(b => { const s = st(b); return s.includes('pronto') || s.includes('entreg') || s.includes('conclui'); });
+      const obra   = list.filter(b => { const s = st(b); return s.includes('obra')   || s.includes('constru') || s.includes('andamento'); });
+      const planta = list.filter(b => !pronto.includes(b) && !obra.includes(b));
+      const perGrp = Math.ceil(cap / 3);
+      return [...planta.slice(0, perGrp), ...obra.slice(0, perGrp), ...pronto.slice(0, perGrp)].slice(0, cap);
+    }
+
     // Filtra pelo viewport atual + 20% de margem
     if (debouncedBounds) {
       const latPad = (debouncedBounds.ne_lat - debouncedBounds.sw_lat) * 0.2;
@@ -396,9 +406,9 @@ function ImoveisContent() {
         b.lat! >= debouncedBounds.sw_lat - latPad && b.lat! <= debouncedBounds.ne_lat + latPad &&
         b.lng! >= debouncedBounds.sw_lng - lngPad && b.lng! <= debouncedBounds.ne_lng + lngPad
       );
-      if (viewport.length > 0) return viewport.slice(0, cap).map(toPin);
+      if (viewport.length > 0) return mixStatus(viewport).map(toPin);
     }
-    return filtered.slice(0, cap).map(toPin);
+    return mixStatus(filtered).map(toPin);
   }, [allBuildings, baseFilter, activeLocation, debouncedBounds, isMobile]);
 
   // Cards: catálogo completo filtrado (não filtra por viewport — o mapa já faz isso nos pins)
