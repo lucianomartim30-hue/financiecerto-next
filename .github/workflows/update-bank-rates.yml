@@ -1,0 +1,99 @@
+name: 🏦 Monitorar Taxas dos Bancos (SBPE)
+
+# Roda no dia 15 de cada mês às 11h UTC (08h Brasília)
+# O BCB publica os dados de crédito até o dia 10.
+# Também pode ser acionado manualmente.
+on:
+  schedule:
+    - cron: '0 11 15 * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry-run (não altera arquivos)'
+        type: boolean
+        default: false
+      signal_only:
+        description: 'Apenas verificar sinal BCB (sem Playwright)'
+        type: boolean
+        default: false
+
+jobs:
+  monitor-rates:
+    name: Verificar e atualizar taxas SBPE
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      issues: write   # para criar issue de alerta se necessário
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Instala Playwright apenas se necessário (não dry-run, não signal-only)
+      - name: Instalar Playwright Chromium
+        if: ${{ !inputs.dry_run && !inputs.signal_only }}
+        run: npx playwright install chromium --with-deps
+
+      # Executa o script
+      - name: Verificar taxas
+        id: check
+        run: |
+          FLAGS=""
+          if [ "${{ inputs.dry_run }}"    = "true" ]; then FLAGS="$FLAGS --dry-run"; fi
+          if [ "${{ inputs.signal_only }}" = "true" ]; then FLAGS="$FLAGS --signal-only"; fi
+          node scripts/update-bank-rates.js $FLAGS
+        continue-on-error: true
+
+      # Faz commit se houve alteração
+      - name: Commit e push (se houver alterações)
+        if: steps.check.outcome == 'success'
+        run: |
+          git config user.name  "rate-bot[bot]"
+          git config user.email "rate-bot@financiecerto.com.br"
+
+          if git diff --quiet lib/calculos.ts; then
+            echo "ℹ️  Nenhuma alteração detectada."
+          else
+            MES=$(date +'%b/%Y')
+            git add lib/calculos.ts
+            git commit -m "chore(taxas): atualizar taxa Caixa SBPE — ${MES}"
+            git push
+            echo "✅ Taxa atualizada e commit realizado."
+          fi
+
+      # Cria GitHub Issue se o script falhou (taxa não pôde ser obtida)
+      - name: Criar alerta se taxa não pôde ser atualizada
+        if: steps.check.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toLocaleDateString('pt-BR');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              title: `⚠️ Taxas SBPE precisam de revisão manual — ${today}`,
+              body: [
+                '## Taxas dos bancos precisam de verificação',
+                '',
+                'O agente automático detectou que as taxas de mercado podem ter mudado,',
+                'mas não conseguiu confirmar a taxa atual da Caixa automaticamente.',
+                '',
+                '**Verifique manualmente:**',
+                '- [ ] [Caixa](https://www.caixa.gov.br/voce/habitacao/financiamento-habitacional/taxas-juros-modalidades-vigentes/)',
+                '- [ ] [Bradesco](https://banco.bradesco/html/classic/produtos-servicos/financiamentos)',
+                '- [ ] [Itaú](https://www.itau.com.br/creditos/financiamentos-e-emprestimos)',
+                '- [ ] [Santander](https://www.santander.com.br/financiamentos)',
+                '- [ ] [Banco do Brasil](https://www.bb.com.br/financiamento-imobiliario)',
+                '',
+                'Após verificar, atualize `BANCOS_SBPE` em `lib/calculos.ts` e feche esta issue.',
+                '',
+                '_Gerado automaticamente pelo workflow `update-bank-rates.yml`_',
+              ].join('\n'),
+              labels: ['manutenção', 'taxas'],
+            });
