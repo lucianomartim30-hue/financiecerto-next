@@ -4,10 +4,9 @@ import { useState } from 'react';
 
 const ASSUNTOS = [
   'Dúvida sobre financiamento',
-  'Dúvida sobre MCMV',
-  'Problema no site',
-  'Sugestão',
-  'Parceria / Imobiliária',
+  'Simulação personalizada',
+  'Parceria comercial',
+  'Sugestão para o site',
   'Outro',
 ];
 
