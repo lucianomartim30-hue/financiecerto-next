@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   try {
     // Envia para o administrador
     const { error } = await resend.emails.send({
-      from:     'FinancieCerto <onboarding@resend.dev>',
+      from:     'FinancieCerto <contato@financiecerto.com.br>',
       to:       ['contato@financiecerto.com.br'],
       subject:  `[Contato] ${assunto || 'Nova mensagem'} — ${nome}`,
       html,
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     // Confirmação para o usuário (silenciosa se falhar)
     resend.emails.send({
-      from:    'FinancieCerto <onboarding@resend.dev>',
+      from:    'FinancieCerto <contato@financiecerto.com.br>',
       to:      [email],
       subject: 'Recebemos sua mensagem — FinancieCerto',
       html:    htmlConfirmacao,
