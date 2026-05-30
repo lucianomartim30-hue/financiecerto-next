@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 // Rate limiting simples (por IP, em memória)
 const rateMap = new Map<string, { count: number; resetAt: number }>();
@@ -31,23 +31,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'E-mail inválido.' }, { status: 400 });
   }
 
-  const GMAIL_USER = process.env.GMAIL_USER;
-  const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
-  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
-    console.error('GMAIL_USER ou GMAIL_APP_PASSWORD não configurados');
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  if (!RESEND_API_KEY) {
+    console.error('RESEND_API_KEY não configurada');
     return NextResponse.json({ error: 'Serviço de email não configurado.' }, { status: 500 });
   }
 
-  // Remove espaços da senha de app (o Google exibe com espaços mas aceita sem)
-  const appPass = GMAIL_APP_PASSWORD.replace(/\s/g, '');
-
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: { user: GMAIL_USER, pass: appPass },
-    tls: { rejectUnauthorized: false },
-  });
+  const resend = new Resend(RESEND_API_KEY);
 
   // Monta o email
   const html = `
@@ -97,18 +87,23 @@ export async function POST(req: NextRequest) {
 
   try {
     // Envia para o administrador
-    await transporter.sendMail({
-      from:     `"FinancieCerto" <${GMAIL_USER}>`,
-      to:       GMAIL_USER,
+    const { error } = await resend.emails.send({
+      from:     'FinancieCerto <onboarding@resend.dev>',
+      to:       ['contato@financiecerto.com.br'],
       subject:  `[Contato] ${assunto || 'Nova mensagem'} — ${nome}`,
       html,
       replyTo:  email,
     });
 
+    if (error) {
+      console.error('Resend error:', error);
+      return NextResponse.json({ error: 'Erro ao enviar email.' }, { status: 500 });
+    }
+
     // Confirmação para o usuário (silenciosa se falhar)
-    transporter.sendMail({
-      from:    `"FinancieCerto" <${GMAIL_USER}>`,
-      to:      email,
+    resend.emails.send({
+      from:    'FinancieCerto <onboarding@resend.dev>',
+      to:      [email],
       subject: 'Recebemos sua mensagem — FinancieCerto',
       html:    htmlConfirmacao,
     }).catch(() => {});
