@@ -132,13 +132,15 @@ export async function GET(
     if (mainPhoto) photos.push(mainPhoto);
 
     const imagesRaw = ((b.images ?? b.photos ?? b.building_images ?? b.building_photos ?? []) as Record<string, unknown>[]);
-    for (const img of imagesRaw.slice(0, 30)) {
-      // Cada item pode ter: { id, description, type, associations } — às vezes sem URL explícita.
-      // Tentamos primeiro extrair URL dos campos conhecidos (melhor qualidade);
-      // só usamos o ID para montar URL via CDN se nenhum campo URL estiver presente.
+    for (const img of imagesRaw.slice(0, 60)) {
+      // Orulo v2 aninha as URLs dentro de img.image = { '1024x1024': '...', '520x280': '...' }
+      // Verificamos primeiro o objeto aninhado (URLs reais do CDN), depois campos de raiz,
+      // e só como último recurso construímos a URL via ID.
+      const nested = (img.image ?? img.images) as Record<string, string> | undefined;
+      const urlFromNested = nested ? pickUrl(nested) : '';
       const urlFromFields = pickUrl(img as Record<string, string>);
       const imgId = (img.id ?? img['image_id']) as string | number | undefined;
-      const url = urlFromFields || (imgId ? imageUrl(imgId) : '');
+      const url = urlFromNested || urlFromFields || (imgId ? imageUrl(imgId) : '');
       if (url && !photos.includes(url)) photos.push(url);
     }
 
