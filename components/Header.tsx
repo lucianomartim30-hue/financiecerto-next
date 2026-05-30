@@ -10,6 +10,7 @@ const NAV_SIMPLE = [
   { href: '/imoveis',   label: 'Imóveis',   icon: '🏘️' },
   { href: '/guia',      label: 'Guia',      icon: '📘' },
   { href: '/glossario', label: 'Glossário', icon: '🔤' },
+  { href: '/sobre',     label: 'Sobre nós', icon: 'ℹ️' },
   { href: '/contato',   label: 'Contato',   icon: '✉️' },
 ];
 
