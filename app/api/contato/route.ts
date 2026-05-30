@@ -41,9 +41,10 @@ export async function POST(req: NextRequest) {
 
   // Monta o email
   const html = `
+    <meta charset="utf-8"/>
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;">
       <div style="background:#2563eb;padding:24px 32px;border-radius:12px 12px 0 0;">
-        <h1 style="color:#fff;margin:0;font-size:20px;">📩 Nova mensagem — FinancieCerto</h1>
+        <h1 style="color:#fff;margin:0;font-size:20px;">Nova mensagem &mdash; FinancieCerto</h1>
       </div>
       <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
         <table style="width:100%;border-collapse:collapse;">
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
   const htmlConfirmacao = `
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;">
       <div style="background:#16a34a;padding:24px 32px;border-radius:12px 12px 0 0;">
-        <h1 style="color:#fff;margin:0;font-size:20px;">✅ Mensagem recebida!</h1>
+        <h1 style="color:#fff;margin:0;font-size:20px;">Mensagem recebida!</h1>
       </div>
       <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
         <p style="font-size:15px;color:#111827;">Olá, <strong>${nome}</strong>!</p>
