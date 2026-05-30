@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
         </p>
       </div>
     </div>
-  `;
+  `);
 
   try {
     // Envia para o administrador
