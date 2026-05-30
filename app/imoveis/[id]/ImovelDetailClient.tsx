@@ -322,13 +322,13 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
               {/* Overlay escuro com contagem de fotos restantes */}
-              {total > 3 && (
+              {validCount > 3 && (
                 <div style={{
                   position: 'absolute', inset: 0,
                   background: 'rgba(0,0,0,.52)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <span style={{ color: '#fff', fontWeight: '800', fontSize: '20px' }}>+{total - 3}</span>
+                  <span style={{ color: '#fff', fontWeight: '800', fontSize: '20px' }}>+{validCount - 3}</span>
                 </div>
               )}
             </div>
