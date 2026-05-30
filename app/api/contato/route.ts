@@ -39,43 +39,49 @@ export async function POST(req: NextRequest) {
 
   const resend = new Resend(RESEND_API_KEY);
 
+  // Helper para escapar HTML mantendo acentos
+  const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const wrap = (body: string) => `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width"/></head>
+<body style="margin:0;padding:20px;background:#f3f4f6;">${body}</body></html>`;
+
   // Monta o email
-  const html = `
-    <meta charset="utf-8"/>
+  const html = wrap(`
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;">
       <div style="background:#2563eb;padding:24px 32px;border-radius:12px 12px 0 0;">
         <h1 style="color:#fff;margin:0;font-size:20px;">Nova mensagem &mdash; FinancieCerto</h1>
       </div>
       <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
         <table style="width:100%;border-collapse:collapse;">
-          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:120px;">Nome</td><td style="padding:8px 0;font-weight:700;color:#111827;">${nome}</td></tr>
-          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">E-mail</td><td style="padding:8px 0;font-weight:700;color:#2563eb;"><a href="mailto:${email}">${email}</a></td></tr>
-          ${telefone ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">Telefone</td><td style="padding:8px 0;font-weight:700;">${telefone}</td></tr>` : ''}
-          ${assunto ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">Assunto</td><td style="padding:8px 0;font-weight:700;">${assunto}</td></tr>` : ''}
+          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;width:120px;">Nome</td><td style="padding:8px 0;font-weight:700;color:#111827;">${esc(nome)}</td></tr>
+          <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">E-mail</td><td style="padding:8px 0;font-weight:700;color:#2563eb;"><a href="mailto:${esc(email)}">${esc(email)}</a></td></tr>
+          ${telefone ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">Telefone</td><td style="padding:8px 0;font-weight:700;">${esc(telefone)}</td></tr>` : ''}
+          ${assunto ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">Assunto</td><td style="padding:8px 0;font-weight:700;">${esc(assunto)}</td></tr>` : ''}
         </table>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;" />
         <p style="font-size:13px;color:#6b7280;margin:0 0 8px;">Mensagem:</p>
-        <p style="font-size:15px;color:#111827;line-height:1.7;white-space:pre-wrap;">${mensagem.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+        <p style="font-size:15px;color:#111827;line-height:1.7;white-space:pre-wrap;">${esc(mensagem)}</p>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;" />
-        <p style="font-size:11px;color:#9ca3af;">Enviado via financiecerto.com.br · LGPD aceito · IP: ${ip}</p>
+        <p style="font-size:11px;color:#9ca3af;">Enviado via financiecerto.com.br &middot; LGPD aceito &middot; IP: ${ip}</p>
       </div>
     </div>
-  `;
+  `);
 
   // Email de confirmação para o usuário
-  const htmlConfirmacao = `
+  const htmlConfirmacao = wrap(`
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;">
       <div style="background:#16a34a;padding:24px 32px;border-radius:12px 12px 0 0;">
         <h1 style="color:#fff;margin:0;font-size:20px;">Mensagem recebida!</h1>
       </div>
       <div style="background:#fff;padding:32px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 12px 12px;">
-        <p style="font-size:15px;color:#111827;">Olá, <strong>${nome}</strong>!</p>
+        <p style="font-size:15px;color:#111827;">Ol&aacute;, <strong>${esc(nome)}</strong>!</p>
         <p style="font-size:14px;color:#374151;line-height:1.7;">
-          Recebemos sua mensagem e responderemos em até <strong>2 dias úteis</strong>.
+          Recebemos sua mensagem e responderemos em at&eacute; <strong>2 dias &uacute;teis</strong>.
         </p>
         <div style="background:#F8FAFC;border-radius:10px;padding:16px 20px;margin:20px 0;">
           <p style="font-size:12px;color:#6b7280;margin:0 0 4px;">Sua mensagem:</p>
-          <p style="font-size:13px;color:#374151;margin:0;white-space:pre-wrap;">${mensagem.replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 300)}${mensagem.length > 300 ? '...' : ''}</p>
+          <p style="font-size:13px;color:#374151;margin:0;white-space:pre-wrap;">${esc(mensagem.slice(0, 300))}${mensagem.length > 300 ? '...' : ''}</p>
         </div>
         <p style="font-size:13px;color:#6b7280;">
           Atenciosamente,<br/>
