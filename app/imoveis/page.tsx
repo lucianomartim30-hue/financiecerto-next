@@ -503,9 +503,9 @@ function ImoveisContent() {
 
   const pillStyle = (active: boolean): React.CSSProperties => ({
     height: '36px', padding: '0 12px', borderRadius: '18px',
-    border: `1.5px solid ${active ? 'var(--primary)' : '#d1d5db'}`,
-    background: active ? 'var(--primary-light)' : '#fff',
-    color: active ? 'var(--primary)' : '#374151',
+    border: `1.5px solid ${active ? '#60a5fa' : 'rgba(255,255,255,.2)'}`,
+    background: active ? 'rgba(96,165,250,.15)' : 'rgba(255,255,255,.08)',
+    color: active ? '#60a5fa' : 'rgba(255,255,255,.85)',
     fontSize: '13px', fontWeight: active ? '700' : '500',
     cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
     whiteSpace: 'nowrap' as const, flexShrink: 0,
@@ -737,7 +737,7 @@ function ImoveisContent() {
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <div
         className="filter-bar"
-        style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '8px 12px', display: 'flex', gap: '7px', alignItems: 'center', flexShrink: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
+        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', borderBottom: '1px solid rgba(255,255,255,.08)', padding: '8px 12px', display: 'flex', gap: '7px', alignItems: 'center', flexShrink: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
       >
         {/* Busca: botão que abre modal no mobile / input inline no desktop */}
         <div ref={searchRef} style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
@@ -748,9 +748,9 @@ function ImoveisContent() {
               style={{
                 display: 'flex', alignItems: 'center', gap: '5px',
                 height: '34px', padding: '0 10px',
-                background: '#f9fafb', border: '1.5px solid #d1d5db', borderRadius: '8px',
+                background: 'rgba(255,255,255,.1)', border: '1.5px solid rgba(255,255,255,.2)', borderRadius: '8px',
                 cursor: 'pointer', fontSize: '13px',
-                color: search ? '#111827' : '#9ca3af',
+                color: search ? '#fff' : 'rgba(255,255,255,.6)',
                 width: 'min(200px, calc(50vw - 40px))', overflow: 'hidden',
                 flexShrink: 0,
               }}
@@ -763,7 +763,7 @@ function ImoveisContent() {
           ) : (
             /* Desktop: input com autocomplete inline */
             <>
-              <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid #d1d5db' }}>
+              <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid rgba(255,255,255,.2)' }}>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
                   <input
@@ -774,10 +774,10 @@ function ImoveisContent() {
                       if (e.key === 'Enter') { inputRef.current?.blur(); geocodeAndFly(search); }
                       if (e.key === 'Escape') { setShowSuggestions(false); inputRef.current?.blur(); }
                     }}
-                    onFocus={e => { e.currentTarget.style.background = '#fff'; setShowSuggestions(true); }}
-                    onBlur={e => { e.currentTarget.style.background = '#f9fafb'; }}
+                    onFocus={e => { e.currentTarget.style.background = 'rgba(255,255,255,.15)'; setShowSuggestions(true); }}
+                    onBlur={e => { e.currentTarget.style.background = 'rgba(255,255,255,.08)'; }}
                     ref={inputRef}
-                    style={{ width: '130px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '13px' }}
+                    style={{ width: '130px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '13px' }}
                   />
                 </div>
                 {search && (
@@ -817,7 +817,7 @@ function ImoveisContent() {
         {/* Chip de localização ativa */}
         {activeLocation && (
           <button onClick={() => { setActiveLocation(''); setSearch(''); }}
-            style={{ height: '36px', padding: '0 10px', borderRadius: '18px', border: '1.5px solid var(--primary)', background: 'var(--primary-light)', color: 'var(--primary)', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            style={{ height: '36px', padding: '0 10px', borderRadius: '18px', border: '1.5px solid #60a5fa', background: 'rgba(96,165,250,.15)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
             📍 {activeLocation} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
           </button>
         )}
@@ -840,7 +840,7 @@ function ImoveisContent() {
         </button>
 
         {hasFilters && (
-          <button onClick={clearAll} style={{ height: '36px', padding: '0 12px', borderRadius: '18px', border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          <button onClick={clearAll} style={{ height: '36px', padding: '0 12px', borderRadius: '18px', border: '1px solid rgba(252,165,165,.4)', background: 'rgba(220,38,38,.15)', color: '#fca5a5', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
             ✕ Limpar
           </button>
         )}
@@ -848,7 +848,7 @@ function ImoveisContent() {
 
       {/* ── MOBILE: Tabs Lista / Mapa ────────────────────────────────────────── */}
       {isMobile && (
-        <div style={{ display: 'flex', background: '#fff', borderBottom: '1px solid #e5e7eb', flexShrink: 0 }}>
+        <div style={{ display: 'flex', background: '#1e3a5f', borderBottom: '1px solid rgba(255,255,255,.08)', flexShrink: 0 }}>
           {([
             { id: 'list' as const, icon: '📋', label: loading ? 'Lista' : `Lista (${visibleBuildings.length})` },
             { id: 'map'  as const, icon: '🗺️', label: loading ? 'Mapa'  : `Mapa (${mapPins.length})` },
@@ -856,10 +856,10 @@ function ImoveisContent() {
             <button key={id} onClick={() => setMobileView(id)}
               style={{
                 flex: 1, padding: '11px 8px', background: 'transparent',
-                color: mobileView === id ? 'var(--primary)' : '#6b7280',
+                color: mobileView === id ? '#60a5fa' : 'rgba(255,255,255,.5)',
                 fontWeight: mobileView === id ? '700' : '500',
                 border: 'none',
-                borderBottom: mobileView === id ? '2.5px solid var(--primary)' : '2.5px solid transparent',
+                borderBottom: mobileView === id ? '2.5px solid #60a5fa' : '2.5px solid transparent',
                 fontSize: '14px', cursor: 'pointer', transition: 'all 0.15s',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
               }}>
