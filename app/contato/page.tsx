@@ -42,12 +42,34 @@ export default function ContatoPage() {
   }
 
   return (
-    <main style={{ maxWidth: 720, margin: '0 auto', padding: '40px 16px 80px' }}>
-      {/* Título */}
-      <h1 style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)', marginBottom: 6 }}>Fale conosco</h1>
-      <p style={{ fontSize: 14, color: 'var(--text-faint)', marginBottom: 32 }}>
-        Tire dúvidas, envie sugestões ou entre em contato para parcerias.
-      </p>
+    <main>
+      {/* Hero */}
+      <section style={{
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)',
+        padding: '64px 24px 56px',
+        textAlign: 'center',
+      }}>
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
+          <div style={{
+            display: 'inline-block',
+            background: 'rgba(255,255,255,.1)',
+            border: '1px solid rgba(255,255,255,.15)',
+            borderRadius: 999, padding: '5px 16px',
+            fontSize: 12, fontWeight: 700, color: '#93c5fd',
+            letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 20,
+          }}>
+            Contato
+          </div>
+          <h1 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: 14 }}>
+            Fale conosco
+          </h1>
+          <p style={{ fontSize: 16, color: '#cbd5e1', lineHeight: 1.7, margin: 0 }}>
+            Tire dúvidas, envie sugestões ou entre em contato para parcerias.
+          </p>
+        </div>
+      </section>
+
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 16px 80px' }}>
 
       {/* Banner email direto */}
       <div style={{
@@ -226,6 +248,7 @@ export default function ContatoPage() {
           <p style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: -8 }}>* Campos obrigatórios.</p>
         </form>
       )}
+      </div>
     </main>
   );
 }
