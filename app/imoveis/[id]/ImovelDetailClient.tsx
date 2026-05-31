@@ -187,6 +187,8 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
   const [lightboxUrlOverrides, setLightboxUrlOverrides] = useState<Map<number, string>>(new Map());
   // failedPhotos: índices confirmados como quebrados (todas variantes falharam)
   const [failedPhotos, setFailedPhotos] = useState<Set<number>>(new Set());
+  // mosaicFailed: slots do mosaico que falharam (para ocultar o container)
+  const [mosaicFailed, setMosaicFailed] = useState<Set<number>>(new Set());
 
   const total = photos.length;
 
@@ -209,12 +211,15 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
     return idx;
   }
 
-  // onError do mosaico: tenta variante; se esgotada, oculta e registra falha
+  // onError do mosaico: tenta variante; se esgotada, oculta o container inteiro e registra falha
   function mosaicOnError(e: React.SyntheticEvent<HTMLImageElement>, idx: number) {
     const img = e.currentTarget;
     const next = nextVariantUrl(img.src);
     if (next) { img.src = next; return; }
-    img.style.display = 'none';
+    // Oculta o container pai para não mostrar caixa preta
+    const container = img.closest('[data-mosaic-slot]') as HTMLElement | null;
+    if (container) container.style.display = 'none';
+    setMosaicFailed(prev => new Set([...prev, idx]));
     setFailedPhotos(prev => new Set([...prev, idx]));
   }
 
@@ -295,6 +300,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
           {/* Foto 2 — superior direita */}
           {total >= 2 && (
             <div
+              data-mosaic-slot="1"
               onClick={() => setLightbox(1)}
               style={{ position: 'relative', overflow: 'hidden', cursor: 'zoom-in', background: '#1e293b' }}
             >
@@ -311,6 +317,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
           {/* Foto 3 — inferior direita, com overlay "+N" se houver mais */}
           {total >= 3 && (
             <div
+              data-mosaic-slot="2"
               onClick={() => setLightbox(2)}
               style={{ position: 'relative', overflow: 'hidden', cursor: 'zoom-in', background: '#1e293b' }}
             >
@@ -383,7 +390,12 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
           >✕</button>
 
           <div style={{ position: 'absolute', bottom: '20px', color: 'rgba(255,255,255,.7)', fontSize: '13px' }}>
-            {lightbox + 1} / {validCount > 0 ? validCount : total}
+            {/* Posição sequencial entre fotos válidas (não pula números) */}
+            {(() => {
+              const validList = photos.map((_, i) => i).filter(i => !failedPhotos.has(i));
+              const pos = validList.indexOf(lightbox) + 1;
+              return `${pos > 0 ? pos : lightbox + 1} / ${validCount > 0 ? validCount : total}`;
+            })()}
           </div>
         </div>
       )}
