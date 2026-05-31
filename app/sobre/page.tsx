@@ -62,7 +62,7 @@ export default function SobrePage() {
               fontSize: 15, fontWeight: 700, textDecoration: 'none',
               border: '2px solid #3b82f6',
             }}>
-              Simular meu perfil →
+              Descobrir meu perfil →
             </Link>
             <Link href="/imoveis" style={{
               background: 'rgba(255,255,255,0.08)', color: '#fff',
