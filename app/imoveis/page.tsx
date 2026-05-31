@@ -737,7 +737,7 @@ function ImoveisContent() {
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <div
         className="filter-bar"
-        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)', borderBottom: '1px solid rgba(255,255,255,.08)', padding: '8px 12px', display: 'flex', gap: '7px', alignItems: 'center', flexShrink: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
+        style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)', borderBottom: '1px solid rgba(255,255,255,.08)', padding: '8px 12px', display: 'flex', gap: '7px', alignItems: 'center', flexShrink: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}
       >
         {/* Busca: botão que abre modal no mobile / input inline no desktop */}
         <div ref={searchRef} style={{ position: 'relative', display: 'flex', flexShrink: 0 }}>
