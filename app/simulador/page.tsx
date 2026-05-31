@@ -642,7 +642,9 @@ function SimuladorInner() {
             <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 10 }}>Seu perfil — {dados.label}</div>
             <div style={{ fontSize: 38, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{formatBRL(dados.valorMaxImovel)}</div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', marginTop: 6 }}>
-              {painelAtivo === 'sfi' ? 'capacidade de compra (sem limite de teto)' : `valor máximo do imóvel${dados.teto ? ` · teto ${formatBRL(dados.teto)}` : ''}`}
+              {painelAtivo === 'sfi'
+                ? 'capacidade de compra (sem limite de teto)'
+                : `valor máximo do imóvel${dados.teto ? ` · teto ${formatBRL(dados.teto)}` : ''}${fgtsAtivo5 > 0 ? ` · inclui FGTS de ${formatBRL(fgtsAtivo5)}` : ''}`}
             </div>
             <div style={{ display: 'inline-block', marginTop: 14, padding: '5px 16px', background: 'rgba(255,255,255,.2)', borderRadius: 99, fontSize: 13, color: '#fff', fontWeight: 700 }}>
               {dados.taxa}% a.a. + {painelAtivo === 'sfi' ? 'taxa livre' : 'TR'}
@@ -654,9 +656,9 @@ function SimuladorInner() {
               { l: 'Parcela estimada', v: formatBRL(dados.parcela) + '/mês', d: `${compr.toFixed(1)}% da renda` },
               { l: 'Prazo máximo', v: `${prazoAnos} anos`, d: `${prazoMaxMeses} meses` },
               {
-                l: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? 'Subsídio estimado' : 'FGTS disponível',
+                l: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? 'Subsídio estimado' : 'FGTS utilizado',
                 v: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? formatBRL(subsidioEstimado) : (painelAtivo === 'sfi' ? 'Não permitido' : formatBRL(perfil.fgts)),
-                d: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? 'Confirme na Caixa Econômica Federal' : painelAtivo === 'sfi' ? 'SFI não usa FGTS' : 'Usado como entrada',
+                d: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? 'Confirme na Caixa Econômica Federal' : painelAtivo === 'sfi' ? 'SFI não usa FGTS' : 'Já incluído no poder de compra acima',
               },
               { l: 'Modalidade', v: painelAtivo === 'sbpe' ? 'SFH / SBPE' : dados.label, d: painelAtivo === 'sbpe' ? 'SBPE opera dentro do SFH' : painelAtivo === 'sfi' ? 'Paralelo ao SFH, sem teto' : 'Subsídio CEF' },
             ].map(({ l, v, d }) => (
