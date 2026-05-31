@@ -132,7 +132,7 @@ export async function GET(
     if (mainPhoto) photos.push(mainPhoto);
 
     const imagesRaw = ((b.images ?? b.photos ?? b.building_images ?? b.building_photos ?? []) as Record<string, unknown>[]);
-    for (const img of imagesRaw.slice(0, 60)) {
+    for (const img of imagesRaw.slice(0, 30)) {
       // Orulo v2 aninha as URLs dentro de img.image = { '1024x1024': '...', '520x280': '...' }
       // Verificamos primeiro o objeto aninhado (URLs reais do CDN), depois campos de raiz,
       // e só como último recurso construímos a URL via ID.
