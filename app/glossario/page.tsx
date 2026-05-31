@@ -282,31 +282,31 @@ export default function GlossarioPage() {
 
       {/* ── Hero ───────────────────────────────────────────────────── */}
       <section style={{
-        background: 'linear-gradient(160deg, #eff6ff 0%, #fafaf9 60%, #f0fdf4 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)',
         padding: '80px 24px 64px',
         textAlign: 'center',
       }}>
         <div className="container" style={{ maxWidth: '680px' }}>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '8px',
-            background: 'rgba(37,99,235,.08)',
-            border: '1px solid rgba(37,99,235,.2)',
+            background: 'rgba(255,255,255,.1)',
+            border: '1px solid rgba(255,255,255,.15)',
             borderRadius: '99px', padding: '5px 14px',
             marginBottom: '24px',
           }}>
             <span style={{ fontSize: '14px' }}>🔤</span>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: '#2563eb', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: '#93c5fd', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
               Glossário
             </span>
           </div>
 
-          <h1 style={{ fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: '800', color: '#0f172a', lineHeight: 1.2, marginBottom: '16px' }}>
+          <h1 style={{ fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: '800', color: '#fff', lineHeight: 1.2, marginBottom: '16px' }}>
             Termos do{' '}
-            <span style={{ color: '#2563eb' }}>
+            <span style={{ background: 'linear-gradient(135deg, #818cf8, #38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               Financiamento Imobiliário
             </span>
           </h1>
-          <p style={{ fontSize: '16px', color: '#64748b', lineHeight: 1.7, marginBottom: '36px' }}>
+          <p style={{ fontSize: '16px', color: '#cbd5e1', lineHeight: 1.7, marginBottom: '36px' }}>
             {TERMS.length} termos explicados de forma clara e objetiva — do MCMV ao ITBI, de SAC a SIOPI.
           </p>
 
@@ -324,14 +324,14 @@ export default function GlossarioPage() {
               style={{
                 width: '100%',
                 padding: '14px 16px 14px 46px',
-                border: '1.5px solid #e2e8f0',
+                border: '1.5px solid rgba(255,255,255,.15)',
                 borderRadius: '12px',
-                background: '#fff',
-                color: '#0f172a',
+                background: 'rgba(255,255,255,.1)',
+                color: '#fff',
                 fontSize: '15px',
                 outline: 'none',
+                backdropFilter: 'blur(8px)',
                 boxSizing: 'border-box',
-                boxShadow: '0 1px 4px rgba(0,0,0,.06)',
               }}
             />
           </div>

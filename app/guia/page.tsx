@@ -117,25 +117,45 @@ export default function GuiaPage() {
 
       {/* Hero */}
       <section style={{
-        background: 'linear-gradient(160deg, #eff6ff 0%, #fafaf9 60%, #f0fdf4 100%)',
-        borderBottom: '1px solid var(--border)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)',
+        borderBottom: '1px solid rgba(255,255,255,.08)',
         padding: '64px 24px 72px',
         textAlign: 'center',
       }}>
         <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-          <p className="section-label">Educação Financeira</p>
-          <h1 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: '900', letterSpacing: '-1px', marginBottom: '16px' }}>
+          <div style={{
+            display: 'inline-block',
+            background: 'rgba(255,255,255,.1)',
+            border: '1px solid rgba(255,255,255,.15)',
+            borderRadius: 999,
+            padding: '5px 16px',
+            fontSize: 12, fontWeight: 700,
+            color: '#93c5fd',
+            letterSpacing: '1px',
+            textTransform: 'uppercase',
+            marginBottom: 20,
+          }}>
+            Educação Financeira
+          </div>
+          <h1 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: '900', letterSpacing: '-1px', marginBottom: '16px', color: '#fff' }}>
             Guia Completo de Financiamento
           </h1>
-          <p style={{ fontSize: '17px', color: 'var(--text-muted)', lineHeight: '1.7', maxWidth: '540px', margin: '0 auto 32px' }}>
+          <p style={{ fontSize: '17px', color: '#cbd5e1', lineHeight: '1.7', maxWidth: '540px', margin: '0 auto 32px' }}>
             Tudo que você precisa saber sobre o processo real da compra imobiliária no Brasil —
             do MCMV ao habite-se.
           </p>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/simulador" className="btn-primary">
+            <Link href="/simulador" style={{
+              background: '#2563eb', color: '#fff', borderRadius: 10,
+              padding: '13px 26px', fontSize: 15, fontWeight: 700, textDecoration: 'none',
+            }}>
               Simular agora →
             </Link>
-            <Link href="/glossario" className="btn-outline">
+            <Link href="/glossario" style={{
+              background: 'rgba(255,255,255,.1)', color: '#fff',
+              border: '1px solid rgba(255,255,255,.2)',
+              borderRadius: 10, padding: '13px 26px', fontSize: 15, fontWeight: 700, textDecoration: 'none',
+            }}>
               🔤 Ver glossário
             </Link>
           </div>

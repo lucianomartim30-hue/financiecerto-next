@@ -12,20 +12,20 @@ export default function SobrePage() {
 
       {/* ── SEÇÃO 1 — HERO ─────────────────────────────────────────────────── */}
       <section style={{
-        background: 'linear-gradient(160deg, #eff6ff 0%, #fafaf9 60%, #f0fdf4 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)',
         padding: '80px 24px 72px',
         textAlign: 'center',
       }}>
         <div style={{ maxWidth: 760, margin: '0 auto' }}>
           <div style={{
             display: 'inline-block',
-            background: 'rgba(37,99,235,.08)',
-            border: '1px solid rgba(37,99,235,.2)',
+            background: 'rgba(255,255,255,0.1)',
+            border: '1px solid rgba(255,255,255,0.15)',
             borderRadius: 999,
             padding: '6px 18px',
             fontSize: 12,
             fontWeight: 700,
-            color: '#2563eb',
+            color: '#93c5fd',
             letterSpacing: '1px',
             textTransform: 'uppercase',
             marginBottom: 28,
@@ -36,17 +36,17 @@ export default function SobrePage() {
           <h1 style={{
             fontSize: 'clamp(26px, 5vw, 44px)',
             fontWeight: 900,
-            color: '#0f172a',
+            color: '#fff',
             lineHeight: 1.15,
             marginBottom: 24,
           }}>
             O mercado imobiliário tem muitos portais.<br />
-            <span style={{ color: '#2563eb' }}>Nenhum deles começa pela sua realidade financeira.</span>
+            <span style={{ color: '#60a5fa' }}>Nenhum deles começa pela sua realidade financeira.</span>
           </h1>
 
           <p style={{
             fontSize: 'clamp(15px, 2vw, 18px)',
-            color: '#475569',
+            color: '#cbd5e1',
             lineHeight: 1.8,
             maxWidth: 600,
             margin: '0 auto 40px',
@@ -60,14 +60,15 @@ export default function SobrePage() {
               background: '#2563eb', color: '#fff',
               borderRadius: 12, padding: '14px 28px',
               fontSize: 15, fontWeight: 700, textDecoration: 'none',
+              border: '2px solid #3b82f6',
             }}>
               Descobrir meu perfil →
             </Link>
             <Link href="/imoveis" style={{
-              background: '#fff', color: '#0f172a',
+              background: 'rgba(255,255,255,0.08)', color: '#fff',
               borderRadius: 12, padding: '14px 28px',
               fontSize: 15, fontWeight: 700, textDecoration: 'none',
-              border: '1.5px solid #e2e8f0',
+              border: '2px solid rgba(255,255,255,0.2)',
             }}>
               Explorar imóveis →
             </Link>

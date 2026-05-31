@@ -85,8 +85,8 @@ export default function Home() {
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section style={{
-        background: 'linear-gradient(160deg, #eff6ff 0%, #fafaf9 55%, #f0fdf4 100%)',
-        borderBottom: '1px solid var(--border)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)',
+        borderBottom: '1px solid rgba(255,255,255,.08)',
         padding: '72px 24px 80px',
         textAlign: 'center',
       }}>
@@ -95,9 +95,9 @@ export default function Home() {
           {/* Badge */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '7px',
-            background: 'rgba(255,255,255,.9)',
-            color: 'var(--primary)',
-            border: '1px solid rgba(37,99,235,.18)',
+            background: 'rgba(255,255,255,.1)',
+            color: '#93c5fd',
+            border: '1px solid rgba(255,255,255,.15)',
             borderRadius: '99px',
             padding: '6px 18px',
             fontSize: '12px',
@@ -105,7 +105,6 @@ export default function Home() {
             letterSpacing: '0.5px',
             textTransform: 'uppercase',
             marginBottom: '32px',
-            boxShadow: '0 2px 12px rgba(37,99,235,.08)',
           }}>
             <span>🏠</span> Plataforma inteligente imobiliária · 2026
           </div>
@@ -116,12 +115,12 @@ export default function Home() {
             fontWeight: '900',
             lineHeight: '1.1',
             letterSpacing: '-1.5px',
-            color: 'var(--text)',
+            color: '#fff',
             marginBottom: '22px',
           }}>
             Descubra o imóvel certo{' '}
             <span style={{
-              background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+              background: 'linear-gradient(135deg, #60a5fa, #34d399)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -134,7 +133,7 @@ export default function Home() {
           {/* Subtítulo */}
           <p style={{
             fontSize: '18px',
-            color: 'var(--text-muted)',
+            color: '#cbd5e1',
             lineHeight: '1.75',
             marginBottom: '44px',
             maxWidth: '580px',
@@ -171,7 +170,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <p style={{ fontSize: '13px', color: 'var(--text-faint)', marginTop: '16px' }}>
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.5)', marginTop: '16px' }}>
             Gratuito · Sem cadastro · Resultado em menos de 2 minutos
           </p>
 
@@ -183,21 +182,21 @@ export default function Home() {
             flexWrap: 'wrap',
             marginTop: '56px',
             paddingTop: '40px',
-            borderTop: '1px solid rgba(0,0,0,.07)',
+            borderTop: '1px solid rgba(255,255,255,.1)',
           }}>
             {STATS.map((s) => (
               <Link key={s.label} href={s.href} style={{ textAlign: 'center', textDecoration: 'none' }}>
                 <div style={{
                   fontSize: '28px',
                   fontWeight: '900',
-                  color: 'var(--primary)',
+                  color: '#60a5fa',
                   letterSpacing: '-0.5px',
                   lineHeight: 1,
                   marginBottom: '4px',
                 }}>
                   {s.value}
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-faint)', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.5)', fontWeight: '500', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                   {s.label}
                 </div>
               </Link>
