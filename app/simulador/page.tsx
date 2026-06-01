@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
-  descobrir, simular, formatBRL, motivoSBPE, parcelaPrice,
+  descobrir, simular, formatBRL, motivoSBPE, parcelaPrice, calcularSeguros,
   detectarFaixaMCMV, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH,
   BANCOS_SBPE,
   type ResultadoDescobrir, type ResultadoSimulacao,
@@ -210,7 +210,9 @@ function ComparativoBancosSBPE({ financiado, prazoMeses }: { financiado: number;
       </div>
       <div style={{ display: 'grid', gap: 6 }}>
         {BANCOS_SBPE.map((b, i) => {
-          const parcela = parcelaPrice(financiado, b.taxa, prazoMeses > 0 ? prazoMeses : 420);
+          const aj      = parcelaPrice(financiado, b.taxa, prazoMeses > 0 ? prazoMeses : 420);
+          const seguros = calcularSeguros(financiado);
+          const total   = aj + seguros.total;
           return (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -226,14 +228,19 @@ function ComparativoBancosSBPE({ financiado, prazoMeses }: { financiado: number;
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: b.destaque ? 'var(--primary)' : '#111827' }}>{b.taxa.toFixed(2).replace('.', ',')}% a.a.</div>
-                {financiado > 0 && <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>~{formatBRL(Math.round(parcela))}/mês</div>}
+                {financiado > 0 && (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: b.destaque ? 'var(--primary)' : '#111827', marginTop: 1 }}>~{formatBRL(Math.round(total))}/mês</div>
+                    <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 1 }}>A+J {formatBRL(Math.round(aj))} + seguros {formatBRL(Math.round(seguros.total))}</div>
+                  </>
+                )}
               </div>
             </div>
           );
         })}
       </div>
       <p style={{ fontSize: 11, color: '#6B7280', marginTop: 10, lineHeight: 1.5 }}>
-        ℹ️ Taxas nominais + TR. Parcela estimada (Price · sem seguros). Taxas variam por perfil, LTV e relacionamento com o banco. Consulte cada instituição para proposta personalizada.
+        ℹ️ Encargo total estimado (Price · A+J + MIP + DFI). Seguros variam por idade e banco. Taxas variam por perfil, LTV e relacionamento. Consulte cada instituição para proposta personalizada.
       </p>
     </div>
   );
