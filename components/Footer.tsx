@@ -9,6 +9,8 @@ const LINKS = {
     { label: 'Imóveis compatíveis', href: '/imoveis' },
     { label: 'Guia completo', href: '/guia' },
     { label: 'Glossário', href: '/glossario' },
+    { label: 'Sobre nós', href: '/sobre' },
+    { label: 'Contato', href: '/contato' },
   ],
 };
 
