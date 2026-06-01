@@ -66,48 +66,48 @@ interface ImovelContext {
 // ──────────────────────────────────────────────────────────────────────────────
 const SUGESTOES_POR_PAGINA: Record<string, string[]> = {
   '/': [
-    'O que é MCMV?',
-    'Qual a diferença entre SAC e Price?',
+    'Quanto preciso de renda para comprar um apartamento?',
+    'Posso usar FGTS como entrada?',
+    'Qual a diferença entre MCMV e financiamento normal?',
     'Preciso de entrada para financiar?',
-    'Posso usar FGTS na compra?',
   ],
   '/simulador': [
-    'Como a renda afeta o financiamento?',
-    'MCMV ou SBPE — qual escolher?',
-    'O que é comprometimento de renda?',
-    'Subsídio é devolvido?',
+    'O que significa esse valor que apareceu?',
+    'Como o FGTS entra no meu poder de compra?',
+    'O que compõe a minha parcela mensal?',
+    'Qual o próximo passo depois de simular?',
   ],
   '/simulador/na-planta': [
-    'Como funciona a evolução de obra?',
-    'O que são juros evolutivos?',
-    'Pago à construtora e ao banco juntos?',
-    'O que é crédito associativo?',
+    'Quanto vou pagar por mês durante a obra?',
+    'Pago para a construtora e para o banco ao mesmo tempo?',
+    'O que acontece se a obra atrasar?',
+    'Qual o próximo passo depois de simular?',
   ],
   '/imoveis': [
-    'O que significa "Na Planta"?',
-    'O que verificar na matrícula do imóvel?',
-    'Qual a diferença entre VGV e preço unitário?',
-    'Posso visitar o empreendimento antes de comprar?',
+    'Como saber se consigo financiar esse imóvel?',
+    'O que significa "Na Planta" no status?',
+    'Quanto eu pagaria de parcela nesse imóvel?',
+    'Quero agendar uma visita — como faço?',
   ],
   '/guia': [
-    'Quanto tempo leva a aprovação?',
-    'Autônomo consegue financiar?',
     'Quais documentos preciso separar?',
-    'Como funciona o FGTS Futuro?',
+    'Quanto tempo leva a aprovação do financiamento?',
+    'Autônomo ou MEI consegue financiar?',
+    'O que é ITBI e quanto custa?',
   ],
   '/glossario': [
-    'O que é TR?',
-    'O que é CET no financiamento?',
-    'Explica alienação fiduciária',
+    'O que é TR e como afeta minha parcela?',
+    'Explica alienação fiduciária de forma simples',
     'O que é habite-se?',
+    'O que é CET e por que importa?',
   ],
 };
 
 const DEFAULT_SUGESTOES = [
-  'O que é MCMV?',
-  'Qual a diferença de SAC e Price?',
-  'Como funciona o crédito associativo?',
-  'Posso usar FGTS na entrada?',
+  'Quanto preciso de renda para comprar um apartamento?',
+  'Posso usar FGTS como entrada?',
+  'Preciso pagar ITBI e cartório na compra?',
+  'Qual a diferença entre MCMV e SBPE?',
 ];
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -165,42 +165,58 @@ export default function ChatFab() {
       const teto = ctx?.resultado?.valorMaxImovel ?? 0;
       const faixa = ctx?.resultado?.faixa ?? '';
       const parcela = ctx?.resultado?.parcela ?? 0;
+      const renda = ctx?.renda ?? 0;
+      const fgts = ctx?.fgts ?? 0;
+      const comprometimento = ctx?.resultado?.comprometimento ?? 0;
 
-      // Página de imóvel específico com perfil
+      // Imóvel específico + perfil → análise completa e didática
       if (path.startsWith('/imoveis/') && imovel?.name && temPerfil) {
         const precoMin = imovel.minPrice ?? 0;
         const diff = teto - precoMin;
-        const analise = diff >= 0
-          ? `Este imóvel está **${fmtBRL(diff)} abaixo** do seu teto — dentro do seu alcance. ✅`
-          : `Este imóvel está **${fmtBRL(Math.abs(diff))} acima** do seu teto — mas FGTS e entrada podem ajudar. ⚠️`;
-        return `Olá! Sou o **João**. 👋\n\nVejo que você está analisando o **${imovel.name}**. Com seu perfil ${faixa} e poder de compra de **${fmtBRL(teto)}**, ${analise}\n\nQuer que eu monte o cenário completo para você?`;
+        const viavel = diff >= 0;
+        const analise = viavel
+          ? `Este imóvel está **${fmtBRL(diff)} abaixo** do seu poder de compra. ✅ Você tem folga.`
+          : `Este imóvel está **${fmtBRL(Math.abs(diff))} acima** do seu poder de compra calculado. ⚠️ Mas vale conversar — FGTS e a avaliação da Caixa podem mudar esse quadro.`;
+        return `Olá! Sou o **João**, seu consultor. 👋\n\nVejo que você está olhando o **${imovel.name}**.\n\n${analise}\n\nQuer que eu explique o que esses números significam para você na prática?`;
       }
 
-      // /imoveis com perfil
+      // Simulador com resultado → explica o resultado de forma didática
+      if ((path === '/simulador' || path === '/') && temPerfil) {
+        const comprStr = comprometimento > 0
+          ? ` Isso representa **${comprometimento.toFixed(1)}% da sua renda** — dentro do limite aceito pelos bancos (30%).`
+          : '';
+        const fgtsStr = fgts > 0
+          ? ` Seu FGTS de **${fmtBRL(fgts)} já está incluído** nesse valor — você não precisa tirar isso do bolso.`
+          : '';
+        return `Olá! Sou o **João**. 👋\n\nVi que você acabou de simular. Deixa eu te explicar o que os números significam:\n\n📊 **Você pode comprar um imóvel de até ${fmtBRL(teto)}.**${fgtsStr}\n\n💰 **Sua parcela mensal seria de ${fmtBRL(parcela)}.**${comprStr}\n\nQuer entender melhor algum desses números? Ou prefere já buscar imóveis compatíveis?`;
+      }
+
+      // Simulador na planta com resultado
+      if (path === '/simulador/na-planta' && temPerfil) {
+        return `Olá! Sou o **João**. 👋\n\nVocê está simulando um imóvel na planta. Esse tipo de compra tem um fluxo de pagamento diferente — você paga ao mesmo tempo para a construtora e para o banco. Quer que eu explique como funciona na prática com os seus números?`;
+      }
+
+      // Portal de imóveis com perfil
       if (path === '/imoveis' && temPerfil) {
-        return `Olá! Sou o **João**, seu consultor FinancieCerto. 👋\n\nCom seu perfil **${faixa}**, você consegue imóveis até **${fmtBRL(teto)}**. Estou aqui para ajudar a comparar opções e entender qual faz mais sentido para você.`;
+        return `Olá! Sou o **João**. 👋\n\nCom o seu perfil **${faixa}**, você busca imóveis até **${fmtBRL(teto)}**. Estou aqui para te ajudar a escolher — analiso qualquer empreendimento para você, explico os custos reais e te digo se cabe no seu orçamento. É só me perguntar!`;
       }
 
-      // /simulador com perfil
-      if (path === '/simulador' && temPerfil) {
-        return `Olá! Sou o **João**. 👋\n\nSeu perfil já está calculado — parcela estimada de **${fmtBRL(parcela)}/mês** com teto de **${fmtBRL(teto)}**. Se quiser simular um imóvel específico ou entender melhor os números, é só perguntar.`;
-      }
-
+      // Padrões por página
       const map: Record<string, string> = {
         '/simulador':
-          'Olá! Sou o **João**, seu consultor FinancieCerto. 👋\n\nVejo que você está no simulador. Se tiver dúvidas sobre renda, entrada, FGTS ou qual modalidade faz mais sentido para você, é só perguntar.',
+          'Olá! Sou o **João**, seu consultor FinancieCerto. 👋\n\nEstou aqui para te ajudar a entender tudo sobre financiamento — desde o básico ("quanto preciso de entrada?") até os cálculos mais detalhados. Pode perguntar sem medo, não existe pergunta boba!',
         '/simulador/na-planta':
-          'Olá! Sou o **João**. 👋\n\nVocê está simulando um imóvel na planta. Se tiver dúvidas sobre evolução de obra, crédito associativo, juros evolutivos ou qualquer parte do processo, estou aqui.',
+          'Olá! Sou o **João**. 👋\n\nComprar um imóvel na planta tem algumas particularidades. Se você quiser entender o que vai pagar durante a obra, quanto são os juros do banco nesse período ou como funciona a entrada — é só me perguntar, explico de forma simples.',
         '/imoveis':
-          'Olá! Sou o **João**, consultor FinancieCerto. 👋\n\nEstá explorando imóveis. Se quiser entender melhor algum empreendimento, status de obra ou comparar opções financeiramente, é só me perguntar.',
+          'Olá! Sou o **João**, consultor FinancieCerto. 👋\n\nEstá explorando imóveis! Se quiser, me conta sua renda e FGTS que eu calculo na hora quanto você consegue financiar e quais imóveis daqui se encaixam no seu orçamento.',
         '/guia':
-          'Olá! Sou o **João**. 👋\n\nVocê está no Guia. Se algum tópico ficou com dúvida ou quiser aprofundar — MCMV, documentação, processo — pode me perguntar diretamente.',
+          'Olá! Sou o **João**. 👋\n\nEstá lendo o Guia — ótimo! Qualquer dúvida que surgir, pode me perguntar diretamente. Explico os termos, os cálculos e o processo de forma simples.',
         '/glossario':
-          'Olá! Sou o **João**. 👋\n\nEstá no Glossário. Se quiser que eu explique algum termo de forma mais contextual ou com exemplos práticos, é só dizer.',
+          'Olá! Sou o **João**. 👋\n\nSe algum termo não ficou claro, é só me pedir! Explico com exemplos práticos e com os números da sua situação, se você já simulou.',
       };
       return (
         map[path] ||
-        'Olá! Sou o **João**, consultor virtual do FinancieCerto. 👋\n\nSou especialista em financiamento imobiliário — MCMV, SBPE, imóvel na planta, FGTS, processo de aprovação. Como posso ajudar?'
+        'Olá! Sou o **João**, seu consultor de financiamento imobiliário. 👋\n\nPode me perguntar qualquer coisa — desde "o que é MCMV?" até "quanto vou pagar de parcela se comprar um apartamento de R$ 400 mil". Estou aqui para te ajudar a entender tudo antes de tomar qualquer decisão.'
       );
     },
     [],
