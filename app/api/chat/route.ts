@@ -169,13 +169,15 @@ NUNCA diga "sinal/entrada" como se fosse um único pagamento. O correto é "ato"
 - FGTS Futuro (MCMV Faixas 1-2): compromete depósitos futuros para reduzir parcela mensal desde o início
 
 **Custos envolvidos na compra**
-- ITBI: imposto municipal de 2–3% sobre o valor do imóvel (varia por cidade)
+- ITBI: imposto municipal de 2% sobre o valor do imóvel em São Paulo (varia por cidade)
 - Registro no cartório (CRI): ≈ 1% do valor do imóvel (varia por estado)
 - Avaliação do banco: taxa cobrada pelo banco para avaliar o imóvel (≈ R$ 500–3.000)
 - TAC: taxa de abertura de crédito (nem todos os bancos cobram)
 - MIP: seguro de vida obrigatório (0,019% do saldo devedor/mês — sobe com a idade)
 - DFI: seguro do imóvel obrigatório (0,0093% do saldo devedor/mês)
 - CET (Custo Efetivo Total): taxa que inclui tudo — use para comparar propostas entre bancos
+- Taxa de Administração Caixa: R$ 25,00/mês (cobrada na parcela)
+- IMPORTANTE: Algumas construtoras isentam o comprador de ITBI e registro. Consulte a construtora antes de assumir que precisa pagar.
 
 **Comprometimento de renda**
 - O banco aceita no máximo 30% da renda bruta comprometida com a parcela (amortização + juros + seguros)
@@ -208,9 +210,64 @@ Quando o usuário pedir orientação ou "o que fazer agora?", ofereça um plano 
 5. Análise de crédito na Caixa/banco → aprovação → assinatura → registro
 
 ━━━ PODER DE COMPRA — CÁLCULO MENTAL ━━━
-Exemplo real: imóvel R$ 314.613 | financiamento aprovado R$ 267k (pela renda) | FGTS R$ 44k | ato R$ 1k | mensais à construtora 26 × R$ 100,21
-→ Total poder de compra: R$ 267k (banco) + R$ 44k (FGTS) + R$ 1k (ato) + mensais (R$ 2,6k) = R$ 314k+ ✅
-Lição: imóvel que parece "fora do alcance pela renda" pode ser viável quando combinado financiamento + FGTS + ato + sinais + mensais + anuais + chaves à construtora
+Exemplo real (contrato Mundo Apto Estação Conceição, São Paulo, dez/2025):
+- Renda conjunta: R$ 8.268/mês (MCMV Faixa 4)
+- Imóvel: R$ 314.613 (preço construtora) | Avaliação Caixa: R$ 333.750 (+6% acima)
+- Financiamento aprovado: R$ 267.000 (80% da avaliação Caixa — não do preço da construtora)
+- FGTS: R$ 44.037 | Ato à construtora: R$ 1.000 | Mensais: 36 × R$ 100
+- Banco + FGTS cobriram: R$ 311.037 = 99% do preço da construtora
+- Parcela definitiva: R$ 1.966/mês (23,8% da renda) ✅
+
+Lições importantes:
+1. A Caixa avalia o imóvel ACIMA do preço da construtora em empreendimentos MCMV → o banco financia 80% da avaliação (maior), não do preço de venda
+2. Isso permite que banco + FGTS cubram 90–100% do preço pago à construtora
+3. A saída de caixa real do comprador = ITBI + cartório + ato mínimo (R$ 1.000 a R$ 5.000) — e algumas construtoras isentam ITBI e registro
+4. No MCMV na planta, a construtora costuma pedir ato de R$ 1.000–5.000 e mensais de R$ 100–300
+5. Imóvel que parece "fora do alcance pela renda" pode ser viável combinando financiamento + FGTS + parcelas mínimas à construtora
+
+━━━ GLOSSÁRIO COMPLETO — 32 TERMOS ━━━
+MCMV: Minha Casa Minha Vida — programa federal de habitação popular com subsídio e taxas reduzidas
+SBPE: Sistema Brasileiro de Poupança e Empréstimo — crédito com recursos da poupança, taxas livres de mercado
+SFH: Sistema Financeiro da Habitação — imóveis até R$ 2,25M, taxa máx 12% a.a., permite FGTS
+SFI: Sistema de Financiamento Imobiliário — imóveis acima de R$ 2,25M, sem FGTS, taxas livres
+Crédito Associativo: modalidade onde a Caixa financia junto com a construtora desde o início da obra
+TR: Taxa Referencial — índice que corrige o saldo devedor; está em 0,1679%/mês (2026), NÃO está zerada
+INCC: Índice Nacional de Custo da Construção — corrige o saldo à construtora durante a obra
+CET: Custo Efetivo Total — taxa que inclui juros, seguros, tarifas; use para comparar propostas
+LTV: Loan-to-Value — percentual do valor do imóvel que o banco financia (ex: LTV 80% = banco cobre 80%)
+SAC: Sistema de Amortização Constante — amortização fixa, parcelas decrescentes, menor custo total
+Price (Tabela Price): parcelas fixas, começa com mais juros, custo total maior, parcela menor no início
+Amortização: parte da parcela que reduz o saldo devedor (o resto é juro)
+Saldo Devedor: quanto ainda se deve ao banco; corrigido mensalmente pela TR
+MIP: seguro de vida obrigatório no financiamento — cobre morte/invalidez do devedor
+DFI (DFC): seguro obrigatório do imóvel contra danos físicos e incêndio
+ITBI: imposto municipal de 2% sobre o valor do imóvel (SP) — pago na assinatura do contrato
+TAC: Taxa de Administração de Contrato — R$ 25/mês (Caixa); cobrada mensalmente na parcela
+Registro de Imóvel: averbação do contrato no Cartório de Registro de Imóveis (≈1% do valor)
+Habite-se: certidão emitida pela prefeitura que autoriza a ocupação após conclusão da obra
+RI / Registro de Incorporação: documento que permite a venda de unidades antes da construção
+SICAQ: sistema da Caixa que faz a pré-análise de crédito no MCMV antes da obra
+Alienação Fiduciária: garantia do financiamento — o imóvel fica em nome do banco até quitação
+FGTS: Fundo de Garantia do Tempo de Serviço — pode ser usado na entrada ou amortização
+FGTS Futuro: antecipa depósitos futuros do FGTS para reduzir parcelas — disponível para Faixas 1 e 2
+Subsídio MCMV: desconto do governo no valor do imóvel — até R$ 55k para Faixas 1 e 2; não é devolvido
+Evolução de Obra: liberação progressiva do crédito pela Caixa conforme o avanço físico da construção
+SIOPI: sistema da Caixa que registra as medições de avanço de obra e libera verbas à construtora
+Juros Evolutivos: juros pagos ao banco durante a obra sobre o saldo já liberado — crescem mensalmente
+Cronograma Físico-Financeiro: planilha de avanço da obra com datas e percentuais de liberação de verbas
+Interveniente Quitante: banco que quita o saldo devedor de outro banco durante a portabilidade do crédito
+Distrato: cancelamento do contrato de compra e venda — regras pelo Lei 13.786/2018 (15% de retenção)
+HIS: Habitação de Interesse Social — tipo de empreendimento para MCMV Faixas 1 e 2
+
+━━━ INTERPRETAÇÃO DO CONTEXTO EM TEMPO REAL ━━━
+Quando o CONTEXTO DA SESSÃO contiver dados do simulador ou imóvel:
+- USE SEMPRE os números exatos do contexto — nunca dê valores genéricos quando tem dados reais
+- Se o usuário está no /simulador/na-planta com dados preenchidos: analise o fluxo real (ato + mensais à construtora + juros evolutivos ao banco + parcela pós-entrega)
+- Se jurosEvoInicio e jurosEvoPico estão no contexto: explique que os juros começam em X e sobem até Y durante a obra, pois a Caixa libera verbas progressivamente
+- Se precisaPagarConstrutora = false: o FGTS + subsídio cobrem toda a entrada mínima calculada
+- Se faltaParaConstrutora está no contexto: esse é o valor que o usuário precisa pagar à construtora além do FGTS/subsídio
+- Se o imóvel tem amenidades e tipologias: use essas informações ao responder sobre o empreendimento
+- Quando o usuário perguntar "consigo comprar?" e o imóvel + perfil estão no contexto: faça o cálculo completo com os números reais e dê uma resposta definitiva
 
 ━━━ REGRAS DE RESPOSTA ━━━
 - Resposta clara e direta — máximo 4 parágrafos para respostas gerais; use bullets apenas quando listar 3+ itens
@@ -244,102 +301,139 @@ function buildContextBlock(ctx: Record<string, unknown> | null | undefined): str
   if (page) {
     const pageNames: Record<string, string> = {
       '/': 'Página inicial',
-      '/simulador': 'Simulador — Descobrir / Já sei o imóvel',
-      '/simulador/na-planta': 'Simulador — Imóvel na planta',
-      '/imoveis': 'Portal de imóveis compatíveis',
-      '/guia': 'Guia completo de financiamento',
-      '/glossario': 'Glossário de termos',
+      '/simulador': 'Simulador de Perfil (Descobrir perfil / Já sei o imóvel)',
+      '/simulador/na-planta': 'Simulador na Planta (crédito associativo)',
+      '/imoveis': 'Portal de imóveis (+2.000 empreendimentos)',
+      '/guia': 'Guia completo de financiamento (5 capítulos)',
+      '/glossario': 'Glossário de termos imobiliários',
+      '/sobre': 'Página Sobre nós',
+      '/contato': 'Página de Contato',
     };
     lines.push(`Página atual: ${pageNames[page] ?? page}`);
   }
 
-  // ── Perfil completo do usuário (descoberto no simulador de perfil) ──────────
+  // ── Perfil completo do usuário ─────────────────────────────────────────────
   const perfil = ctx.perfil as Record<string, unknown> | undefined;
   if (perfil) {
     lines.push('');
-    lines.push('PERFIL DO USUÁRIO (descoberto no simulador):');
-    if (perfil.renda)      lines.push(`- Renda familiar bruta: ${fmtBRL(perfil.renda)}/mês`);
-    if (perfil.fgts)       lines.push(`- FGTS disponível: ${fmtBRL(perfil.fgts)}`);
-    if (perfil.entrada)    lines.push(`- Entrada/ato disponível: ${fmtBRL(perfil.entrada)}`);
-    if (perfil.prazo)      lines.push(`- Prazo desejado: ${perfil.prazo} anos`);
-    if (perfil.idade)      lines.push(`- Idade: ${perfil.idade} anos`);
+    lines.push('PERFIL DO USUÁRIO (calculado no simulador de perfil):');
+    if (perfil.renda)       lines.push(`- Renda familiar bruta: ${fmtBRL(perfil.renda)}/mês`);
+    if (perfil.fgts)        lines.push(`- FGTS disponível: ${fmtBRL(perfil.fgts)}`);
+    if (perfil.entrada)     lines.push(`- Entrada/ato disponível: ${fmtBRL(perfil.entrada)}`);
+    if (perfil.prazo)       lines.push(`- Prazo desejado: ${perfil.prazo} anos`);
+    if (perfil.idade)       lines.push(`- Idade: ${perfil.idade} anos`);
     if (perfil.dependentes) lines.push(`- Dependentes: ${perfil.dependentes}`);
 
     const res = perfil.resultado as Record<string, unknown> | undefined;
     if (res) {
-      if (res.faixa)          lines.push(`- Faixa MCMV: ${res.faixa}`);
-      if (res.modalidade)     lines.push(`- Modalidade recomendada: ${res.modalidade}`);
-      if (res.valorMaxImovel) lines.push(`- Teto de compra (poder de compra): ${fmtBRL(res.valorMaxImovel)}`);
-      if (res.parcela)        lines.push(`- Parcela estimada (Price): ${fmtBRL(res.parcela)}/mês`);
-      if (res.comprometimento) lines.push(`- Comprometimento de renda: ${Number(res.comprometimento).toFixed(1)}%`);
-      if (res.subsidio)       lines.push(`- Subsídio estimado: ${fmtBRL(res.subsidio)}`);
-      if (res.taxaAnual)      lines.push(`- Taxa de juros: ${res.taxaAnual}% a.a.`);
+      lines.push('  Resultado calculado:');
+      if (res.faixa)           lines.push(`  - Faixa/modalidade: ${res.faixa}`);
+      if (res.modalidade)      lines.push(`  - Modalidade recomendada: ${res.modalidade}`);
+      if (res.valorMaxImovel)  lines.push(`  - PODER DE COMPRA TOTAL (já inclui FGTS): ${fmtBRL(res.valorMaxImovel)}`);
+      if (res.parcela)         lines.push(`  - Parcela estimada (Price, com seguros): ${fmtBRL(res.parcela)}/mês`);
+      if (res.comprometimento) lines.push(`  - Comprometimento de renda: ${Number(res.comprometimento).toFixed(1)}%`);
+      if (res.subsidio && Number(res.subsidio) > 0) lines.push(`  - Subsídio MCMV estimado: ${fmtBRL(res.subsidio)}`);
+      if (res.taxaAnual)       lines.push(`  - Taxa de juros: ${res.taxaAnual}% a.a. + TR`);
     }
   }
 
-  // ── Imóvel que o usuário está visualizando agora ───────────────────────────
+  // ── Imóvel sendo visualizado ───────────────────────────────────────────────
   const imovel = ctx.imovelAtual as Record<string, unknown> | undefined;
   if (imovel) {
     lines.push('');
-    lines.push('IMÓVEL SENDO VISUALIZADO AGORA:');
-    if (imovel.name)         lines.push(`- Empreendimento: ${imovel.name}`);
-    if (imovel.developer)    lines.push(`- Construtora: ${imovel.developer}`);
-    if (imovel.neighborhood) lines.push(`- Bairro: ${imovel.neighborhood}`);
-    if (imovel.city)         lines.push(`- Cidade: ${imovel.city}`);
-    if (imovel.status)       lines.push(`- Status: ${imovel.status}`);
-    if (imovel.minPrice)     lines.push(`- Preço a partir de: ${fmtBRL(imovel.minPrice)}`);
-    if (imovel.maxPrice)     lines.push(`- Preço máximo: ${fmtBRL(imovel.maxPrice)}`);
-    if (imovel.deliveryDate) lines.push(`- Previsão de entrega: ${imovel.deliveryDate}`);
+    lines.push('IMÓVEL VISUALIZADO AGORA:');
+    if (imovel.name)           lines.push(`- Empreendimento: ${imovel.name}`);
+    if (imovel.developer)      lines.push(`- Construtora: ${imovel.developer}`);
+    if (imovel.neighborhood)   lines.push(`- Bairro: ${imovel.neighborhood}, ${imovel.city || ''}`);
+    if (imovel.status)         lines.push(`- Status: ${imovel.status}`);
+    if (imovel.minPrice)       lines.push(`- Preço a partir de: ${fmtBRL(imovel.minPrice)}`);
+    if (imovel.maxPrice && Number(imovel.maxPrice) !== Number(imovel.minPrice))
+      lines.push(`- Preço máximo: ${fmtBRL(imovel.maxPrice)}`);
+    if (imovel.deliveryDate)   lines.push(`- Previsão de entrega: ${imovel.deliveryDate}`);
+    if (imovel.bedroomsMin != null) {
+      const bdMax = imovel.bedroomsMax && Number(imovel.bedroomsMax) !== Number(imovel.bedroomsMin)
+        ? `–${imovel.bedroomsMax}` : '';
+      lines.push(`- Quartos: ${imovel.bedroomsMin}${bdMax}`);
+    }
+    if (imovel.areaMin)        lines.push(`- Área: ${imovel.areaMin}${imovel.areaMax && Number(imovel.areaMax) !== Number(imovel.areaMin) ? `–${imovel.areaMax}` : ''} m²`);
+    if (imovel.numberOfFloors) lines.push(`- Andares: ${imovel.numberOfFloors}`);
+    if (imovel.totalUnits)     lines.push(`- Total de unidades: ${imovel.totalUnits}`);
+    if (imovel.stock != null)  lines.push(`- Unidades disponíveis: ${imovel.stock}`);
+    if (Array.isArray(imovel.amenities) && imovel.amenities.length > 0)
+      lines.push(`- Amenidades/diferenciais: ${(imovel.amenities as string[]).join(', ')}`);
+    if (Array.isArray(imovel.typologies) && imovel.typologies.length > 0) {
+      lines.push(`- Tipologias disponíveis:`);
+      (imovel.typologies as Record<string,unknown>[]).forEach(t => {
+        lines.push(`  • ${t.type || ''} | ${t.bedrooms || '?'} quartos | ${t.area || '?'} m² | ${t.vagas || '?'} vaga(s) | ${t.price || 'consultar'}`);
+      });
+    }
+    if (imovel.description)    lines.push(`- Descrição: ${imovel.description}`);
 
-    // Análise automática de viabilidade se perfil presente
+    // Análise automática de viabilidade
     const perf = ctx.perfil as Record<string, unknown> | undefined;
     const perRes = perf?.resultado as Record<string, unknown> | undefined;
     const teto = Number(perRes?.valorMaxImovel || 0);
     const precoMin = Number(imovel.minPrice || 0);
     if (teto > 0 && precoMin > 0) {
       const diff = teto - precoMin;
-      const status = diff >= 0
-        ? `DENTRO do poder de compra (${fmtBRL(Math.abs(diff))} abaixo do teto)`
-        : `ACIMA do poder de compra (${fmtBRL(Math.abs(diff))} acima do teto)`;
-      lines.push(`- ANÁLISE: Imóvel está ${status}`);
+      const analise = diff >= 0
+        ? `✅ DENTRO do poder de compra (${fmtBRL(Math.abs(diff))} abaixo do teto de ${fmtBRL(teto)})`
+        : `⚠️ ACIMA do poder de compra calculado (${fmtBRL(Math.abs(diff))} acima — mas FGTS, entrada e avaliação da Caixa podem ajustar)`;
+      lines.push(`- ANÁLISE DE VIABILIDADE: ${analise}`);
     }
   }
 
-  // ── Simulação específica (já sei o imóvel) ─────────────────────────────────
+  // ── Simulação em curso (simulador de perfil ou imóvel específico) ──────────
   const sim = ctx.simulacao as Record<string, unknown> | undefined;
   if (sim) {
     lines.push('');
-    lines.push('Dados da simulação em curso:');
-
-    if (sim.renda) lines.push(`- Renda familiar bruta: ${fmtBRL(sim.renda)}/mês`);
-    if (sim.entrada) lines.push(`- Entrada disponível: ${fmtBRL(sim.entrada)}`);
-    if (sim.fgts) lines.push(`- FGTS: ${fmtBRL(sim.fgts)}`);
-    if (sim.prazo) lines.push(`- Prazo desejado: ${sim.prazo} anos`);
+    lines.push('SIMULAÇÃO EM CURSO:');
+    if (sim.renda)   lines.push(`- Renda: ${fmtBRL(sim.renda)}/mês`);
+    if (sim.fgts)    lines.push(`- FGTS: ${fmtBRL(sim.fgts)}`);
+    if (sim.entrada) lines.push(`- Entrada: ${fmtBRL(sim.entrada)}`);
+    if (sim.prazo)   lines.push(`- Prazo: ${sim.prazo} anos`);
 
     const res = sim.resultado as Record<string, unknown> | undefined;
     if (res) {
-      lines.push('');
-      lines.push('Resultado da simulação:');
-      if (res.faixa) lines.push(`- Faixa MCMV: ${res.faixa}`);
-      if (res.modalidade) lines.push(`- Modalidade recomendada: ${res.modalidade}`);
-      if (res.valorMaxImovel) lines.push(`- Valor máximo de imóvel: ${fmtBRL(res.valorMaxImovel)}`);
-      if (res.valorImovel) lines.push(`- Imóvel simulado: ${fmtBRL(res.valorImovel)}`);
-      if (res.valorFinanciado) lines.push(`- Valor financiado: ${fmtBRL(res.valorFinanciado)}`);
-      if (res.parcela) lines.push(`- Parcela estimada: ${fmtBRL(res.parcela)}/mês`);
-      if (res.parcelaSAC) lines.push(`- Parcela SAC (1ª): ${fmtBRL(res.parcelaSAC)}/mês`);
-      if (res.comprometimento) lines.push(`- Comprometimento de renda: ${Number(res.comprometimento).toFixed(1)}%`);
-      if (res.subsidio) lines.push(`- Subsídio disponível: ${fmtBRL(res.subsidio)}`);
-      if (res.taxaAnual) lines.push(`- Taxa de juros: ${res.taxaAnual}% a.a.`);
+      if (res.faixa)           lines.push(`- Faixa/modalidade: ${res.faixa}`);
+      if (res.valorMaxImovel)  lines.push(`- Poder de compra: ${fmtBRL(res.valorMaxImovel)} (FGTS já incluído)`);
+      if (res.valorImovel)     lines.push(`- Imóvel simulado: ${fmtBRL(res.valorImovel)}`);
+      if (res.valorFinanciado) lines.push(`- Valor financiado pelo banco: ${fmtBRL(res.valorFinanciado)}`);
+      if (res.parcela)         lines.push(`- Parcela estimada (Price + seguros): ${fmtBRL(res.parcela)}/mês`);
+      if (res.parcelaSAC)      lines.push(`- Parcela SAC 1ª: ${fmtBRL(res.parcelaSAC)}/mês`);
+      if (res.comprometimento) lines.push(`- Comprometimento: ${Number(res.comprometimento).toFixed(1)}%`);
+      if (res.subsidio && Number(res.subsidio) > 0) lines.push(`- Subsídio: ${fmtBRL(res.subsidio)}`);
+      if (res.taxaAnual)       lines.push(`- Taxa: ${res.taxaAnual}% a.a.`);
     }
 
+    // ── Simulador na planta — estado detalhado ─────────────────────────────
     const planta = sim.planta as Record<string, unknown> | undefined;
     if (planta) {
       lines.push('');
-      lines.push('Parâmetros do imóvel na planta:');
-      if (planta.valorImovel) lines.push(`- Valor do imóvel: ${fmtBRL(planta.valorImovel)}`);
-      if (planta.prazoObraMeses) lines.push(`- Prazo estimado de obra: ${planta.prazoObraMeses} meses`);
-      if (planta.estagio) lines.push(`- Estágio do empreendimento: ${planta.estagio}`);
-      if (planta.modalidade) lines.push(`- Modalidade: ${planta.modalidade}`);
+      lines.push('SIMULADOR NA PLANTA — ESTADO ATUAL:');
+      if (planta.modalidade)        lines.push(`- Modalidade: ${planta.modalidade}`);
+      if (planta.taxaAnual)         lines.push(`- Taxa: ${planta.taxaAnual}% a.a. + TR`);
+      if (planta.valorImovel)       lines.push(`- Valor do imóvel: ${fmtBRL(planta.valorImovel)}`);
+      if (planta.estagio)           lines.push(`- Estágio: ${planta.estagio}`);
+      if (planta.prazoObraMeses)    lines.push(`- Prazo de obra: ${planta.prazoObraMeses} meses`);
+      if (planta.siopiLiberado)     lines.push(`- Avanço físico atual: ${planta.siopiLiberado}`);
+      lines.push('  Pagamentos à construtora:');
+      if (planta.ato)               lines.push(`  - Ato (assinatura): ${fmtBRL(planta.ato)}`);
+      if (planta.mensalValor)       lines.push(`  - Mensais: ${fmtBRL(planta.mensalValor)}/mês × ${planta.mensalQtd || '?'} meses`);
+      if (planta.totalConstrutora)  lines.push(`  - TOTAL pago à construtora: ${fmtBRL(planta.totalConstrutora)}`);
+      lines.push('  Juros evolutivos ao banco (durante a obra):');
+      if (planta.jurosEvoInicio)    lines.push(`  - Início (1º mês): ~${fmtBRL(planta.jurosEvoInicio)}/mês`);
+      if (planta.jurosEvoMedio)     lines.push(`  - Médio: ~${fmtBRL(planta.jurosEvoMedio)}/mês`);
+      if (planta.jurosEvoPico)      lines.push(`  - Pico (último mês de obra): ~${fmtBRL(planta.jurosEvoPico)}/mês`);
+      lines.push('  Financiamento e resultado:');
+      if (planta.fgtsUsado && Number(planta.fgtsUsado) > 0)    lines.push(`  - FGTS aplicado: ${fmtBRL(planta.fgtsUsado)}`);
+      if (planta.subsidioEstimado && Number(planta.subsidioEstimado) > 0) lines.push(`  - Subsídio: ${fmtBRL(planta.subsidioEstimado)}`);
+      if (planta.entradaMinima)     lines.push(`  - Entrada mínima estimada (20% LTV): ${fmtBRL(planta.entradaMinima)}`);
+      if (planta.recursosExternos)  lines.push(`  - FGTS + subsídio cobre: ${fmtBRL(planta.recursosExternos)}`);
+      if (planta.faltaParaConstrutora != null) lines.push(`  - Falta cobrir via construtora: ${fmtBRL(planta.faltaParaConstrutora)}`);
+      if (planta.valorFinanciado)   lines.push(`  - Valor financiado pelo banco: ${fmtBRL(planta.valorFinanciado)}`);
+      if (planta.parcelaPosObra)    lines.push(`  - Parcela pós-entrega (Price + seguros): ${fmtBRL(planta.parcelaPosObra)}/mês`);
+      if (planta.seguros)           lines.push(`  - Seguros (MIP + DFI): ${fmtBRL(planta.seguros)}/mês`);
     }
   }
 

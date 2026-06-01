@@ -49,6 +49,16 @@ interface ImovelContext {
   neighborhood?: string;
   city?: string;
   deliveryDate?: string;
+  bedroomsMin?: number;
+  bedroomsMax?: number;
+  areaMin?: number;
+  areaMax?: number;
+  description?: string;
+  amenities?: string[];
+  typologies?: { type?: unknown; bedrooms?: unknown; area?: unknown; price?: unknown; vagas?: unknown }[];
+  totalUnits?: number;
+  stock?: number;
+  numberOfFloors?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

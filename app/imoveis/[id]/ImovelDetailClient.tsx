@@ -1254,9 +1254,31 @@ export default function ImovelDetailClient({ id }: { id: string }) {
         if (!res.ok) throw new Error('Não encontrado');
         const data: ImovelDetalhe = await res.json();
         setImovel(data);
-        // Salva contexto para João consultor
+        // Salva contexto completo para João consultor
         try {
-          const ctx = { id: data.id, name: data.name, developer: data.developer, minPrice: data.min_price, maxPrice: data.max_price, status: data.status, neighborhood: data.neighborhood, city: data.city, deliveryDate: data.delivery_date };
+          const ctx = {
+            id: data.id,
+            name: data.name,
+            developer: data.developer,
+            minPrice: data.min_price,
+            maxPrice: data.max_price,
+            status: data.status,
+            neighborhood: data.neighborhood,
+            city: data.city,
+            deliveryDate: data.delivery_date,
+            bedroomsMin: data.bedrooms_min,
+            bedroomsMax: data.bedrooms_max,
+            areaMin: data.area_min,
+            areaMax: data.area_max,
+            description: data.description?.slice(0, 400) || '',
+            amenities: (data.amenities || []).slice(0, 15),
+            typologies: (data.typologies || []).slice(0, 5).map((t) => ({
+              type: t.type, bedrooms: t.bedrooms, area: t.area, price: t.price, vagas: t.vagas,
+            })),
+            totalUnits: data.total_units,
+            stock: data.stock,
+            numberOfFloors: data.number_of_floors,
+          };
           sessionStorage.setItem('fc_current_imovel', JSON.stringify(ctx));
           window.dispatchEvent(new StorageEvent('storage', { key: 'fc_current_imovel', newValue: JSON.stringify(ctx) }));
         } catch { /* ignore */ }

@@ -289,10 +289,32 @@ function NaPlantaContent() {
       page: '/simulador/na-planta',
       renda, fgts,
       planta: {
-        valorImovel: valor, prazoObraMeses: qtdMensais,
+        valorImovel: valor,
+        prazoObraMeses: qtdMensais,
         estagio: estagio === 'lancamento' ? 'Na planta' : estagio === 'obras' ? 'Em obras' : 'Pronto / Habite-se',
         siopiLiberado: `${Math.round(siopiInicial * 100)}%`,
-        modalidade: isMCMV ? 'MCMV Crédito Associativo' : 'SBPE',
+        modalidade: isMCMV ? (faixaEfetiva ? `MCMV ${faixaEfetiva.label}` : 'MCMV') : 'SBPE',
+        taxaAnual: taxa,
+        // Pagamentos à construtora
+        ato,
+        mensalValor: mensalUnit,
+        mensalQtd: qtdMensais,
+        totalConstrutora,
+        // Juros evolutivos ao banco durante a obra
+        jurosEvoInicio: Math.round(jurosEvo1),
+        jurosEvoMedio: Math.round(jurosEvoMedio),
+        jurosEvoPico: Math.round(jurosEvoPico),
+        // Resultado financeiro
+        entradaMinima,
+        fgtsUsado: fgts,
+        subsidioEstimado,
+        valorFinanciado: financiado,
+        parcelaPosObra: Math.round(parcelaFin + seguros.total),
+        seguros: Math.round(seguros.total),
+        // Análise
+        recursosExternos,
+        precisaPagarConstrutora,
+        faltaParaConstrutora: Math.max(0, entradaMinima - recursosExternos),
       },
       resultado: {
         valorImovel: valor, entradaMinima, recursosExternos,
