@@ -785,7 +785,7 @@ function SimuladorInner() {
             {
               num: '✓', done: true,
               titulo: 'Perfil calculado',
-              desc: `${dados.label} · teto ${formatBRL(dados.valorMaxImovel)} · parcela ~${formatBRL(dados.parcela ?? 0)}/mês`,
+              desc: `${dados.label} · poder de compra ${formatBRL(dados.valorMaxImovel)} · parcela ~${formatBRL(dados.parcela ?? 0)}/mês`,
             },
             {
               num: '2', done: false,
@@ -795,7 +795,7 @@ function SimuladorInner() {
             {
               num: '3', done: false,
               titulo: 'Escolher o imóvel',
-              desc: `Busque imóveis até ${formatBRL(dados.valorMaxImovel)}. Lembre: FGTS${parseMoeda(e.fgts) > 0 ? ` (${formatBRL(parseMoeda(e.fgts))})` : ''} e entrada ampliam seu poder de compra`,
+              desc: `Seu poder de compra é ${formatBRL(dados.valorMaxImovel)}${parseMoeda(e.fgts) > 0 ? ` (FGTS de ${formatBRL(parseMoeda(e.fgts))} já incluído)` : ''}. Busque imóveis dentro desse valor.`,
             },
             ...(painelAtivo === 'mcmv' ? [{
               num: '4', done: false,
