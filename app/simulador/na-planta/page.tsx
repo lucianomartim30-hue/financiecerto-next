@@ -454,10 +454,12 @@ function NaPlantaContent() {
             {/* Custos extras obrigatórios (ITBI + cartório) */}
             {isMCMV && valor > 0 && (
               <div style={{ marginBottom: '20px', padding: '10px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', fontSize: '12px', color: '#92400e', lineHeight: 1.7 }}>
-                <strong>⚠️ Custos adicionais obrigatórios (fora do financiamento):</strong><br />
+                <strong>⚠️ Custos adicionais (fora do financiamento):</strong><br />
                 • ITBI: ~2% do valor = <strong>{formatBRL(Math.round(valor * 0.02))}</strong><br />
                 • Registro em cartório: ~1% do valor = <strong>{formatBRL(Math.round(valor * 0.01))}</strong><br />
-                • Total estimado: <strong>{formatBRL(Math.round(valor * 0.03))}</strong> — pagos separado, não entram no financiamento.
+                • Total estimado: <strong>{formatBRL(Math.round(valor * 0.03))}</strong><br /><br />
+                <span style={{ color: '#15803d', fontWeight: 700 }}>✅ Muitas construtoras pagam ITBI e registro pelo comprador como promoção comercial.</span>{' '}
+                Sempre pergunte à construtora se essa condição está disponível — pode zerar esses custos.
               </div>
             )}
 
