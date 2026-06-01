@@ -434,11 +434,32 @@ function NaPlantaContent() {
             <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>
               Fluxo de pagamento à construtora
             </p>
-            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '28px', lineHeight: 1.6 }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.6 }}>
               {precisaPagarConstrutora
-                ? `Entrada mínima: ${formatBRL(entradaMinima)}${recursosExternos > 0 ? ` · FGTS${temSubsidio ? ' + subsídio' : ''}: ${formatBRL(recursosExternos)}` : ''} · falta cobrir via construtora: ${formatBRL(faltaParaConstrutora)}`
-                : `✅ FGTS${temSubsidio ? ' + subsídio MCMV' : ''} (${formatBRL(recursosExternos)}) cobrem a entrada mínima (${formatBRL(entradaMinima)}). Qualquer valor adicional reduz o financiamento.`}
+                ? `Entrada mínima estimada: ${formatBRL(entradaMinima)}${recursosExternos > 0 ? ` · FGTS${temSubsidio ? ' + subsídio' : ''}: ${formatBRL(recursosExternos)}` : ''} · falta cobrir via construtora: ${formatBRL(faltaParaConstrutora)}`
+                : `✅ FGTS${temSubsidio ? ' + subsídio MCMV' : ''} (${formatBRL(recursosExternos)}) cobrem a entrada mínima estimada (${formatBRL(entradaMinima)}).`}
             </p>
+
+            {/* Nota sobre avaliação Caixa no MCMV */}
+            {isMCMV && (
+              <div style={{ marginBottom: '20px', padding: '12px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '12px', fontSize: '12px', color: '#166534', lineHeight: 1.7 }}>
+                <strong>💡 Como funciona na prática no MCMV:</strong><br />
+                A Caixa avalia o imóvel pela tabela interna — geralmente <strong>acima do preço da construtora</strong>. O financiamento (80% da avaliação) pode cobrir mais de 80% do valor que você paga. Com FGTS, banco + FGTS juntos costumam cobrir <strong>90% a 100% do preço da construtora</strong>.<br /><br />
+                {faixaEfetiva && (faixaEfetiva.subsidioMax > 0)
+                  ? `Na ${faixaEfetiva.label}, o subsídio de até ${formatBRL(faixaEfetiva.subsidioMax)} + FGTS pode zerar sua entrada. A saída de caixa real costuma ser apenas ITBI (~2%) + cartório (~1%) + ato à construtora.`
+                  : `Na ${faixaEfetiva?.label ?? 'sua faixa'}, sem subsídio, o FGTS cobre a maior parte. A saída de caixa real costuma ser ITBI (~2%) + cartório (~1%) + ato à construtora (geralmente R$ 1.000 a R$ 5.000).`}
+              </div>
+            )}
+
+            {/* Custos extras obrigatórios (ITBI + cartório) */}
+            {isMCMV && valor > 0 && (
+              <div style={{ marginBottom: '20px', padding: '10px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', fontSize: '12px', color: '#92400e', lineHeight: 1.7 }}>
+                <strong>⚠️ Custos adicionais obrigatórios (fora do financiamento):</strong><br />
+                • ITBI: ~2% do valor = <strong>{formatBRL(Math.round(valor * 0.02))}</strong><br />
+                • Registro em cartório: ~1% do valor = <strong>{formatBRL(Math.round(valor * 0.01))}</strong><br />
+                • Total estimado: <strong>{formatBRL(Math.round(valor * 0.03))}</strong> — pagos separado, não entram no financiamento.
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
@@ -620,7 +641,7 @@ function NaPlantaContent() {
                           O banco avalia o <strong>encargo mensal completo</strong> — não o valor bruto liberado. O encargo inclui <strong>A+J + MIP + DFI + tarifa</strong> e não pode ultrapassar <strong>30% da renda bruta</strong> (Res. CMN 4.676/2018).
                           <br /><br />
                           Renda <strong>{formatBRL(renda)}/mês</strong> × 30% = <strong>{formatBRL(Math.round(renda * 0.30))}/mês</strong> de encargo máximo.
-                          {' '}À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em 35 anos (incluindo seguros), o banco aprova até <strong>{formatBRL(maxFinBanco)}</strong> (LTV {Math.round(ltvPct * 100)}% do imóvel).
+                          {' '}À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em 35 anos (incluindo seguros), o banco aprova até <strong>{formatBRL(maxFinBanco)}</strong> (LTV {Math.round(ltvPct * 100)}% do imóvel).{isMCMV ? ' Na prática, a Caixa avalia o imóvel acima do preço de venda — o financiamento pode cobrir mais de 80% do valor pago à construtora.' : ''}
                           {(fgts > 0 || totalContribuicao > 0) && (
                             <span> Com {[fgts > 0 ? `FGTS de ${formatBRL(fgts)}` : null, subsidioEstimado > 0 ? `subsídio de ${formatBRL(subsidioEstimado)}` : null, totalConstrutora > 0 ? `pagamentos à construtora de ${formatBRL(totalConstrutora)}` : null].filter(Boolean).join(' + ')}, o valor financiado pelo banco fica em <strong>{formatBRL(financiado)}</strong>.</span>
                           )}
