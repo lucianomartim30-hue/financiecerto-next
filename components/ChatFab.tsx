@@ -126,10 +126,32 @@ function renderMarkdown(text: string): string {
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Export: salvar contexto de simulação (chamado pelas páginas)
+// Preserva valorMaxImovel do simulador de perfil se o contexto novo não tiver
+// (evita misturar resultado do simulador na planta com o poder de compra descoberto)
 // ──────────────────────────────────────────────────────────────────────────────
 export function saveSimContext(ctx: SimulacaoContext) {
   if (typeof window === 'undefined') return;
   try {
+    // Se o novo contexto não tem valorMaxImovel (ex: simulador na planta),
+    // preserva o valorMaxImovel anterior para não misturar cenários
+    if (!ctx.resultado?.valorMaxImovel) {
+      const raw = sessionStorage.getItem('fc_sim_context');
+      if (raw) {
+        try {
+          const prev = JSON.parse(raw) as SimulacaoContext;
+          if (prev.resultado?.valorMaxImovel) {
+            ctx = {
+              ...ctx,
+              resultado: {
+                ...ctx.resultado,
+                valorMaxImovel: prev.resultado.valorMaxImovel,
+                faixa: ctx.resultado?.faixa || prev.resultado.faixa,
+              },
+            };
+          }
+        } catch { /* ignore */ }
+      }
+    }
     sessionStorage.setItem('fc_sim_context', JSON.stringify(ctx));
     window.dispatchEvent(
       new StorageEvent('storage', {
