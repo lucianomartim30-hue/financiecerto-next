@@ -643,8 +643,15 @@ function SimuladorInner() {
             <div style={{ fontSize: 38, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{formatBRL(dados.valorMaxImovel)}</div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', marginTop: 6 }}>
               {painelAtivo === 'sfi'
-                ? 'capacidade de compra (sem limite de teto)'
-                : `valor máximo do imóvel${dados.teto ? ` · teto ${formatBRL(dados.teto)}` : ''}${fgtsAtivo5 > 0 ? ` · inclui FGTS de ${formatBRL(fgtsAtivo5)}` : ''}`}
+                ? 'capacidade de compra · sem limite de teto'
+                : (() => {
+                    const partes = [];
+                    if (valorFinanciadoAtivo5 > 0) partes.push(`${formatBRL(valorFinanciadoAtivo5)} financiado`);
+                    if (entradaEmDinheiro5 > 0)    partes.push(`${formatBRL(entradaEmDinheiro5)} entrada`);
+                    if (fgtsAtivo5 > 0)            partes.push(`${formatBRL(fgtsAtivo5)} FGTS`);
+                    if (subsidioAtivo5 > 0)        partes.push(`${formatBRL(subsidioAtivo5)} subsídio`);
+                    return partes.length > 0 ? partes.join(' + ') : 'valor máximo do imóvel';
+                  })()}
             </div>
             <div style={{ display: 'inline-block', marginTop: 14, padding: '5px 16px', background: 'rgba(255,255,255,.2)', borderRadius: 99, fontSize: 13, color: '#fff', fontWeight: 700 }}>
               {dados.taxa}% a.a. + {painelAtivo === 'sfi' ? 'taxa livre' : 'TR'}
