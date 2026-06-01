@@ -817,7 +817,7 @@ function SimuladorInner() {
             {
               num: painelAtivo === 'mcmv' ? '6' : '5', done: false,
               titulo: 'Contrato e registro',
-              desc: 'Assinatura do contrato + ITBI (~2%) e registro em cartório (~1%). Obrigatórios, mas muitas construtoras pagam esses custos pelo comprador — sempre pergunte.',
+              desc: 'Assinatura do contrato + ITBI (~2%) e registro em cartório (~1%). Algumas construtoras isentam o comprador desses custos — consulte a construtora.',
             },
           ].map(({ num, done, titulo, desc }) => (
             <div key={titulo} style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>

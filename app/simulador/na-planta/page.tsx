@@ -458,8 +458,7 @@ function NaPlantaContent() {
                 • ITBI: ~2% do valor = <strong>{formatBRL(Math.round(valor * 0.02))}</strong><br />
                 • Registro em cartório: ~1% do valor = <strong>{formatBRL(Math.round(valor * 0.01))}</strong><br />
                 • Total estimado: <strong>{formatBRL(Math.round(valor * 0.03))}</strong><br /><br />
-                <span style={{ color: '#15803d', fontWeight: 700 }}>✅ Muitas construtoras pagam ITBI e registro pelo comprador como promoção comercial.</span>{' '}
-                Sempre pergunte à construtora se essa condição está disponível — pode zerar esses custos.
+                <strong>Algumas construtoras isentam o comprador de ITBI e registro.</strong> Consulte a construtora.
               </div>
             )}
 

@@ -69,7 +69,7 @@ const CAPITULOS = [
       },
       {
         pergunta: 'Quais são os custos além do imóvel?',
-        resposta: `Ao comprar um imóvel, você precisa reservar:\n\n• **ITBI (Imposto sobre Transmissão de Bens Imóveis):** 2% do valor do imóvel em São Paulo (pode variar por município). No MCMV, pode ter isenção ou redução.\n• **Cartório (escritura + registro):** aproximadamente 1% do valor do imóvel (inclui emolumentos e registro)\n• **Correspondente bancário/despachante:** R$ 1.000 a R$ 3.000 (opcional mas comum)\n• **Seguros MIP e DFI:** obrigatórios no financiamento, cobrados mensalmente na parcela\n• **Taxa administrativa:** R$ 25/mês cobrada na parcela\n\nTotal de custos de aquisição: reserve entre 3% e 5% do valor do imóvel.\n\n⭐ Muitas construtoras, especialmente em lançamentos MCMV, pagam o ITBI e o registro em cartório pelo comprador como promoção comercial — o que pode zerar esses custos completamente. Sempre pergunte à construtora se essa condição está disponível antes de assinar.`,
+        resposta: `Ao comprar um imóvel, você precisa reservar:\n\n• **ITBI (Imposto sobre Transmissão de Bens Imóveis):** 2% do valor do imóvel em São Paulo (pode variar por município). No MCMV, pode ter isenção ou redução.\n• **Cartório (escritura + registro):** aproximadamente 1% do valor do imóvel (inclui emolumentos e registro)\n• **Correspondente bancário/despachante:** R$ 1.000 a R$ 3.000 (opcional mas comum)\n• **Seguros MIP e DFI:** obrigatórios no financiamento, cobrados mensalmente na parcela\n• **Taxa administrativa:** R$ 25/mês cobrada na parcela\n\nTotal de custos de aquisição: reserve entre 3% e 5% do valor do imóvel.\n\n⭐ Algumas construtoras isentam o comprador de ITBI e registro. Consulte a construtora antes de assinar.`,
       },
     ],
   },
