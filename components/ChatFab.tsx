@@ -180,25 +180,19 @@ export default function ChatFab() {
         return `Olá! Sou o **João**, seu consultor. 👋\n\nVejo que você está olhando o **${imovel.name}**.\n\n${analise}\n\nQuer que eu explique o que esses números significam para você na prática?`;
       }
 
-      // Simulador com resultado → explica o resultado de forma didática
+      // Simulador com resultado → convida a conversar, sem repetir os números
       if ((path === '/simulador' || path === '/') && temPerfil) {
-        const comprStr = comprometimento > 0
-          ? ` Isso representa **${comprometimento.toFixed(1)}% da sua renda** — dentro do limite aceito pelos bancos (30%).`
-          : '';
-        const fgtsStr = fgts > 0
-          ? ` Seu FGTS de **${fmtBRL(fgts)} já está incluído** nesse valor — você não precisa tirar isso do bolso.`
-          : '';
-        return `Olá! Sou o **João**. 👋\n\nVi que você acabou de simular. Deixa eu te explicar o que os números significam:\n\n📊 **Você pode comprar um imóvel de até ${fmtBRL(teto)}.**${fgtsStr}\n\n💰 **Sua parcela mensal seria de ${fmtBRL(parcela)}.**${comprStr}\n\nQuer entender melhor algum desses números? Ou prefere já buscar imóveis compatíveis?`;
+        return `Olá! Sou o **João**. 👋\n\nVi que você já tem seu perfil calculado. Ficou alguma dúvida sobre os resultados? Posso explicar o que cada número significa, como a parcela é calculada ou qual o próximo passo para você.`;
       }
 
       // Simulador na planta com resultado
       if (path === '/simulador/na-planta' && temPerfil) {
-        return `Olá! Sou o **João**. 👋\n\nVocê está simulando um imóvel na planta. Esse tipo de compra tem um fluxo de pagamento diferente — você paga ao mesmo tempo para a construtora e para o banco. Quer que eu explique como funciona na prática com os seus números?`;
+        return `Olá! Sou o **João**. 👋\n\nVi que você simulou um imóvel na planta. Ficou alguma dúvida? Posso explicar como funciona o pagamento durante a obra, o que são os juros evolutivos ou qual o próximo passo.`;
       }
 
       // Portal de imóveis com perfil
       if (path === '/imoveis' && temPerfil) {
-        return `Olá! Sou o **João**. 👋\n\nCom o seu perfil **${faixa}**, você busca imóveis até **${fmtBRL(teto)}**. Estou aqui para te ajudar a escolher — analiso qualquer empreendimento para você, explico os custos reais e te digo se cabe no seu orçamento. É só me perguntar!`;
+        return `Olá! Sou o **João**. 👋\n\nVocê já tem seu perfil calculado — ótimo! Se quiser, me mostra qual imóvel te chamou atenção e eu analiso se cabe no seu orçamento.`;
       }
 
       // Padrões por página
