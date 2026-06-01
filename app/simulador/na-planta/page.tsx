@@ -502,7 +502,12 @@ function NaPlantaContent() {
                     <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Valor pago à construtora na assinatura do contrato</p>
                   </div>
                 </div>
-                <CampoCompacto value={atoRaw} onChange={v => setAtoRaw(fi(v))} placeholder="14.000" />
+                <CampoCompacto value={atoRaw} onChange={v => setAtoRaw(fi(v))} placeholder={isMCMV ? '1.000' : '14.000'} />
+                {isMCMV && !ato && (
+                  <p style={{ fontSize: '11px', color: '#059669', marginTop: '5px' }}>
+                    💡 No MCMV, a construtora costuma pedir R$ 1.000 a R$ 5.000 no ato.
+                  </p>
+                )}
                 {ato > 0 && faltaParaConstrutora > 0 && (
                   <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '6px' }}>
                     Saldo restante após ato: {formatBRL(saldoAposAto)} · sujeito a reajuste INCC
@@ -543,7 +548,7 @@ function NaPlantaContent() {
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ flex: '1', minWidth: '130px' }}>
-                    <CampoCompacto value={mensalRaw} onChange={v => setMensalRaw(fi(v))} placeholder="1.900" />
+                    <CampoCompacto value={mensalRaw} onChange={v => setMensalRaw(fi(v))} placeholder={isMCMV ? '100' : '1.900'} />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>/mês ×</span>
@@ -552,6 +557,11 @@ function NaPlantaContent() {
                     </Select>
                   </div>
                 </div>
+                {isMCMV && !mensalUnit && (
+                  <p style={{ fontSize: '11px', color: '#059669', marginTop: '5px' }}>
+                    💡 No MCMV, a construtora costuma pedir R$ 100 a R$ 300/mês × 36 meses durante a obra.
+                  </p>
+                )}
                 {mensalUnit > 0 && (
                   <div style={{ marginTop: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Total mensais: {formatBRL(totalMensais)}</span>
