@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   formatBRL, parcelaPrice, calcularSeguros,
   TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, calcSubsidioEstimado,
-  FAIXAS_MCMV, type FaixaMCMV,
+  FAIXAS_MCMV, LTV_SBPE_PRICE, type FaixaMCMV,
 } from '@/lib/calculos';
 import Link from 'next/link';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
@@ -222,7 +222,7 @@ function NaPlantaContent() {
   const motivo = (!isMCMV && renda > 0 && valor > 0) ? motivoSBPE(renda, valor) : null;
 
   const maxFinPerfil = isMCMV ? maxFinMcmv : maxFinSbpe;
-  const ltvPct       = isMCMV ? (faixaEfetiva?.ltvMax ?? 0.80) : 0.80;
+  const ltvPct       = isMCMV ? (faixaEfetiva?.ltvMax ?? 0.80) : LTV_SBPE_PRICE; // SBPE Price: 70% (consistente com simulador principal)
   const maxFinBanco  = valor > 0
     ? (maxFinPerfil > 0 ? Math.min(maxFinPerfil, Math.round(valor * ltvPct)) : Math.round(valor * ltvPct))
     : 0;

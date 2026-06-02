@@ -859,7 +859,7 @@ function SimuladorInner() {
         <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
           <Link href={`/imoveis?min=${Math.round(dados.valorMaxImovel * 0.5)}&max=${dados.valorMaxImovel}&tipo=${tipoImovel}`}
             style={{ display: 'block', padding: '16px 0', borderRadius: 12, background: 'var(--primary)', color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
-            🏠 Ver imóveis compatíveis — {dados.label}
+            🏠 Ver empreendimentos compatíveis — {dados.label}
           </Link>
           <button onClick={avancar} style={{ padding: '14px 0', borderRadius: 12, border: '1.5px solid var(--border)', background: 'transparent', color: 'var(--text)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
             Simular imóvel específico

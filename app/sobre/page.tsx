@@ -70,7 +70,7 @@ export default function SobrePage() {
               fontSize: 15, fontWeight: 700, textDecoration: 'none',
               border: '2px solid rgba(255,255,255,0.2)',
             }}>
-              Explorar imóveis →
+              Explorar empreendimentos →
             </Link>
           </div>
         </div>
@@ -214,7 +214,7 @@ export default function SobrePage() {
                 titulo: 'Encontrar imóveis compatíveis',
                 desc: 'Mais de 2.000 empreendimentos em São Paulo filtrados automaticamente pelo seu perfil — sem desperdiçar tempo com imóveis fora do seu alcance real.',
                 link: '/imoveis',
-                label: 'Ver imóveis',
+                label: 'Ver empreendimentos',
               },
               {
                 n: '4',
@@ -442,7 +442,7 @@ export default function SobrePage() {
               fontSize: 15, fontWeight: 700, textDecoration: 'none',
               border: '2px solid rgba(255,255,255,0.2)',
             }}>
-              Ver imóveis compatíveis →
+              Ver empreendimentos compatíveis →
             </Link>
           </div>
         </div>

@@ -289,7 +289,7 @@ export default function BuscaImoveisInteligente({
             fontFamily: 'inherit', transition: 'all .2s',
           }}
         >
-          {loading ? 'Buscando...' : 'Buscar imóveis compatíveis →'}
+          {loading ? 'Buscando...' : 'Buscar empreendimentos compatíveis →'}
         </button>
 
         {/* ── Resultados ──────────────────────────────────────────────────── */}
@@ -358,7 +358,7 @@ export default function BuscaImoveisInteligente({
                     fontSize: 13, fontWeight: 700, textAlign: 'center', textDecoration: 'none',
                   }}
                 >
-                  Ver todos os imóveis compatíveis →
+                  Ver todos os empreendimentos compatíveis →
                 </Link>
               </>
             )}

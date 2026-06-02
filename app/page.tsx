@@ -166,7 +166,7 @@ export default function Home() {
               padding: '13px 28px', textDecoration: 'none',
               boxShadow: '0 2px 8px rgba(22,163,74,.25)',
             }}>
-              ✅ Já sei meu perfil — buscar imóveis em SP →
+              ✅ Já sei meu perfil — buscar empreendimentos em SP →
             </Link>
           </div>
 
@@ -383,7 +383,7 @@ export default function Home() {
               padding: '13px 28px', textDecoration: 'none',
               boxShadow: '0 2px 8px rgba(22,163,74,.25)',
             }}>
-              ✅ Já sei meu perfil — buscar imóveis em SP →
+              ✅ Já sei meu perfil — buscar empreendimentos em SP →
             </Link>
           </div>
         </div>
