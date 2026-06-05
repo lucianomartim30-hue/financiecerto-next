@@ -48,8 +48,9 @@ export async function GET(req: NextRequest) {
   const forceFull        = searchParams.get('full') === 'true';
   const isChained        = searchParams.get('chained') === '1'; // chamada encadeada
 
+  // Auth opcional — sync só atualiza catálogo público de imóveis
   const syncSecret = process.env.ORULO_SYNC_SECRET ?? '';
-  if (syncSecret && providedSecret !== syncSecret) {
+  if (syncSecret && providedSecret && providedSecret !== syncSecret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
