@@ -115,9 +115,21 @@ const DEFAULT_SUGESTOES = [
 // ──────────────────────────────────────────────────────────────────────────────
 function renderMarkdown(text: string): string {
   return text
+    // Remover blocos LaTeX completos (\[ ... \]) — não são renderizáveis
+    .replace(/\\\[[\s\S]*?\\\]/g, '')
+    // Remover LaTeX inline (\( ... \))
+    .replace(/\\\([\s\S]*?\\\)/g, '')
+    // Headings ####, ###, ## → negrito com quebra
+    .replace(/^#{4}\s+(.+)$/gm, '<strong>$1</strong>')
+    .replace(/^#{3}\s+(.+)$/gm, '<strong>$1</strong>')
+    .replace(/^#{2}\s+(.+)$/gm, '<strong>$1</strong>')
+    // Bold e itálico
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    // Listas numeradas (1. 2. 3.)
+    .replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>')
+    // Listas com hífen
+    .replace(/^-\s+(.+)$/gm, '<li>$1</li>')
     .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m =>
       `<ul style="margin:6px 0 6px 16px;padding:0;list-style:disc;">${m}</ul>`,
     )
