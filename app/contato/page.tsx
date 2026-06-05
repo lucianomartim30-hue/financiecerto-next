@@ -33,7 +33,11 @@ export default function ContatoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      if (res.ok) { setStatus('ok'); setForm({ nome: '', email: '', telefone: '', assunto: '', mensagem: '', lgpd: false }); }
+      if (res.ok) {
+        setStatus('ok');
+        setForm({ nome: '', email: '', telefone: '', assunto: '', mensagem: '', lgpd: false });
+        import('@/lib/gtag').then(m => m.trackContato(form.assunto));
+      }
       else { const d = await res.json(); setErro(d.error || 'Erro ao enviar. Tente novamente.'); setStatus('error'); }
     } catch {
       setErro('Erro de conexão. Verifique sua internet e tente novamente.');

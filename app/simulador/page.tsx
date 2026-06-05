@@ -398,6 +398,8 @@ function SimuladorInner() {
       sessionStorage.setItem('fc_sim_context', JSON.stringify(richCtx));
       window.dispatchEvent(new StorageEvent('storage', { key: 'fc_sim_context', newValue: JSON.stringify(richCtx) }));
     } catch { /* SSR */ }
+    // GA4 — evento de simulação concluída
+    import('@/lib/gtag').then(m => m.trackSimulacao({ modalidade, faixa }));
   }
 
   function calcularSim() {
