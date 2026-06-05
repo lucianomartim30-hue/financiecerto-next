@@ -303,23 +303,6 @@ export default function Header() {
 
         <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 0' }}>
 
-          {/* Início */}
-          <Link
-            href="/"
-            onClick={() => setMenuOpen(false)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '12px',
-              padding: '13px 20px',
-              background: pathname === '/' ? 'var(--primary-light)' : 'transparent',
-              color: pathname === '/' ? 'var(--primary)' : 'var(--text)',
-              fontWeight: pathname === '/' ? '700' : '600',
-              fontSize: '15px', textDecoration: 'none',
-            }}
-          >
-            <span style={{ fontSize: '18px', width: '24px', textAlign: 'center' }}>🏠</span>
-            Início
-          </Link>
-
           {/* Simular — grupo expandível */}
           <div>
             <button
