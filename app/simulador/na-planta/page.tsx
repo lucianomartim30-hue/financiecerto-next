@@ -341,7 +341,7 @@ function NaPlantaContent() {
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <section className="fc-hero-np" style={{
-        background: 'linear-gradient(160deg, #0f172a 0%, #1a2e4a 55%, #0f172a 100%)',
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)',
         padding: '64px 24px 80px', textAlign: 'center',
       }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>

@@ -131,7 +131,7 @@ function Hero({ etapa }: { etapa: number }) {
   const { tag, titulo, sub } = heroCopy[etapa] ?? heroCopy[0];
   return (
     <section style={{
-      background: 'linear-gradient(160deg, #0f172a 0%, #1e3a5f 100%)',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)',
       padding: 'clamp(48px, 7vw, 80px) 20px clamp(52px, 7vw, 72px)',
       textAlign: 'center',
     }}>
