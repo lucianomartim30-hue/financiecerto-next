@@ -546,22 +546,12 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
 // Bloco Financeiro — card lateral sticky (diferencial FinancieCerto)
 // ─────────────────────────────────────────────────────────────────────────────
 function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
-  // Se o imóvel ainda não foi lançado, não mostrar estimativas
-  // Converter formato dd/mm/yyyy para ISO yyyy-mm-dd para comparação correta
-  const parseLaunchDate = (dateStr: string | null): Date | null => {
-    if (!dateStr) return null;
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      const [day, month, year] = parts;
-      return new Date(`${year}-${month}-${day}`);
-    }
-    return new Date(dateStr); // fallback para ISO format
-  };
-  const launchDate = parseLaunchDate(imovel.launch_date);
-  const isLancamentoFuturo = launchDate && launchDate > new Date();
+  // Mostrar "A Definir" apenas para "Breve Lançamento" (sem tabela de preço definida)
+  // Se tem min_price > 0, já foi lançado e tem tabela de preço
+  const isBreveLancamento = !imovel.min_price || imovel.min_price < 100; // preço muito baixo = não lançado ainda
 
   const valorRef = imovel.min_price ?? imovel.max_price ?? 0;
-  const est = valorRef > 0 && !isLancamentoFuturo ? calcEstimate(valorRef) : null;
+  const est = valorRef > 0 && !isBreveLancamento ? calcEstimate(valorRef) : null;
 
   // Simulator state
   const [expanded, setExpanded] = useState(false);
@@ -627,9 +617,9 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
 
         {/* Preço */}
         <div style={{ background: 'rgba(255,255,255,.08)', borderRadius: '12px', padding: '14px 16px', marginBottom: '16px' }}>
-          {isLancamentoFuturo ? (
+          {isBreveLancamento ? (
             <p style={{ fontSize: '14px', color: 'rgba(255,255,255,.6)' }}>
-              <strong>A Definir</strong> — Lançamento em {launchDate?.toLocaleDateString('pt-BR')}
+              <strong>A Definir</strong> — Breve Lançamento
             </p>
           ) : imovel.min_price && imovel.max_price && imovel.min_price !== imovel.max_price ? (
             <>
@@ -651,19 +641,19 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
 
       <div style={{ padding: '20px' }}>
         {/* Estimativas instantâneas */}
-        {(est && valorRef > 0 && !isLancamentoFuturo) || isLancamentoFuturo ? (
+        {(est && valorRef > 0) || isBreveLancamento ? (
           <div style={{ marginBottom: '18px' }}>
             <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
-              {isLancamentoFuturo ? 'Informações não disponíveis' : 'Estimativas sem perfil'}
+              {isBreveLancamento ? 'Informações não disponíveis' : 'Estimativas sem perfil'}
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {[
-                { label: 'Renda sugerida', value: isLancamentoFuturo ? 'A Definir' : (est ? formatBRL(est.rendaSugerida) + '/mês' : '—'), icon: '💼', color: '#2563eb' },
-                { label: 'Entrada (20%)', value: isLancamentoFuturo ? 'A Definir' : (est ? formatBRL(est.entrada) : '—'), icon: '🏦', color: '#7c3aed' },
-                { label: 'Parcela estimada', value: isLancamentoFuturo ? 'A Definir' : (est ? formatBRL(est.parcela) + '/mês' : '—'), icon: '📅', color: '#0f6e56' },
-                { label: est?.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : 'SBPE / SFI', value: isLancamentoFuturo ? 'A Definir' : (est?.faixaMCMV ? `até R$ ${est.faixaMCMV.rendaMax.toLocaleString('pt-BR')}` : 'Renda livre'), icon: est?.faixaMCMV ? '🏠' : '🏛️', color: est?.faixaMCMV ? '#16a34a' : '#d97706' },
+                { label: 'Renda sugerida', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.rendaSugerida) + '/mês' : '—'), icon: '💼', color: '#2563eb' },
+                { label: 'Entrada (20%)', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.entrada) : '—'), icon: '🏦', color: '#7c3aed' },
+                { label: 'Parcela estimada', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.parcela) + '/mês' : '—'), icon: '📅', color: '#0f6e56' },
+                { label: est?.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : 'SBPE / SFI', value: isBreveLancamento ? 'A Definir' : (est?.faixaMCMV ? `até R$ ${est.faixaMCMV.rendaMax.toLocaleString('pt-BR')}` : 'Renda livre'), icon: est?.faixaMCMV ? '🏠' : '🏛️', color: est?.faixaMCMV ? '#16a34a' : '#d97706' },
               ].map(({ label, value, icon, color }) => (
-                <div key={label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', opacity: isLancamentoFuturo ? 0.6 : 1 }}>
+                <div key={label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', opacity: isBreveLancamento ? 0.6 : 1 }}>
                   <div style={{ fontSize: '16px', marginBottom: '4px' }}>{icon}</div>
                   <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>{label}</p>
                   <p style={{ fontSize: '13px', fontWeight: '800', color }}>{value}</p>
@@ -671,26 +661,26 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
               ))}
             </div>
             <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginTop: '8px', textAlign: 'center' }}>
-              {isLancamentoFuturo ? '* Valores serão definidos após o lançamento' : `* Estimativas SBPE ${TAXA_SBPE_ANUAL}%+TR, 30 anos. Simule para valores precisos.`}
+              {isBreveLancamento ? '* Valores serão definidos quando os preços forem lançados' : `* Estimativas SBPE ${TAXA_SBPE_ANUAL}%+TR, 30 anos. Simule para valores precisos.`}
             </p>
           </div>
         ) : null}
 
         {/* MCMV Eligibility Badge */}
-        {valorRef > 0 && !isLancamentoFuturo && <BadgeMCMV valorImovel={valorRef} />}
+        {valorRef > 0 && !isBreveLancamento && <BadgeMCMV valorImovel={valorRef} />}
 
-        {/* Mensagem para lançamento futuro */}
-        {isLancamentoFuturo && (
+        {/* Mensagem para breve lançamento */}
+        {isBreveLancamento && (
           <div style={{ background: 'rgba(29, 78, 216, .1)', border: '1px solid rgba(29, 78, 216, .3)', borderRadius: '12px', padding: '14px', marginBottom: '16px', textAlign: 'center' }}>
             <p style={{ fontSize: '12px', color: 'rgba(29, 78, 216, .9)', fontWeight: '600' }}>
-              🚀 Este imóvel ainda não foi lançado<br/>
-              Volte em {launchDate?.toLocaleDateString('pt-BR')} para simular
+              🚀 Este empreendimento está em Breve Lançamento<br/>
+              Os preços serão definidos em breve
             </p>
           </div>
         )}
 
         {/* Botão expandir simulador */}
-        {!isLancamentoFuturo && (
+        {!isBreveLancamento && (
           <>
             {!expanded ? (
               <button onClick={() => setExpanded(true)}
