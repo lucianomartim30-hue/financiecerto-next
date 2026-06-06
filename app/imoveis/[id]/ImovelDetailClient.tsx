@@ -640,17 +640,19 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
 
       <div style={{ padding: '20px' }}>
         {/* Estimativas instantâneas */}
-        {est && valorRef > 0 && (
+        {(est && valorRef > 0 && !isLancamentoFuturo) || isLancamentoFuturo ? (
           <div style={{ marginBottom: '18px' }}>
-            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>Estimativas sem perfil</p>
+            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
+              {isLancamentoFuturo ? 'Informações não disponíveis' : 'Estimativas sem perfil'}
+            </p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {[
-                { label: 'Renda sugerida', value: formatBRL(est.rendaSugerida) + '/mês', icon: '💼', color: '#2563eb' },
-                { label: 'Entrada (20%)', value: formatBRL(est.entrada), icon: '🏦', color: '#7c3aed' },
-                { label: 'Parcela estimada', value: formatBRL(est.parcela) + '/mês', icon: '📅', color: '#0f6e56' },
-                { label: est.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : 'SBPE / SFI', value: est.faixaMCMV ? `até R$ ${est.faixaMCMV.rendaMax.toLocaleString('pt-BR')}` : 'Renda livre', icon: est.faixaMCMV ? '🏠' : '🏛️', color: est.faixaMCMV ? '#16a34a' : '#d97706' },
+                { label: 'Renda sugerida', value: isLancamentoFuturo ? 'A Definir' : (est ? formatBRL(est.rendaSugerida) + '/mês' : '—'), icon: '💼', color: '#2563eb' },
+                { label: 'Entrada (20%)', value: isLancamentoFuturo ? 'A Definir' : (est ? formatBRL(est.entrada) : '—'), icon: '🏦', color: '#7c3aed' },
+                { label: 'Parcela estimada', value: isLancamentoFuturo ? 'A Definir' : (est ? formatBRL(est.parcela) + '/mês' : '—'), icon: '📅', color: '#0f6e56' },
+                { label: est?.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : 'SBPE / SFI', value: isLancamentoFuturo ? 'A Definir' : (est?.faixaMCMV ? `até R$ ${est.faixaMCMV.rendaMax.toLocaleString('pt-BR')}` : 'Renda livre'), icon: est?.faixaMCMV ? '🏠' : '🏛️', color: est?.faixaMCMV ? '#16a34a' : '#d97706' },
               ].map(({ label, value, icon, color }) => (
-                <div key={label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px' }}>
+                <div key={label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', opacity: isLancamentoFuturo ? 0.6 : 1 }}>
                   <div style={{ fontSize: '16px', marginBottom: '4px' }}>{icon}</div>
                   <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '3px' }}>{label}</p>
                   <p style={{ fontSize: '13px', fontWeight: '800', color }}>{value}</p>
@@ -658,10 +660,10 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
               ))}
             </div>
             <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginTop: '8px', textAlign: 'center' }}>
-              * Estimativas SBPE {TAXA_SBPE_ANUAL}%+TR, 30 anos. Simule para valores precisos.
+              {isLancamentoFuturo ? '* Valores serão definidos após o lançamento' : `* Estimativas SBPE ${TAXA_SBPE_ANUAL}%+TR, 30 anos. Simule para valores precisos.`}
             </p>
           </div>
-        )}
+        ) : null}
 
         {/* MCMV Eligibility Badge */}
         {valorRef > 0 && !isLancamentoFuturo && <BadgeMCMV valorImovel={valorRef} />}
