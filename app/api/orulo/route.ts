@@ -161,6 +161,19 @@ export async function GET(req: NextRequest) {
 
     const token = await getToken();
 
+    // ── Municípios da Região Metropolitana de São Paulo (RMSP) ──────────────
+    const GRANDE_SP = new Set([
+      'são paulo','guarulhos','osasco','santo andré','são bernardo do campo',
+      'são caetano do sul','diadema','mauá','carapicuíba','itaquaquecetuba',
+      'barueri','taboão da serra','cotia','suzano','mogi das cruzes',
+      'embu das artes','itapevi','francisco morato','franco da rocha',
+      'caieiras','cajamar','ribeirão pires','ferraz de vasconcelos','poá',
+      'mairiporã','santana de parnaíba','arujá','biritiba-mirim','guararema',
+      'itapecerica da serra','jandira','juquitiba','pirapora do bom jesus',
+      'rio grande da serra','salesópolis','santa isabel','são lourenço da serra',
+      'vargem grande paulista','embu-guaçu',
+    ]);
+
     // ── Camada 1: Catálogo do KV ─────────────────────────────────────────────
     const cached = await kvGetCatalog();
 
@@ -170,7 +183,10 @@ export async function GET(req: NextRequest) {
     if (cached && cached.length > 0) {
       let all = cached;
 
-      // Filtra por cidade se especificada
+      // Filtra por Grande SP por padrão (somente municípios da RMSP)
+      all = all.filter(b => GRANDE_SP.has((b.city || '').toLowerCase().trim()));
+
+      // Filtra por cidade específica se informada
       if (city) {
         const lc = city.toLowerCase();
         all = all.filter(b => (b.city || '').toLowerCase().includes(lc));
