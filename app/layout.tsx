@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import ChatFab from "@/components/ChatFab";
 import FooterWrapper from "@/components/FooterWrapper";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
@@ -13,6 +14,13 @@ export const metadata: Metadata = {
   keywords: "financiamento imobiliário, MCMV, Minha Casa Minha Vida, simulador, FGTS, Caixa Econômica",
   verification: {
     google: 'l34uBI3ef56FcK3A9RXJPN4eiOXmRx-gJDTxcbQ_zNc',
+  },
+  // PWA — cor da barra do navegador no Android/Chrome
+  themeColor: '#1d4ed8',
+  appleWebApp: {
+    capable: true,
+    title: 'FinancieCerto',
+    statusBarStyle: 'black-translucent',
   },
   openGraph: {
     title: "FinancieCerto — Plataforma Inteligente de Descoberta Imobiliária",
@@ -52,6 +60,7 @@ export default function RootLayout({
         <ChatFab />
         <Analytics />
         <SpeedInsights />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
