@@ -28,6 +28,19 @@ import {
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
 
+// ── Municípios da Região Metropolitana de São Paulo (RMSP) — constante global ─
+const GRANDE_SP = new Set([
+  'são paulo','guarulhos','osasco','santo andré','são bernardo do campo',
+  'são caetano do sul','diadema','mauá','carapicuíba','itaquaquecetuba',
+  'barueri','taboão da serra','cotia','suzano','mogi das cruzes',
+  'embu das artes','itapevi','francisco morato','franco da rocha',
+  'caieiras','cajamar','ribeirão pires','ferraz de vasconcelos','poá',
+  'mairiporã','santana de parnaíba','arujá','biritiba-mirim','guararema',
+  'itapecerica da serra','jandira','juquitiba','pirapora do bom jesus',
+  'rio grande da serra','salesópolis','santa isabel','são lourenço da serra',
+  'vargem grande paulista','embu-guaçu',
+]);
+
 // ── Auto-trigger: dispara sync em background quando catálogo está incompleto ──
 // Garante que o catálogo se reconstrói sozinho sem intervenção manual.
 let _lastAutoSync = 0; // timestamp do último disparo (evita avalanche — por instância)
@@ -161,18 +174,6 @@ export async function GET(req: NextRequest) {
 
     const token = await getToken();
 
-    // ── Municípios da Região Metropolitana de São Paulo (RMSP) ──────────────
-    const GRANDE_SP = new Set([
-      'são paulo','guarulhos','osasco','santo andré','são bernardo do campo',
-      'são caetano do sul','diadema','mauá','carapicuíba','itaquaquecetuba',
-      'barueri','taboão da serra','cotia','suzano','mogi das cruzes',
-      'embu das artes','itapevi','francisco morato','franco da rocha',
-      'caieiras','cajamar','ribeirão pires','ferraz de vasconcelos','poá',
-      'mairiporã','santana de parnaíba','arujá','biritiba-mirim','guararema',
-      'itapecerica da serra','jandira','juquitiba','pirapora do bom jesus',
-      'rio grande da serra','salesópolis','santa isabel','são lourenço da serra',
-      'vargem grande paulista','embu-guaçu',
-    ]);
 
     // ── Camada 1: Catálogo do KV ─────────────────────────────────────────────
     const cached = await kvGetCatalog();
