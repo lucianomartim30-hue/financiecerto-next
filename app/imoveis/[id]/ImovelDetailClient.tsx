@@ -546,8 +546,11 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
 // Bloco Financeiro — card lateral sticky (diferencial FinancieCerto)
 // ─────────────────────────────────────────────────────────────────────────────
 function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
+  // Se o imóvel ainda não foi lançado, não mostrar estimativas
+  const isLancamentoFuturo = imovel.launch_date && new Date(imovel.launch_date) > new Date();
+
   const valorRef = imovel.min_price ?? imovel.max_price ?? 0;
-  const est = valorRef > 0 ? calcEstimate(valorRef) : null;
+  const est = valorRef > 0 && !isLancamentoFuturo ? calcEstimate(valorRef) : null;
 
   // Simulator state
   const [expanded, setExpanded] = useState(false);
@@ -613,7 +616,11 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
 
         {/* Preço */}
         <div style={{ background: 'rgba(255,255,255,.08)', borderRadius: '12px', padding: '14px 16px', marginBottom: '16px' }}>
-          {imovel.min_price && imovel.max_price && imovel.min_price !== imovel.max_price ? (
+          {isLancamentoFuturo ? (
+            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,.6)' }}>
+              <strong>A Definir</strong> — Lançamento em {new Date(imovel.launch_date!).toLocaleDateString('pt-BR')}
+            </p>
+          ) : imovel.min_price && imovel.max_price && imovel.min_price !== imovel.max_price ? (
             <>
               <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.55)', marginBottom: '4px' }}>Faixa de preço</p>
               <p style={{ fontSize: '22px', fontWeight: '900', color: '#fff', lineHeight: 1 }}>
@@ -657,16 +664,28 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
         )}
 
         {/* MCMV Eligibility Badge */}
-        {valorRef > 0 && <BadgeMCMV valorImovel={valorRef} />}
+        {valorRef > 0 && !isLancamentoFuturo && <BadgeMCMV valorImovel={valorRef} />}
+
+        {/* Mensagem para lançamento futuro */}
+        {isLancamentoFuturo && (
+          <div style={{ background: 'rgba(29, 78, 216, .1)', border: '1px solid rgba(29, 78, 216, .3)', borderRadius: '12px', padding: '14px', marginBottom: '16px', textAlign: 'center' }}>
+            <p style={{ fontSize: '12px', color: 'rgba(29, 78, 216, .9)', fontWeight: '600' }}>
+              🚀 Este imóvel ainda não foi lançado<br/>
+              Volte em {new Date(imovel.launch_date!).toLocaleDateString('pt-BR')} para simular
+            </p>
+          </div>
+        )}
 
         {/* Botão expandir simulador */}
-        {!expanded ? (
-          <button onClick={() => setExpanded(true)}
-            style={{ width: '100%', background: 'linear-gradient(135deg, var(--primary), var(--accent))', color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontSize: '14px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 16px rgba(37,99,235,.3)', marginBottom: '10px' }}>
-            Simular este imóvel →
-          </button>
-        ) : (
-          /* Simulador expandido */
+        {!isLancamentoFuturo && (
+          <>
+            {!expanded ? (
+              <button onClick={() => setExpanded(true)}
+                style={{ width: '100%', background: 'linear-gradient(135deg, var(--primary), var(--accent))', color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontSize: '14px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 16px rgba(37,99,235,.3)', marginBottom: '10px' }}>
+                Simular este imóvel →
+              </button>
+            ) : (
+              /* Simulador expandido */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)' }}>Simulador personalizado</p>
@@ -805,6 +824,8 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
               );
             })()}
           </div>
+            )}
+          </>
         )}
 
         {/* CTA WhatsApp */}
