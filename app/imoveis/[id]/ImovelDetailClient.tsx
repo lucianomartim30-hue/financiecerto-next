@@ -193,10 +193,20 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
   const total = photos.length;
 
   // Cadeia de fallback por variante CDN Orulo (qualidade decrescente)
+  // Ordem: xlarge → large → featured → troca extensão jpg↔png → desiste
   function nextVariantUrl(url: string): string {
-    if (url.includes('/large/'))   return url.replace('/large/', '/xlarge/');
-    if (url.includes('/xlarge/'))  return url.replace('/xlarge/', '/featured_modern_without_watermark/');
-    if (/\/\d+x\d+\//.test(url))  return url.replace(/\/\d+x\d+\//, '/featured_modern_without_watermark/');
+    if (url.includes('/xlarge/'))
+      return url.replace('/xlarge/', '/large/');
+    if (url.includes('/large/'))
+      return url.replace('/large/', '/featured_modern_without_watermark/');
+    if (/\/\d+x\d+\//.test(url))
+      return url.replace(/\/\d+x\d+\//, '/featured_modern_without_watermark/');
+    // Se chegou em featured e ainda falhou, tenta trocar a extensão jpg↔png
+    if (url.includes('/featured_modern_without_watermark/')) {
+      if (url.endsWith('.jpg'))  return url.slice(0, -4) + '.png';
+      if (url.endsWith('.png'))  return url.slice(0, -4) + '.jpg';
+      if (url.endsWith('.jpeg')) return url.slice(0, -5) + '.jpg';
+    }
     return '';
   }
 
