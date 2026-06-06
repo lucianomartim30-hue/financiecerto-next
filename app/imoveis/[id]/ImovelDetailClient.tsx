@@ -192,20 +192,26 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
 
   const total = photos.length;
 
-  // Cadeia de fallback por variante CDN Orulo (qualidade decrescente)
-  // Ordem: xlarge → large → featured → troca extensão jpg↔png → desiste
+  // Cadeia de fallback por variante CDN Orulo
+  // Problema real: Orulo armazena arquivos como .jpeg mas a URL construída usa .jpg
+  // Ordem: xlarge → large(.jpg) → large(.jpeg) → featured(.jpg) → featured(.jpeg) → featured(.png) → desiste
   function nextVariantUrl(url: string): string {
+    const FEAT = '/featured_modern_without_watermark/';
     if (url.includes('/xlarge/'))
       return url.replace('/xlarge/', '/large/');
-    if (url.includes('/large/'))
-      return url.replace('/large/', '/featured_modern_without_watermark/');
+    if (url.includes('/large/')) {
+      // Tenta trocar extensão dentro de /large/ antes de descer para featured
+      if (url.endsWith('.jpg'))  return url.slice(0, -4) + '.jpeg';
+      if (url.endsWith('.jpeg')) return url.replace('/large/', FEAT).slice(0, -5) + '.jpg';
+      return url.replace('/large/', FEAT);
+    }
     if (/\/\d+x\d+\//.test(url))
-      return url.replace(/\/\d+x\d+\//, '/featured_modern_without_watermark/');
-    // Se chegou em featured e ainda falhou, tenta trocar a extensão jpg↔png
-    if (url.includes('/featured_modern_without_watermark/')) {
-      if (url.endsWith('.jpg'))  return url.slice(0, -4) + '.png';
+      return url.replace(/\/\d+x\d+\//, FEAT);
+    // Em featured: cicla entre extensões jpg → jpeg → png → desiste
+    if (url.includes(FEAT)) {
+      if (url.endsWith('.jpg'))  return url.slice(0, -4) + '.jpeg';
+      if (url.endsWith('.jpeg')) return url.slice(0, -5) + '.png';
       if (url.endsWith('.png'))  return url.slice(0, -4) + '.jpg';
-      if (url.endsWith('.jpeg')) return url.slice(0, -5) + '.jpg';
     }
     return '';
   }
@@ -317,7 +323,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
               <img
                 src={photos[1]}
                 alt={`${name} — foto 2`}
-                loading="lazy"
+                loading="eager"
                 onError={e => mosaicOnError(e, 1)}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
@@ -334,7 +340,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
               <img
                 src={photos[2]}
                 alt={`${name} — foto 3`}
-                loading="lazy"
+                loading="eager"
                 onError={e => mosaicOnError(e, 2)}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
               />
