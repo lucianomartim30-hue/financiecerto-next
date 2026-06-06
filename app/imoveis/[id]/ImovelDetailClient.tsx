@@ -547,7 +547,18 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
 // ─────────────────────────────────────────────────────────────────────────────
 function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
   // Se o imóvel ainda não foi lançado, não mostrar estimativas
-  const isLancamentoFuturo = imovel.launch_date && new Date(imovel.launch_date) > new Date();
+  // Converter formato dd/mm/yyyy para ISO yyyy-mm-dd para comparação correta
+  const parseLaunchDate = (dateStr: string | null): Date | null => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return new Date(`${year}-${month}-${day}`);
+    }
+    return new Date(dateStr); // fallback para ISO format
+  };
+  const launchDate = parseLaunchDate(imovel.launch_date);
+  const isLancamentoFuturo = launchDate && launchDate > new Date();
 
   const valorRef = imovel.min_price ?? imovel.max_price ?? 0;
   const est = valorRef > 0 && !isLancamentoFuturo ? calcEstimate(valorRef) : null;
@@ -618,7 +629,7 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
         <div style={{ background: 'rgba(255,255,255,.08)', borderRadius: '12px', padding: '14px 16px', marginBottom: '16px' }}>
           {isLancamentoFuturo ? (
             <p style={{ fontSize: '14px', color: 'rgba(255,255,255,.6)' }}>
-              <strong>A Definir</strong> — Lançamento em {new Date(imovel.launch_date!).toLocaleDateString('pt-BR')}
+              <strong>A Definir</strong> — Lançamento em {launchDate?.toLocaleDateString('pt-BR')}
             </p>
           ) : imovel.min_price && imovel.max_price && imovel.min_price !== imovel.max_price ? (
             <>
@@ -673,7 +684,7 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
           <div style={{ background: 'rgba(29, 78, 216, .1)', border: '1px solid rgba(29, 78, 216, .3)', borderRadius: '12px', padding: '14px', marginBottom: '16px', textAlign: 'center' }}>
             <p style={{ fontSize: '12px', color: 'rgba(29, 78, 216, .9)', fontWeight: '600' }}>
               🚀 Este imóvel ainda não foi lançado<br/>
-              Volte em {new Date(imovel.launch_date!).toLocaleDateString('pt-BR')} para simular
+              Volte em {launchDate?.toLocaleDateString('pt-BR')} para simular
             </p>
           </div>
         )}
