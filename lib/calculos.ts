@@ -23,23 +23,26 @@ export const FAIXAS_MCMV: FaixaMCMV[] = [
     label: 'Faixa 1',
   },
   {
-    // Faixa 2 — subsídio até R$ 55.000 (decrescente) · juros 7,66% (cotista) / 8,16% (sem FGTS)
+    // Faixa 2 — subsídio decrescente · escala deslizante por renda (Portaria MCID 333/2026)
+    // SP/Sul/Sudeste: cotista 5,00% (renda R$3.200) → 6,50% (renda R$5.000)
+    //                 sem FGTS  5,50% (renda R$3.200) → 7,00% (renda R$5.000)
+    // taxaRef = referência visual (topo cotista SP) | taxaMin/taxaMax = extremos da faixa
     numero: 2, rendaMax: 5000,
-    taxaRef: 7.66, taxaMin: 7.66, taxaMax: 8.16,
+    taxaRef: 6.50, taxaMin: 5.00, taxaMax: 7.00,
     teto: 275000, ltvMax: 0.90, ltvSAC: 0.90, subsidioMax: 55000,
     label: 'Faixa 2',
   },
   {
-    // Faixa 3 — sem subsídio · juros 7,66–8,16% a.a.
+    // Faixa 3 — sem subsídio · 8,16% a.a. flat (sem distinção cotista — Portaria 333/2026)
     numero: 3, rendaMax: 9600,
-    taxaRef: 7.66, taxaMin: 7.66, taxaMax: 8.16,
+    taxaRef: 8.16, taxaMin: 8.16, taxaMax: 8.16,
     teto: 400000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 0,
     label: 'Faixa 3',
   },
   {
-    // Faixa 4 — sem subsídio · juros até 10,50% a.a.
+    // Faixa 4 — sem subsídio · 10,50% a.a. flat (sem distinção cotista — Portaria 333/2026)
     numero: 4, rendaMax: 13000,
-    taxaRef: 10.50, taxaMin: 9.00, taxaMax: 10.50,
+    taxaRef: 10.50, taxaMin: 10.50, taxaMax: 10.50,
     teto: 600000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 0,
     label: 'Faixa 4',
   },
@@ -75,7 +78,7 @@ export const TR_MENSAL        = 0.1679;
 
 // Legado
 export const TETO_MCMV     = 350000;
-export const TAXA_MCMV_ANUAL = 7.66;
+export const TAXA_MCMV_ANUAL = 8.16; // fallback F3 flat (Portaria 333/2026)
 
 // ─── TR histórica — últimos 36 meses (Jun/2023 → Mai/2026) ───────────────────
 // Fonte: Banco Central do Brasil — Série 226 | Atualizado: Mai/2026
@@ -173,6 +176,27 @@ export function simularHistoricoTR(
     saldoFinalSemTR: saldoSemTR,
     diferencaSaldo: saldoComTR - saldoSemTR,
   };
+}
+
+// ─── Taxa efetiva MCMV (escala deslizante F2 + taxa flat F3/F4) ──────────────
+// Portaria MCID 333/2026 — São Paulo / Sul / Sudeste / Centro-Oeste
+// F2: escala linear por renda (5,00%→6,50% cotista | 5,50%→7,00% sem FGTS)
+// F3: 8,16% flat (sem distinção cotista)  |  F4: 10,50% flat
+export function taxaEfetivaMCMV(
+  faixa: FaixaMCMV,
+  rendaBruta: number,
+  cotista: boolean,
+): number {
+  if (faixa.numero === 2) {
+    // Interpolação linear dentro da Faixa 2
+    const t = Math.min(1, Math.max(0, (rendaBruta - 3200) / (5000 - 3200)));
+    const taxa = cotista
+      ? 5.00 + t * 1.50  // 5,00% (R$3.200) → 6,50% (R$5.000)
+      : 5.50 + t * 1.50; // 5,50% (R$3.200) → 7,00% (R$5.000)
+    return Math.round(taxa * 1000) / 1000; // arredonda para 3 casas
+  }
+  // F1, F3, F4: taxa única por cotista/não-cotista
+  return cotista ? faixa.taxaMin : faixa.taxaMax;
 }
 
 // ─── Detectar faixa MCMV ─────────────────────────────────────────────────────
@@ -448,10 +472,10 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
 
   const isSFI      = !isMCMV && valorImovel > TETO_SFH;
   const modalidade: 'MCMV' | 'SBPE' | 'SFI' = isMCMV ? 'MCMV' : isSFI ? 'SFI' : 'SBPE';
-  // Para MCMV Faixas 2 e 3: cotista = taxaMin (7,66%), não-cotista = taxaMax (8,16%)
-  // Para Faixa 1: taxaMin = 4,00% (cotista), taxaMax = 5,00% (sem FGTS)
+  // F2: escala deslizante por renda (5,00%–6,50% cotista | 5,50%–7,00% sem FGTS)
+  // F3/F4: taxa flat 8,16%/10,50% — sem distinção cotista
   const taxaAnual  = isMCMV
-    ? (fgtsElegivel ? faixa!.taxaMin : faixa!.taxaMax)
+    ? taxaEfetivaMCMV(faixa!, rendaBruta, fgtsElegivel)
     : isSFI ? TAXA_SFI_ANUAL : TAXA_SBPE_ANUAL;
 
   const entradaTotal    = entrada + fgtsUsado + subsidioEstimado;
@@ -576,9 +600,9 @@ export function descobrir(
   const faixa   = detectarFaixaMCMV(rendaBruta);
   const elegivel = faixa !== null && !jaRecebeuBeneficio && !temImovelMunicipio;
 
-  // Taxa MCMV depende de cotista: cotista = taxaMin (7,66%), não-cotista = taxaMax (8,16%)
+  // F2: escala deslizante | F3/F4: flat — ambos via taxaEfetivaMCMV()
   const taxaMCMV = faixa
-    ? (fgtsElegivel ? faixa.taxaMin : faixa.taxaMax)
+    ? taxaEfetivaMCMV(faixa, rendaBruta, fgtsElegivel)
     : TAXA_MCMV_ANUAL;
   const tetoMCMV = faixa?.teto   ?? 275000;
 
