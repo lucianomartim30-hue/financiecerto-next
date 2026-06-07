@@ -33,9 +33,10 @@ export const FAIXAS_MCMV: FaixaMCMV[] = [
     label: 'Faixa 2',
   },
   {
-    // Faixa 3 — sem subsídio · 8,16% a.a. flat (sem distinção cotista — Portaria 333/2026)
+    // Faixa 3 — sem subsídio · cotista 7,66% | sem FGTS 8,16% (Portaria MCID 333/2026)
+    // A distinção cotista/não-cotista persiste na F3 (diferença de 0,5 p.p.)
     numero: 3, rendaMax: 9600,
-    taxaRef: 8.16, taxaMin: 8.16, taxaMax: 8.16,
+    taxaRef: 8.16, taxaMin: 7.66, taxaMax: 8.16,
     teto: 400000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 0,
     label: 'Faixa 3',
   },
@@ -78,7 +79,7 @@ export const TR_MENSAL        = 0.1679;
 
 // Legado
 export const TETO_MCMV     = 350000;
-export const TAXA_MCMV_ANUAL = 8.16; // fallback F3 flat (Portaria 333/2026)
+export const TAXA_MCMV_ANUAL = 7.91; // fallback F3 médio cotista/sem-FGTS (7,66+8,16)/2
 
 // ─── TR histórica — últimos 36 meses (Jun/2023 → Mai/2026) ───────────────────
 // Fonte: Banco Central do Brasil — Série 226 | Atualizado: Mai/2026
