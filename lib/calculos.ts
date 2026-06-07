@@ -23,9 +23,9 @@ export const FAIXAS_MCMV: FaixaMCMV[] = [
     label: 'Faixa 1',
   },
   {
-    // Faixa 2 — subsídio até R$ 55.000 (decrescente) · juros 5,00–7,00% a.a.
+    // Faixa 2 — subsídio até R$ 55.000 (decrescente) · juros 7,66% (cotista) / 8,16% (sem FGTS)
     numero: 2, rendaMax: 5000,
-    taxaRef: 6.50, taxaMin: 5.00, taxaMax: 7.00,
+    taxaRef: 7.66, taxaMin: 7.66, taxaMax: 8.16,
     teto: 275000, ltvMax: 0.90, ltvSAC: 0.90, subsidioMax: 55000,
     label: 'Faixa 2',
   },
@@ -448,7 +448,11 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
 
   const isSFI      = !isMCMV && valorImovel > TETO_SFH;
   const modalidade: 'MCMV' | 'SBPE' | 'SFI' = isMCMV ? 'MCMV' : isSFI ? 'SFI' : 'SBPE';
-  const taxaAnual  = isMCMV ? faixa!.taxaRef : isSFI ? TAXA_SFI_ANUAL : TAXA_SBPE_ANUAL;
+  // Para MCMV Faixas 2 e 3: cotista = taxaMin (7,66%), não-cotista = taxaMax (8,16%)
+  // Para Faixa 1: taxaMin = 4,00% (cotista), taxaMax = 5,00% (sem FGTS)
+  const taxaAnual  = isMCMV
+    ? (fgtsElegivel ? faixa!.taxaMin : faixa!.taxaMax)
+    : isSFI ? TAXA_SFI_ANUAL : TAXA_SBPE_ANUAL;
 
   const entradaTotal    = entrada + fgtsUsado + subsidioEstimado;
   const valorFinanciado = Math.max(0, valorImovel - entradaTotal);
@@ -572,7 +576,10 @@ export function descobrir(
   const faixa   = detectarFaixaMCMV(rendaBruta);
   const elegivel = faixa !== null && !jaRecebeuBeneficio && !temImovelMunicipio;
 
-  const taxaMCMV = faixa?.taxaRef ?? TAXA_MCMV_ANUAL;
+  // Taxa MCMV depende de cotista: cotista = taxaMin (7,66%), não-cotista = taxaMax (8,16%)
+  const taxaMCMV = faixa
+    ? (fgtsElegivel ? faixa.taxaMin : faixa.taxaMax)
+    : TAXA_MCMV_ANUAL;
   const tetoMCMV = faixa?.teto   ?? 275000;
 
   const capacMCMV     = elegivel ? capacidadeComSeguros(rendaBruta, taxaMCMV, prazoMeses, 0.30, idadeProponente) : 0;

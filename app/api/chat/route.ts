@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { descobrir, simular, formatBRL } from '@/lib/calculos';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Rate limiting — in-memory (per serverless instance, good enough for MVP)
@@ -17,6 +18,161 @@ function checkRateLimit(ip: string): boolean {
   if (entry.count >= RATE_LIMIT) return false;
   entry.count++;
   return true;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Simulação server-side — extrai parâmetros da conversa e roda lib/calculos
+// para garantir que João sempre use os mesmos cálculos do simulador oficial
+// ──────────────────────────────────────────────────────────────────────────────
+
+interface SimParams {
+  renda?: number;
+  fgts?: number;
+  entrada?: number;
+  prazo?: number;
+  idade?: number;
+  valorImovel?: number | null;
+  naPlanta?: boolean;
+  cotista?: boolean;
+  dependentes?: number;
+  semDados?: boolean;
+}
+
+/** Usa GPT-4o-mini para extrair parâmetros numéricos da conversa em português */
+async function extractSimParams(
+  messages: { role: string; content: string }[],
+  userMessage: string,
+  apiKey: string,
+): Promise<SimParams | null> {
+  // Só tenta extração se houver palavras-chave de simulação
+  const allText = [...messages.map(m => m.content), userMessage].join(' ').toLowerCase();
+  const temIntencao = /renda|salário|salario|ganho|fgts|entrada|simul|calcul|parcela|financ|comprar|imóvel|apartamento|casa/.test(allText);
+  const temNumero = /\d/.test(allText);
+  if (!temIntencao || !temNumero) return null;
+
+  try {
+    const convText = [
+      ...messages.slice(-8).map(m => `${m.role === 'user' ? 'Usuário' : 'João'}: ${m.content}`),
+      `Usuário: ${userMessage}`,
+    ].join('\n');
+
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `Extraia parâmetros de simulação de financiamento imobiliário desta conversa em português.
+Retorne JSON com os campos encontrados (omita os não mencionados):
+- renda: número (renda bruta familiar mensal em R$)
+- fgts: número (saldo FGTS disponível, padrão 0)
+- entrada: número (dinheiro próprio além do FGTS, padrão 0)
+- prazo: número em anos (padrão 35)
+- idade: número em anos (padrão 35)
+- valorImovel: número (valor do imóvel, null se não informado)
+- naPlanta: boolean (true se mencionou na planta/em obras)
+- cotista: boolean (true se cotista FGTS há 3+ anos, padrão true)
+- dependentes: número (filhos, padrão 0)
+
+Conversão obrigatória: "4 mil"→4000, "20k"→20000, "R$10.000"→10000, "10 de entrada"→10000.
+Se não há renda mencionada, retorne {"semDados": true}.`,
+          },
+          { role: 'user', content: convText },
+        ],
+        response_format: { type: 'json_object' },
+        max_tokens: 200,
+        temperature: 0,
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const parsed: SimParams = JSON.parse(data.choices?.[0]?.message?.content || '{}');
+    if (parsed.semDados || !parsed.renda || parsed.renda < 300) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** Roda descobrir() ou simular() e retorna bloco de contexto com os resultados exatos */
+function buildSimBloco(params: SimParams): string {
+  const renda       = Number(params.renda)       || 0;
+  const fgts        = Number(params.fgts)        || 0;
+  const entrada     = Number(params.entrada)     || 0;
+  const prazo       = Number(params.prazo)       || 35;
+  const idade       = Number(params.idade)       || 35;
+  const valorImovel = params.valorImovel ? Number(params.valorImovel) : 0;
+  const naPlanta    = Boolean(params.naPlanta);
+  const cotista     = params.cotista !== false;
+  const dependentes = Number(params.dependentes) || 0;
+
+  if (valorImovel > 10000) {
+    // ── Simulação de imóvel específico ────────────────────────────────────────
+    const r = simular({
+      rendaBruta: renda, fgts, entrada, valorImovel,
+      prazoAnos: prazo, naPlanta, prazoObraAnos: 3,
+      idadeProponente: idade, cotista, primeiroImovel: true,
+      jaRecebeuBeneficio: false, dependentes,
+    });
+
+    const modal = r.isMCMV ? `MCMV ${r.faixa?.label}` : r.isSFI ? 'SFI' : 'SBPE (SFH)';
+    const cotStr = cotista ? 'cotista FGTS (7,66% a.a.)' : 'sem FGTS (8,16% a.a.)';
+    return `
+━━━ SIMULAÇÃO CALCULADA PELO SISTEMA — APRESENTE ESSES VALORES EXATOS ━━━
+🚫 NÃO recalcule. João só apresenta os números abaixo de forma natural e consultiva.
+
+Imóvel: ${formatBRL(r.valorImovel)} | Modalidade: ${modal} | Taxa: ${r.taxaAnual}% a.a. + TR (${r.isMCMV ? cotStr : ''})
+Prazo: ${r.prazoMeses} meses (${Math.round(r.prazoMeses / 12)} anos)
+
+📥 Composição da entrada:
+• FGTS usado: ${formatBRL(r.fgtsUsado)}
+• Entrada própria: ${formatBRL(entrada)}
+${r.subsidioEstimado > 0 ? `• Subsídio MCMV estimado: ${formatBRL(r.subsidioEstimado)} (confirmar na Caixa)` : ''}
+• Total que o banco financia: ${formatBRL(r.valorFinanciado)}
+
+📊 Parcelas — Sistema SAC (padrão MCMV):
+• 1ª parcela: ${formatBRL(r.parcelaSACPrimeiro)}/mês (inclui A+J + seguros)
+• Última parcela: ${formatBRL(r.parcelaSACUltimo)}/mês (após ${r.prazoMeses} meses)
+• Comprometimento de renda: ${r.comprometimento.toFixed(1)}% ${r.comprometimento > 30 ? '🚨 ACIMA DO LIMITE DE 30%' : '✅ dentro do limite'}
+
+📊 Alternativa Price (parcela fixa):
+• Parcela fixa: ${formatBRL(r.parcelaPrimeiro)}/mês
+• Saúde financeira: ${r.saudeLabel}
+${r.alertas.length > 0 ? '\n⚠️ Alertas:\n' + r.alertas.map(a => '• ' + a).join('\n') : ''}
+${r.obraAlerta ? '\n🏗️ ' + r.obraAlerta : ''}
+━━━ FIM ━━━`;
+
+  } else {
+    // ── Descoberta de perfil (sem imóvel específico) ───────────────────────────
+    const r = descobrir(renda, fgts, entrada, prazo, idade, cotista, true, false, dependentes);
+    const usaMCMV = r.mcmv.elegivel;
+    const cotStr = cotista ? '7,66% a.a. (cotista)' : '8,16% a.a. (sem FGTS)';
+
+    return `
+━━━ PERFIL CALCULADO PELO SISTEMA — APRESENTE ESSES VALORES EXATOS ━━━
+🚫 NÃO recalcule. João só apresenta os números abaixo de forma natural e consultiva.
+
+Renda: ${formatBRL(renda)}/mês | FGTS: ${formatBRL(fgts)} | Entrada: ${formatBRL(entrada)}
+Prazo máximo: ${r.prazoMaxMeses} meses (${Math.round(r.prazoMaxMeses / 12)} anos, limitado pela idade ${idade} anos)
+
+${usaMCMV ? `✅ MCMV ${r.faixa?.label} — ${cotStr}
+━━ Poder de compra MCMV ━━
+• Imóvel máximo: ${formatBRL(r.mcmv.valorMaxImovel)}
+  → Banco financia: ${formatBRL(r.mcmv.valorFinanciado)} + FGTS: ${formatBRL(r.fgts)} + Entrada: ${formatBRL(entrada)}${r.subsidioEstimado > 0 ? ` + Subsídio: ${formatBRL(r.subsidioEstimado)}` : ''}
+• Parcela estimada: ${formatBRL(r.mcmv.parcela)}/mês (${r.mcmv.comprometimento.toFixed(1)}% da renda)
+• Comprometimento: ${r.mcmv.comprometimento > 30 ? '🚨 ACIMA DE 30% — banco pode reprovar. Sugerir maior entrada ou prazo máximo.' : `${r.mcmv.comprometimento.toFixed(1)}% ✅ aprovável`}
+• Subsídio estimado: ${formatBRL(r.subsidioEstimado)} (definido na Caixa por perfil e município)
+• Imóveis sugeridos: ${formatBRL(r.oruloMinPrice)} a ${formatBRL(r.oruloMaxPrice)}` : ''}
+
+💼 SBPE (SFH) — 11,19% a.a. + TR
+• Imóvel máximo: ${formatBRL(r.sbpe.valorMaxImovel)}
+• Parcela estimada: ${formatBRL(r.sbpe.parcela)}/mês (${r.sbpe.comprometimento.toFixed(1)}% da renda)
+━━━ FIM ━━━`;
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -730,8 +886,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // ── Simulação server-side — roda lib/calculos antes do main GPT ──────────────
+  let simBloco = '';
+  try {
+    const simParams = await extractSimParams(
+      history.slice(-12).map(m => ({ role: m.role, content: m.content })),
+      message,
+      apiKey,
+    );
+    if (simParams) {
+      simBloco = buildSimBloco(simParams);
+    }
+  } catch (e) {
+    // Falha silenciosa — João continua sem o bloco de simulação
+    console.warn('[api/chat] extractSimParams error:', e);
+  }
+
   // Build messages array
-  const systemPrompt = SYSTEM_BASE + buildContextBlock(context);
+  const systemPrompt =
+    SYSTEM_BASE +
+    buildContextBlock(context) +
+    (simBloco
+      ? `\n\n━━━ INSTRUÇÃO ESPECIAL PARA ESTA MENSAGEM ━━━\nOs valores abaixo foram calculados pelo sistema usando as fórmulas oficiais do FinancieCerto. Apresente-os de forma natural e consultiva — como um corretor que "acabou de calcular". NÃO refaça nenhum cálculo. NÃO altere nenhum número. Se o usuário pedir esclarecimentos, explique o que os números significam na prática.\n${simBloco}`
+      : '');
 
   const messages: { role: string; content: string }[] = [
     { role: 'system', content: systemPrompt },
