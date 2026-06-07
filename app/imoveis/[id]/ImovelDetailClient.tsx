@@ -483,7 +483,11 @@ function BadgeMCMV({ valorImovel }: { valorImovel: number }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
         <div style={{ background: 'rgba(255,255,255,.7)', borderRadius: '10px', padding: '8px 10px' }}>
           <p style={{ fontSize: '10px', color: '#4ADE80', fontWeight: '600', marginBottom: '2px' }}>Taxa subsidiada</p>
-          <p style={{ fontSize: '14px', fontWeight: '900', color: '#166534' }}>{faixa.taxaRef}% a.a.</p>
+          <p style={{ fontSize: '14px', fontWeight: '900', color: '#166534' }}>
+            {faixa.taxaMin === faixa.taxaMax
+              ? `${faixa.taxaMin.toFixed(2).replace('.', ',')}%`
+              : `${faixa.taxaMin.toFixed(2).replace('.', ',')}%–${faixa.taxaMax.toFixed(2).replace('.', ',')}%`} a.a.
+          </p>
         </div>
         {faixa.subsidioMax > 0 ? (
           <div style={{ background: 'rgba(255,255,255,.7)', borderRadius: '10px', padding: '8px 10px' }}>

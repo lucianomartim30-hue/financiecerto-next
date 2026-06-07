@@ -218,7 +218,8 @@ function NaPlantaContent() {
   })();
 
   const isMCMV = faixaEfetiva !== null;
-  const taxa   = isMCMV && faixaEfetiva ? faixaEfetiva.taxaRef : TAXA_SBPE_ANUAL;
+  // Simulator na-planta assume cotista=true (não coletamos essa info aqui) → usa taxaMin
+  const taxa   = isMCMV && faixaEfetiva ? faixaEfetiva.taxaMin : TAXA_SBPE_ANUAL;
   const motivo = (!isMCMV && renda > 0 && valor > 0) ? motivoSBPE(renda, valor) : null;
 
   const maxFinPerfil = isMCMV ? maxFinMcmv : maxFinSbpe;
@@ -381,7 +382,7 @@ function NaPlantaContent() {
               <CampoValor label="Renda familiar bruta" placeholder="6.000" value={rendaRaw} onChange={v => setRendaRaw(fi(v))} hint="Usamos a renda para identificar MCMV ou SBPE e verificar o limite de 30%" />
               {rendaDigitada > 0 && faixaRenda && (
                 <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px', marginTop: '-8px' }}>
-                  <p style={{ fontSize: '13px', color: '#15803d' }}>✅ <strong>MCMV {faixaRenda.label}</strong> — taxa {faixaRenda.taxaRef.toFixed(2).replace('.', ',')}% a.a. · teto {formatBRL(faixaRenda.teto)}</p>
+                  <p style={{ fontSize: '13px', color: '#15803d' }}>✅ <strong>MCMV {faixaRenda.label}</strong> — taxa {faixaRenda.taxaMin === faixaRenda.taxaMax ? `${faixaRenda.taxaMin.toFixed(2).replace('.', ',')}%` : `${faixaRenda.taxaMin.toFixed(2).replace('.', ',')}%–${faixaRenda.taxaMax.toFixed(2).replace('.', ',')}%`} a.a. · teto {formatBRL(faixaRenda.teto)}</p>
                 </div>
               )}
               {rendaDigitada > 0 && !faixaRenda && (
@@ -400,7 +401,7 @@ function NaPlantaContent() {
             <div style={{ marginBottom: '20px', marginTop: '-8px' }}>
               {isMCMV ? (
                 <span style={{ fontSize: '12px', fontWeight: '700', padding: '3px 10px', borderRadius: '99px', display: 'inline-block', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }}>
-                  ✅ MCMV {faixaEfetiva!.label} — {faixaEfetiva!.taxaRef.toFixed(2).replace('.', ',')}% a.a. · teto {formatBRL(faixaEfetiva!.teto)}
+                  ✅ MCMV {faixaEfetiva!.label} — {faixaEfetiva!.taxaMin === faixaEfetiva!.taxaMax ? `${faixaEfetiva!.taxaMin.toFixed(2).replace('.', ',')}%` : `${faixaEfetiva!.taxaMin.toFixed(2).replace('.', ',')}%–${faixaEfetiva!.taxaMax.toFixed(2).replace('.', ',')}%`} a.a. · teto {formatBRL(faixaEfetiva!.teto)}
                 </span>
               ) : (
                 <div>
