@@ -82,16 +82,11 @@ export default function Header() {
             }}>
               <svg width="26" height="24" viewBox="0 0 28 26" fill="none">
                 <path d="M2,14 L14,2 L26,14 L22,14 L22,25 L6,25 L6,14 Z" fill="white"/>
-                <rect x="9" y="17" width="10" height="8" rx="1.5" fill="#2563eb"/>
+                <rect x="11" y="18" width="6" height="7" rx="1" fill="#2563eb"/>
               </svg>
             </div>
-            <div>
-              <div style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '-0.4px', lineHeight: 1 }}>
-                <span style={{ color: '#0f172a' }}>Financie</span><span style={{ color: '#2563eb' }}>Certo</span>
-              </div>
-              <div style={{ fontSize: '9px', color: 'var(--text-faint)', fontWeight: '600', letterSpacing: '0.35px', marginTop: '3px' }}>
-                MCMV · SBPE · SFI
-              </div>
+            <div style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '-0.4px', lineHeight: 1 }}>
+              <span style={{ color: '#0f172a' }}>Financie</span><span style={{ color: '#2563eb' }}>Certo</span>
             </div>
           </Link>
 
