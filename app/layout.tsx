@@ -17,6 +17,10 @@ export const metadata: Metadata = {
   },
   // PWA — cor da barra do navegador no Android/Chrome
   themeColor: '#1d4ed8',
+  icons: {
+    icon: '/icons/icon.svg',
+    apple: '/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     title: 'FinancieCerto',
