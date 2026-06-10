@@ -72,19 +72,25 @@ export default function Header() {
         }}>
 
           {/* ── Logo ───────────────────────────────────────────────────────── */}
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '9px', flexShrink: 0 }}>
-            <div style={{
-              width: '34px', height: '34px',
-              background: 'linear-gradient(135deg, var(--primary), var(--accent))',
-              borderRadius: '9px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '16px',
-            }}>🏠</div>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '11px', flexShrink: 0 }}>
+            <svg width="38" height="36" viewBox="0 0 44 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="hdr-door" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2563eb"/>
+                  <stop offset="100%" stopColor="#1e3a8a"/>
+                </linearGradient>
+              </defs>
+              <path
+                d="M3 23 L22 6 L41 23 L36 23 L36 39 L8 39 L8 23 Z"
+                stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+              />
+              <rect x="15" y="26" width="14" height="13" rx="3" fill="url(#hdr-door)"/>
+            </svg>
             <div>
-              <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', letterSpacing: '-0.3px', lineHeight: 1 }}>
-                Financie<span style={{ color: 'var(--primary)' }}>Certo</span>
+              <div style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '-0.5px', lineHeight: 1 }}>
+                <span style={{ color: '#0f172a' }}>Financie</span><span style={{ color: '#2563eb' }}>Certo</span>
               </div>
-              <div style={{ fontSize: '10px', color: 'var(--text-faint)', fontWeight: '500', letterSpacing: '0.3px', marginTop: '2px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--text-faint)', fontWeight: '600', letterSpacing: '0.4px', marginTop: '3px' }}>
                 MCMV · SBPE · 2026
               </div>
             </div>
