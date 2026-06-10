@@ -72,8 +72,8 @@ export default function Header() {
         }}>
 
           {/* ── Logo ───────────────────────────────────────────────────────── */}
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '11px', flexShrink: 0 }}>
-            <svg width="38" height="36" viewBox="0 0 44 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+            <svg width="48" height="46" viewBox="0 0 58 56" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="hdr-door" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#2563eb"/>
@@ -81,17 +81,21 @@ export default function Header() {
                 </linearGradient>
               </defs>
               <path
-                d="M3 23 L22 6 L41 23 L36 23 L36 39 L8 39 L8 23 Z"
-                stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                d="M2,29 L29,5 L56,29 L49,29 L49,53 L9,53 L9,29 Z"
+                stroke="#2563eb" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"
               />
-              <rect x="15" y="26" width="14" height="13" rx="3" fill="url(#hdr-door)"/>
+              <rect x="19" y="34" width="20" height="19" rx="3" fill="url(#hdr-door)"/>
             </svg>
             <div>
-              <div style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '-0.5px', lineHeight: 1 }}>
-                <span style={{ color: '#0f172a' }}>Financie</span><span style={{ color: '#2563eb' }}>Certo</span>
+              <div style={{ fontSize: '24px', fontWeight: '800', letterSpacing: '-0.6px', lineHeight: 1 }}>
+                <span style={{ color: '#0d1b2a' }}>Financie</span><span style={{ color: '#1a56db' }}>Certo</span>
               </div>
-              <div style={{ fontSize: '9px', color: 'var(--text-faint)', fontWeight: '600', letterSpacing: '0.4px', marginTop: '3px' }}>
-                MCMV · SBPE · 2026
+              <div className="logo-tagline" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '5px' }}>
+                <div style={{ width: '16px', height: '1.5px', background: '#2563eb', flexShrink: 0 }}/>
+                <span style={{ fontSize: '8px', color: '#6b7280', fontWeight: '600', letterSpacing: '0.11em', whiteSpace: 'nowrap' }}>
+                  O JEITO INTELIGENTE DE ENCONTRAR SEU IMÓVEL
+                </span>
+                <div style={{ width: '16px', height: '1.5px', background: '#2563eb', flexShrink: 0 }}/>
               </div>
             </div>
           </Link>
@@ -405,6 +409,7 @@ export default function Header() {
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }
           .hamburger-btn { display: flex !important; }
+          .logo-tagline { display: none !important; }
         }
         @media (min-width: 769px) {
           .hamburger-btn { display: none !important; }
