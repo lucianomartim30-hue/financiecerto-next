@@ -233,7 +233,7 @@ export default function Header() {
 
           {/* ── CTA + Hamburger ────────────────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            <Link href="/simulador" className="btn-primary" style={{ fontSize: '13px', padding: '8px 18px' }}>
+            <Link href="/simulador" className="btn-primary header-cta" style={{ fontSize: '13px', padding: '8px 18px' }}>
               Descobrir perfil
             </Link>
             <button
@@ -399,6 +399,7 @@ export default function Header() {
         @media (max-width: 768px) {
           .desktop-nav { display: none !important; }
           .hamburger-btn { display: flex !important; }
+          .header-cta { display: none !important; }
         }
         @media (min-width: 769px) {
           .hamburger-btn { display: none !important; }
