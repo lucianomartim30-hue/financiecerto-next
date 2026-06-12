@@ -134,12 +134,12 @@ Prazo: ${r.prazoMeses} meses (${Math.round(r.prazoMeses / 12)} anos)
 ${r.subsidioEstimado > 0 ? `• Subsídio MCMV estimado: ${formatBRL(r.subsidioEstimado)} (confirmar na Caixa)` : ''}
 • Total que o banco financia: ${formatBRL(r.valorFinanciado)}
 
-📊 Parcelas — Sistema SAC (padrão MCMV):
+📊 Opção 1 — SAC (parcela decrescente):
 • 1ª parcela: ${formatBRL(r.parcelaSACPrimeiro)}/mês (inclui A+J + seguros)
 • Última parcela: ${formatBRL(r.parcelaSACUltimo)}/mês (após ${r.prazoMeses} meses)
 • Comprometimento de renda: ${r.comprometimento.toFixed(1)}% ${r.comprometimento > 30 ? '🚨 ACIMA DO LIMITE DE 30%' : '✅ dentro do limite'}
 
-📊 Alternativa Price (parcela fixa):
+📊 Opção 2 — Price (parcela fixa, menor no início):
 • Parcela fixa: ${formatBRL(r.parcelaPrimeiro)}/mês
 • Saúde financeira: ${r.saudeLabel}
 ${r.alertas.length > 0 ? '\n⚠️ Alertas:\n' + r.alertas.map(a => '• ' + a).join('\n') : ''}
@@ -286,12 +286,13 @@ REGRA ABSOLUTA — FOCO NO MCMV:
 
 JAMAIS invente limites que não existem (ex: "Caixa tem limite de R$ 6.500 para Faixa 2" — isso não existe).
 
-━━━ REGRAS CRÍTICAS — MCMV USA SAC, NUNCA PRICE (NUNCA ERRAR) ━━━
+━━━ REGRAS CRÍTICAS — MCMV: SEMPRE APRESENTE SAC **E** PRICE (NUNCA OMITIR UMA) ━━━
 
-REGRA ABSOLUTA: O MCMV (Faixas 1, 2, 3 e 4) usa SEMPRE o sistema SAC (Sistema de Amortização Constante).
-- NUNCA diga "tabela Price" para um cliente MCMV. Price é para SBPE.
-- No SAC a parcela começa MAIOR e vai CAINDO todo mês — isso é um benefício a destacar.
-- SBPE pode usar Price ou SAC; MCMV usa SAC.
+REGRA ABSOLUTA: O MCMV permite os DOIS sistemas de amortização — SAC e Price (Tabela Price). Quem escolhe é o comprador. Sempre que o assunto for parcela, APRESENTE AS DUAS opções e deixe o cliente decidir conforme o bolso:
+- SAC (Amortização Constante): a 1ª parcela é MAIOR e vai CAINDO mês a mês. Custo total menor no fim.
+- Price (parcela fixa): parcela FIXA e menor no início do que a 1ª do SAC. A MAIORIA das pessoas escolhe Price justamente para ter parcela inicial menor e caber no limite de 30% de comprometimento. Custo total maior.
+- NUNCA diga "MCMV é sempre SAC" nem "Price é exclusivo do SBPE" — está ERRADO e contradiz o próprio site (/guia e /glossario explicam SAC vs Price como opções do MCMV).
+- Ao calcular, mostre a 1ª parcela no SAC E a parcela fixa no Price, lado a lado.
 
 COMO CALCULAR SAC PARA MCMV:
   taxa_mensal = (1 + taxa_anual/100)^(1/12) - 1
@@ -397,11 +398,11 @@ Exemplo de como interpretar o resultado para o usuário:
 ━━━ BASE DE CONHECIMENTO ━━━
 
 **MCMV — Minha Casa, Minha Vida (Portaria MCID 333/2026 — vigente desde 22/04/2026, São Paulo)**
-- Faixa 1: renda até R$ 3.200 | taxa 4,00–5,00% a.a. + TR | teto R$ 275k | subsídio até R$ 55k | LTV até 95% | SAC
-- Faixa 2: renda R$3.201–R$5.000 | taxa ESCALA por renda: 5,00%–6,50% cotista | 5,50%–7,00% sem FGTS + TR | teto R$ 275k | subsídio | LTV até 90% | SAC
-- Faixa 3: renda R$5.001–R$9.600 | taxa 7,66% cotista | 8,16% sem FGTS (+ TR) | teto R$ 400k | sem subsídio | LTV até 80% | SAC
-- Faixa 4: renda R$9.601–R$13.000 | taxa 10,50% a.a. flat + TR | teto R$ 600k | sem subsídio | LTV até 80% | SAC
-- TODAS as faixas MCMV usam SAC. Price é exclusivo do SBPE.
+- Faixa 1: renda até R$ 3.200 | taxa 4,00–5,00% a.a. + TR | teto R$ 275k | subsídio até R$ 55k | LTV até 95% | SAC ou Price
+- Faixa 2: renda R$3.201–R$5.000 | taxa ESCALA por renda: 5,00%–6,50% cotista | 5,50%–7,00% sem FGTS + TR | teto R$ 275k | subsídio | LTV até 90% | SAC ou Price
+- Faixa 3: renda R$5.001–R$9.600 | taxa 7,66% cotista | 8,16% sem FGTS (+ TR) | teto R$ 400k | sem subsídio | LTV até 80% | SAC ou Price
+- Faixa 4: renda R$9.601–R$13.000 | taxa 10,50% a.a. flat + TR | teto R$ 600k | sem subsídio | LTV até 80% | SAC ou Price
+- Todas as faixas MCMV podem usar SAC OU Price — o comprador escolhe. SAC = custo total menor; Price = parcela inicial menor (a mais procurada por quem precisa caber no orçamento).
 - Cotista FGTS faz diferença nas Faixas 2 e 3 (taxa reduzida em 0,5 p.p.). Faixa 4: taxa igual para todos (10,50%).
 - FGTS Futuro: permite antecipar depósitos futuros para reduzir parcela — ideal para CLT Faixa 1 e 2
 - Subsídio não é devolvido — funciona como desconto direto no preço do imóvel
