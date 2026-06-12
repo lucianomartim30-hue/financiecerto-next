@@ -46,7 +46,7 @@ export default function ContatoPage() {
   }
 
   return (
-    <main>
+    <div>
       {/* Hero */}
       <section style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)',
@@ -253,7 +253,7 @@ export default function ContatoPage() {
         </form>
       )}
       </div>
-    </main>
+    </div>
   );
 }
 

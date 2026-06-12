@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function SobrePage() {
   return (
-    <main>
+    <div>
 
       {/* ── SEÇÃO 1 — HERO ─────────────────────────────────────────────────── */}
       <section style={{
@@ -448,6 +448,6 @@ export default function SobrePage() {
         </div>
       </section>
 
-    </main>
+    </div>
   );
 }
