@@ -1,6 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+
+// Fonte auto-hospedada pelo próprio site (sem pedido externo render-blocking).
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
+  variable: "--font-inter",
+});
 import Header from "@/components/Header";
 import ChatFab from "@/components/ChatFab";
 import FooterWrapper from "@/components/FooterWrapper";
@@ -44,7 +53,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" className={inter.variable}>
       <body style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-5FCF1KE9XP"
