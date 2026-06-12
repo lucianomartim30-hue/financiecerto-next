@@ -8,7 +8,7 @@
  *  - Offline fallback                          → página cached mais recente
  */
 
-const CACHE_VERSION  = 'fc-v2';
+const CACHE_VERSION  = 'fc-v3';
 const STATIC_CACHE   = `${CACHE_VERSION}-static`;
 const PAGES_CACHE    = `${CACHE_VERSION}-pages`;
 

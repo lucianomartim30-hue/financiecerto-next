@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import Header from "@/components/Header";
@@ -15,8 +15,6 @@ export const metadata: Metadata = {
   verification: {
     google: 'l34uBI3ef56FcK3A9RXJPN4eiOXmRx-gJDTxcbQ_zNc',
   },
-  // PWA — cor da barra do navegador no Android/Chrome
-  themeColor: '#1d4ed8',
   icons: {
     icon: '/icons/icon.svg',
     apple: '/apple-touch-icon.png',
@@ -34,6 +32,10 @@ export const metadata: Metadata = {
     locale: "pt_BR",
     type: "website",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#1d4ed8',
 };
 
 export default function RootLayout({
