@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { descobrir, simular, formatBRL } from '@/lib/calculos';
+import { fatosArtigoParaContexto } from '@/lib/artigos';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Rate limiting — in-memory (per serverless instance, good enough for MVP)
@@ -724,10 +725,22 @@ function buildContextBlock(ctx: Record<string, unknown> | null | undefined): str
       '/imoveis': 'Portal de imóveis (+2.000 empreendimentos)',
       '/guia': 'Guia completo de financiamento (5 capítulos)',
       '/glossario': 'Glossário de termos imobiliários',
+      '/aprenda': 'Hub Aprenda (artigos educativos)',
       '/sobre': 'Página Sobre nós',
       '/contato': 'Página de Contato',
     };
     lines.push(`Página atual: ${pageNames[page] ?? page}`);
+
+    // Se está lendo um artigo do hub /aprenda, injeta os fatos-chave dele.
+    // (João lê da MESMA fonte do artigo — lib/artigos.ts — então nunca dessincroniza.)
+    if (page.startsWith('/aprenda/')) {
+      const slug = page.replace('/aprenda/', '').split('/')[0];
+      const fatos = fatosArtigoParaContexto(slug);
+      if (fatos) {
+        lines.push('');
+        lines.push(fatos);
+      }
+    }
   }
 
   // ── Perfil completo do usuário ─────────────────────────────────────────────

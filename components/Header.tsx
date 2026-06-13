@@ -8,6 +8,7 @@ import { useState, useRef } from 'react';
 const NAV_SIMPLE = [
   { href: '/',          label: 'Início',    icon: '🏠' },
   { href: '/imoveis',   label: 'Imóveis',   icon: '🏘️' },
+  { href: '/aprenda',   label: 'Aprenda',   icon: '📚' },
   { href: '/guia',      label: 'Guia',      icon: '📘' },
   { href: '/glossario', label: 'Glossário', icon: '🔤' },
   { href: '/sobre',     label: 'Sobre nós', icon: 'ℹ️' },
