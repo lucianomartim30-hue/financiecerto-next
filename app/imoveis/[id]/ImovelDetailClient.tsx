@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, type FaixaMCMV } from '@/lib/calculos';
+import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, type FaixaMCMV } from '@/lib/calculos';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -160,17 +160,44 @@ function getStatus(s: string) {
   return { cor: '#475569', bg: 'rgba(71,85,105,.12)', label: s };
 }
 
-function calcEstimate(valorImovel: number) {
+function calcEstimate(valorImovel: number): {
+  entrada: number; parcela: number; rendaSugerida: number; faixaMCMV: FaixaMCMV | null; taxa: number;
+} {
   const entrada = Math.round(valorImovel * 0.20);
   const financiado = valorImovel - entrada;
-  // Renda sugerida: parcela Price a TAXA_SBPE_ANUAL, 30 anos ≤ 30% renda
-  const i = (TAXA_SBPE_ANUAL / 100) / 12;
   const n = 360;
-  const parcela = Math.round(financiado * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1) + (financiado * 0.00003) + 25);
+  const pmt = (taxaAnual: number) => {
+    const i = (taxaAnual / 100) / 12;
+    const base = financiado * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
+    return Math.round(base + financiado * 0.00003 + 25); // + seguro aprox. + tx. adm.
+  };
+
+  // Faixa CONSISTENTE com a renda: a faixa do MCMV é definida pela RENDA, não
+  // pelo preço. Testamos da menor faixa para a maior e usamos a primeira em que
+  // a renda necessária (calculada à taxa MCMV daquela faixa) cabe na própria faixa.
+  for (const f of FAIXAS_MCMV) {
+    if (valorImovel > f.teto) continue; // imóvel não cabe no teto desta faixa
+    let taxa = f.taxaMin;
+    let parcela = pmt(taxa);
+    let rendaSugerida = Math.ceil(parcela / 0.30 / 100) * 100;
+    if (f.numero === 2) {
+      // Faixa 2 tem taxa deslizante por renda — converge em poucas iterações
+      for (let k = 0; k < 4; k++) {
+        taxa = taxaEfetivaMCMV(f, rendaSugerida, true);
+        parcela = pmt(taxa);
+        rendaSugerida = Math.ceil(parcela / 0.30 / 100) * 100;
+      }
+    }
+    if (rendaSugerida <= f.rendaMax) {
+      return { entrada, parcela, rendaSugerida, faixaMCMV: f, taxa };
+    }
+  }
+
+  // Acima das faixas MCMV (renda alta ou imóvel acima do teto) → SBPE
+  const taxa = TAXA_SBPE_ANUAL;
+  const parcela = pmt(taxa);
   const rendaSugerida = Math.ceil(parcela / 0.30 / 100) * 100;
-  // MCMV eligibility via tabela oficial
-  const faixaMCMV: FaixaMCMV | null = FAIXAS_MCMV.find(f => valorImovel <= f.teto) ?? null;
-  return { entrada, parcela, rendaSugerida, faixaMCMV };
+  return { entrada, parcela, rendaSugerida, faixaMCMV: null, taxa };
 }
 
 function isNaPlanta(status: string) {
@@ -469,8 +496,7 @@ function StickyNav({ hasTypologies, hasAmenities, hasCaracteristicas }: { hasTyp
 // ─────────────────────────────────────────────────────────────────────────────
 // Badge MCMV — elegibilidade com subsídio e taxa
 // ─────────────────────────────────────────────────────────────────────────────
-function BadgeMCMV({ valorImovel }: { valorImovel: number }) {
-  const faixa = FAIXAS_MCMV.find(f => valorImovel <= f.teto);
+function BadgeMCMV({ faixa }: { faixa: FaixaMCMV | null }) {
   if (!faixa) return null;
   return (
     <div style={{ background: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)', border: '1.5px solid #86EFAC', borderRadius: '14px', padding: '14px 16px', marginBottom: '16px' }}>
@@ -665,13 +691,17 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
               ))}
             </div>
             <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginTop: '8px', textAlign: 'center' }}>
-              {isBreveLancamento ? '* Valores serão definidos quando os preços forem lançados' : `* Estimativas SBPE ${TAXA_SBPE_ANUAL}%+TR, 30 anos. Simule para valores precisos.`}
+              {isBreveLancamento
+                ? '* Valores serão definidos quando os preços forem lançados'
+                : est?.faixaMCMV
+                  ? `* Estimativa via MCMV ${est.faixaMCMV.label} (${est.taxa.toFixed(2).replace('.', ',')}% a.a. + TR), 30 anos. Simule para valores precisos.`
+                  : `* Estimativa SBPE ${TAXA_SBPE_ANUAL}%+TR, 30 anos. Simule para valores precisos.`}
             </p>
           </div>
         ) : null}
 
         {/* MCMV Eligibility Badge */}
-        {valorRef > 0 && !isBreveLancamento && <BadgeMCMV valorImovel={valorRef} />}
+        {valorRef > 0 && !isBreveLancamento && <BadgeMCMV faixa={est?.faixaMCMV ?? null} />}
 
         {/* Mensagem para breve lançamento */}
         {isBreveLancamento && (
