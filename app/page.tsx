@@ -4,7 +4,7 @@ const STATS = [
   { value: '2.000+', label: 'Empreendimentos', href: '/imoveis' },
   { value: 'MCMV · SBPE · SFI', label: 'Todos os perfis de renda', href: '/simulador' },
   { value: '35 anos', label: 'Prazo máximo', href: '/simulador' },
-  { value: 'R$ 55k', label: 'Subsídio MCMV máximo', href: '/guia' },
+  { value: 'R$ 190k a 34mi', label: 'Do econômico ao alto padrão', href: '/imoveis' },
 ];
 
 const STEPS = [
@@ -140,7 +140,7 @@ export default function Home() {
             margin: '0 auto 44px',
           }}>
             Não é um portal comum. É um sistema que interpreta seu perfil, calcula sua
-            capacidade real e recomenda apenas imóveis que você consegue financiar.
+            capacidade real e recomenda apenas imóveis que você consegue financiar — de econômicos a médio e alto padrão.
           </p>
 
           {/* CTAs — linha 1 */}

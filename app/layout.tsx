@@ -19,8 +19,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
   title: "FinancieCerto — Plataforma Inteligente de Descoberta Imobiliária",
-  description: "Simule seu financiamento, descubra sua faixa MCMV e encontre imóveis compatíveis com sua realidade financeira. MCMV, SBPE, crédito associativo — tudo em um só lugar.",
-  keywords: "financiamento imobiliário, MCMV, Minha Casa Minha Vida, simulador, FGTS, Caixa Econômica",
+  description: "Simule seu financiamento e encontre o imóvel certo — do econômico ao médio e alto padrão. Descubra sua faixa, taxa real e os imóveis compatíveis com sua renda. MCMV, SBPE, SFI e FGTS.",
+  keywords: "financiamento imobiliário, imóveis São Paulo, MCMV, SBPE, SFI, alto padrão, médio padrão, simulador de financiamento, FGTS, Caixa Econômica",
   verification: {
     google: 'l34uBI3ef56FcK3A9RXJPN4eiOXmRx-gJDTxcbQ_zNc',
   },
