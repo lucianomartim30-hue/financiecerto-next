@@ -124,7 +124,7 @@ function Hero({ etapa }: { etapa: number }) {
     2: { tag: 'Passo 2 de 6', titulo: 'Você tem FGTS\ndisponível?', sub: 'O FGTS amplia seu poder de compra e reduz o valor financiado.' },
     3: { tag: 'Passo 3 de 6', titulo: 'Tem entrada\noutra reserva?', sub: 'Entrada própria reduz o financiamento e pode melhorar a aprovação.' },
     4: { tag: 'Passo 4 de 6', titulo: 'Prazo e\nperfil pessoal', sub: 'O prazo e a idade definem a parcela e o seguro MIP.' },
-    5: { tag: 'Descobrindo seu perfil...', titulo: 'Calculando seu\nteto de compra.', sub: 'Aguarde um instante.' },
+    5: { tag: 'Seu perfil de compra', titulo: 'Seu teto de\ncompra.', sub: 'Veja sua faixa, a taxa real e a parcela estimada.' },
     6: { tag: 'Imóvel específico', titulo: 'Simule um\nimóvel concreto.', sub: 'Informe o valor e o estágio — calcularemos parcela, FGTS e modalidade.' },
     7: { tag: 'Resultado', titulo: 'Simulação\ncompleta.', sub: '' },
   };
