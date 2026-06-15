@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, type FaixaMCMV } from '@/lib/calculos';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
@@ -129,6 +129,11 @@ function parseMoeda(v: string): number {
 function fmtInput(raw: string) {
   const d = raw.replace(/\D/g, '');
   return d ? Number(d).toLocaleString('pt-BR') : '';
+}
+function parseTipologiaPrice(price: string): number | null {
+  if (!price || price === 'Consultar') return null;
+  const n = parseInt(price.replace(/[^0-9]/g, ''), 10);
+  return n > 0 ? n : null;
 }
 function faixaRange(min: number | null, max: number | null, unit: string) {
   if (!min) return null;
@@ -575,12 +580,9 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
 // ─────────────────────────────────────────────────────────────────────────────
 // Bloco Financeiro — card lateral sticky (diferencial FinancieCerto)
 // ─────────────────────────────────────────────────────────────────────────────
-function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
-  // Mostrar "A Definir" apenas para "Breve Lançamento" (sem tabela de preço definida)
-  // Se tem min_price > 0, já foi lançado e tem tabela de preço
-  const isBreveLancamento = !imovel.min_price || imovel.min_price < 100; // preço muito baixo = não lançado ainda
-
-  const valorRef = imovel.min_price ?? imovel.max_price ?? 0;
+function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: ImovelDetalhe; valorOverride?: number; tipologiaLabel?: string }) {
+  const isBreveLancamento = !imovel.min_price || imovel.min_price < 100;
+  const valorRef = valorOverride ?? (imovel.min_price ?? imovel.max_price ?? 0);
   const est = valorRef > 0 && !isBreveLancamento ? calcEstimate(valorRef) : null;
 
   // Simulator state
@@ -651,6 +653,11 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
             <p style={{ fontSize: '14px', color: 'rgba(255,255,255,.6)' }}>
               <strong>A Definir</strong> — Breve Lançamento
             </p>
+          ) : valorOverride ? (
+            <>
+              <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.55)', marginBottom: '4px' }}>{tipologiaLabel || 'Tipologia selecionada'}</p>
+              <p style={{ fontSize: '26px', fontWeight: '900', color: '#fff', lineHeight: 1 }}>{formatBRL(valorOverride)}</p>
+            </>
           ) : imovel.min_price && imovel.max_price && imovel.min_price !== imovel.max_price ? (
             <>
               <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.55)', marginBottom: '4px' }}>Faixa de preço</p>
@@ -879,7 +886,7 @@ function BlocoFinanceiro({ imovel }: { imovel: ImovelDetalhe }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipologias em cards
 // ─────────────────────────────────────────────────────────────────────────────
-function SecaoTipologias({ typologies }: { typologies: Tipologia[] }) {
+function SecaoTipologias({ typologies, onSimular }: { typologies: Tipologia[]; onSimular?: (preco: number, label: string) => void }) {
   if (!typologies.length) return null;
   return (
     <div id="tipologias" style={{ scrollMarginTop: '100px' }}>
@@ -926,6 +933,17 @@ function SecaoTipologias({ typologies }: { typologies: Tipologia[] }) {
                   📐 Ver planta
                 </a>
               )}
+              {onSimular && (() => {
+                const preco = parseTipologiaPrice(t.price ?? '');
+                if (!preco) return null;
+                return (
+                  <button
+                    onClick={() => onSimular(preco, t.type)}
+                    style={{ display: 'block', width: '100%', marginTop: '10px', background: 'linear-gradient(135deg, var(--primary), var(--accent))', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'center' }}>
+                    Simular esta planta →
+                  </button>
+                );
+              })()}
             </div>
           </div>
         ))}
@@ -1321,6 +1339,15 @@ export default function ImovelDetailClient({ id }: { id: string }) {
   const [copied, setCopied] = useState(false);
   const [bpLightbox, setBpLightbox] = useState<Blueprint | null>(null);
   const [bpImgError, setBpImgError] = useState(false);
+  const [valorTipologia, setValorTipologia] = useState<number | undefined>(undefined);
+  const [labelTipologia, setLabelTipologia] = useState<string | undefined>(undefined);
+  const blocoRef = useRef<HTMLDivElement>(null);
+
+  const handleSimularTipologia = useCallback((preco: number, label: string) => {
+    setValorTipologia(preco);
+    setLabelTipologia(label);
+    blocoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -1522,12 +1549,12 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             </div>
 
             {/* Financeiro (mobile only — aparece na coluna esquerda em telas pequenas) */}
-            <div className="financeiro-mobile" style={{ display: 'none' }}>
-              <BlocoFinanceiro imovel={imovel} />
+            <div ref={blocoRef} className="financeiro-mobile" style={{ display: 'none' }}>
+              <BlocoFinanceiro imovel={imovel} valorOverride={valorTipologia} tipologiaLabel={labelTipologia} />
             </div>
 
             <SecaoCaracteristicas imovel={imovel} />
-            <SecaoTipologias typologies={imovel.typologies} />
+            <SecaoTipologias typologies={imovel.typologies} onSimular={handleSimularTipologia} />
             <SecaoDiferenciais amenities={imovel.amenities} />
             <SecaoEmpreendimento imovel={imovel} />
             <SecaoLocalizacao imovel={imovel} />
@@ -1544,7 +1571,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
 
           {/* ── RIGHT: sticky financial card ──────────────────────────── */}
           <div className="financeiro-desktop" style={{ position: 'sticky', top: 'calc(var(--header-h) + 52px + 24px)', maxHeight: 'calc(100vh - var(--header-h) - 100px)', overflowY: 'auto' }}>
-            <BlocoFinanceiro imovel={imovel} />
+            <BlocoFinanceiro imovel={imovel} valorOverride={valorTipologia} tipologiaLabel={labelTipologia} />
           </div>
         </div>
       </div>
