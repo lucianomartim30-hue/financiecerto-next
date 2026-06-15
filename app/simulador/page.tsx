@@ -653,10 +653,16 @@ function SimuladorInner() {
         <div style={{ background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 20, overflow: 'hidden', marginBottom: 16 }}>
           <div style={{ background: dados.cor, padding: '24px 24px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: 10 }}>Seu perfil — {dados.label}</div>
-            <div style={{ fontSize: 38, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{formatBRL(dados.valorMaxImovel)}</div>
+            <div style={{ fontSize: 38, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+              {painelAtivo === 'sbpe' && dados.valorMaxImovel >= TETO_SFH
+                ? '⚠ Teto SFH'
+                : formatBRL(dados.valorMaxImovel)}
+            </div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,.8)', marginTop: 6 }}>
               {painelAtivo === 'sfi'
                 ? 'capacidade de compra · sem limite de teto'
+                : painelAtivo === 'sbpe' && dados.valorMaxImovel >= TETO_SFH
+                  ? `Sua renda suporta até ${formatBRL(sbpe.valorFinanciado)} de financiamento`
                 : (() => {
                     const partes = [];
                     if (valorFinanciadoAtivo5 > 0) partes.push(`${formatBRL(valorFinanciadoAtivo5)} financiado`);
@@ -708,7 +714,7 @@ function SimuladorInner() {
         {painelAtivo === 'sbpe' && (
           <>
             <div style={{ padding: '12px 14px', background: '#E6F1FB', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#0C447C' }}>
-              <strong>SBPE</strong> (Sistema Brasileiro de Poupança e Empréstimo) é a <em>fonte de captação</em> — recursos da poupança. Opera dentro do <strong>SFH</strong> (Sistema Financeiro da Habitação) para imóveis até {formatBRL(TETO_SFH)}. Permite uso do FGTS. <strong>Qualquer banco pode oferecer SBPE</strong> — compare as taxas abaixo.
+              <strong>SBPE</strong> (Sistema Brasileiro de Poupança e Empréstimo) — recursos da poupança, opera dentro do <strong>SFH</strong>. Teto do sistema: {formatBRL(TETO_SFH)} (não é o seu limite pessoal — <strong>seu poder de compra real está no card acima</strong>). Permite FGTS. Qualquer banco oferece SBPE — compare abaixo.
             </div>
             <ComparativoBancosSBPE financiado={perfil?.sbpe.valorFinanciado ?? 0} prazoMeses={perfil?.prazoMaxMeses ?? 420} />
           </>

@@ -643,12 +643,21 @@ export function descobrir(
 
   const elegMCMV = elegivel && imovelMaxMCMV >= 80000;
 
+  // Para a busca de imóveis (Orulo), o teto de pesquisa usa capacidade de RENDA,
+  // não o total inflado por FGTS muito alto. Isso evita mostrar imóveis de R$2,25M
+  // para quem ganha R$5k mas tem FGTS grande (e não é elegível ao MCMV).
+  // "imovelMaxSBPE" pode ser TETO_SFH quando entradaTotal >= ~R$2M — irrealista p/ busca.
+  const sbpeSearchBase = Math.min(
+    imovelMaxSBPE,
+    capacSBPE / LTV_SBPE_SAC + entradaTotal,  // max pelo LTV (80% SAC) + caixa disponível
+  );
+
   const oruloMax = elegMCMV
     ? Math.round(Math.min(tetoMCMV, imovelMaxMCMV * 1.05))
-    : Math.round(imovelMaxSBPE * 1.08);
+    : Math.round(sbpeSearchBase * 1.08);
   const oruloMin = elegMCMV
     ? Math.round(imovelMaxMCMV * 0.50)
-    : Math.round(imovelMaxSBPE * 0.70);
+    : Math.round(sbpeSearchBase * 0.70);
 
   return {
     rendaBruta, fgts: fgtsUsado,
