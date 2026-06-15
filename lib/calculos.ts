@@ -325,8 +325,11 @@ export function calcSubsidioEstimado(
   fator = Math.max(0.05, Math.min(1, fator));
 
   const subCalc = faixa.subsidioMax * fator;
-  const limPct  = faixa.numero === 1 ? 0.30 : 0.20;
-  return Math.round(Math.min(subCalc, valorImovel * limPct));
+  // Limite real: subsídio não pode superar o valor financiável (LTV × preço).
+  // Não usar % arbitrário do valor do imóvel — isso quebrava a monotonia:
+  // imóveis baratos (renda baixa) recebiam teto menor e, paradoxalmente, subsídio
+  // menor do que imóveis mais caros (renda maior).
+  return Math.round(Math.min(subCalc, valorImovel * faixa.ltvMax));
 }
 
 // ─── Capacidade de financiamento com seguros ─────────────────────────────────
