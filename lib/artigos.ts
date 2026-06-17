@@ -150,7 +150,120 @@ export const ARTIGOS: Artigo[] = [
       'A linha "Amortização" durante a obra é a TR do mês (correção monetária) — varia todo mês, não reduz a dívida.',
     ],
     ctaSimulador: { texto: 'Simular meu imóvel na planta', href: '/simulador/na-planta' },
-    relacionados: [],
+    relacionados: ['mcmv-sbpe-sfi-qual-modalidade-escolher'],
+  },
+  {
+    slug: 'mcmv-sbpe-sfi-qual-modalidade-escolher',
+    keyword: 'MCMV, SBPE ou SFI qual escolher',
+    titulo: 'MCMV, SBPE ou SFI: Qual Modalidade de Financiamento Escolher',
+    tituloSEO: 'MCMV, SBPE ou SFI: Qual Financiamento Imobiliário Escolher (2026)',
+    metaDescription:
+      'Compare MCMV, SBPE e SFI: faixas de renda, taxas reais, tetos de imóvel e subsídio. Descubra em qual modalidade sua renda se encaixa e simule sua parcela.',
+    resumo:
+      'Antes de procurar imóvel, vale saber em qual modalidade de financiamento você se encaixa — isso muda a taxa de juros, o subsídio (quando existe) e até o valor máximo de imóvel que você pode financiar. Aqui você compara MCMV, SBPE e SFI lado a lado, com taxas e tetos reais de 2026.',
+    publicado: '2026-06-17',
+    atualizado: '2026-06-17',
+    leituraMin: 9,
+    secoes: [
+      {
+        titulo: 'As 3 modalidades em resumo',
+        blocos: [
+          { tipo: 'p', texto: 'No Brasil, todo financiamento habitacional cai em uma de três modalidades — e a divisão entre elas é definida principalmente pela **sua renda familiar bruta** e pelo **valor do imóvel**:' },
+          { tipo: 'tabela',
+            cabecalho: ['Modalidade', 'Quem usa', 'Taxa (a.a. + TR)', 'Teto do imóvel', 'FGTS'],
+            linhas: [
+              ['MCMV', 'Renda até R$ 13.000', '4,00% a 10,50%', 'R$ 275 mil a R$ 600 mil (por faixa)', 'Sim'],
+              ['SBPE (SFH)', 'Qualquer renda, imóvel até R$ 2,25 mi', '11,19% a 11,97%', 'R$ 2,25 milhões', 'Sim'],
+              ['SFI', 'Imóvel acima de R$ 2,25 mi', '~12,5% (taxa de mercado)', 'Sem teto', 'Não'],
+            ],
+          },
+          { tipo: 'destaque', texto: 'Regra prática: se sua renda é até R$ 13.000/mês E o imóvel está dentro do teto da sua faixa, o MCMV quase sempre é mais vantajoso — taxas menores e, nas Faixas 1 e 2, subsídio. Acima disso, ou para imóvel mais caro que o teto MCMV, a opção é SBPE; e só acima de R$ 2,25 milhões entra o SFI.' },
+        ],
+      },
+      {
+        titulo: 'MCMV: faixas, taxas e subsídio por renda',
+        blocos: [
+          { tipo: 'p', texto: 'O Minha Casa Minha Vida divide os participantes em 4 faixas, conforme a Portaria MCID nº 333/2026. Quanto menor a renda, menor a taxa — e só as duas primeiras faixas têm subsídio:' },
+          { tipo: 'tabela',
+            cabecalho: ['Faixa', 'Renda mensal', 'Taxa (a.a.)', 'Teto do imóvel', 'Subsídio máx.'],
+            linhas: [
+              ['Faixa 1', 'até R$ 3.200', '4,00% a 5,00%', 'R$ 275.000', 'R$ 55.000'],
+              ['Faixa 2', 'R$ 3.200 a R$ 5.000', '5,00% a 7,00%', 'R$ 275.000', 'R$ 55.000 (decrescente)'],
+              ['Faixa 3', 'R$ 5.000 a R$ 9.600', '7,66% a 8,16%', 'R$ 400.000', 'Não tem'],
+              ['Faixa 4', 'R$ 9.600 a R$ 13.000', '10,50% (fixa)', 'R$ 600.000', 'Não tem'],
+            ],
+          },
+          { tipo: 'p', texto: 'Na Faixa 2, a taxa é uma **escala deslizante**: quem ganha R$ 3.200 paga próximo de 5,00% a.a.; quem ganha R$ 5.000 paga próximo de 7,00% a.a. — o valor exato varia ponto a ponto dentro da faixa. Nas Faixas 3 e 4, ser cotista do FGTS (ter pelo menos 3 anos de contribuição) garante a taxa mais baixa do intervalo; sem isso, paga-se a taxa mais alta.' },
+          { tipo: 'destaque', texto: 'O subsídio é decrescente: quanto menor a renda, maior o desconto no preço do imóvel. Ele nunca é devolvido — é abatido direto do valor financiado. A partir da Faixa 3, não há mais subsídio, só taxa reduzida em relação ao SBPE.' },
+        ],
+      },
+      {
+        titulo: 'SBPE: a porta para quem não se qualifica no MCMV',
+        blocos: [
+          { tipo: 'p', texto: 'O SBPE (Sistema Brasileiro de Poupança e Empréstimo) usa recursos da caderneta de poupança e opera dentro do **SFH** (Sistema Financeiro da Habitação) para imóveis residenciais de até R$ 2,25 milhões. É a linha padrão de mercado, sem subsídio do governo, mas com regras menos restritivas: qualquer renda pode contratar, e qualquer banco pode oferecer.' },
+          { tipo: 'tabela',
+            cabecalho: ['Banco', 'Taxa (a.a. + TR)', 'Observação'],
+            linhas: [
+              ['Caixa Econômica Federal', '11,19%', 'Correntista com relacionamento'],
+              ['Banco Inter', '11,49%', 'Digital, sem tarifa de adm.'],
+              ['Bradesco', '11,69%', '—'],
+              ['Santander', '11,74%', '—'],
+              ['Itaú', '11,89%', '—'],
+              ['Banco do Brasil', '11,97%', 'Correntista BB'],
+            ],
+          },
+          { tipo: 'p', texto: 'O FGTS pode ser usado no SBPE da mesma forma que no MCMV: como parte da entrada ou para amortizar o saldo devedor — desde que o imóvel esteja dentro do teto do SFH e o comprador atenda às regras gerais do fundo (3 anos de contribuição, não ter outro imóvel financiado pelo SFH).' },
+          { tipo: 'destaque', texto: 'Quem ganha pouco acima do teto do MCMV (ex.: R$ 13.500/mês) não cai automaticamente em taxas piores — o SBPE da Caixa, a partir de 11,19% a.a., é a opção, e o LTV pode chegar a 80% (SAC) ou 70% (Price).' },
+        ],
+      },
+      {
+        titulo: 'SFI: financiamento de alto padrão, sem teto',
+        blocos: [
+          { tipo: 'p', texto: 'Para imóveis acima de R$ 2,25 milhões — o teto do SFH —, a operação passa para o SFI (Sistema de Financiamento Imobiliário). A Caixa reativou essa linha para pessoa física em 2026, usando recursos do SBPE, com taxa de mercado em torno de 12,5% a.a. + TR.' },
+          { tipo: 'lista', itens: [
+            '**Sem teto de valor** — financia imóveis de qualquer preço acima de R$ 2,25 milhões.',
+            '**Sem uso de FGTS** — o fundo só pode ser usado dentro do SFH.',
+            '**Taxa de mercado** — mais alta que o SBPE, mas sem o limite legal de 12% a.a. que o SFH impõe.',
+            '**Não é exclusividade da Caixa** — outros bancos também operam SFI para alto padrão.',
+          ] },
+        ],
+      },
+      {
+        titulo: 'Como saber qual modalidade é a sua',
+        blocos: [
+          { tipo: 'p', texto: 'Cruze sua renda familiar bruta com o valor do imóvel que você quer comprar:' },
+          { tipo: 'lista', itens: [
+            'Renda até R$ 13.000 **e** imóvel dentro do teto da faixa correspondente → **MCMV** (melhor taxa, possível subsídio).',
+            'Renda até R$ 13.000, mas imóvel **acima** do teto MCMV da sua faixa → **SBPE**, mesmo com renda baixa.',
+            'Renda acima de R$ 13.000, imóvel até R$ 2,25 milhões → **SBPE**.',
+            'Imóvel acima de R$ 2,25 milhões, qualquer renda → **SFI** (FGTS não entra).',
+          ] },
+          { tipo: 'destaque', texto: 'Exemplo: renda de R$ 4.500/mês comprando um imóvel de R$ 320.000. A renda está na Faixa 2 do MCMV, mas o imóvel passa do teto de R$ 275.000 da faixa — esse comprador precisa simular pelo SBPE, não pelo MCMV, mesmo com renda baixa.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'Quem se qualifica para o MCMV pode escolher o SBPE mesmo assim?',
+        resposta: 'Sim, é uma opção válida — por exemplo, para comprar um imóvel acima do teto da sua faixa MCMV, ou se preferir um banco específico. Mas normalmente o MCMV tem taxa menor e, nas Faixas 1 e 2, subsídio — então vale comparar as duas simulações antes de decidir.' },
+      { pergunta: 'Quem ganha mais de R$ 13.000 pode usar o MCMV?',
+        resposta: 'Não. R$ 13.000 é o teto da Faixa 4, a última do programa. Renda acima disso vai direto para o SBPE (até R$ 2,25 milhões) ou SFI (acima desse valor).' },
+      { pergunta: 'O FGTS funciona em todas as modalidades?',
+        resposta: 'Funciona no MCMV e no SBPE (dentro do SFH, até R$ 2,25 milhões). No SFI, não é permitido usar FGTS.' },
+      { pergunta: 'Qual a diferença prática entre SFH e SFI?',
+        resposta: 'O SFH é o sistema legal que cobre o MCMV e o SBPE para imóveis até R$ 2,25 milhões, com regras protegidas (uso de FGTS, taxa limitada a 12% a.a.). O SFI é o sistema paralelo para imóveis mais caros ou taxas mais altas, com regras de mercado livre.' },
+      { pergunta: 'Posso comprar um imóvel de R$ 2,5 milhões usando FGTS?',
+        resposta: 'Não. Imóveis acima de R$ 2,25 milhões (teto do SFH) entram automaticamente no SFI, que não permite uso de FGTS sob nenhuma hipótese.' },
+    ],
+    fatosChaveParaJoao: [
+      'As 3 modalidades de financiamento: MCMV (renda até R$13.000, taxa 4-10,5%), SBPE/SFH (qualquer renda, imóvel até R$2,25M, taxa ~11,19-11,97%), SFI (imóvel acima de R$2,25M, taxa livre ~12,5%, sem FGTS).',
+      'MCMV tem 4 faixas por renda: F1 até R$3.200 (4-5%, teto R$275k, subsídio até R$55k), F2 R$3.200-5.000 (5-7% escala deslizante, teto R$275k, subsídio decrescente), F3 R$5.000-9.600 (7,66-8,16%, teto R$400k, sem subsídio), F4 R$9.600-13.000 (10,5% fixo, teto R$600k, sem subsídio).',
+      'A faixa MCMV é definida pela RENDA, mas o financiamento só vale se o IMÓVEL também estiver dentro do teto daquela faixa — senão precisa simular SBPE mesmo com renda baixa.',
+      'SBPE permite qualquer renda, qualquer banco; taxa Caixa correntista 11,19% a.a.+TR é a mais competitiva do mercado em 2026. Permite FGTS dentro do teto SFH (R$2,25M).',
+      'SFI é para imóveis acima de R$2,25M (teto SFH); não usa FGTS; taxa de mercado (~12,5% a.a.); sem teto de valor.',
+      'Regra rápida pro João: cruzar renda do usuário com valor do imóvel desejado decide a modalidade — não basta olhar só a renda.',
+    ],
+    ctaSimulador: { texto: 'Descobrir minha modalidade', href: '/simulador' },
+    relacionados: ['juros-evolucao-obra'],
   },
 ];
 
