@@ -64,8 +64,8 @@ export const ARTIGOS: Artigo[] = [
       {
         titulo: 'O que são os juros de evolução de obra',
         blocos: [
-          { tipo: 'p', texto: 'Quando você compra um imóvel **na planta** financiado pela Caixa (o chamado **Crédito Associativo**), o contrato é assinado **antes da obra terminar**. A Caixa não entrega todo o dinheiro de uma vez para a construtora — ela libera o valor aos poucos, conforme a obra avança.' },
-          { tipo: 'p', texto: 'Durante esse período de construção, você paga ao banco apenas os **juros sobre o que já foi liberado**. É como se você estivesse pegando o empréstimo aos poucos e pagando juros só sobre a parte já usada. Essas cobranças mensais são os **juros de evolução de obra** (ou "juros de obra"), e aparecem no seu extrato como **Prestação 0**.' },
+          { tipo: 'p', texto: 'Quando você compra um imóvel **na planta** financiado pela Caixa (o chamado **Crédito Associativo**), o contrato de financiamento é assinado **antes do início da obra** — não durante, nem depois. A partir da assinatura, a Caixa não entrega todo o dinheiro de uma vez para a construtora: ela libera o valor aos poucos, conforme a obra avança.' },
+          { tipo: 'p', texto: 'Por isso, cerca de **30 dias depois de assinar o contrato**, já chega a primeira fatura: os **juros de evolução de obra**. Você paga ao banco apenas os juros sobre o que já foi liberado até aquele mês — é como pegar o empréstimo aos poucos e pagar juros só sobre a parte já usada. Essas cobranças mensais aparecem no seu extrato como **Prestação 0**.' },
           { tipo: 'destaque', texto: 'Ponto-chave: durante a obra você **ainda não está pagando a dívida** — só os juros do que já foi liberado. A amortização (o abatimento da dívida) só começa depois das chaves.' },
         ],
       },
@@ -134,7 +134,7 @@ export const ARTIGOS: Artigo[] = [
       { pergunta: 'Por que minha parcela aumenta todo mês durante a obra?',
         resposta: 'Porque os juros incidem sobre o valor já liberado pela Caixa, e esse valor cresce conforme a obra avança. Mais obra concluída significa mais verba liberada à construtora, mais saldo e, portanto, mais juros.' },
       { pergunta: 'Por quanto tempo pago os juros de obra?',
-        resposta: 'Durante todo o período de construção — normalmente até a entrega das chaves (habite-se). Pode levar de 1 a 3 anos, dependendo do empreendimento e do estágio em que você assinou o contrato.' },
+        resposta: 'Desde cerca de 30 dias após a assinatura do contrato de financiamento (que ocorre antes do início da obra) até a entrega das chaves (habite-se). O prazo total de obra varia de 1 a 3 anos, dependendo do empreendimento.' },
       { pergunta: 'A parcela vai aumentar quando eu pegar as chaves?',
         resposta: 'Sim, geralmente dá um salto. Durante a obra você paga só juros + seguros; após as chaves a parcela passa a incluir também a amortização (o abatimento da dívida), o que aumenta bastante o valor mensal.' },
       { pergunta: 'Como a Caixa calcula o juros mensal?',
@@ -360,7 +360,7 @@ export const ARTIGOS: Artigo[] = [
     metaDescription:
       'Entenda o crédito associativo do início ao fim: como a Caixa libera o financiamento durante a obra, o fluxo de pagamento à construtora e o que muda no habite-se.',
     resumo:
-      'Comprar na planta pelo MCMV ou SBPE quase sempre passa pelo crédito associativo — o modelo em que o financiamento é assinado antes da obra terminar. Aqui você vê o fluxo completo, do contrato com a construtora à entrega das chaves, e entende quem recebe o quê em cada etapa.',
+      'Comprar na planta pelo MCMV ou SBPE quase sempre passa pelo crédito associativo — o modelo em que o contrato de financiamento é assinado antes do início da obra, e a primeira fatura de juros chega cerca de 30 dias depois. Aqui você vê o fluxo completo, do contrato com a construtora à entrega das chaves, e entende quem recebe o quê em cada etapa.',
     publicado: '2026-06-17',
     atualizado: '2026-06-17',
     leituraMin: 8,
@@ -368,8 +368,8 @@ export const ARTIGOS: Artigo[] = [
       {
         titulo: 'O que é o crédito associativo',
         blocos: [
-          { tipo: 'p', texto: 'É o modelo de financiamento em que o contrato com o banco é assinado **antes ou durante a construção**, não só quando o imóvel está pronto. É o formato padrão do MCMV para imóveis na planta, mas também existe no SBPE.' },
-          { tipo: 'p', texto: 'A diferença para um financiamento de imóvel pronto: o banco não entrega o dinheiro de uma vez. Ele libera o valor para a construtora **conforme a obra avança**, com base em medições periódicas. Enquanto isso, o comprador paga só os juros sobre o que já foi liberado (os juros de evolução de obra) — não a parcela completa.' },
+          { tipo: 'p', texto: 'É o modelo de financiamento em que o contrato com o banco é assinado **antes do início da obra** — não durante, nem só na entrega das chaves. É o formato padrão do MCMV para imóveis na planta, mas também existe no SBPE.' },
+          { tipo: 'p', texto: 'A diferença para um financiamento de imóvel pronto: o banco não entrega o dinheiro de uma vez na assinatura. Ele libera o valor para a construtora **conforme a obra avança**, com base em medições periódicas. Cerca de 30 dias após a assinatura, já chega a primeira fatura: o comprador paga só os juros sobre o que já foi liberado até aquele mês (os juros de evolução de obra) — não a parcela completa, que só começa no habite-se.' },
         ],
       },
       {
@@ -379,7 +379,7 @@ export const ARTIGOS: Artigo[] = [
             '**1. Contrato de Compra e Venda:** assinado entre comprador e construtora, define imóvel, valor e condições de pagamento.',
             '**2. SICAQ (análise de crédito):** a construtora envia os dados do comprador à Caixa, que analisa e aprova a capacidade de financiamento — antes mesmo da obra avançar.',
             '**3. Contrato de Financiamento:** assinado entre comprador e Caixa. A partir daqui, o financiamento está formalizado.',
-            '**4. Obra em andamento:** a Caixa libera recursos à construtora por medição de avanço físico. O comprador paga juros de evolução mensalmente sobre o saldo já liberado.',
+            '**4. Obra em andamento:** a Caixa libera recursos à construtora por medição de avanço físico. Cerca de 30 dias após a assinatura do contrato de financiamento, chega a primeira fatura de juros de evolução, e o comprador continua pagando mensalmente sobre o saldo já liberado.',
             '**5. Habite-se:** a prefeitura atesta que a construção terminou. O financiamento sai do regime de evolução e entra no regime normal — parcelas completas, com amortização.',
           ] },
           { tipo: 'destaque', texto: 'O acompanhamento de todo esse processo — medições, repasses, situação do comprador — fica registrado no SICAQ, sistema interno da Caixa. Construtoras costumam informar o andamento, mas vale acompanhar.' },
@@ -424,7 +424,7 @@ export const ARTIGOS: Artigo[] = [
         resposta: 'Só depois do habite-se, quando a obra é formalmente concluída e o financiamento sai do regime de evolução para o regime normal de amortização.' },
     ],
     fatosChaveParaJoao: [
-      'Crédito associativo = financiamento assinado ANTES/DURANTE a obra (padrão MCMV, também existe no SBPE). Banco libera recursos à construtora por medição de avanço, não de uma vez.',
+      'Crédito associativo = contrato de financiamento assinado ANTES do início da obra (padrão MCMV, também existe no SBPE). Cerca de 30 dias após a assinatura, chega a primeira fatura de juros de evolução. Banco libera recursos à construtora por medição de avanço, não de uma vez.',
       'Fluxo: 1) Contrato com construtora → 2) SICAQ (análise de crédito) → 3) Contrato de financiamento com a Caixa → 4) Obra com juros de evolução → 5) Habite-se → financiamento normal com amortização.',
       'Durante a obra, dois fluxos de pagamento distintos: à CONSTRUTORA (ato, mensais, reforços, anuais, chaves) e ao BANCO (juros de evolução de obra, sobre saldo já liberado).',
       'Cronograma físico-financeiro = documento que define avanço de obra x repasse mês a mês. Atraso na obra trava o repasse da Caixa.',
