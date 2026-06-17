@@ -535,6 +535,93 @@ export const ARTIGOS: Artigo[] = [
     ctaSimulador: { texto: 'Simular meu financiamento', href: '/simulador' },
     relacionados: ['credito-associativo-como-funciona-comprar-na-planta', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
   },
+  {
+    slug: 'documentos-financiar-imovel-clt-autonomo-mei',
+    keyword: 'documentos para financiar imóvel',
+    titulo: 'Documentos para Financiar Imóvel: CLT, Autônomo e MEI',
+    tituloSEO: 'Documentos para Financiar Imóvel: CLT, Autônomo e MEI (2026)',
+    metaDescription:
+      'Checklist completo de documentos para financiar imóvel pela Caixa: pessoais, de renda (CLT, autônomo, MEI) e do imóvel. Inclui como compor renda com outra pessoa.',
+    resumo:
+      'Antes de assinar qualquer proposta de compra, vale separar a documentação — é o que evita perder tempo (e às vezes o sinal pago) com uma análise de crédito reprovada. Aqui está o checklist completo por tipo de renda: CLT, autônomo e MEI.',
+    publicado: '2026-06-17',
+    atualizado: '2026-06-17',
+    leituraMin: 7,
+    secoes: [
+      {
+        titulo: 'Documentos pessoais — exigidos de todo mundo',
+        blocos: [
+          { tipo: 'lista', itens: [
+            'RG e CPF (ou CNH)',
+            'Comprovante de estado civil — certidão de nascimento (solteiro) ou casamento',
+            'Comprovante de endereço atualizado (geralmente até 90 dias)',
+          ] },
+        ],
+      },
+      {
+        titulo: 'CLT: documentos de renda',
+        blocos: [
+          { tipo: 'lista', itens: [
+            'Holerites (contracheques) dos últimos 6 meses',
+            'Declaração de Imposto de Renda do último exercício + recibo de entrega',
+            'Extrato do FGTS, se for usar como entrada ou amortização',
+          ] },
+          { tipo: 'p', texto: 'É a documentação mais simples de reunir, porque o vínculo formal já comprova a renda de forma direta — o banco confirma o vínculo e o valor pelos próprios holerites.' },
+        ],
+      },
+      {
+        titulo: 'Autônomo e MEI: documentos de renda',
+        blocos: [
+          { tipo: 'p', texto: 'Sem holerite, a comprovação é feita por um conjunto de documentos que, juntos, demonstram a movimentação financeira real:' },
+          { tipo: 'lista', itens: [
+            '**Autônomo (pessoa física):** extrato bancário dos últimos 6 meses, Declaração de IR do último exercício + recibo, e Decore (Declaração Comprobatória de Percepção de Rendimentos) assinada por contador.',
+            '**MEI:** CNPJ ativo há pelo menos 2 anos, Declaração Anual do MEI (DASN-SIMEI), extrato bancário PJ dos últimos 6 meses, e Declaração de IR pessoa física do último exercício + recibo.',
+          ] },
+          { tipo: 'destaque', texto: 'Não existe um percentual fixo e oficial de quanto da renda informada o banco aceita para autônomo/MEI — cada instituição analisa a média da movimentação nos extratos e declarações apresentados. Por isso, manter extratos organizados e sem inconsistências pesa mais do que qualquer "regra geral" que você ouvir por aí.' },
+        ],
+      },
+      {
+        titulo: 'Composição de renda: incluir outra pessoa no financiamento',
+        blocos: [
+          { tipo: 'p', texto: 'É possível somar a renda de até outras pessoas (cônjuge, parente ou até amigo) para aumentar a capacidade de financiamento — desde que nenhuma delas tenha restrição de crédito (CPF negativado) e que a soma das rendas não ultrapasse o limite definido pela instituição para esse tipo de composição.' },
+        ],
+      },
+      {
+        titulo: 'Documentos do imóvel (compra de imóvel pronto ou revenda)',
+        blocos: [
+          { tipo: 'lista', itens: [
+            'Matrícula atualizada do imóvel (emitida há poucos dias, para confirmar titularidade e checar se há ônus/penhoras)',
+            'IPTU do imóvel',
+            'Cópia do compromisso de compra e venda (se já houver)',
+          ] },
+          { tipo: 'p', texto: 'Esses documentos não se aplicam a imóvel na planta (ainda não tem matrícula individualizada) — nesse caso, a documentação relevante é a da incorporação, fornecida pela própria construtora.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'Quanto tempo antes da compra devo separar os documentos?',
+        resposta: 'Idealmente, antes de assinar qualquer proposta ou pagar sinal — especialmente em imóvel pronto, onde a análise de crédito só ocorre depois que o preço já foi negociado com o vendedor.' },
+      { pergunta: 'O MEI precisa ter quanto tempo de CNPJ aberto para financiar?',
+        resposta: 'Geralmente é exigido CNPJ ativo há pelo menos 2 anos, com Declaração Anual do MEI (DASN-SIMEI) regularizada.' },
+      { pergunta: 'Posso somar minha renda com a de outra pessoa que não é meu cônjuge?',
+        resposta: 'Sim, é possível compor renda com parentes ou até terceiros, desde que nenhum tenha restrição de crédito e a soma respeite o limite da instituição financeira para esse tipo de composição.' },
+      { pergunta: 'Existe um percentual fixo de renda que o banco aceita para autônomo?',
+        resposta: 'Não há um percentual oficial único — cada banco analisa a consistência dos extratos bancários e declarações apresentadas. O que pesa mais é ter documentação organizada e sem inconsistências nos últimos meses.' },
+      { pergunta: 'Preciso de Decore se for MEI?',
+        resposta: 'A Decore é mais associada ao autônomo pessoa física. Para o MEI, o conjunto padrão é CNPJ ativo, DASN-SIMEI, extrato bancário PJ e declaração de IR pessoa física — mas pode variar conforme o banco.' },
+    ],
+    fatosChaveParaJoao: [
+      'Documentos pessoais (todos): RG/CPF ou CNH, comprovante de estado civil, comprovante de endereço (até 90 dias).',
+      'CLT: holerites últimos 6 meses + Declaração de IR + recibo + extrato FGTS (se for usar).',
+      'Autônomo PF: extrato bancário 6 meses + Declaração de IR + recibo + Decore assinada por contador.',
+      'MEI: CNPJ ativo há 2+ anos + DASN-SIMEI + extrato bancário PJ 6 meses + Declaração de IR PF + recibo.',
+      'NÃO existe percentual oficial fixo de renda aceita para autônomo/MEI — cada banco avalia a consistência dos extratos/declarações apresentados.',
+      'Composição de renda: pode somar renda de outra pessoa (parente ou não), desde que sem restrição de crédito e dentro do limite da instituição.',
+      'Documentos do imóvel (só pronto/revenda): matrícula atualizada, IPTU, compromisso de compra e venda. Na planta, não há matrícula individualizada — vale a documentação da incorporação.',
+    ],
+    ctaSimulador: { texto: 'Simular meu financiamento', href: '/simulador' },
+    relacionados: ['custos-comprar-imovel-financiado-itbi-cartorio-taxas', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

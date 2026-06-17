@@ -78,12 +78,8 @@ const CAPITULOS = [
     corLight: 'var(--warning-light)',
     topicos: [
       {
-        pergunta: 'Quais documentos o trabalhador CLT precisa?',
-        resposta: `Para trabalhador com carteira assinada:\n\n**Pessoais:**\n• RG e CPF (ou CNH)\n• Comprovante de estado civil (certidão de nascimento ou casamento)\n• Comprovante de endereço atualizado\n\n**De renda:**\n• Holerites dos últimos 6 meses\n• Declaração de IR do último exercício + recibo de entrega\n• Extrato do FGTS (se for usar)\n\n**Do imóvel (para imóvel pronto):**\n• Matrícula atualizada do imóvel\n• IPTU\n• Cópia do compromisso de compra e venda`,
-      },
-      {
-        pergunta: 'E para autônomo ou MEI?',
-        resposta: `Documentos pessoais (exigidos em todos os casos):\n• RG e CPF (ou CNH)\n• Comprovante de estado civil (certidão de nascimento ou casamento)\n• Comprovante de endereço atualizado (últimos 90 dias)\n\nPara autônomo:\n• Extrato bancário dos últimos 6 meses\n• Declaração de IR do último exercício + recibo de entrega\n• Decore (Declaração Comprobatória de Percepção de Rendimentos) assinada por contador\n\nPara MEI:\n• CNPJ ativo há pelo menos 2 anos\n• Declaração Anual do MEI (DASN)\n• Extrato bancário PJ dos últimos 6 meses\n• Declaração de IR PF do último exercício + recibo de entrega\n\nImportante: bancos costumam aceitar 70% a 80% da renda do autônomo para fins de comprometimento.`,
+        pergunta: 'Quais documentos preciso separar?',
+        resposta: `Documentos pessoais (todo mundo): RG/CPF ou CNH, comprovante de estado civil, comprovante de endereço. De renda, varia por vínculo: CLT usa holerites; autônomo usa extrato bancário + Decore; MEI usa CNPJ ativo + DASN-SIMEI.\n\nVeja o [checklist completo por tipo de renda — CLT, autônomo e MEI](/aprenda/documentos-financiar-imovel-clt-autonomo-mei).`,
       },
     ],
   },
