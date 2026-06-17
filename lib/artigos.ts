@@ -56,7 +56,7 @@ export const ARTIGOS: Artigo[] = [
     metaDescription:
       'Entenda os juros de evolução de obra no financiamento MCMV: o que são, como a Caixa calcula a parcela durante a obra e um exemplo real mês a mês. Simule o seu na planta.',
     resumo:
-      'Comprou um apartamento na planta financiado pela Caixa e apareceu uma cobrança mensal antes mesmo de receber as chaves? Isso são os juros de evolução de obra. Aqui você entende, em linguagem simples e com um exemplo real, o que é, como a Caixa calcula e por que essa parcela cresce todo mês.',
+      'Quem financia um imóvel na planta pela Caixa já sabe, desde a assinatura do contrato, que vai pagar uma parcela mensal durante a obra — os juros de evolução de obra. Aqui você entende exatamente como a Caixa calcula esse valor, por que ele cresce mês a mês, e vê um exemplo real do início ao fim da obra.',
     publicado: '2026-06-13',
     atualizado: '2026-06-13',
     leituraMin: 7,
