@@ -92,12 +92,8 @@ const CAPITULOS = [
     corLight: 'var(--orange-light)',
     topicos: [
       {
-        pergunta: 'Quando posso usar o FGTS?',
-        resposta: `Você pode usar o FGTS para compra de imóvel residencial quando:\n\n• Tem saldo de pelo menos 3 anos de contribuição (não precisa ser contínuo)\n• O imóvel é residencial e para moradia do titular\n• Não possui outro imóvel financiado pelo SFH no Brasil\n• O imóvel está no município onde trabalha, reside há 1 ano ou é sede da empresa empregadora\n\nO FGTS pode ser usado para complementar a entrada (abater do valor do imóvel) ou para amortizar o saldo devedor periodicamente ao longo do financiamento.`,
-      },
-      {
-        pergunta: 'O FGTS reduz a taxa de juros?',
-        resposta: `No MCMV, usar o FGTS geralmente garante acesso à menor taxa da faixa. Por exemplo, na Faixa 3 sem FGTS a taxa é 7,66% a.a.; com FGTS pode cair para 7,16% a.a.\n\nAlém disso, quanto maior o valor de entrada (FGTS + recursos próprios), menor o saldo a financiar e, consequentemente, menores a parcela e o total de juros pagos ao longo do contrato.`,
+        pergunta: 'Quando posso usar o FGTS e ele reduz a taxa de juros?',
+        resposta: `Precisa de 3 anos de contribuição (elegibilidade), mas atenção: se já usou o FGTS numa compra antes, há um intervalo de 3 anos para usar de novo, e 2 anos entre amortizações no mesmo contrato. Imóvel precisa estar dentro do teto SFH (R$ 2,25 milhões). No MCMV, ser cotista reduz a taxa — mas o maior ganho é reduzir o valor financiado.\n\nVeja as [regras completas de carência e um exemplo real de quanto você economiza](/aprenda/como-usar-fgts-no-financiamento).`,
       },
     ],
   },

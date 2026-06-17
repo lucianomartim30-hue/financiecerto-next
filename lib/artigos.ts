@@ -622,6 +622,100 @@ export const ARTIGOS: Artigo[] = [
     ctaSimulador: { texto: 'Simular meu financiamento', href: '/simulador' },
     relacionados: ['custos-comprar-imovel-financiado-itbi-cartorio-taxas', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
   },
+  {
+    slug: 'como-usar-fgts-no-financiamento',
+    keyword: 'como usar FGTS no financiamento',
+    titulo: 'Como Usar o FGTS no Financiamento Imobiliário',
+    tituloSEO: 'Como Usar o FGTS no Financiamento Imobiliário (2026)',
+    metaDescription:
+      'Entenda as regras para usar o FGTS no financiamento: carências, teto de R$ 2,25 milhões, as 3 formas de uso e um exemplo real de quanto você economiza.',
+    resumo:
+      'O FGTS pode reduzir bastante o custo do seu financiamento — mas tem regras de carência que costumam confundir: uma coisa é o tempo de contribuição, outra é o intervalo entre usos. Aqui você entende as regras de 2026 e vê quanto o FGTS economiza num exemplo real.',
+    publicado: '2026-06-17',
+    atualizado: '2026-06-17',
+    leituraMin: 7,
+    secoes: [
+      {
+        titulo: 'As 3 formas de usar o FGTS',
+        blocos: [
+          { tipo: 'lista', itens: [
+            '**Entrada:** soma ao valor que você já tem, reduzindo o quanto precisa financiar.',
+            '**Amortização do saldo devedor:** abate parte da dívida durante o contrato, reduzindo prazo ou parcela.',
+            '**Pagamento de até 80% das prestações:** por até 12 meses seguidos, em casos específicos.',
+          ] },
+        ],
+      },
+      {
+        titulo: 'As regras de carência (a parte que confunde)',
+        blocos: [
+          { tipo: 'p', texto: 'Existem **duas carências diferentes**, e é comum confundir uma com a outra:' },
+          { tipo: 'tabela',
+            cabecalho: ['Carência', 'Prazo', 'Para quê'],
+            linhas: [
+              ['Tempo de contribuição', '3 anos (não precisa ser contínuo)', 'Elegibilidade básica para usar o FGTS'],
+              ['Entre compras de imóvel', '3 anos desde o registro do contrato anterior', 'Usar o FGTS para uma NOVA aquisição'],
+              ['Entre amortizações', '2 anos entre cada uso', 'Abater saldo devedor de financiamento já em andamento'],
+            ],
+          },
+          { tipo: 'destaque', texto: 'Ou seja: ter 3 anos de contribuição te torna elegível, mas se você já usou o FGTS para comprar um imóvel, precisa esperar 3 anos desde o registro daquele contrato para usar de novo numa compra nova — e 2 anos entre amortizações no mesmo financiamento.' },
+        ],
+      },
+      {
+        titulo: 'Quem pode usar e em qual imóvel',
+        blocos: [
+          { tipo: 'lista', itens: [
+            'Imóvel residencial, para moradia do próprio titular.',
+            'Imóvel dentro do teto do SFH — R$ 2,25 milhões em 2026.',
+            'Comprador não pode ter outro financiamento ativo dentro do SFH.',
+            'O imóvel deve estar no município onde o comprador trabalha, reside há pelo menos 1 ano, ou onde é a sede da empresa empregadora.',
+          ] },
+        ],
+      },
+      {
+        titulo: 'Quanto o FGTS economiza: exemplo real',
+        blocos: [
+          { tipo: 'p', texto: 'Imóvel de R$ 250.000 (MCMV Faixa 3, 7,66% a.a., SAC, 30 anos), com entrada própria de R$ 12.500 (5%):' },
+          { tipo: 'tabela',
+            cabecalho: ['', 'Sem FGTS', 'Com FGTS de R$ 40.000 na entrada'],
+            linhas: [
+              ['Valor financiado', 'R$ 237.500', 'R$ 197.500'],
+              ['1ª parcela (SAC)', 'R$ 2.176', 'R$ 1.809'],
+              ['Total pago em 30 anos', 'R$ 511.146', 'R$ 425.058'],
+            ],
+          },
+          { tipo: 'destaque', texto: 'Usar R$ 40.000 de FGTS na entrada economiza R$ 86.088 ao longo do contrato — bem mais que os R$ 40.000 aplicados, porque reduz o saldo sobre o qual incidem os juros do início ao fim do financiamento.' },
+        ],
+      },
+      {
+        titulo: 'FGTS reduz a taxa de juros?',
+        blocos: [
+          { tipo: 'p', texto: 'No MCMV, ser cotista do FGTS (3+ anos de contribuição) geralmente garante a taxa mais baixa da faixa — nas Faixas 3 e 4, por exemplo, a diferença entre cotista e não-cotista costuma ser de 0,5 ponto percentual. Mas o impacto maior do FGTS não é na taxa: é em **reduzir o valor financiado**, que é o que realmente diminui os juros pagos no total, como no exemplo acima.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'Posso usar o FGTS todo ano para amortizar o financiamento?',
+        resposta: 'Não. Entre cada uso para amortização do mesmo financiamento, é preciso respeitar um intervalo mínimo de 2 anos.' },
+      { pergunta: 'Tenho 3 anos de contribuição — já posso usar o FGTS para comprar outro imóvel?',
+        resposta: 'Os 3 anos de contribuição são a elegibilidade básica. Mas se você já usou o FGTS para comprar um imóvel antes, precisa esperar 3 anos desde o registro daquele contrato para usar de novo numa nova aquisição.' },
+      { pergunta: 'Posso usar o FGTS para comprar um imóvel de R$ 3 milhões?',
+        resposta: 'Não. O teto de avaliação do imóvel para uso do FGTS é R$ 2,25 milhões em 2026 — acima disso, o imóvel está no SFI, que não permite FGTS.' },
+      { pergunta: 'O FGTS reduz minha taxa de juros?',
+        resposta: 'No MCMV, ser cotista do FGTS costuma garantir a taxa mais baixa da faixa (até 0,5 ponto percentual menor nas Faixas 3 e 4). Mas o maior benefício é usar o FGTS para reduzir o valor financiado — isso economiza mais no total do que a diferença de taxa.' },
+      { pergunta: 'Posso usar o FGTS para pagar parte das parcelas, sem amortizar?',
+        resposta: 'Sim, é uma das 3 formas de uso: pagar até 80% das prestações mensais, por até 12 meses consecutivos, em situações específicas previstas pelas regras do fundo.' },
+    ],
+    fatosChaveParaJoao: [
+      'Duas carências DIFERENTES (não confundir): 3 anos de contribuição = elegibilidade básica. 3 anos desde o registro do contrato anterior = intervalo para usar FGTS em NOVA compra. 2 anos = intervalo entre amortizações no MESMO financiamento.',
+      '3 formas de uso do FGTS: (1) entrada, (2) amortização do saldo devedor, (3) pagamento de até 80% das prestações por até 12 meses seguidos.',
+      'Teto do imóvel para uso do FGTS: R$ 2,25 milhões em 2026 (mesmo teto do SFH). Acima disso, SFI, sem FGTS.',
+      'Requisitos: imóvel residencial para moradia própria, sem outro financiamento ativo no SFH, imóvel no município de trabalho/residência (1+ ano)/sede da empregadora.',
+      'Exemplo real: imóvel R$250k, SAC 30 anos, 7,66% a.a. — usar R$40k de FGTS na entrada reduz financiado de R$237.500 para R$197.500, economizando R$86.088 no total pago (não só os R$40k aplicados).',
+      'FGTS cotista pode reduzir taxa no MCMV (até 0,5pp nas Faixas 3/4), mas o maior ganho é reduzir o saldo financiado, não a taxa em si.',
+    ],
+    ctaSimulador: { texto: 'Simular com FGTS', href: '/simulador' },
+    relacionados: ['mcmv-sbpe-sfi-qual-modalidade-escolher', 'sac-ou-price-qual-sistema-amortizacao-escolher'],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
