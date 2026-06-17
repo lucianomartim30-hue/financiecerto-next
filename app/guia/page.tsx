@@ -65,7 +65,7 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'Qual a diferença entre SAC e Tabela Price?',
-        resposta: `No **SAC**, a amortização é fixa e a parcela começa mais alta, mas cai mês a mês. Na **Price**, a parcela é fixa do início ao fim, mas o custo total acaba sendo maior. O MCMV usa SAC por padrão; no SBPE você pode escolher.\n\nVeja o [comparativo com exemplo real (1ª parcela, última parcela e total pago)](/aprenda/sac-ou-price-qual-sistema-amortizacao-escolher).`,
+        resposta: `No **SAC**, a amortização é fixa e a parcela começa mais alta, mas cai mês a mês. Na **Price**, a parcela é fixa do início ao fim, mas o custo total acaba sendo maior. O MCMV usa Price por padrão na maioria dos contratos; no SBPE você pode escolher.\n\nVeja o [comparativo com exemplo real (1ª parcela, última parcela e total pago)](/aprenda/sac-ou-price-qual-sistema-amortizacao-escolher).`,
       },
     ],
   },
