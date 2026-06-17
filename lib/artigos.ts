@@ -150,7 +150,7 @@ export const ARTIGOS: Artigo[] = [
       'A linha "Amortização" durante a obra é a TR do mês (correção monetária) — varia todo mês, não reduz a dívida.',
     ],
     ctaSimulador: { texto: 'Simular meu imóvel na planta', href: '/simulador/na-planta' },
-    relacionados: ['mcmv-sbpe-sfi-qual-modalidade-escolher'],
+    relacionados: ['mcmv-sbpe-sfi-qual-modalidade-escolher', 'credito-associativo-como-funciona-comprar-na-planta'],
   },
   {
     slug: 'mcmv-sbpe-sfi-qual-modalidade-escolher',
@@ -351,6 +351,88 @@ export const ARTIGOS: Artigo[] = [
     ],
     ctaSimulador: { texto: 'Simular Price x SAC', href: '/simulador' },
     relacionados: ['mcmv-sbpe-sfi-qual-modalidade-escolher'],
+  },
+  {
+    slug: 'credito-associativo-como-funciona-comprar-na-planta',
+    keyword: 'crédito associativo como funciona',
+    titulo: 'Crédito Associativo: Como Funciona Financiar um Imóvel na Planta',
+    tituloSEO: 'Crédito Associativo: Como Funciona Financiar na Planta (2026)',
+    metaDescription:
+      'Entenda o crédito associativo do início ao fim: como a Caixa libera o financiamento durante a obra, o fluxo de pagamento à construtora e o que muda no habite-se.',
+    resumo:
+      'Comprar na planta pelo MCMV ou SBPE quase sempre passa pelo crédito associativo — o modelo em que o financiamento é assinado antes da obra terminar. Aqui você vê o fluxo completo, do contrato com a construtora à entrega das chaves, e entende quem recebe o quê em cada etapa.',
+    publicado: '2026-06-17',
+    atualizado: '2026-06-17',
+    leituraMin: 8,
+    secoes: [
+      {
+        titulo: 'O que é o crédito associativo',
+        blocos: [
+          { tipo: 'p', texto: 'É o modelo de financiamento em que o contrato com o banco é assinado **antes ou durante a construção**, não só quando o imóvel está pronto. É o formato padrão do MCMV para imóveis na planta, mas também existe no SBPE.' },
+          { tipo: 'p', texto: 'A diferença para um financiamento de imóvel pronto: o banco não entrega o dinheiro de uma vez. Ele libera o valor para a construtora **conforme a obra avança**, com base em medições periódicas. Enquanto isso, o comprador paga só os juros sobre o que já foi liberado (os juros de evolução de obra) — não a parcela completa.' },
+        ],
+      },
+      {
+        titulo: 'O fluxo completo: da assinatura ao habite-se',
+        blocos: [
+          { tipo: 'lista', itens: [
+            '**1. Contrato de Compra e Venda:** assinado entre comprador e construtora, define imóvel, valor e condições de pagamento.',
+            '**2. SICAQ (análise de crédito):** a construtora envia os dados do comprador à Caixa, que analisa e aprova a capacidade de financiamento — antes mesmo da obra avançar.',
+            '**3. Contrato de Financiamento:** assinado entre comprador e Caixa. A partir daqui, o financiamento está formalizado.',
+            '**4. Obra em andamento:** a Caixa libera recursos à construtora por medição de avanço físico. O comprador paga juros de evolução mensalmente sobre o saldo já liberado.',
+            '**5. Habite-se:** a prefeitura atesta que a construção terminou. O financiamento sai do regime de evolução e entra no regime normal — parcelas completas, com amortização.',
+          ] },
+          { tipo: 'destaque', texto: 'O acompanhamento de todo esse processo — medições, repasses, situação do comprador — fica registrado no SICAQ, sistema interno da Caixa. Construtoras costumam informar o andamento, mas vale acompanhar.' },
+        ],
+      },
+      {
+        titulo: 'Quem recebe o quê: construtora x banco',
+        blocos: [
+          { tipo: 'p', texto: 'Durante a obra, o comprador paga em duas frentes diferentes, que não devem ser confundidas:' },
+          { tipo: 'tabela',
+            cabecalho: ['Pagamento', 'Para quem', 'Quando'],
+            linhas: [
+              ['Ato (5% a 10%)', 'Construtora', 'Na assinatura do contrato'],
+              ['Mensais', 'Construtora', 'Todo mês, durante a obra'],
+              ['Sinais / reforços', 'Construtora', 'Datas específicas (ex.: a cada 6 meses)'],
+              ['Anuais', 'Construtora', 'Parcelas anuais, geralmente mais altas'],
+              ['Juros de evolução de obra', 'Caixa Econômica Federal', 'Todo mês, sobre o saldo já liberado'],
+              ['Chaves', 'Construtora', 'Na entrega do imóvel'],
+            ],
+          },
+          { tipo: 'p', texto: 'O saldo que falta na entrega das chaves — descontado tudo que já foi pago à construtora — é o valor que entra no financiamento bancário definitivo, no prazo escolhido pelo comprador.' },
+        ],
+      },
+      {
+        titulo: 'O que pode atrasar ou travar o processo',
+        blocos: [
+          { tipo: 'p', texto: 'O **cronograma físico-financeiro** detalha, mês a mês, o avanço de obra previsto e o repasse correspondente. Se a obra atrasa em relação a esse cronograma, a Caixa pode segurar a liberação até a medição confirmar o avanço — o que não significa que o comprador pare de pagar, mas pode gerar atrito com a construtora.' },
+          { tipo: 'p', texto: 'Se o comprador quiser desistir depois de assinado, entra a **Lei do Distrato** (13.786/2018): a incorporadora pode reter entre 25% e 50% dos valores pagos, dependendo do regime do empreendimento, e devolve o restante em até 180 dias. Já se for a construtora que atrasar a entrega, o comprador pode pedir o distrato e reaver tudo que pagou, com correção.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'O crédito associativo é só para MCMV?',
+        resposta: 'É mais comum no MCMV, mas o SBPE também opera com crédito associativo para imóvel na planta — o fluxo é parecido, mudando taxa e regras de FGTS.' },
+      { pergunta: 'Por que pago juros à Caixa antes mesmo de ter o imóvel pronto?',
+        resposta: 'Porque o banco já desembolsou parte do valor financiado para a construtora, conforme a obra avança. Esses juros remuneram o banco pelo capital já liberado, antes de você começar a pagar o financiamento completo.' },
+      { pergunta: 'O que acontece se a obra atrasar?',
+        resposta: 'A liberação de recursos pela Caixa segue o avanço real medido — se a obra atrasa, os repasses também atrasam. Se o atraso for grande, o comprador tem direito a pedir o distrato com devolução integral corrigida (Lei 13.786/2018).' },
+      { pergunta: 'Posso desistir depois de assinar o contrato?',
+        resposta: 'Sim, mas a incorporadora pode reter entre 25% e 50% dos valores pagos, conforme a Lei do Distrato, devolvendo o restante em até 180 dias.' },
+      { pergunta: 'Quando começo a pagar a parcela completa, com amortização?',
+        resposta: 'Só depois do habite-se, quando a obra é formalmente concluída e o financiamento sai do regime de evolução para o regime normal de amortização.' },
+    ],
+    fatosChaveParaJoao: [
+      'Crédito associativo = financiamento assinado ANTES/DURANTE a obra (padrão MCMV, também existe no SBPE). Banco libera recursos à construtora por medição de avanço, não de uma vez.',
+      'Fluxo: 1) Contrato com construtora → 2) SICAQ (análise de crédito) → 3) Contrato de financiamento com a Caixa → 4) Obra com juros de evolução → 5) Habite-se → financiamento normal com amortização.',
+      'Durante a obra, dois fluxos de pagamento distintos: à CONSTRUTORA (ato, mensais, reforços, anuais, chaves) e ao BANCO (juros de evolução de obra, sobre saldo já liberado).',
+      'Cronograma físico-financeiro = documento que define avanço de obra x repasse mês a mês. Atraso na obra trava o repasse da Caixa.',
+      'Lei do Distrato (13.786/2018): se o comprador desistir, incorporadora retém 25-50% do pago, devolve o resto em até 180 dias. Se for a construtora que atrasar a entrega, o comprador pode pedir distrato com devolução integral corrigida.',
+      'Ver também: artigo "Juros de Evolução de Obra" para o cálculo detalhado mês a mês da parcela durante a construção.',
+    ],
+    ctaSimulador: { texto: 'Simular meu imóvel na planta', href: '/simulador/na-planta' },
+    relacionados: ['juros-evolucao-obra', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
   },
 ];
 

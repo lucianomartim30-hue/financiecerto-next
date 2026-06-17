@@ -35,7 +35,7 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'Como funciona o crédito associativo?',
-        resposta: `No crédito associativo (principal modelo MCMV/HIS), o financiamento é assinado **antes ou durante a obra**. A Caixa Econômica Federal Econômica Federal libera recursos conforme medições de avanço da obra.\n\nO comprador paga os chamados **juros de evolução de obra** mensalmente, sobre o saldo liberado pela Caixa Econômica Federal até aquele momento. Quanto mais avançada a obra, maior o saldo liberado e, portanto, maior a parcela de evolução.\n\nAo término da obra (habite-se), o financiamento entra em seu regime normal de amortização.`,
+        resposta: `É o modelo em que o financiamento é assinado **antes ou durante a obra** (padrão no MCMV, também existe no SBPE). A Caixa libera recursos à construtora conforme a obra avança, e o comprador paga juros sobre o saldo já liberado até o habite-se — quando o financiamento entra no regime normal.\n\nVeja o [fluxo completo, da assinatura ao habite-se](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
       },
       {
         pergunta: 'O que são os juros de evolução de obra?',
@@ -43,7 +43,7 @@ const CAPITULOS = [
       },
       {
         pergunta: 'Qual é o fluxo de pagamento típico da construtora?',
-        resposta: `A construtora normalmente estrutura o pagamento durante a obra assim:\n\n• **Ato:** valor pago na assinatura do contrato (geralmente 5% a 10%)\n• **Mensais:** parcelas fixas mensais durante a obra\n• **Sinais/Reforços:** pagamentos em datas específicas (ex: a cada 6 meses)\n• **Anuais:** parcelas anuais mais pesadas\n• **Chaves:** parcela maior na entrega, antes do financiamento bancário entrar\n• **Evolução de obra:** pago ao banco (Caixa Econômica Federal), não à construtora\n\nO saldo restante na entrega das chaves é financiado pela Caixa Econômica Federal no prazo escolhido.`,
+        resposta: `Durante a obra, você paga em duas frentes: à **construtora** (ato, mensais, sinais/reforços, anuais e chaves) e ao **banco** (juros de evolução de obra, sobre o saldo já liberado). O saldo restante na entrega das chaves entra no financiamento bancário definitivo.\n\nVeja a [tabela completa de quem recebe o quê e quando](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
       },
     ],
   },
