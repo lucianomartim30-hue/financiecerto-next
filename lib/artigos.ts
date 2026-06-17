@@ -263,7 +263,94 @@ export const ARTIGOS: Artigo[] = [
       'Regra rápida pro João: cruzar renda do usuário com valor do imóvel desejado decide a modalidade — não basta olhar só a renda.',
     ],
     ctaSimulador: { texto: 'Descobrir minha modalidade', href: '/simulador' },
-    relacionados: ['juros-evolucao-obra'],
+    relacionados: ['juros-evolucao-obra', 'sac-ou-price-qual-sistema-amortizacao-escolher'],
+  },
+  {
+    slug: 'sac-ou-price-qual-sistema-amortizacao-escolher',
+    keyword: 'SAC ou Price qual escolher',
+    titulo: 'SAC ou Price: Qual Sistema de Amortização Escolher',
+    tituloSEO: 'SAC ou Price: Qual Sistema de Amortização Escolher (2026)',
+    metaDescription:
+      'Compare SAC e Price com exemplo real: primeira parcela, última parcela e total pago em 30 anos. Entenda qual sistema sai mais barato e quando o outro vale mais.',
+    resumo:
+      'Na hora de assinar o financiamento, o banco pergunta: SAC ou Price? A escolha muda o valor da primeira parcela, como ela evolui ao longo dos anos e quanto você paga de juros no total. Aqui você vê a conta real, lado a lado, com os mesmos R$ 230.000 financiados nos dois sistemas.',
+    publicado: '2026-06-17',
+    atualizado: '2026-06-17',
+    leituraMin: 7,
+    secoes: [
+      {
+        titulo: 'Como funciona cada sistema',
+        blocos: [
+          { tipo: 'p', texto: 'Os dois sistemas amortizam (abatem) a mesma dívida, mas distribuem o pagamento de forma diferente:' },
+          { tipo: 'lista', itens: [
+            '**SAC (Sistema de Amortização Constante):** a parte que abate a dívida é sempre o mesmo valor todo mês. Como o saldo devedor cai mais rápido, os juros (calculados sobre o saldo) diminuem mês a mês — e a parcela total também diminui.',
+            '**Price (Tabela Price):** a parcela total é fixa do primeiro ao último mês. No início, quase tudo é juros e pouco é amortização; com o tempo, essa proporção se inverte. Por isso o saldo cai mais devagar e o custo total é maior.',
+          ] },
+          { tipo: 'destaque', texto: 'É o mesmo princípio de qualquer empréstimo: quem abate a dívida mais rápido (SAC) paga menos juros no total, porque os juros incidem sobre um saldo que cai mais rápido.' },
+        ],
+      },
+      {
+        titulo: 'Exemplo real, lado a lado',
+        blocos: [
+          { tipo: 'p', texto: 'Financiamento de R$ 230.000 (MCMV Faixa 3, 7,66% a.a. + TR, 30 anos = 360 meses), sem considerar seguros nem TR:' },
+          { tipo: 'tabela',
+            cabecalho: ['', 'SAC', 'Price'],
+            linhas: [
+              ['1ª parcela', 'R$ 2.107', 'R$ 1.633 (fixa)'],
+              ['Última parcela', 'R$ 643', 'R$ 1.633 (fixa)'],
+              ['Total pago em 30 anos', 'R$ 495.004', 'R$ 588.048'],
+            ],
+          },
+          { tipo: 'destaque', texto: 'Nesse exemplo, o SAC custa R$ 93.044 menos ao longo do contrato — mas exige uma parcela inicial 29% mais alta que o Price (R$ 2.107 contra R$ 1.633).' },
+        ],
+      },
+      {
+        titulo: 'Por que o SAC sai mais barato no total',
+        blocos: [
+          { tipo: 'p', texto: 'No SAC, a amortização mensal é fixa: R$ 230.000 ÷ 360 meses ≈ R$ 639/mês de abatimento, sempre. Os juros incidem sobre o saldo restante, que cai nesse ritmo constante — então o total de juros pagos ao longo do contrato é menor.' },
+          { tipo: 'p', texto: 'No Price, a parcela é fixa, então o banco recalcula a amortização todo mês para manter esse valor constante. Isso significa que, no começo, quase nada é amortizado — o saldo devedor demora mais para cair, e os juros incidem por mais tempo sobre um valor mais alto.' },
+        ],
+      },
+      {
+        titulo: 'Quando o Price pode valer a pena',
+        blocos: [
+          { tipo: 'p', texto: 'Apesar do custo total maior, o Price tem dois cenários onde faz sentido:' },
+          { tipo: 'lista', itens: [
+            '**Orçamento apertado no início:** se a parcela inicial do SAC pesa demais no seu limite de comprometimento de renda (30%), o Price reduz esse valor — ao custo de pagar mais juros depois.',
+            '**LTV menor no SBPE:** no SBPE, o Price permite financiar até 70% do imóvel, contra até 80% no SAC. Ou seja, escolher SAC no SBPE pode exigir uma entrada menor para o mesmo imóvel.',
+          ] },
+          { tipo: 'destaque', texto: 'Na prática, quem pode pagar a parcela inicial mais alta do SAC quase sempre sai ganhando — menos juros totais e dívida menor desde o primeiro mês. O Price entra como alternativa quando a parcela inicial do SAC não cabe no orçamento.' },
+        ],
+      },
+      {
+        titulo: 'Qual o sistema padrão no MCMV e no SBPE',
+        blocos: [
+          { tipo: 'p', texto: 'O MCMV usa SAC como padrão na grande maioria dos contratos — é o sistema que a Caixa Econômica Federal aplica automaticamente no crédito associativo. Já no SBPE, os dois sistemas estão disponíveis e a escolha é do comprador no momento da contratação.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'Posso trocar de SAC para Price depois de assinar o contrato?',
+        resposta: 'Normalmente não — o sistema de amortização é definido no contrato e não pode ser alterado depois sem renegociação com o banco (portabilidade ou novo contrato), o que tem custos e nem sempre é aceito.' },
+      { pergunta: 'O MCMV permite escolher Price?',
+        resposta: 'A grande maioria dos contratos MCMV usa SAC por padrão, definido pela Caixa Econômica Federal. Quem quer Price geralmente precisa contratar pelo SBPE.' },
+      { pergunta: 'Por que a parcela do SAC começa mais alta que a do Price?',
+        resposta: 'Porque no SAC a amortização é fixa desde o primeiro mês, somada aos juros sobre o saldo total. No Price, o banco distribui o pagamento para manter a parcela igual do início ao fim, então a primeira parcela é mais baixa.' },
+      { pergunta: 'O Price é sempre mais caro no total?',
+        resposta: 'Sim, para o mesmo valor, taxa e prazo, o Price sempre resulta em mais juros pagos no total — é uma consequência matemática de o saldo devedor cair mais lentamente.' },
+      { pergunta: 'Qual sistema é melhor para quem tem orçamento apertado no início?',
+        resposta: 'O Price, porque a parcela é fixa e mais baixa no começo comparada à primeira parcela do SAC. O custo é pagar mais juros ao longo do contrato.' },
+    ],
+    fatosChaveParaJoao: [
+      'SAC = amortização constante todo mês; parcela total DECRESCE com o tempo (juros incidem sobre saldo que cai). Price = parcela FIXA do início ao fim; amortização cresce, juros diminuem dentro da parcela.',
+      'Para o mesmo valor/taxa/prazo, SAC sempre custa menos no total (menos juros pagos) — mas a 1ª parcela do SAC é mais alta que a parcela fixa do Price.',
+      'Exemplo real (R$230.000, 7,66% a.a., 360 meses): SAC 1ª parcela R$2.107, última R$643, total R$495.004. Price parcela fixa R$1.633, total R$588.048. Diferença: R$93.044 a mais no Price.',
+      'MCMV usa SAC por padrão (definido pela Caixa). SBPE permite escolher entre os dois.',
+      'No SBPE, o sistema de amortização afeta o LTV máximo: até 80% do imóvel com SAC, até 70% com Price (Price exige entrada maior).',
+      'Não é possível trocar de sistema depois de assinado sem renegociar o contrato.',
+    ],
+    ctaSimulador: { texto: 'Simular Price x SAC', href: '/simulador' },
+    relacionados: ['mcmv-sbpe-sfi-qual-modalidade-escolher'],
   },
 ];
 
