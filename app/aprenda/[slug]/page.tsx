@@ -37,9 +37,11 @@ export async function generateMetadata(
   };
 }
 
-// ── Markup inline mínimo: **negrito** → <strong> (conteúdo é nosso, seguro) ────
+// ── Markup inline mínimo: **negrito** e [link](url) (conteúdo é nosso, seguro) ──
 function inline(texto: string): string {
-  return texto.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  return texto
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" style="color:var(--primary);font-weight:600;">$1</a>');
 }
 
 function Bloco({ b }: { b: BlocoArtigo }) {

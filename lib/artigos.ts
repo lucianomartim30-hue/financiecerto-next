@@ -434,6 +434,107 @@ export const ARTIGOS: Artigo[] = [
     ctaSimulador: { texto: 'Simular meu imóvel na planta', href: '/simulador/na-planta' },
     relacionados: ['juros-evolucao-obra', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
   },
+  {
+    slug: 'custos-comprar-imovel-financiado-itbi-cartorio-taxas',
+    keyword: 'custos para comprar imóvel financiado',
+    titulo: 'Quanto Custa Comprar um Imóvel Financiado: ITBI, Cartório e Taxas',
+    tituloSEO: 'Quanto Custa Comprar Imóvel Financiado: ITBI e Cartório (2026)',
+    metaDescription:
+      'Veja quanto custa comprar um imóvel financiado além do preço: ITBI (com isenções no SFH e MCMV), registro, despachante. Exemplo real calculado, passo a passo.',
+    resumo:
+      'Comprar um imóvel financiado não custa só o valor da entrada — tem também ITBI, registro em cartório e outras taxas que entram na conta antes de você receber as chaves. Aqui você vê quanto cada uma pesa, com um exemplo real calculado, e uma isenção de ITBI que pouca gente usa: financiar pelo SFH reduz bastante esse imposto.',
+    publicado: '2026-06-17',
+    atualizado: '2026-06-17',
+    leituraMin: 8,
+    secoes: [
+      {
+        titulo: 'Quanto realmente custa, além do preço do imóvel',
+        blocos: [
+          { tipo: 'p', texto: 'Reserve entre **2% e 5% do valor do imóvel** para custos de aquisição, fora a entrada e o financiamento em si:' },
+          { tipo: 'tabela',
+            cabecalho: ['Custo', 'Quem cobra', 'Valor típico'],
+            linhas: [
+              ['ITBI', 'Prefeitura', '3% em São Paulo (com isenções — veja abaixo)'],
+              ['Registro de Imóveis', 'Cartório de Registro', '0,5% a 1% do valor do imóvel'],
+              ['Escritura pública', 'Cartório de Notas', 'Só se NÃO financiado (veja abaixo)'],
+              ['Despachante / correspondente', 'Profissional terceirizado', 'R$ 1.000 a R$ 3.000 (opcional)'],
+            ],
+          },
+        ],
+      },
+      {
+        titulo: 'ITBI: a isenção que pouca gente usa',
+        blocos: [
+          { tipo: 'p', texto: 'Em São Paulo capital, o ITBI é 3% sobre o maior valor entre o preço da transação e o valor venal de referência da prefeitura. Mas existem duas isenções importantes:' },
+          { tipo: 'lista', itens: [
+            '**Financiamento pelo SFH:** a parte financiada do imóvel, até R$ 636.612,50, é isenta de ITBI. O imposto incide só sobre a entrada paga com recursos próprios (e sobre o que exceder esse teto, se houver).',
+            '**MCMV / primeiro imóvel:** isenção total de ITBI para compras dentro do limite definido pela prefeitura — R$ 245.527,77 a partir de 01/01/2026.',
+          ] },
+          { tipo: 'p', texto: 'Exemplo: imóvel de R$ 300.000 financiado pelo SBPE (dentro do SFH), com entrada de R$ 60.000 e R$ 240.000 financiados.' },
+          { tipo: 'tabela',
+            cabecalho: ['', 'Sem a isenção SFH', 'Com a isenção SFH'],
+            linhas: [
+              ['Base do ITBI', 'R$ 300.000 (valor total)', 'R$ 60.000 (só a entrada)'],
+              ['ITBI a pagar (3%)', 'R$ 9.000', 'R$ 1.800'],
+            ],
+          },
+          { tipo: 'destaque', texto: 'Nesse exemplo, a isenção do SFH economiza R$ 7.200 de ITBI. Como a parte financiada (R$ 240.000) fica abaixo do teto de R$ 636.612,50, ela não entra na base de cálculo do imposto — só a entrada paga do próprio bolso é taxada.' },
+        ],
+      },
+      {
+        titulo: 'Registro de imóveis e escritura',
+        blocos: [
+          { tipo: 'p', texto: 'O **Registro de Imóveis** é obrigatório em qualquer compra — é o que de fato transfere a propriedade para o seu nome. Os emolumentos seguem tabela do estado, normalmente entre 0,5% e 1% do valor do imóvel.' },
+          { tipo: 'p', texto: 'Já a **escritura pública** (Cartório de Notas) só é necessária quando a compra é **à vista**. Em compras financiadas, o próprio contrato de financiamento — com a alienação fiduciária do banco — já tem força de escritura pública. Ou seja: quem financia, normalmente, não paga separadamente pela escritura.' },
+        ],
+      },
+      {
+        titulo: 'Análise de crédito: imóvel pronto x na planta',
+        blocos: [
+          { tipo: 'p', texto: 'No MCMV com crédito associativo (compra na planta), a análise de crédito é feita antes mesmo da assinatura do contrato com a construtora, via SICAQ — você já sabe se está aprovado antes de se comprometer. Veja o [fluxo completo do crédito associativo](/aprenda/credito-associativo-como-funciona-comprar-na-planta).' },
+          { tipo: 'p', texto: 'Em um imóvel **pronto** (lançamento já entregue ou imóvel usado/revenda), a análise ocorre quando você apresenta a proposta ao banco — geralmente depois de já ter negociado o preço com o vendedor. É preciso ter os documentos em ordem (renda comprovada, certidões negativas, CPF sem restrição) antes de assinar qualquer proposta de compra, para não correr o risco de o crédito ser reprovado depois de já ter pago sinal.' },
+        ],
+      },
+      {
+        titulo: 'Exemplo completo: quanto separar para fechar negócio',
+        blocos: [
+          { tipo: 'p', texto: 'Retomando o exemplo do imóvel de R$ 300.000 (SBPE, entrada R$ 60.000):' },
+          { tipo: 'tabela',
+            cabecalho: ['Item', 'Valor'],
+            linhas: [
+              ['Entrada', 'R$ 60.000'],
+              ['ITBI (com isenção SFH)', 'R$ 1.800'],
+              ['Registro de imóveis (~0,8%)', 'R$ 2.400'],
+              ['Despachante (estimado)', 'R$ 2.000'],
+              ['Total a separar, fora a entrada', 'R$ 6.200 (≈ 2,1% do imóvel)'],
+            ],
+          },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'O ITBI é sempre 3% em São Paulo?',
+        resposta: 'A alíquota é 3%, mas a base de cálculo pode ser reduzida por isenções: no financiamento SFH, a parte financiada até R$ 636.612,50 não entra na conta; no MCMV/primeiro imóvel, há isenção total até R$ 245.527,77 (valor de 2026).' },
+      { pergunta: 'Preciso pagar escritura se o imóvel for financiado?',
+        resposta: 'Geralmente não. O próprio contrato de financiamento com alienação fiduciária tem força de escritura pública. A escritura no Cartório de Notas só é necessária em compras à vista.' },
+      { pergunta: 'Quando a análise de crédito é feita no MCMV comparado ao imóvel pronto?',
+        resposta: 'No MCMV com crédito associativo, a análise (via SICAQ) é feita antes da assinatura, ainda na planta. Em imóvel pronto, a análise ocorre quando a proposta é levada ao banco, já com o preço negociado.' },
+      { pergunta: 'Quanto custa o despachante ou correspondente bancário?',
+        resposta: 'Entre R$ 1.000 e R$ 3.000, dependendo da região e da complexidade do processo. É um serviço opcional — você pode levar a documentação diretamente ao banco.' },
+      { pergunta: 'Posso financiar o ITBI e o registro junto com o imóvel?',
+        resposta: 'Não. Esses custos são pagos à parte, geralmente antes ou no fechamento da compra — não entram no valor financiado pelo banco.' },
+    ],
+    fatosChaveParaJoao: [
+      'Custos de aquisição além do imóvel: ITBI (3% em SP, com isenções), Registro de Imóveis (0,5-1%), Escritura (só se à vista), despachante (R$1.000-3.000 opcional). Total típico: 2-5% do valor do imóvel.',
+      'ISENÇÃO IMPORTANTE: no financiamento SFH, a parte financiada até R$636.612,50 é isenta de ITBI — o imposto incide só sobre a entrada paga em dinheiro.',
+      'ISENÇÃO MCMV: compra de primeiro imóvel dentro do limite de R$245.527,77 (2026) é isenta de ITBI integralmente.',
+      'Exemplo: imóvel R$300k, entrada R$60k, financiado R$240k (SFH) → ITBI incide só sobre os R$60k de entrada = R$1.800 (em vez de R$9.000 sem a isenção).',
+      'Quem financia normalmente NÃO paga escritura separada — o contrato com alienação fiduciária já tem força de escritura pública.',
+      'Análise de crédito: no MCMV/planta é via SICAQ, antes da assinatura. Em imóvel pronto/revenda, é quando a proposta chega ao banco, já com preço negociado.',
+    ],
+    ctaSimulador: { texto: 'Simular meu financiamento', href: '/simulador' },
+    relacionados: ['credito-associativo-como-funciona-comprar-na-planta', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────

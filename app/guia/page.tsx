@@ -57,15 +57,15 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'Quais são as etapas do processo MCMV/HIS?',
-        resposta: `**1. SICAQ (análise de crédito):** A construtora submete os dados do comprador para análise pela Caixa Econômica Federal. O comprador descobre sua capacidade de crédito aprovada.\n\n**2. Assinatura do Contrato de Compra e Venda:** entre comprador e construtora, definindo o imóvel, valor e condições.\n\n**3. Assinatura do Contrato de Financiamento:** entre comprador e Caixa Econômica Federal. O financiamento está formalmente contratado.\n\n**4. Início da obra + evolução:** Caixa Econômica Federal libera recursos conforme medições. Comprador paga juros de evolução mensalmente.\n\n**5. Habite-se + entrega:** obra concluída, comprador recebe as chaves e o financiamento entra em regime normal.`,
+        resposta: `Resumo: contrato com a construtora → SICAQ (análise de crédito) → contrato de financiamento com a Caixa → obra com juros de evolução → habite-se → financiamento entra no regime normal.\n\nVeja o [fluxo completo, com prazos e o que pode travar](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
       },
       {
         pergunta: 'Quando o banco faz a análise de crédito?',
-        resposta: `No MCMV, a análise é feita antes mesmo da assinatura do contrato, via SICAQ. Isso garante que o comprador já sabe que está aprovado antes de se comprometer.\n\nNo SBPE com imóvel pronto, a análise ocorre quando o comprador apresenta a proposta ao banco. É preciso ter os documentos em ordem: renda comprovada, certidões negativas, sem restrições no CPF.`,
+        resposta: `No MCMV/planta, a análise é feita antes da assinatura, via SICAQ. Em imóvel pronto ou revenda, a análise ocorre quando a proposta chega ao banco, já com o preço negociado.\n\nVeja a [comparação completa entre os dois casos](/aprenda/custos-comprar-imovel-financiado-itbi-cartorio-taxas).`,
       },
       {
         pergunta: 'Quais são os custos além do imóvel?',
-        resposta: `Ao comprar um imóvel, você precisa reservar:\n\n• **ITBI (Imposto sobre Transmissão de Bens Imóveis):** 2% do valor do imóvel em São Paulo (pode variar por município). No MCMV, pode ter isenção ou redução.\n• **Cartório (escritura + registro):** aproximadamente 1% do valor do imóvel (inclui emolumentos e registro)\n• **Correspondente bancário/despachante:** R$ 1.000 a R$ 3.000 (opcional mas comum)\n• **Seguros MIP e DFI:** obrigatórios no financiamento, cobrados mensalmente na parcela\n• **Taxa administrativa:** R$ 25/mês cobrada na parcela\n\nTotal de custos de aquisição: reserve entre 3% e 5% do valor do imóvel.\n\n⭐ Algumas construtoras isentam o comprador de ITBI e registro. Consulte a construtora antes de assinar.`,
+        resposta: `ITBI (3% em São Paulo, com isenções importantes no SFH e no MCMV), Registro de Imóveis (0,5% a 1%) e, se a compra for à vista, escritura pública. Reserve entre 2% e 5% do valor do imóvel.\n\nVeja o [detalhamento com exemplo real e a isenção de ITBI que pouca gente usa](/aprenda/custos-comprar-imovel-financiado-itbi-cartorio-taxas).`,
       },
     ],
   },
