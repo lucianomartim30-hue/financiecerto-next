@@ -65,7 +65,7 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'Qual a diferença entre SAC e Tabela Price?',
-        resposta: `No **SAC**, a amortização é fixa e a parcela começa mais alta, mas cai mês a mês. Na **Price**, a parcela é fixa do início ao fim, mas o custo total acaba sendo maior. No MCMV, a Price costuma sair como primeira opção (usa o prazo máximo e cabe mais fácil no limite de renda), mas o SAC pode ser escolhido se a renda aprovada no SICAQ sustentar a parcela inicial mais alta.\n\nVeja o [comparativo com exemplo real (1ª parcela, última parcela e total pago)](/aprenda/sac-ou-price-qual-sistema-amortizacao-escolher).`,
+        resposta: `No **SAC**, a amortização é fixa e a parcela começa mais alta, mas cai mês a mês. Na **Price**, a parcela é fixa do início ao fim, mas o custo total acaba sendo maior. São as duas modalidades de amortização de qualquer financiamento — MCMV, SBPE, com ou sem crédito associativo.\n\nVeja o [comparativo com exemplo real (1ª parcela, última parcela e total pago)](/aprenda/sac-ou-price-qual-sistema-amortizacao-escolher).`,
       },
     ],
   },
