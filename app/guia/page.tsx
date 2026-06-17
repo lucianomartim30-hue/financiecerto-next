@@ -43,7 +43,7 @@ const CAPITULOS = [
       },
       {
         pergunta: 'O que são os juros de evolução de obra?',
-        resposta: `São os juros pagos mensalmente sobre o saldo já liberado pela Caixa Econômica Federal para a construtora. Funciona assim:\n\n• Obra 0% → saldo liberado = 0 → evolução = R$ 0\n• Obra 30% → saldo liberado ≈ R$ 60.000 → evolução ≈ R$ 370/mês (MCMV F1)\n• Obra 70% → saldo liberado ≈ R$ 140.000 → evolução ≈ R$ 870/mês\n• Obra 100% → financiamento entra em regime normal\n\nA taxa varia: Faixa 1 ≈ 0,4% a.m., Faixa 3 ≈ 0,62% a.m., SBPE ≈ 0,83% a.m.`,
+        resposta: `Durante a obra, a Caixa Econômica Federal não entrega o valor financiado de uma vez para a construtora — ela libera aos poucos, conforme a obra avança. Você paga juros só sobre o que **já foi liberado**, não sobre o financiamento total.\n\n**Fórmula:** juros do mês = saldo já liberado × (taxa anual ÷ 12)\n\nExemplo real — financiamento de R$ 267.000 (MCMV Faixa 3, 7,66% a.a. = 0,64% a.m.):\n\n• Obra 0% → saldo liberado R$ 0 → juros R$ 0\n• Obra 30% → saldo liberado ≈ R$ 80.000 → juros ≈ R$ 510/mês\n• Obra 70% → saldo liberado ≈ R$ 187.000 → juros ≈ R$ 1.190/mês\n• Obra 100% (habite-se) → saldo todo liberado, juros no teto (≈ R$ 1.700/mês) → financiamento entra no regime normal, com amortização\n\nA taxa mensal equivalente (taxa anual ÷ 12) varia por modalidade: Faixa 1 ≈ 0,33% a.m., Faixa 3 ≈ 0,64% a.m., SBPE ≈ 0,93% a.m. Veja o [exemplo completo mês a mês](/aprenda/juros-evolucao-obra).`,
       },
       {
         pergunta: 'Qual é o fluxo de pagamento típico da construtora?',
@@ -251,8 +251,10 @@ export default function GuiaPage() {
                     paddingTop: '16px',
                     whiteSpace: 'pre-line',
                   }}>
-                    {topico.resposta.replace(/\*\*(.*?)\*\*/g, '**$1**').split('\n').map((line, li) => {
-                      const boldLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    {topico.resposta.split('\n').map((line, li) => {
+                      const boldLine = line
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" style="color:var(--primary);font-weight:600;">$1</a>');
                       return (
                         <p key={li} style={{ marginBottom: line === '' ? '8px' : '4px' }}
                           dangerouslySetInnerHTML={{ __html: boldLine }} />
