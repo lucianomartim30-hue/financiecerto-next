@@ -6,12 +6,15 @@ export const metadata: Metadata = {
   description: 'Tudo sobre MCMV, SBPE, crédito associativo, documentação, custos e o processo real da compra imobiliária no Brasil.',
 };
 
+// Capítulos em ORDEM DE JORNADA — etapa 1 (descobrir modalidade) até etapa 7 (FGTS),
+// do momento em que o cliente decide comprar até a entrega das chaves.
 const CAPITULOS = [
   {
     id: 'modalidades',
+    etapa: 1,
     icon: '🏦',
-    titulo: 'Modalidades de Financiamento',
-    subtitulo: 'MCMV vs SBPE vs SFI',
+    titulo: 'Descubra sua Modalidade',
+    subtitulo: 'MCMV, SBPE ou SFI — antes de procurar imóvel',
     cor: 'var(--primary)',
     corLight: 'var(--primary-light)',
     topicos: [
@@ -19,61 +22,14 @@ const CAPITULOS = [
         pergunta: 'MCMV, SBPE ou SFI: qual a diferença?',
         resposta: `As três modalidades se dividem por renda e valor do imóvel: **MCMV** (renda até R$ 13.000, 4 faixas, taxas de 4% a 10,5% a.a., subsídio nas Faixas 1 e 2), **SBPE/SFH** (qualquer renda, imóvel até R$ 2,25 milhões, taxa a partir de 11,19% a.a.) e **SFI** (imóvel acima de R$ 2,25 milhões, taxa de mercado, sem FGTS).\n\nVeja o [comparativo completo, com taxas e tetos por faixa](/aprenda/mcmv-sbpe-sfi-qual-modalidade-escolher).`,
       },
-      {
-        pergunta: 'Qual a diferença entre SAC e Tabela Price?',
-        resposta: `No **SAC**, a amortização é fixa e a parcela começa mais alta, mas cai mês a mês. Na **Price**, a parcela é fixa do início ao fim, mas o custo total acaba sendo maior. O MCMV usa SAC por padrão; no SBPE você pode escolher.\n\nVeja o [comparativo com exemplo real (1ª parcela, última parcela e total pago)](/aprenda/sac-ou-price-qual-sistema-amortizacao-escolher).`,
-      },
-    ],
-  },
-  {
-    id: 'planta',
-    icon: '🏗️',
-    titulo: 'Imóvel na Planta',
-    subtitulo: 'Crédito Associativo e evolução de obra',
-    cor: 'var(--accent)',
-    corLight: 'var(--accent-light)',
-    topicos: [
-      {
-        pergunta: 'Como funciona o crédito associativo?',
-        resposta: `É o modelo em que o financiamento é assinado **antes ou durante a obra** (padrão no MCMV, também existe no SBPE). A Caixa libera recursos à construtora conforme a obra avança, e o comprador paga juros sobre o saldo já liberado até o habite-se — quando o financiamento entra no regime normal.\n\nVeja o [fluxo completo, da assinatura ao habite-se](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
-      },
-      {
-        pergunta: 'O que são os juros de evolução de obra?',
-        resposta: `Durante a obra, a Caixa Econômica Federal não entrega o valor financiado de uma vez para a construtora — ela libera aos poucos, conforme a obra avança. Você paga juros só sobre o que **já foi liberado**, não sobre o financiamento total.\n\n**Fórmula:** juros do mês = saldo já liberado × (taxa anual ÷ 12)\n\nPor isso a parcela começa baixa (quase nada liberado) e cresce mês a mês, até atingir o teto quando a obra é entregue (habite-se) — momento em que o financiamento entra no regime normal, com amortização. A taxa mensal equivalente varia por modalidade: Faixa 1 ≈ 0,33% a.m., Faixa 3 ≈ 0,64% a.m., SBPE ≈ 0,93% a.m.\n\nVeja o [exemplo completo, mês a mês, com valores reais](/aprenda/juros-evolucao-obra).`,
-      },
-      {
-        pergunta: 'Qual é o fluxo de pagamento típico da construtora?',
-        resposta: `Durante a obra, você paga em duas frentes: à **construtora** (ato, mensais, sinais/reforços, anuais e chaves) e ao **banco** (juros de evolução de obra, sobre o saldo já liberado). O saldo restante na entrega das chaves entra no financiamento bancário definitivo.\n\nVeja a [tabela completa de quem recebe o quê e quando](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
-      },
-    ],
-  },
-  {
-    id: 'processo',
-    icon: '📋',
-    titulo: 'Processo de Compra',
-    subtitulo: 'Do SICAQ ao habite-se',
-    cor: 'var(--purple)',
-    corLight: 'var(--purple-light)',
-    topicos: [
-      {
-        pergunta: 'Quais são as etapas do processo MCMV/HIS?',
-        resposta: `Resumo: contrato com a construtora → SICAQ (análise de crédito) → contrato de financiamento com a Caixa → obra com juros de evolução → habite-se → financiamento entra no regime normal.\n\nVeja o [fluxo completo, com prazos e o que pode travar](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
-      },
-      {
-        pergunta: 'Quando o banco faz a análise de crédito?',
-        resposta: `No MCMV/planta, a análise é feita antes da assinatura, via SICAQ. Em imóvel pronto ou revenda, a análise ocorre quando a proposta chega ao banco, já com o preço negociado.\n\nVeja a [comparação completa entre os dois casos](/aprenda/custos-comprar-imovel-financiado-itbi-cartorio-taxas).`,
-      },
-      {
-        pergunta: 'Quais são os custos além do imóvel?',
-        resposta: `ITBI (3% em São Paulo, com isenções importantes no SFH e no MCMV), Registro de Imóveis (0,5% a 1%) e, se a compra for à vista, escritura pública. Reserve entre 2% e 5% do valor do imóvel.\n\nVeja o [detalhamento com exemplo real e a isenção de ITBI que pouca gente usa](/aprenda/custos-comprar-imovel-financiado-itbi-cartorio-taxas).`,
-      },
     ],
   },
   {
     id: 'documentos',
+    etapa: 2,
     icon: '📁',
-    titulo: 'Documentação',
-    subtitulo: 'O que você precisa separar',
+    titulo: 'Organize sua Documentação',
+    subtitulo: 'Separe antes de negociar — evita perder o sinal por reprovação',
     cor: 'var(--warning)',
     corLight: 'var(--warning-light)',
     topicos: [
@@ -84,10 +40,76 @@ const CAPITULOS = [
     ],
   },
   {
+    id: 'custos',
+    etapa: 3,
+    icon: '💰',
+    titulo: 'Saiba Quanto Vai Custar',
+    subtitulo: 'Entrada, ITBI, cartório e taxas — antes de fechar negócio',
+    cor: 'var(--purple)',
+    corLight: 'var(--purple-light)',
+    topicos: [
+      {
+        pergunta: 'Quais são os custos além do imóvel?',
+        resposta: `ITBI (3% em São Paulo, com isenções importantes no SFH e no MCMV), Registro de Imóveis (0,5% a 1%) e, se a compra for à vista, escritura pública. Reserve entre 2% e 5% do valor do imóvel.\n\nVeja o [detalhamento com exemplo real e a isenção de ITBI que pouca gente usa](/aprenda/custos-comprar-imovel-financiado-itbi-cartorio-taxas).`,
+      },
+    ],
+  },
+  {
+    id: 'amortizacao',
+    etapa: 4,
+    icon: '📊',
+    titulo: 'Escolha SAC ou Price',
+    subtitulo: 'O sistema de amortização — decidido na contratação',
+    cor: 'var(--accent)',
+    corLight: 'var(--accent-light)',
+    topicos: [
+      {
+        pergunta: 'Qual a diferença entre SAC e Tabela Price?',
+        resposta: `No **SAC**, a amortização é fixa e a parcela começa mais alta, mas cai mês a mês. Na **Price**, a parcela é fixa do início ao fim, mas o custo total acaba sendo maior. O MCMV usa SAC por padrão; no SBPE você pode escolher.\n\nVeja o [comparativo com exemplo real (1ª parcela, última parcela e total pago)](/aprenda/sac-ou-price-qual-sistema-amortizacao-escolher).`,
+      },
+    ],
+  },
+  {
+    id: 'assinatura',
+    etapa: 5,
+    icon: '📋',
+    titulo: 'Assine e Passe pela Análise de Crédito',
+    subtitulo: 'Do contrato à aprovação do financiamento',
+    cor: 'var(--warning)',
+    corLight: 'var(--warning-light)',
+    topicos: [
+      {
+        pergunta: 'Qual é o fluxo completo, da assinatura ao habite-se?',
+        resposta: `Contrato com a construtora (ou vendedor) → análise de crédito → contrato de financiamento com o banco → obra (se for na planta) → habite-se → financiamento no regime normal. No MCMV/planta, a análise é feita antes da assinatura, via SICAQ; em imóvel pronto ou revenda, ocorre quando a proposta chega ao banco, já com o preço negociado.\n\nVeja o [fluxo completo, com prazos e o que pode travar](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
+      },
+      {
+        pergunta: 'Quem recebe o quê: construtora x banco?',
+        resposta: `Em compra na planta, você paga em duas frentes: à **construtora** (ato, mensais, sinais/reforços, anuais e chaves) e ao **banco** (juros de evolução de obra, sobre o saldo já liberado). O saldo restante na entrega das chaves entra no financiamento bancário definitivo.\n\nVeja a [tabela completa de quem recebe o quê e quando](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
+      },
+    ],
+  },
+  {
+    id: 'planta',
+    etapa: 6,
+    opcional: true,
+    icon: '🏗️',
+    titulo: 'Durante a Obra',
+    subtitulo: 'Juros de evolução — só se você comprou na planta',
+    cor: 'var(--accent)',
+    corLight: 'var(--accent-light)',
+    topicos: [
+      {
+        pergunta: 'O que são os juros de evolução de obra?',
+        resposta: `Durante a obra, a Caixa Econômica Federal não entrega o valor financiado de uma vez para a construtora — ela libera aos poucos, conforme a obra avança. Você paga juros só sobre o que **já foi liberado**, não sobre o financiamento total.\n\n**Fórmula:** juros do mês = saldo já liberado × (taxa anual ÷ 12)\n\nPor isso a parcela começa baixa (quase nada liberado) e cresce mês a mês, até atingir o teto quando a obra é entregue (habite-se) — momento em que o financiamento entra no regime normal, com amortização. A taxa mensal equivalente varia por modalidade: Faixa 1 ≈ 0,33% a.m., Faixa 3 ≈ 0,64% a.m., SBPE ≈ 0,93% a.m.\n\nVeja o [exemplo completo, mês a mês, com valores reais](/aprenda/juros-evolucao-obra).`,
+      },
+    ],
+  },
+  {
     id: 'fgts',
+    etapa: 7,
     icon: '💼',
-    titulo: 'FGTS no Financiamento',
-    subtitulo: 'Como e quando usar',
+    titulo: 'Use o FGTS a seu Favor',
+    subtitulo: 'Na entrada, na amortização ou nas parcelas',
     cor: 'var(--orange)',
     corLight: 'var(--orange-light)',
     topicos: [
@@ -129,8 +151,8 @@ export default function GuiaPage() {
             Guia Completo de Financiamento
           </h1>
           <p style={{ fontSize: '17px', color: '#cbd5e1', lineHeight: '1.7', maxWidth: '540px', margin: '0 auto 32px' }}>
-            Tudo que você precisa saber sobre o processo real da compra imobiliária no Brasil —
-            do MCMV ao habite-se.
+            As 7 etapas, em ordem, do momento em que você decide comprar até o dia em que assina
+            o financiamento e recebe as chaves.
           </p>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/simulador" style={{
@@ -173,7 +195,7 @@ export default function GuiaPage() {
                   transition: 'opacity 0.15s',
                 }}
               >
-                {cap.icon} {cap.titulo}
+                {cap.icon} {cap.etapa}. {cap.titulo}
               </a>
             ))}
           </div>
@@ -195,6 +217,9 @@ export default function GuiaPage() {
             }}>
               <span style={{ fontSize: '28px' }}>{cap.icon}</span>
               <div>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: cap.cor, textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  Etapa {cap.etapa}{cap.opcional ? ' · se for na planta' : ''}
+                </span>
                 <h2 style={{ fontSize: '20px', fontWeight: '800', color: cap.cor, marginBottom: '2px' }}>
                   {cap.titulo}
                 </h2>
