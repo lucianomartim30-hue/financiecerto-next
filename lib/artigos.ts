@@ -325,7 +325,8 @@ export const ARTIGOS: Artigo[] = [
       {
         titulo: 'Qual o sistema padrão no MCMV e no SBPE',
         blocos: [
-          { tipo: 'p', texto: 'No MCMV, a Tabela Price é o padrão real aplicado pela Caixa Econômica Federal na maioria dos contratos de crédito associativo — não o SAC. Já no SBPE, os dois sistemas estão disponíveis para o comprador.' },
+          { tipo: 'p', texto: 'No simulador da Caixa (e também no SBPE), os dois sistemas estão disponíveis para escolha. Mas no MCMV, a Tabela Price costuma sair como primeira opção na maioria dos casos — não porque o SAC seja proibido, e sim porque a Price usa o prazo máximo disponível para o comprador e gera parcelas iguais, o que cabe mais facilmente no limite de 30% de comprometimento de renda.' },
+          { tipo: 'p', texto: 'Quando o comprador passa pela análise real de crédito (SICAQ), se a renda comprovada sustentar a parcela inicial mais alta do SAC dentro desse mesmo prazo, ele pode escolher o SAC — e nesse caso paga menos juros no total, como mostrado no exemplo acima.' },
         ],
       },
     ],
@@ -333,7 +334,7 @@ export const ARTIGOS: Artigo[] = [
       { pergunta: 'Posso trocar de SAC para Price depois de assinar o contrato?',
         resposta: 'Normalmente não — o sistema de amortização é definido no contrato e não pode ser alterado depois sem renegociação com o banco (portabilidade ou novo contrato), o que tem custos e nem sempre é aceito.' },
       { pergunta: 'O MCMV permite escolher SAC?',
-        resposta: 'A maioria dos contratos de crédito associativo MCMV usa Tabela Price por padrão, definido pela Caixa Econômica Federal. O SBPE é onde a escolha entre SAC e Price fica mais aberta para o comprador.' },
+        resposta: 'Permite — o simulador da Caixa oferece os dois sistemas também no MCMV. A Price costuma sair como primeira opção porque usa o prazo máximo e cabe mais fácil no limite de renda, mas quem é aprovado no SICAQ com renda suficiente para a parcela inicial mais alta pode escolher o SAC.' },
       { pergunta: 'Por que a parcela do SAC começa mais alta que a do Price?',
         resposta: 'Porque no SAC a amortização é fixa desde o primeiro mês, somada aos juros sobre o saldo total. No Price, o banco distribui o pagamento para manter a parcela igual do início ao fim, então a primeira parcela é mais baixa.' },
       { pergunta: 'O Price é sempre mais caro no total?',
@@ -345,7 +346,7 @@ export const ARTIGOS: Artigo[] = [
       'SAC = amortização constante todo mês; parcela total DECRESCE com o tempo (juros incidem sobre saldo que cai). Price = parcela FIXA do início ao fim; amortização cresce, juros diminuem dentro da parcela.',
       'Para o mesmo valor/taxa/prazo, SAC sempre custa menos no total (menos juros pagos) — mas a 1ª parcela do SAC é mais alta que a parcela fixa do Price.',
       'Exemplo real (R$230.000, 7,66% a.a., 360 meses): SAC 1ª parcela R$2.107, última R$643, total R$495.004. Price parcela fixa R$1.633, total R$588.048. Diferença: R$93.044 a mais no Price.',
-      'MCMV usa Tabela Price por padrão na maioria dos contratos de crédito associativo (definido pela Caixa) — NÃO é SAC. SBPE permite escolher entre os dois.',
+      'MCMV permite escolher SAC ou Price (não é restrito) — mas Price costuma sair como primeira opção no simulador da Caixa porque usa o prazo máximo disponível e cabe mais fácil no limite de 30% de renda. Quem é aprovado no SICAQ com renda suficiente para a parcela inicial mais alta pode escolher SAC.',
       'No SBPE, o sistema de amortização afeta o LTV máximo: até 80% do imóvel com SAC, até 70% com Price (Price exige entrada maior).',
       'Não é possível trocar de sistema depois de assinado sem renegociar o contrato.',
     ],
