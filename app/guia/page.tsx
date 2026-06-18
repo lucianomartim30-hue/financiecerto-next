@@ -84,7 +84,7 @@ const CAPITULOS = [
       },
       {
         pergunta: 'Quem recebe o quê: construtora x banco?',
-        resposta: `Em compra na planta, você paga em duas frentes: à **construtora** (ato, mensais, sinais/reforços, anuais e chaves) e ao **banco** (juros de evolução de obra, sobre o saldo já liberado). O saldo restante na entrega das chaves entra no financiamento bancário definitivo.\n\nVeja a [tabela completa de quem recebe o quê e quando](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
+        resposta: `No crédito associativo (MCMV), você paga em duas frentes: à **construtora** (ato, mensais, sinais/reforços, anuais e chaves) e ao **banco** (juros de evolução de obra, sobre o saldo já liberado). Já no SBPE, você paga só a construtora durante a obra — o contrato com o banco só é assinado depois da entrega das chaves.\n\nVeja a [comparação completa dos dois fluxos](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
       },
     ],
   },

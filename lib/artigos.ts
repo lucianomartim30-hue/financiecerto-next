@@ -351,7 +351,7 @@ export const ARTIGOS: Artigo[] = [
     metaDescription:
       'Entenda o crédito associativo do início ao fim: como a Caixa libera o financiamento durante a obra, o fluxo de pagamento à construtora e o que muda no habite-se.',
     resumo:
-      'Comprar na planta pelo MCMV ou SBPE quase sempre passa pelo crédito associativo — o modelo em que o contrato de financiamento é assinado antes do início da obra, e a primeira fatura de juros chega cerca de 30 dias depois. Aqui você vê o fluxo completo, do contrato com a construtora à entrega das chaves, e entende quem recebe o quê em cada etapa.',
+      'No MCMV, comprar na planta quase sempre passa pelo crédito associativo: o contrato de financiamento é assinado antes do início da obra, e a primeira fatura de juros chega cerca de 30 dias depois. Já no financiamento tradicional (SBPE), o caminho é diferente — o contrato com o banco só é assinado depois da entrega das chaves. Aqui você vê os dois fluxos completos e entende quem recebe o quê em cada etapa.',
     publicado: '2026-06-17',
     atualizado: '2026-06-17',
     leituraMin: 8,
@@ -359,8 +359,20 @@ export const ARTIGOS: Artigo[] = [
       {
         titulo: 'O que é o crédito associativo',
         blocos: [
-          { tipo: 'p', texto: 'É o modelo de financiamento em que o contrato com o banco é assinado **antes do início da obra** — não durante, nem só na entrega das chaves. É o formato padrão do MCMV para imóveis na planta, mas também existe no SBPE.' },
+          { tipo: 'p', texto: 'É o modelo de financiamento usado pelo MCMV para imóveis na planta, em que o contrato com a Caixa é assinado **antes do início da obra** — não durante, nem só na entrega das chaves.' },
           { tipo: 'p', texto: 'A diferença para um financiamento de imóvel pronto: o banco não entrega o dinheiro de uma vez na assinatura. Ele libera o valor para a construtora **conforme a obra avança**, com base em medições periódicas. Cerca de 30 dias após a assinatura, já chega a primeira fatura: o comprador paga só os juros sobre o que já foi liberado até aquele mês (os juros de evolução de obra) — não a parcela completa, que só começa no habite-se.' },
+        ],
+      },
+      {
+        titulo: 'E se eu financiar pelo SBPE (banco tradicional) em vez do crédito associativo?',
+        blocos: [
+          { tipo: 'p', texto: 'O caminho é diferente. No financiamento tradicional (SBPE) para imóvel na planta, **o contrato de financiamento só é assinado depois da entrega das chaves** — não antes do início da obra como no crédito associativo MCMV.' },
+          { tipo: 'lista', itens: [
+            'Durante a obra, o comprador paga **só à construtora** (ato, mensais, sinais/reforços, anuais) — não há juros de evolução pagos a um banco nesse período.',
+            'O comprador tem liberdade para escolher **qualquer banco** de sua preferência — não precisa ser o banco indicado pela construtora.',
+            'A análise de crédito com o banco escolhido deve ser feita **antes do fim da obra**, para que o comprador já esteja aprovado e pronto para assinar o financiamento assim que as chaves forem entregues.',
+          ] },
+          { tipo: 'destaque', texto: 'Resumindo a diferença: no crédito associativo (MCMV), você assina com o banco antes da obra e paga juros de evolução nesse meio tempo. No SBPE, você só assina com o banco depois das chaves — mas a análise de crédito precisa estar pronta antes disso, durante a obra.' },
         ],
       },
       {
@@ -380,7 +392,7 @@ export const ARTIGOS: Artigo[] = [
       {
         titulo: 'Quem recebe o quê: construtora x banco',
         blocos: [
-          { tipo: 'p', texto: 'Durante a obra, o comprador paga em duas frentes diferentes, que não devem ser confundidas:' },
+          { tipo: 'p', texto: 'No crédito associativo (MCMV), durante a obra o comprador paga em duas frentes diferentes, que não devem ser confundidas:' },
           { tipo: 'tabela',
             cabecalho: ['Pagamento', 'Para quem', 'Quando'],
             linhas: [
@@ -406,7 +418,7 @@ export const ARTIGOS: Artigo[] = [
     ],
     faq: [
       { pergunta: 'O crédito associativo é só para MCMV?',
-        resposta: 'É mais comum no MCMV, mas o SBPE também opera com crédito associativo para imóvel na planta — o fluxo é parecido, mudando taxa e regras de FGTS.' },
+        resposta: 'É o modelo padrão do MCMV. No financiamento tradicional (SBPE), o caminho para imóvel na planta é diferente: o comprador paga só a construtora durante a obra, escolhe livremente o banco, e o contrato de financiamento só é assinado depois da entrega das chaves.' },
       { pergunta: 'Por que pago juros à Caixa antes mesmo de ter o imóvel pronto?',
         resposta: 'Porque o banco já desembolsou parte do valor financiado para a construtora, conforme a obra avança. Esses juros remuneram o banco pelo capital já liberado, antes de você começar a pagar o financiamento completo.' },
       { pergunta: 'O que acontece se a obra atrasar?',
@@ -417,9 +429,12 @@ export const ARTIGOS: Artigo[] = [
         resposta: 'Só depois do habite-se, quando a obra é formalmente concluída e o financiamento sai do regime de evolução para o regime normal de amortização.' },
       { pergunta: 'A análise do SICAQ vence depois de algum tempo?',
         resposta: 'A análise continua válida para a Caixa entre a aprovação e a assinatura do contrato de financiamento. Mas se a Caixa demorar mais de 2 meses para chamar o comprador para essa assinatura, pode ser que peça algum documento ou comprovante de renda atualizado.' },
+      { pergunta: 'Comprando na planta pelo SBPE, quando assino o financiamento?',
+        resposta: 'Só depois da entrega das chaves. Durante a obra você paga apenas à construtora; a análise de crédito com o banco escolhido deve ser feita antes do fim da obra, para que você já esteja aprovado e pronto para assinar quando as chaves chegarem.' },
     ],
     fatosChaveParaJoao: [
-      'Crédito associativo = contrato de financiamento assinado ANTES do início da obra (padrão MCMV, também existe no SBPE). Cerca de 30 dias após a assinatura, chega a primeira fatura de juros de evolução. Banco libera recursos à construtora por medição de avanço, não de uma vez.',
+      'Crédito associativo = contrato de financiamento assinado ANTES do início da obra. É o modelo padrão do MCMV. Cerca de 30 dias após a assinatura, chega a primeira fatura de juros de evolução. Banco libera recursos à construtora por medição de avanço, não de uma vez.',
+      'SBPE (financiamento tradicional) na planta é DIFERENTE do crédito associativo: o contrato com o banco só é assinado DEPOIS da entrega das chaves. Durante a obra, o comprador paga só a construtora (sem juros de evolução a banco), escolhe livremente qualquer banco, e deve concluir a análise de crédito antes do fim da obra para estar pronto pra assinar na entrega.',
       'Fluxo: 1) SICAQ (análise de crédito, ANTES de qualquer contrato/sinal) → 2) Contrato de Compra e Venda com a construtora (Ato/sinal pago aqui) → 3) Contrato de financiamento com a Caixa → 4) Obra com juros de evolução → 5) Habite-se → financiamento normal com amortização. Análise de crédito SEMPRE antes do sinal — pedir sinal antes da análise é sinal de golpe.',
       'Durante a obra, dois fluxos de pagamento distintos: à CONSTRUTORA (ato, mensais, reforços, anuais, chaves) e ao BANCO (juros de evolução de obra, sobre saldo já liberado).',
       'Cronograma físico-financeiro = documento que define avanço de obra x repasse mês a mês. Atraso na obra trava o repasse da Caixa.',
