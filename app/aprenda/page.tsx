@@ -42,8 +42,31 @@ export default function AprendaIndex() {
         </div>
       </section>
 
+      {/* Outros formatos: Guia (jornada) e Glossário (dicionário) */}
+      <div className="container" style={{ maxWidth: 820, padding: '40px 24px 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+          <Link href="/guia" className="card card-hover" style={{ padding: '20px 22px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 28 }}>📘</span>
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>Guia passo a passo</p>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>As 7 etapas, em ordem, até as chaves</p>
+            </div>
+          </Link>
+          <Link href="/glossario" className="card card-hover" style={{ padding: '20px 22px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 28 }}>🔤</span>
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)', margin: '0 0 4px' }}>Glossário</p>
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>Termos do financiamento, de A a Z</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+
       {/* Lista de artigos */}
-      <div className="container" style={{ maxWidth: 820, padding: '48px 24px 80px' }}>
+      <div className="container" style={{ maxWidth: 820, padding: '40px 24px 80px' }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 16 }}>
+          Artigos completos
+        </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           {artigos.map(a => (
             <Link key={a.slug} href={`/aprenda/${a.slug}`} className="card card-hover" style={{
