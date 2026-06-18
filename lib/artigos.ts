@@ -374,6 +374,7 @@ export const ARTIGOS: Artigo[] = [
             '**5. Habite-se:** a prefeitura atesta que a construção terminou. O financiamento sai do regime de evolução e entra no regime normal — parcelas completas, com amortização.',
           ] },
           { tipo: 'destaque', texto: 'O acompanhamento de todo esse processo — medições, repasses, situação do comprador — fica registrado no SICAQ, sistema interno da Caixa. Construtoras costumam informar o andamento, mas vale acompanhar.' },
+          { tipo: 'p', texto: 'A análise do SICAQ continua válida para a Caixa entre a aprovação e a assinatura do contrato de financiamento. Mas se passarem mais de 3 meses entre a aprovação e essa assinatura, a Caixa pode pedir documentos e comprovantes de renda atualizados antes de seguir — por isso não vale a pena demorar muito entre a aprovação do crédito e a formalização do financiamento.' },
         ],
       },
       {
@@ -413,6 +414,8 @@ export const ARTIGOS: Artigo[] = [
         resposta: 'Sim, mas a incorporadora pode reter entre 25% e 50% dos valores pagos, conforme a Lei do Distrato, devolvendo o restante em até 180 dias.' },
       { pergunta: 'Quando começo a pagar a parcela completa, com amortização?',
         resposta: 'Só depois do habite-se, quando a obra é formalmente concluída e o financiamento sai do regime de evolução para o regime normal de amortização.' },
+      { pergunta: 'A análise do SICAQ vence depois de algum tempo?',
+        resposta: 'A análise continua válida para a Caixa entre a aprovação e a assinatura do contrato de financiamento. Mas se passarem mais de 3 meses entre a aprovação e essa assinatura, a Caixa pode pedir documentos e comprovantes de renda atualizados antes de seguir.' },
     ],
     fatosChaveParaJoao: [
       'Crédito associativo = contrato de financiamento assinado ANTES do início da obra (padrão MCMV, também existe no SBPE). Cerca de 30 dias após a assinatura, chega a primeira fatura de juros de evolução. Banco libera recursos à construtora por medição de avanço, não de uma vez.',
@@ -420,6 +423,7 @@ export const ARTIGOS: Artigo[] = [
       'Durante a obra, dois fluxos de pagamento distintos: à CONSTRUTORA (ato, mensais, reforços, anuais, chaves) e ao BANCO (juros de evolução de obra, sobre saldo já liberado).',
       'Cronograma físico-financeiro = documento que define avanço de obra x repasse mês a mês. Atraso na obra trava o repasse da Caixa.',
       'Lei do Distrato (13.786/2018): se o comprador desistir, incorporadora retém 25-50% do pago, devolve o resto em até 180 dias. Se for a construtora que atrasar a entrega, o comprador pode pedir distrato com devolução integral corrigida.',
+      'Análise do SICAQ continua válida entre aprovação e assinatura do contrato de financiamento, MAS se passarem mais de 3 meses até a assinatura, a Caixa pode pedir documentos e comprovantes de renda atualizados.',
       'Ver também: artigo "Juros de Evolução de Obra" para o cálculo detalhado mês a mês da parcela durante a construção.',
     ],
     ctaSimulador: { texto: 'Simular meu imóvel na planta', href: '/simulador/na-planta' },
