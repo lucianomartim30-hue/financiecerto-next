@@ -117,8 +117,8 @@ export const ARTIGOS: Artigo[] = [
       {
         titulo: 'O que muda quando você recebe as chaves',
         blocos: [
-          { tipo: 'p', texto: 'Quando a obra termina e sai o **habite-se**, o financiamento entra na fase definitiva. A Prestação 0 acaba e começam as **prestações reais** (1, 2, 3...). A partir daí você passa a **abater a dívida de verdade** — mas a parcela dá um salto, porque agora inclui a amortização do valor total financiado.' },
-          { tipo: 'destaque', texto: 'Prepare-se para o salto: no exemplo real, a parcela durante a obra estava em ~R$ 657/mês e, após as chaves, foi para cerca de **R$ 1.966/mês**. Esse é o momento mais importante de planejar com antecedência.' },
+          { tipo: 'p', texto: 'Quando a obra termina e sai o **habite-se**, a Prestação 0 (juros de evolução) **termina completamente**. Em seguida, começa algo diferente: a **parcela real do financiamento** (1, 2, 3...), calculada sobre o valor total financiado, com amortização + juros + seguros. Não é a mesma cobrança crescendo — são duas coisas distintas, uma depois da outra.' },
+          { tipo: 'destaque', texto: 'No exemplo real, a Prestação 0 estava em ~R$ 657/mês no fim da obra. A parcela real do financiamento, que começa em seguida, foi para cerca de **R$ 1.966/mês**. São duas cobranças diferentes — vale planejar com antecedência para essa nova parcela, bem maior que a Prestação 0.' },
         ],
       },
       {
@@ -136,7 +136,7 @@ export const ARTIGOS: Artigo[] = [
       { pergunta: 'Por quanto tempo pago os juros de obra?',
         resposta: 'Desde cerca de 30 dias após a assinatura do contrato de financiamento (que ocorre antes do início da obra) até a entrega das chaves (habite-se). O prazo total de obra varia de 1 a 3 anos, dependendo do empreendimento.' },
       { pergunta: 'A parcela vai aumentar quando eu pegar as chaves?',
-        resposta: 'Sim, geralmente dá um salto. Durante a obra você paga só juros + seguros; após as chaves a parcela passa a incluir também a amortização (o abatimento da dívida), o que aumenta bastante o valor mensal.' },
+        resposta: 'Não é a mesma parcela aumentando — são duas cobranças diferentes. Os juros de evolução de obra (Prestação 0) terminam completamente na entrega das chaves. Em seguida, começa a parcela real do financiamento, calculada sobre o valor total financiado (amortização + juros + seguros) — geralmente bem mais alta que a Prestação 0 que você pagava durante a obra.' },
       { pergunta: 'Como a Caixa calcula o juros mensal?',
         resposta: 'Ela transforma a taxa anual em mensal dividindo por 12 (não usa juros compostos) e multiplica pelo valor já liberado. Exemplo: 7,66% ao ano ÷ 12 = 0,6383% ao mês; sobre um saldo liberado de R$ 60.000, o juros do mês fica em torno de R$ 383.' },
     ],
@@ -146,7 +146,7 @@ export const ARTIGOS: Artigo[] = [
       'Parcela durante a obra = Juros (saldo liberado × taxa mensal) + Amortização (TR do mês, variável) + Seguros (MIP+DFI, ~R$ 51) + Taxa adm (~R$ 25).',
       'A parcela CRESCE mês a mês porque a Caixa libera mais verba conforme a obra avança, aumentando o saldo sobre o qual incide o juros.',
       'Exemplo real (MCMV F3, R$ 267.000 a 7,66%): parcela foi de ~R$ 303 (jan, obra ~0%) a ~R$ 657 (jun, obra 7,8%). Teto do juros na obra ≈ R$ 1.704/mês.',
-      'Após as chaves (habite-se), começam as prestações reais com amortização — a parcela dá um salto (no exemplo, de ~R$ 657 para ~R$ 1.966/mês).',
+      'Após as chaves (habite-se), a Prestação 0 (juros de evolução) TERMINA completamente. Em seu lugar começa uma cobrança diferente: a parcela real do financiamento, com amortização (no exemplo, Prestação 0 de ~R$657 termina, parcela real de ~R$1.966/mês começa). NÃO é a mesma parcela aumentando — são duas coisas distintas.',
       'A linha "Amortização" durante a obra é a TR do mês (correção monetária) — varia todo mês, não reduz a dívida.',
     ],
     ctaSimulador: { texto: 'Simular meu imóvel na planta', href: '/simulador/na-planta' },
