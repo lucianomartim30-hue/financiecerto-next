@@ -367,8 +367,8 @@ export const ARTIGOS: Artigo[] = [
         titulo: 'O fluxo completo: da assinatura ao habite-se',
         blocos: [
           { tipo: 'lista', itens: [
-            '**1. Contrato de Compra e Venda:** assinado entre comprador e construtora, define imóvel, valor e condições de pagamento.',
-            '**2. SICAQ (análise de crédito):** a construtora envia os dados do comprador à Caixa, que analisa e aprova a capacidade de financiamento — antes mesmo da obra avançar.',
+            '**1. SICAQ (análise de crédito):** a construtora envia os dados do comprador à Caixa, que analisa e aprova a capacidade de financiamento — antes de qualquer contrato ser assinado ou sinal cobrado.',
+            '**2. Contrato de Compra e Venda:** só depois do crédito aprovado, assinado entre comprador e construtora, definindo imóvel, valor e condições de pagamento (é nesse momento que o Ato/sinal é pago).',
             '**3. Contrato de Financiamento:** assinado entre comprador e Caixa. A partir daqui, o financiamento está formalizado.',
             '**4. Obra em andamento:** a Caixa libera recursos à construtora por medição de avanço físico. Cerca de 30 dias após a assinatura do contrato de financiamento, chega a primeira fatura de juros de evolução, e o comprador continua pagando mensalmente sobre o saldo já liberado.',
             '**5. Habite-se:** a prefeitura atesta que a construção terminou. O financiamento sai do regime de evolução e entra no regime normal — parcelas completas, com amortização.',
@@ -416,7 +416,7 @@ export const ARTIGOS: Artigo[] = [
     ],
     fatosChaveParaJoao: [
       'Crédito associativo = contrato de financiamento assinado ANTES do início da obra (padrão MCMV, também existe no SBPE). Cerca de 30 dias após a assinatura, chega a primeira fatura de juros de evolução. Banco libera recursos à construtora por medição de avanço, não de uma vez.',
-      'Fluxo: 1) Contrato com construtora → 2) SICAQ (análise de crédito) → 3) Contrato de financiamento com a Caixa → 4) Obra com juros de evolução → 5) Habite-se → financiamento normal com amortização.',
+      'Fluxo: 1) SICAQ (análise de crédito, ANTES de qualquer contrato/sinal) → 2) Contrato de Compra e Venda com a construtora (Ato/sinal pago aqui) → 3) Contrato de financiamento com a Caixa → 4) Obra com juros de evolução → 5) Habite-se → financiamento normal com amortização. Análise de crédito SEMPRE antes do sinal — pedir sinal antes da análise é sinal de golpe.',
       'Durante a obra, dois fluxos de pagamento distintos: à CONSTRUTORA (ato, mensais, reforços, anuais, chaves) e ao BANCO (juros de evolução de obra, sobre saldo já liberado).',
       'Cronograma físico-financeiro = documento que define avanço de obra x repasse mês a mês. Atraso na obra trava o repasse da Caixa.',
       'Lei do Distrato (13.786/2018): se o comprador desistir, incorporadora retém 25-50% do pago, devolve o resto em até 180 dias. Se for a construtora que atrasar a entrega, o comprador pode pedir distrato com devolução integral corrigida.',
@@ -483,7 +483,7 @@ export const ARTIGOS: Artigo[] = [
         titulo: 'Análise de crédito: imóvel pronto x na planta',
         blocos: [
           { tipo: 'p', texto: 'No MCMV com crédito associativo (compra na planta), a análise de crédito é feita antes mesmo da assinatura do contrato com a construtora, via SICAQ — você já sabe se está aprovado antes de se comprometer. Veja o [fluxo completo do crédito associativo](/aprenda/credito-associativo-como-funciona-comprar-na-planta).' },
-          { tipo: 'p', texto: 'Em um imóvel **pronto** (lançamento já entregue ou imóvel usado/revenda), a análise ocorre quando você apresenta a proposta ao banco — geralmente depois de já ter negociado o preço com o vendedor. É preciso ter os documentos em ordem (renda comprovada, certidões negativas, CPF sem restrição) antes de assinar qualquer proposta de compra, para não correr o risco de o crédito ser reprovado depois de já ter pago sinal.' },
+          { tipo: 'p', texto: 'Em um imóvel **pronto** (lançamento já entregue ou imóvel usado/revenda), a análise ocorre depois que você já negociou o preço com o vendedor — mas, numa venda séria, sempre **antes** da assinatura do contrato e do pagamento do sinal. Quem pede sinal antes de fazer a análise de crédito está fora do processo normal — é sinal de alerta. Ter os documentos em ordem (renda comprovada, certidões negativas, CPF sem restrição) acelera essa análise e evita atrasos.' },
         ],
       },
       {
@@ -534,7 +534,7 @@ export const ARTIGOS: Artigo[] = [
     metaDescription:
       'Checklist completo de documentos para financiar imóvel pela Caixa: pessoais, de renda (CLT, autônomo, MEI) e do imóvel. Inclui como compor renda com outra pessoa.',
     resumo:
-      'Antes de assinar qualquer proposta de compra, vale separar a documentação — é o que evita perder tempo (e às vezes o sinal pago) com uma análise de crédito reprovada. Aqui está o checklist completo por tipo de renda: CLT, autônomo e MEI.',
+      'A análise de crédito acontece antes da assinatura do contrato e do pagamento do sinal — por isso, separar a documentação com antecedência evita atrasos e reprovações nessa etapa. Aqui está o checklist completo por tipo de renda: CLT, autônomo e MEI.',
     publicado: '2026-06-17',
     atualizado: '2026-06-17',
     leituraMin: 7,
@@ -591,7 +591,7 @@ export const ARTIGOS: Artigo[] = [
     ],
     faq: [
       { pergunta: 'Quanto tempo antes da compra devo separar os documentos?',
-        resposta: 'Idealmente, antes de assinar qualquer proposta ou pagar sinal — especialmente em imóvel pronto, onde a análise de crédito só ocorre depois que o preço já foi negociado com o vendedor.' },
+        resposta: 'Antes de apresentar a proposta ao banco ou à construtora — a análise de crédito acontece depois que o preço já foi negociado, mas sempre antes da assinatura do contrato e do pagamento do sinal. Ter os documentos prontos evita atrasos nessa etapa.' },
       { pergunta: 'O MEI precisa ter quanto tempo de CNPJ aberto para financiar?',
         resposta: 'Geralmente é exigido CNPJ ativo há pelo menos 2 anos, com Declaração Anual do MEI (DASN-SIMEI) regularizada.' },
       { pergunta: 'Posso somar minha renda com a de outra pessoa que não é meu cônjuge?',

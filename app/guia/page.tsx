@@ -29,7 +29,7 @@ const CAPITULOS = [
     etapa: 2,
     icon: '📁',
     titulo: 'Organize sua Documentação',
-    subtitulo: 'Separe antes de negociar — evita perder o sinal por reprovação',
+    subtitulo: 'Separe antes da análise de crédito, que vem antes do contrato e do sinal',
     cor: 'var(--warning)',
     corLight: 'var(--warning-light)',
     topicos: [
@@ -80,7 +80,7 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'Qual é o fluxo completo, da assinatura ao habite-se?',
-        resposta: `Contrato com a construtora (ou vendedor) → análise de crédito → contrato de financiamento com o banco → obra (se for na planta) → habite-se → financiamento no regime normal. No MCMV/planta, a análise é feita antes da assinatura, via SICAQ; em imóvel pronto ou revenda, ocorre quando a proposta chega ao banco, já com o preço negociado.\n\nVeja o [fluxo completo, com prazos e o que pode travar](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
+        resposta: `Análise de crédito → contrato com a construtora (ou vendedor), com pagamento do sinal → contrato de financiamento com o banco → obra (se for na planta) → habite-se → financiamento no regime normal. A análise sempre vem antes da assinatura e do sinal — em venda séria, ninguém cobra sinal antes de analisar o crédito.\n\nVeja o [fluxo completo, com prazos e o que pode travar](/aprenda/credito-associativo-como-funciona-comprar-na-planta).`,
       },
       {
         pergunta: 'Quem recebe o quê: construtora x banco?',
