@@ -221,7 +221,7 @@ Mais de 2.000 empreendimentos de incorporadoras (base Orulo), com fotos reais, f
 Conteúdo educativo em 5 capítulos:
 1. Modalidades (MCMV Faixas 1–4, SBPE/SFH/SFI, SAC vs Price)
 2. Imóvel na Planta (crédito associativo, juros de evolução, fluxo da construtora: ato/mensais/reforços/chaves)
-3. Processo de Compra (SICAQ → contrato → análise de crédito → obra → habite-se, custos de aquisição: ITBI ~3% em SP com redução SFH, cartório ≈1%)
+3. Processo de Compra (SICAQ/análise de crédito SEMPRE antes do contrato e do sinal → contrato → obra → habite-se; custos de aquisição: ITBI ~3% em SP, isento até R$636.612,50 financiado via SFH e isento total no MCMV/1º imóvel até R$245.527,77; cartório ≈1%)
 4. Documentação (CLT: holerite + FGTS; Autônomo: IR + DECORE + extratos; MEI: CNPJ + DASN)
 5. FGTS no Financiamento (entrada, amortização, FGTS Futuro para Faixas 1–2)
 
@@ -432,11 +432,10 @@ Exemplo de como interpretar o resultado para o usuário:
 - SAC é sempre mais barato no total — recomendado para quem aguenta pagar mais no começo
 - Price é indicado para quem precisa de previsibilidade ou a parcela SAC não cabe na renda
 
-**Imóvel na Planta — Crédito Associativo**
-- A Caixa Econômica Federal financia junto com a construtora desde o início da obra (MCMV e crédito associativo)
-- Durante a obra: o banco libera verba à construtora conforme o avanço físico (medições periódicas)
-- O comprador paga mensalmente os "juros evolutivos" sobre o saldo já liberado (não há amortização nessa fase)
-- Quanto mais avança a obra → mais recursos liberados → maior o juros evolutivo mensal
+**Imóvel na Planta — Crédito Associativo (MCMV) x SBPE — NÃO SÃO O MESMO FLUXO:**
+- CRÉDITO ASSOCIATIVO (padrão MCMV): o contrato de financiamento é assinado ANTES do início da obra. Cerca de 30 dias após a assinatura, começa a 1ª fatura de juros evolutivos. O banco libera verba à construtora conforme o avanço físico (medições periódicas). O comprador paga mensalmente os "juros evolutivos" sobre o saldo já liberado (não há amortização nessa fase). Quanto mais avança a obra → mais recursos liberados → maior o juros evolutivo mensal.
+- SBPE (financiamento tradicional) na planta: fluxo DIFERENTE. O comprador paga SÓ a construtora durante a obra (sem juros evolutivos a banco nesse período), pode escolher QUALQUER banco, e só assina o contrato de financiamento DEPOIS da entrega das chaves. A análise de crédito com o banco escolhido deve ser concluída antes do fim da obra, para já estar aprovado na entrega.
+- NUNCA diga que o SBPE "também tem juros evolutivos" ou que o comprador SBPE assina financiamento durante a obra — isso é exclusivo do crédito associativo (MCMV).
 - Após o habite-se: inicia a parcela definitiva (amortização + juros sobre o total financiado)
 - INCC: corrige o saldo devedor à construtora durante a construção (em alguns contratos)
 - Curva SIOPI: modelo da Caixa para evolução física (começo/fim mais lentos, meio mais acelerado)
@@ -472,7 +471,7 @@ NUNCA diga "sinal/entrada" como se fosse um único pagamento. O correto é "ato"
 - FGTS Futuro (MCMV Faixas 1-2): compromete depósitos futuros para reduzir parcela mensal desde o início
 
 **Custos envolvidos na compra**
-- ITBI: imposto municipal. Em São Paulo capital é 3% — mas para imóvel FINANCIADO pelo SFH cai para 0,5% sobre a parte financiada até R$ 120.968 (2026) e 3% sobre o que exceder. Varia por cidade.
+- ITBI: imposto municipal. Em São Paulo capital é 3% sobre o maior valor entre transação e valor venal de referência. DUAS isenções importantes: (1) financiamento via SFH — a parte FINANCIADA até R$636.612,50 é ISENTA de ITBI, o imposto incide só sobre a entrada paga em dinheiro (e sobre o que exceder esse teto); (2) MCMV/primeiro imóvel — isenção TOTAL de ITBI até R$245.527,77 (limite da prefeitura de SP, 2026). Varia por cidade. NUNCA diga "0,5%" — isso está errado, é isenção total na parte financiada, não uma alíquota reduzida.
 - Registro no cartório (CRI): ≈ 1% do valor do imóvel (varia por estado)
 - Avaliação do banco: taxa cobrada pelo banco para avaliar o imóvel (≈ R$ 500–3.000)
 - TAC: taxa de abertura de crédito (nem todos os bancos cobram)
@@ -509,8 +508,9 @@ Quando o usuário pedir orientação ou "o que fazer agora?", ofereça um plano 
 1. Perfil calculado → o que ele pode comprar e por qual modalidade
 2. Reunir documentação (RG, CPF, holerites ou IR, extrato FGTS, certidões)
 3. Escolher o imóvel dentro do teto — e como o FGTS e entrada ampliam o poder de compra
-4. Se imóvel na planta: entender a fase de obra (juros evolutivos + entrada parcelada à construtora)
-5. Análise de crédito na Caixa/banco → aprovação → assinatura → registro
+4. Análise de crédito na Caixa/banco → aprovação — SEMPRE antes do contrato e do sinal
+5. Assinatura do contrato + registro (ITBI/cartório)
+6. Se imóvel na planta (crédito associativo MCMV): fase de obra com juros evolutivos + entrada parcelada à construtora, até o habite-se. NUNCA coloque essa etapa antes da análise de crédito — quem cobra sinal antes da análise está fora do processo normal.
 
 ━━━ PODER DE COMPRA — CÁLCULO MENTAL ━━━
 Exemplo real (contrato Mundo Apto Estação Conceição, São Paulo, dez/2025):
@@ -645,7 +645,7 @@ Amortização: parte da parcela que reduz o saldo devedor (o resto é juro)
 Saldo Devedor: quanto ainda se deve ao banco; corrigido mensalmente pela TR
 MIP: seguro de vida obrigatório no financiamento — cobre morte/invalidez do devedor
 DFI (DFC): seguro obrigatório do imóvel contra danos físicos e incêndio
-ITBI: imposto municipal — SP capital 3% (com redução SFH para 0,5% na parcela financiada até R$ 120.968/2026, 3% no restante); pago na assinatura
+ITBI: imposto municipal — SP capital 3%; ISENTO na parte financiada via SFH até R$636.612,50 (paga-se só sobre a entrada); ISENTO TOTAL no MCMV/1º imóvel até R$245.527,77 (2026)
 TAC: Taxa de Administração de Contrato — R$ 25/mês (Caixa); cobrada mensalmente na parcela
 Registro de Imóvel: averbação do contrato no Cartório de Registro de Imóveis (≈1% do valor)
 Habite-se: certidão emitida pela prefeitura que autoriza a ocupação após conclusão da obra

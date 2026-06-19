@@ -128,7 +128,7 @@ const TERMS: Term[] = [
     term: 'ITBI',
     category: 'seguros',
     short: 'Imposto de Transmissão de Bens Imóveis — cobrado na compra do imóvel.',
-    full: 'Imposto municipal cobrado na transferência de propriedade do imóvel. A alíquota varia por município, geralmente entre 2% e 3% do valor venal ou de transação (o que for maior). Em compras com financiamento, o ITBI incide apenas sobre o valor não financiado (valor de entrada) em alguns municípios, mas a regra varia. O pagamento do ITBI é requisito para registrar a escritura em cartório.',
+    full: 'Imposto municipal cobrado na transferência de propriedade do imóvel. Em São Paulo capital, a alíquota é 3% sobre o maior valor entre o valor venal de referência e o valor da transação. Duas isenções importantes em SP: na parte financiada via SFH, até R$ 636.612,50, o ITBI não incide (paga-se só sobre a entrada); no MCMV/primeiro imóvel, há isenção total até R$ 245.527,77 (valor de 2026). A regra varia por município. O pagamento do ITBI é requisito para registrar o imóvel em cartório.',
   },
   {
     term: 'TAC',
