@@ -816,21 +816,21 @@ function SimuladorInner() {
               titulo: 'Escolher o imóvel',
               desc: `Seu poder de compra é ${formatBRL(dados.valorMaxImovel)}${parseMoeda(e.fgts) > 0 ? ` (FGTS de ${formatBRL(parseMoeda(e.fgts))} já incluído)` : ''}. Busque imóveis dentro desse valor.`,
             },
-            ...(painelAtivo === 'mcmv' ? [{
-              num: '4', done: false,
-              titulo: 'Fase de obra (se na planta)',
-              desc: 'Parcelas de entrada à construtora + juros evolutivos ao banco. As duas correm em paralelo durante a obra',
-            }] : []),
             {
-              num: painelAtivo === 'mcmv' ? '5' : '4', done: false,
+              num: '4', done: false,
               titulo: 'Análise de crédito',
-              desc: 'Caixa Econômica Federal analisa renda, crédito e avalia o imóvel. Prazo médio: 30–60 dias',
+              desc: 'Análise de renda, crédito e avaliação do imóvel — sempre antes da assinatura do contrato e do pagamento do sinal. Prazo médio: 30–60 dias',
             },
             {
-              num: painelAtivo === 'mcmv' ? '6' : '5', done: false,
+              num: '5', done: false,
               titulo: 'Contrato e registro',
               desc: 'Assinatura do contrato + ITBI (~3% em SP, com possível isenção no MCMV) e registro em cartório (~1%). Algumas construtoras isentam o comprador desses custos como promoção de vendas — mais comum em lançamentos na planta. Consulte a construtora onde você vai comprar.',
             },
+            ...(painelAtivo === 'mcmv' ? [{
+              num: '6', done: false,
+              titulo: 'Fase de obra (se na planta)',
+              desc: 'Após o contrato de financiamento assinado: parcelas de entrada à construtora + juros evolutivos ao banco, em paralelo, até o habite-se.',
+            }] : []),
           ].map(({ num, done, titulo, desc }) => (
             <div key={titulo} style={{ display: 'flex', gap: 12, marginBottom: 12, alignItems: 'flex-start' }}>
               <div style={{
