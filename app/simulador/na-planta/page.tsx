@@ -481,7 +481,7 @@ function NaPlantaContent() {
                 • ITBI: ~3% do valor em São Paulo = <strong>{formatBRL(Math.round(valor * 0.03))}</strong><br />
                 • Registro em cartório: ~1% do valor = <strong>{formatBRL(Math.round(valor * 0.01))}</strong><br />
                 • Total estimado: <strong>{formatBRL(Math.round(valor * 0.04))}</strong><br /><br />
-                <strong>No MCMV, há isenção de ITBI para o primeiro imóvel dentro do limite da prefeitura (R$ 245.527,77 em SP/2026) e isenção parcial pela parte financiada via SFH.</strong> Consulte a construtora/cartório para confirmar o valor exato no seu caso.
+                <strong>No MCMV, há isenção de ITBI para o primeiro imóvel dentro do limite da prefeitura (R$ 245.527,77 em SP/2026) e isenção parcial pela parte financiada via SFH.</strong> Além disso, algumas construtoras isentam o comprador de ITBI e/ou registro como promoção de vendas — mais comum em lançamentos na planta. Consulte a construtora onde você vai comprar para saber se essa condição está disponível.
               </div>
             )}
 

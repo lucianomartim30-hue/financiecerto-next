@@ -497,6 +497,7 @@ export const ARTIGOS: Artigo[] = [
         blocos: [
           { tipo: 'p', texto: 'O **Registro de Imóveis** é obrigatório em qualquer compra — é o que de fato transfere a propriedade para o seu nome. Os emolumentos seguem tabela do estado, normalmente entre 0,5% e 1% do valor do imóvel.' },
           { tipo: 'p', texto: 'Já a **escritura pública** (Cartório de Notas) só é necessária quando a compra é **à vista**. Em compras financiadas, o próprio contrato de financiamento — com a alienação fiduciária do banco — já tem força de escritura pública. Ou seja: quem financia, normalmente, não paga separadamente pela escritura.' },
+          { tipo: 'destaque', texto: 'Algumas construtoras isentam o comprador de ITBI e/ou registro como promoção de vendas em determinados empreendimentos — é mais comum em lançamentos na planta. Vale sempre perguntar à construtora onde você vai comprar se essa condição está disponível.' },
         ],
       },
       {
