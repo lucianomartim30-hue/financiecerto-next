@@ -143,7 +143,7 @@ export default function SobrePage() {
               {
                 n: '03',
                 titulo: 'Custos invisíveis',
-                texto: 'ITBI (2%) e cartório (≈1%) não entram no financiamento. Somam entre 3% e 5% do valor do imóvel — e aparecem apenas no final do processo.',
+                texto: 'ITBI (3% em São Paulo, com possível isenção no MCMV) e cartório (≈1%) não entram no financiamento. Somam até 4% do valor do imóvel — e aparecem apenas no final do processo.',
               },
               {
                 n: '04',
