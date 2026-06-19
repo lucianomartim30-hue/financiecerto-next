@@ -459,8 +459,8 @@ function NaPlantaContent() {
             </p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.6 }}>
               {precisaPagarConstrutora
-                ? `Entrada mínima estimada: ${formatBRL(entradaMinima)}${recursosExternos > 0 ? ` · FGTS${temSubsidio ? ' + subsídio' : ''}: ${formatBRL(recursosExternos)}` : ''} · falta cobrir via construtora: ${formatBRL(faltaParaConstrutora)}`
-                : `✅ FGTS${temSubsidio ? ' + subsídio MCMV' : ''} (${formatBRL(recursosExternos)}) cobrem a entrada mínima estimada (${formatBRL(entradaMinima)}).`}
+                ? `Entrada mínima estimada: ${formatBRL(entradaMinima)}${recursosExternos > 0 ? ` · FGTS${temSubsidio ? ` (${formatBRL(fgts)}) + subsídio (${formatBRL(subsidioEstimado)})` : ''}: ${formatBRL(recursosExternos)}` : ''} · falta cobrir via construtora: ${formatBRL(faltaParaConstrutora)}`
+                : `✅ FGTS${temSubsidio ? ` (${formatBRL(fgts)}) + subsídio MCMV (${formatBRL(subsidioEstimado)})` : ''}, total ${formatBRL(recursosExternos)}, cobrem a entrada mínima estimada (${formatBRL(entradaMinima)}).`}
             </p>
 
             {/* Nota sobre avaliação Caixa no MCMV */}
@@ -469,8 +469,8 @@ function NaPlantaContent() {
                 <strong>💡 Como funciona na prática no MCMV:</strong><br />
                 A Caixa avalia o imóvel pela tabela interna — geralmente <strong>acima do preço da construtora</strong>. O financiamento (80% da avaliação) pode cobrir mais de 80% do valor que você paga. Com FGTS, banco + FGTS juntos costumam cobrir <strong>90% a 100% do preço da construtora</strong>.<br /><br />
                 {faixaEfetiva && (faixaEfetiva.subsidioMax > 0)
-                  ? `Na ${faixaEfetiva.label}, o subsídio de até ${formatBRL(faixaEfetiva.subsidioMax)} + FGTS pode zerar sua entrada. A saída de caixa real costuma ser apenas ITBI (~2%) + cartório (~1%) + ato à construtora.`
-                  : `Na ${faixaEfetiva?.label ?? 'sua faixa'}, sem subsídio, o FGTS cobre a maior parte. A saída de caixa real costuma ser ITBI (~2%) + cartório (~1%) + ato à construtora (geralmente R$ 1.000 a R$ 5.000).`}
+                  ? `Na ${faixaEfetiva.label}, o subsídio de até ${formatBRL(faixaEfetiva.subsidioMax)} + FGTS pode zerar sua entrada. A saída de caixa real costuma ser apenas ITBI (~3% em São Paulo, com possível isenção no MCMV) + cartório (~1%) + ato à construtora.`
+                  : `Na ${faixaEfetiva?.label ?? 'sua faixa'}, sem subsídio, o FGTS cobre a maior parte. A saída de caixa real costuma ser ITBI (~3% em São Paulo, com possível isenção no MCMV) + cartório (~1%) + ato à construtora (geralmente R$ 1.000 a R$ 5.000).`}
               </div>
             )}
 
@@ -478,10 +478,10 @@ function NaPlantaContent() {
             {isMCMV && valor > 0 && (
               <div style={{ marginBottom: '20px', padding: '10px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', fontSize: '12px', color: '#92400e', lineHeight: 1.7 }}>
                 <strong>⚠️ Custos adicionais (fora do financiamento):</strong><br />
-                • ITBI: ~2% do valor = <strong>{formatBRL(Math.round(valor * 0.02))}</strong><br />
+                • ITBI: ~3% do valor em São Paulo = <strong>{formatBRL(Math.round(valor * 0.03))}</strong><br />
                 • Registro em cartório: ~1% do valor = <strong>{formatBRL(Math.round(valor * 0.01))}</strong><br />
-                • Total estimado: <strong>{formatBRL(Math.round(valor * 0.03))}</strong><br /><br />
-                <strong>Algumas construtoras isentam o comprador de ITBI e registro.</strong> Consulte a construtora.
+                • Total estimado: <strong>{formatBRL(Math.round(valor * 0.04))}</strong><br /><br />
+                <strong>No MCMV, há isenção de ITBI para o primeiro imóvel dentro do limite da prefeitura (R$ 245.527,77 em SP/2026) e isenção parcial pela parte financiada via SFH.</strong> Consulte a construtora/cartório para confirmar o valor exato no seu caso.
               </div>
             )}
 
