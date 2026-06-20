@@ -206,6 +206,11 @@ function ImoveisContent() {
   const [loading, setLoading] = useState(true);
   const [displayCount, setDisplayCount] = useState(12);
 
+  // Título próprio (analytics) — sem isso, herda o título da home e some nos relatórios do GA
+  useEffect(() => {
+    document.title = 'Imóveis Compatíveis | FinancieCerto';
+  }, []);
+
   // Responsive state
   const [isMobile, setIsMobile] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'map'>('list');

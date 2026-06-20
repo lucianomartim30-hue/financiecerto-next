@@ -151,6 +151,11 @@ function NaPlantaContent() {
   // Tipo de imóvel
   const [tipoImovel, setTipoImovel] = useState<'residencial' | 'comercial'>('residencial');
 
+  // Título próprio (analytics) — sem isso, herda o título da home e some nos relatórios do GA
+  useEffect(() => {
+    document.title = 'Simulador Imóvel na Planta | FinancieCerto';
+  }, []);
+
   // Estágio
   const [estagio, setEstagio] = useState<Estagio>('lancamento');
   const [siopiPctRaw, setSiopiPctRaw] = useState<string>('15');

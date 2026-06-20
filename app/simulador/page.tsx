@@ -308,6 +308,11 @@ function SimuladorInner() {
   const [painelAtivo, setPainelAtivo] = useState<'mcmv' | 'sbpe' | 'sfi'>('mcmv');
   const [tipoImovel,  setTipoImovel]  = useState<'residencial' | 'comercial'>('residencial');
 
+  // Título próprio (analytics) — sem isso, herda o título da home e some nos relatórios do GA
+  useEffect(() => {
+    document.title = 'Simulador de Financiamento | FinancieCerto';
+  }, []);
+
   // Lê URL params vindos da página do imóvel e vai direto ao resultado
   useEffect(() => {
     const valorImovelStr = searchParams.get('valorImovel');
