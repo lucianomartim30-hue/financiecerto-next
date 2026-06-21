@@ -304,6 +304,7 @@ export default function ChatFab() {
   async function sendMessage(text: string) {
     if (!text.trim() || loading) return;
     setInput('');
+    import('@/lib/gtag').then(m => m.trackChatMessage({ page: pathname, mensagem: text }));
 
     const userMsg: Msg = { role: 'user', content: text, id: Date.now().toString() };
     const newMsgs = [...msgs, userMsg];
@@ -609,7 +610,11 @@ export default function ChatFab() {
         )}
 
         <button
-          onClick={() => setOpen(o => !o)}
+          onClick={() => {
+            const next = !open;
+            setOpen(next);
+            if (next) { import('@/lib/gtag').then(m => m.trackChatOpen({ page: pathname })); }
+          }}
           style={{
             width: '56px', height: '56px', borderRadius: '50%',
             background: open ? 'var(--text)' : 'linear-gradient(135deg, #1e3a5f, #2563eb)',

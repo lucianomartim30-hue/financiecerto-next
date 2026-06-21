@@ -128,6 +128,7 @@ export default function BuscaImoveisInteligente({
 
   async function buscar() {
     if (!quartos) return;
+    import('@/lib/gtag').then(m => m.trackBuscaEmpreendimentos({ quartos: quartos ?? undefined, bairro: bairro || undefined }));
     setLoading(true);
     setBuscado(false);
     setResultados([]);

@@ -136,7 +136,9 @@ function fmtRange(min: number | null, max: number | null, unit: string) {
 function ImovelCard({ im }: { im: Imovel }) {
   const sc = getStatus(im.status_norm || im.status || '');
   return (
-    <Link href={`/imoveis/${im.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+    <Link href={`/imoveis/${im.id}`} style={{ textDecoration: 'none', display: 'block' }}
+      onClick={() => { import('@/lib/gtag').then(m => m.trackImovelView({ imovel: im.name, bairro: im.neighborhood, preco: im.min_price ?? undefined })); }}
+    >
       <div style={{
         background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px',
         overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column',

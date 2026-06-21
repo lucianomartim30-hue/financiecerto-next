@@ -76,3 +76,22 @@ export function trackBuscaEmpreendimentos(params?: { quartos?: number; bairro?: 
     quartos:  params?.quartos,
   });
 }
+
+/** Usuário abriu o chat do João */
+export function trackChatOpen(params?: { page?: string }) {
+  gtagEvent({
+    action:   'chat_open',
+    category: 'joao',
+    label:    params?.page,
+  });
+}
+
+/** Usuário enviou uma mensagem para o João */
+export function trackChatMessage(params?: { page?: string; mensagem?: string }) {
+  gtagEvent({
+    action:   'chat_message',
+    category: 'joao',
+    label:    params?.page,
+    mensagem: params?.mensagem?.slice(0, 100),
+  });
+}
