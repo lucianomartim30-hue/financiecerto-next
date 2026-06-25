@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FinancieCerto — Meu Painel</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #fafaf9; color: #1c1917; }
+
+  /* NAV */
+  nav { background: #fff; border-bottom: 1px solid #e7e5e4; padding: 0 24px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { font-size: 20px; font-weight: 800; color: #2563eb; letter-spacing: -0.5px; }
+  .logo span { color: #059669; }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #059669); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .nav-name { font-size: 14px; font-weight: 600; color: #1c1917; }
+  .badge-notif { background: #dc2626; color: #fff; border-radius: 99px; font-size: 11px; font-weight: 700; padding: 2px 7px; }
+
+  /* LAYOUT */
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+  .grid-main { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
+
+  /* GREETING */
+  .greeting { margin-bottom: 28px; }
+  .greeting h1 { font-size: 26px; font-weight: 800; color: #1c1917; letter-spacing: -0.5px; }
+  .greeting p { font-size: 15px; color: #78716c; margin-top: 4px; }
+
+  /* CARD BASE */
+  .card { background: #fff; border-radius: 16px; border: 1px solid #e7e5e4; padding: 24px; }
+  .card-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #78716c; margin-bottom: 16px; }
+
+  /* PERFIL HERO */
+  .perfil-hero { background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #059669 100%); border-radius: 20px; padding: 28px; color: #fff; margin-bottom: 24px; position: relative; overflow: hidden; }
+  .perfil-hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; border-radius: 50%; background: rgba(255,255,255,0.06); }
+  .perfil-hero::after { content: ''; position: absolute; bottom: -60px; left: 30%; width: 250px; height: 250px; border-radius: 50%; background: rgba(255,255,255,0.04); }
+  .perfil-hero-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .faixa-badge { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 99px; padding: 6px 14px; font-size: 13px; font-weight: 700; backdrop-filter: blur(10px); }
+  .perfil-hero h2 { font-size: 15px; font-weight: 500; opacity: 0.85; margin-bottom: 4px; }
+  .perfil-hero .valor-max { font-size: 38px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+  .perfil-hero .valor-sub { font-size: 14px; opacity: 0.75; margin-top: 4px; }
+  .perfil-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; position: relative; z-index: 1; }
+  .stat-item { background: rgba(255,255,255,0.12); border-radius: 12px; padding: 14px; border: 1px solid rgba(255,255,255,0.15); }
+  .stat-label { font-size: 11px; opacity: 0.7; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .stat-value { font-size: 18px; font-weight: 800; margin-top: 4px; }
+  .stat-sub { font-size: 11px; opacity: 0.65; margin-top: 2px; }
+
+  /* ALERTAS */
+  .alerta { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 12px; margin-bottom: 10px; }
+  .alerta-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .alerta-texto strong { font-size: 14px; font-weight: 700; display: block; margin-bottom: 2px; }
+  .alerta-texto span { font-size: 13px; color: #78716c; }
+  .alerta.verde { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .alerta.azul { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .alerta.amarelo { background: #fffbeb; border: 1px solid #fde68a; }
+
+  /* SIMULAÇÕES */
+  .sim-item { border: 1.5px solid #e7e5e4; border-radius: 14px; padding: 18px; margin-bottom: 12px; transition: border-color 0.2s; cursor: pointer; }
+  .sim-item:hover { border-color: #2563eb; }
+  .sim-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .sim-data { font-size: 12px; color: #78716c; }
+  .sim-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+  .sim-tag.f3 { background: #eff6ff; color: #1d4ed8; }
+  .sim-tag.f2 { background: #f0fdf4; color: #047857; }
+  .sim-tag.sbpe { background: #f5f3ff; color: #6d28d9; }
+  .sim-valores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .sim-val-item { background: #fafaf9; border-radius: 8px; padding: 10px; }
+  .sim-val-label { font-size: 11px; color: #78716c; font-weight: 600; }
+  .sim-val { font-size: 15px; font-weight: 800; color: #1c1917; margin-top: 2px; }
+  .sim-comparativo { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding: 10px 12px; background: #f0fdf4; border-radius: 8px; font-size: 12px; color: #047857; font-weight: 600; }
+
+  /* DOCUMENTOS */
+  .doc-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f5f5f4; }
+  .doc-item:last-child { border-bottom: none; }
+  .doc-check { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .doc-check.ok { background: #dcfce7; color: #16a34a; }
+  .doc-check.pend { background: #fef9c3; color: #ca8a04; }
+  .doc-check.no { background: #fee2e2; color: #dc2626; }
+  .doc-nome { font-size: 14px; font-weight: 600; flex: 1; }
+  .doc-status { font-size: 12px; color: #78716c; }
+
+  /* JOAO CARD */
+  .joao-card { background: linear-gradient(135deg, #1c1917, #292524); border-radius: 16px; padding: 24px; color: #fff; }
+  .joao-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #059669); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 16px; }
+  .joao-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
+  .joao-card p { font-size: 13px; opacity: 0.7; line-height: 1.5; margin-bottom: 18px; }
+  .joao-msgs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+  .msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.4; }
+  .msg-joao { background: rgba(255,255,255,0.1); border-radius: 12px 12px 12px 2px; }
+  .msg-user { background: #2563eb; border-radius: 12px 12px 2px 12px; align-self: flex-end; max-width: 85%; }
+  .btn-joao { width: 100%; padding: 13px; background: #2563eb; border: none; border-radius: 12px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+  .btn-joao:hover { background: #1d4ed8; }
+
+  /* IMOVEIS */
+  .imovel-item { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f5f5f4; align-items: center; }
+  .imovel-item:last-child { border-bottom: none; }
+  .imovel-img { width: 64px; height: 64px; border-radius: 10px; background: linear-gradient(135deg, #dbeafe, #bfdbfe); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .imovel-info { flex: 1; }
+  .imovel-nome { font-size: 14px; font-weight: 700; }
+  .imovel-sub { font-size: 12px; color: #78716c; margin-top: 2px; }
+  .imovel-preco { font-size: 15px; font-weight: 800; color: #2563eb; margin-top: 4px; }
+  .imovel-compat { font-size: 11px; font-weight: 700; color: #047857; background: #f0fdf4; padding: 2px 8px; border-radius: 99px; }
+
+  /* PROGRESS */
+  .progress-section { margin-bottom: 8px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .progress-bar { height: 8px; background: #e7e5e4; border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; }
+  .progress-fill.azul { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+  .progress-fill.verde { background: linear-gradient(90deg, #059669, #34d399); }
+  .progress-fill.amarelo { background: linear-gradient(90deg, #d97706, #fbbf24); }
+
+  /* BOTTOM NAV */
+  .bottom-nav { display: none; }
+
+  @media (max-width: 768px) {
+    .grid-main { grid-template-columns: 1fr; }
+    .perfil-stats { grid-template-columns: repeat(3, 1fr); }
+    .container { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Financie<span>Certo</span></div>
+  <div class="nav-right">
+    <span class="badge-notif">3</span>
+    <span class="nav-name">Maria S.</span>
+    <div class="avatar">MS</div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- GREETING -->
+  <div class="greeting">
+    <h1>Boa tarde, Maria 👋</h1>
+    <p>Você simulou pela última vez há 2 dias — seu perfil está atualizado.</p>
+  </div>
+
+  <div class="grid-main">
+    <!-- COLUNA PRINCIPAL -->
+    <div>
+
+      <!-- PERFIL HERO -->
+      <div class="perfil-hero">
+        <div class="perfil-hero-top">
+          <div>
+            <h2>Seu poder de compra</h2>
+            <div class="valor-max">R$ 320.000</div>
+            <div class="valor-sub">Imóvel máximo com seu perfil atual</div>
+          </div>
+          <div class="faixa-badge">MCMV Faixa 3</div>
+        </div>
+        <div class="perfil-stats">
+          <div class="stat-item">
+            <div class="stat-label">Taxa</div>
+            <div class="stat-value">7,66%</div>
+            <div class="stat-sub">a.a. + TR · cotista</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">1ª Parcela</div>
+            <div class="stat-value">R$ 2.180</div>
+            <div class="stat-sub">SAC · 35 anos</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Comprometimento</div>
+            <div class="stat-value">29,1%</div>
+            <div class="stat-sub">✅ dentro do limite</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTAS -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-title">Alertas do seu perfil</div>
+
+        <div class="alerta verde">
+          <div class="alerta-icon">🎉</div>
+          <div class="alerta-texto">
+            <strong>Taxa cotista reduz sua parcela em R$ 134/mês</strong>
+            <span>Você é cotista FGTS há 4 anos — isso garante 7,66% em vez de 8,16% na Faixa 3.</span>
+          </div>
+        </div>
+
+        <div class="alerta azul">
+          <div class="alerta-icon">📊</div>
+          <div class="alerta-texto">
+            <strong>Seu poder de compra subiu R$ 18.000 desde fevereiro</strong>
+            <span>Você simulou com renda maior — tente buscar imóveis até R$ 320k agora.</span>
+          </div>
+        </div>
+
+        <div class="alerta amarelo">
+          <div class="alerta-icon">⚡</div>
+          <div class="alerta-texto">
+            <strong>Com R$ 15k a mais de FGTS você economiza R$ 80/mês na parcela</strong>
+            <span>Seu saldo atual é R$ 22.000 — considere usar o valor máximo como entrada.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTÓRICO DE SIMULAÇÕES -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-title">Histórico de simulações</div>
+
+        <div class="sim-item">
+          <div class="sim-item-top">
+            <span class="sim-data">07 Jun 2026 · há 2 dias</span>
+            <span class="sim-tag f3">Faixa 3</span>
+          </div>
+          <div class="sim-valores">
+            <div class="sim-val-item">
+              <div class="sim-val-label">Renda</div>
+              <div class="sim-val">R$ 7.500</div>
+            </div>
+            <div class="sim-val-item">
+              <div class="sim-val-label">Poder de compra</div>
+              <div class="sim-val">R$ 320.000</div>
+            </div>
+            <div class="sim-val-item">
+              <div class="sim-val-label">1ª parcela</div>
+              <div class="sim-val">R$ 2.180</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sim-item">
+          <div class="sim-item-top">
+            <span class="sim-data">14 Fev 2026 · há 4 meses</span>
+            <span class="sim-tag f3">Faixa 3</span>
+          </div>
+          <div class="sim-valores">
+            <div class="sim-val-item">
+              <div class="sim-val-label">Renda</div>
+              <div class="sim-val">R$ 6.800</div>
+            </div>
+            <div class="sim-val-item">
+              <div class="sim-val-label">Poder de compra</div>
+              <div class="sim-val">R$ 302.000</div>
+            </div>
+            <div class="sim-val-item">
+              <div class="sim-val-label">1ª parcela</div>
+              <div class="sim-val">R$ 2.040</div>
+            </div>
+          </div>
+          <div class="sim-comparativo">
+            📈 Seu poder de compra cresceu R$ 18.000 em relação a essa simulação
+          </div>
+        </div>
+
+        <div class="sim-item">
+          <div class="sim-item-top">
+            <span class="sim-data">03 Nov 2025 · há 7 meses</span>
+            <span class="sim-tag f3">Faixa 3</span>
+          </div>
+          <div class="sim-valores">
+            <div class="sim-val-item">
+              <div class="sim-val-label">Renda</div>
+              <div class="sim-val">R$ 6.000</div>
+            </div>
+            <div class="sim-val-item">
+              <div class="sim-val-label">Poder de compra</div>
+              <div class="sim-val">R$ 278.000</div>
+            </div>
+            <div class="sim-val-item">
+              <div class="sim-val-label">1ª parcela</div>
+              <div class="sim-val">R$ 1.890</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMÓVEIS SALVOS -->
+      <div class="card">
+        <div class="card-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>Imóveis salvos</span>
+          <a href="#" style="font-size:13px; font-weight:600; color:#2563eb; text-transform:none; letter-spacing:0;">Ver todos →</a>
+        </div>
+
+        <div class="imovel-item">
+          <div class="imovel-img">🏢</div>
+          <div class="imovel-info">
+            <div class="imovel-nome">Viver Tatuapé — Cyrela</div>
+            <div class="imovel-sub">Tatuapé · 2 quartos · 58m²</div>
+            <div class="imovel-preco">R$ 298.000</div>
+          </div>
+          <div class="imovel-compat">✓ Compatível</div>
+        </div>
+
+        <div class="imovel-item">
+          <div class="imovel-img">🏗️</div>
+          <div class="imovel-info">
+            <div class="imovel-nome">Reserva Penha — MRV</div>
+            <div class="imovel-sub">Penha · 2 quartos · 52m² · Na planta</div>
+            <div class="imovel-preco">R$ 285.000</div>
+          </div>
+          <div class="imovel-compat">✓ Compatível</div>
+        </div>
+
+        <div class="imovel-item">
+          <div class="imovel-img">🏠</div>
+          <div class="imovel-info">
+            <div class="imovel-nome">Gran Vitta Belém — Tenda</div>
+            <div class="imovel-sub">Belém · 3 quartos · 64m²</div>
+            <div class="imovel-preco">R$ 318.000</div>
+          </div>
+          <div class="imovel-compat">✓ Compatível</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SIDEBAR -->
+    <div>
+
+      <!-- JOÃO -->
+      <div class="joao-card" style="margin-bottom: 24px;">
+        <div class="joao-avatar">🤖</div>
+        <h3>João lembra de você</h3>
+        <p>Continuamos de onde paramos na última conversa.</p>
+        <div class="joao-msgs">
+          <div class="msg-bubble msg-joao">
+            "Maria, da última vez você queria apartamento no Tatuapé com 2 quartos. Ainda é isso? 😊"
+          </div>
+          <div class="msg-bubble msg-user">
+            "Sim! Mas estou olhando a Penha também agora"
+          </div>
+          <div class="msg-bubble msg-joao">
+            "Ótimo — achei 2 imóveis novos na Penha dentro do seu perfil de R$ 320k 👇"
+          </div>
+        </div>
+        <button class="btn-joao">Continuar conversa com João →</button>
+      </div>
+
+      <!-- CHECKLIST -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-title">Documentação necessária</div>
+        <div style="margin-bottom: 16px;">
+          <div class="progress-section">
+            <div class="progress-label">
+              <span style="font-size:13px; font-weight:600;">Progresso</span>
+              <span style="font-size:13px; font-weight:700; color:#059669;">4 de 7 itens ✓</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill verde" style="width: 57%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="doc-item">
+          <div class="doc-check ok">✓</div>
+          <div class="doc-nome">RG / CNH</div>
+          <div class="doc-status">Ok</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-check ok">✓</div>
+          <div class="doc-nome">CPF</div>
+          <div class="doc-status">Ok</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-check ok">✓</div>
+          <div class="doc-nome">Holerites (3 últimos)</div>
+          <div class="doc-status">Ok</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-check ok">✓</div>
+          <div class="doc-nome">Extrato FGTS</div>
+          <div class="doc-status">Ok</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-check pend">!</div>
+          <div class="doc-nome">Imposto de Renda 2025</div>
+          <div class="doc-status" style="color:#d97706;">Pendente</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-check no">✗</div>
+          <div class="doc-nome">Certidão de nascimento/casamento</div>
+          <div class="doc-status" style="color:#dc2626;">Falta</div>
+        </div>
+        <div class="doc-item">
+          <div class="doc-check no">✗</div>
+          <div class="doc-nome">Comprovante de residência</div>
+          <div class="doc-status" style="color:#dc2626;">Falta</div>
+        </div>
+      </div>
+
+      <!-- JORNADA -->
+      <div class="card">
+        <div class="card-title">Sua jornada de compra</div>
+
+        <div style="display: flex; flex-direction: column; gap: 0;">
+          <!-- Step 1 -->
+          <div style="display: flex; gap: 14px; padding-bottom: 18px; position: relative;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: #059669; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 800; flex-shrink: 0;">✓</div>
+              <div style="width: 2px; flex: 1; background: #e7e5e4; margin-top: 6px;"></div>
+            </div>
+            <div style="padding-top: 6px;">
+              <div style="font-size: 14px; font-weight: 700;">Conheceu o FinancieCerto</div>
+              <div style="font-size: 12px; color: #78716c; margin-top: 2px;">Nov 2025</div>
+            </div>
+          </div>
+          <!-- Step 2 -->
+          <div style="display: flex; gap: 14px; padding-bottom: 18px; position: relative;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: #059669; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 800; flex-shrink: 0;">✓</div>
+              <div style="width: 2px; flex: 1; background: #e7e5e4; margin-top: 6px;"></div>
+            </div>
+            <div style="padding-top: 6px;">
+              <div style="font-size: 14px; font-weight: 700;">Entendeu seu perfil MCMV</div>
+              <div style="font-size: 12px; color: #78716c; margin-top: 2px;">3 simulações feitas</div>
+            </div>
+          </div>
+          <!-- Step 3 -->
+          <div style="display: flex; gap: 14px; padding-bottom: 18px;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: #2563eb; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 800; flex-shrink: 0;">→</div>
+              <div style="width: 2px; flex: 1; background: #e7e5e4; margin-top: 6px;"></div>
+            </div>
+            <div style="padding-top: 6px;">
+              <div style="font-size: 14px; font-weight: 700; color: #2563eb;">Escolher o imóvel</div>
+              <div style="font-size: 12px; color: #78716c; margin-top: 2px;">3 imóveis salvos · você está aqui</div>
+            </div>
+          </div>
+          <!-- Step 4 -->
+          <div style="display: flex; gap: 14px; padding-bottom: 18px;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: #e7e5e4; display: flex; align-items: center; justify-content: center; color: #a8a29e; font-size: 14px; font-weight: 800; flex-shrink: 0;">4</div>
+              <div style="width: 2px; flex: 1; background: #e7e5e4; margin-top: 6px;"></div>
+            </div>
+            <div style="padding-top: 6px;">
+              <div style="font-size: 14px; font-weight: 600; color: #a8a29e;">Análise de crédito (Caixa)</div>
+              <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">SICAQ + documentação</div>
+            </div>
+          </div>
+          <!-- Step 5 -->
+          <div style="display: flex; gap: 14px;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: #e7e5e4; display: flex; align-items: center; justify-content: center; color: #a8a29e; font-size: 14px; font-weight: 800; flex-shrink: 0;">5</div>
+            </div>
+            <div style="padding-top: 6px;">
+              <div style="font-size: 14px; font-weight: 600; color: #a8a29e;">Assinatura do contrato</div>
+              <div style="font-size: 12px; color: #a8a29e; margin-top: 2px;">Chaves na mão 🏠</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

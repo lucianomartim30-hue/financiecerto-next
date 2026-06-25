@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import SchemaMarkup from '@/components/SchemaMarkup';
+import { website, organization, breadcrumb, SITE_CONFIG } from '@/lib/schema';
 
 const STATS = [
   { value: '2.000+', label: 'Empreendimentos', href: '/imoveis' },
@@ -80,8 +82,17 @@ const FEATURES = [
 ];
 
 export default function Home() {
+  const schemas = [
+    website,
+    organization,
+    breadcrumb([
+      { name: 'Início', url: SITE_CONFIG.domain },
+    ]),
+  ];
+
   return (
     <div style={{ background: 'var(--bg)' }}>
+      <SchemaMarkup schemas={schemas} />
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section style={{

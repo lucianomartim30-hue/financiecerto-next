@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getArtigo, getArtigos, ARTIGOS, type BlocoArtigo } from '@/lib/artigos';
+import SchemaMarkup from '@/components/SchemaMarkup';
+import { article as articleSchema, faqPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -33,6 +35,14 @@ export async function generateMetadata(
       type: 'article',
       publishedTime: artigo.publicado,
       modifiedTime: artigo.atualizado,
+      images: [
+        {
+          url: `${BASE}/og-artigo.png`,
+          width: 1200,
+          height: 630,
+          alt: artigo.titulo,
+        },
+      ],
     },
   };
 }
@@ -103,42 +113,33 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
     .filter(Boolean) as ReturnType<typeof getArtigos>;
 
   // ── Dados estruturados (Article + FAQ + Breadcrumb) ──────────────────────────
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@graph': [
-      {
-        '@type': 'Article',
-        headline: artigo.titulo,
-        description: artigo.metaDescription,
-        datePublished: artigo.publicado,
-        dateModified: artigo.atualizado,
-        author: { '@type': 'Organization', name: 'FinancieCerto' },
-        publisher: { '@type': 'Organization', name: 'FinancieCerto', url: BASE },
-        mainEntityOfPage: url,
-        inLanguage: 'pt-BR',
-      },
-      {
-        '@type': 'FAQPage',
-        mainEntity: artigo.faq.map(f => ({
-          '@type': 'Question',
-          name: f.pergunta,
-          acceptedAnswer: { '@type': 'Answer', text: f.resposta },
-        })),
-      },
-      {
-        '@type': 'BreadcrumbList',
-        itemListElement: [
-          { '@type': 'ListItem', position: 1, name: 'Início', item: BASE },
-          { '@type': 'ListItem', position: 2, name: 'Aprenda', item: `${BASE}/aprenda` },
-          { '@type': 'ListItem', position: 3, name: artigo.titulo, item: url },
-        ],
-      },
-    ],
-  };
+  const schemas = [
+    articleSchema({
+      url,
+      title: artigo.titulo,
+      description: artigo.metaDescription,
+      imageUrl: `${BASE}/og-artigo.png`,
+      publishedDate: artigo.publicado,
+      modifiedDate: artigo.atualizado,
+      keywords: artigo.keyword,
+      wordCount: Math.ceil((artigo.leituraMin * 200)), // Estimativa: 200 palavras/minuto
+    }),
+    faqPage({
+      url,
+      title: artigo.titulo,
+      description: artigo.metaDescription,
+      questions: artigo.faq,
+    }),
+    breadcrumb([
+      { name: 'Início', url: BASE },
+      { name: 'Aprenda', url: `${BASE}/aprenda` },
+      { name: artigo.titulo, url },
+    ]),
+  ];
 
   return (
     <div style={{ background: 'var(--bg)' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <SchemaMarkup schemas={schemas} />
 
       {/* Hero */}
       <section style={{
