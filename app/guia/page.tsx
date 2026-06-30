@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { GuiaTracker } from './GuiaTracker';
 
 export const metadata: Metadata = {
   title: 'Guia Completo de Financiamento Imobiliário | FinancieCerto',
@@ -124,6 +125,7 @@ const CAPITULOS = [
 export default function GuiaPage() {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh', paddingBottom: '80px' }}>
+      <GuiaTracker />
 
       {/* Hero */}
       <section style={{

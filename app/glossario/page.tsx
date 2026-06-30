@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 interface Term {
   term: string;
@@ -232,6 +232,10 @@ export default function GlossarioPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('todos');
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  useEffect(() => {
+    import('@/lib/gtag').then(m => m.trackPaginaConteudo({ pagina: '/glossario', tipo: 'glossario_termos' }));
+  }, []);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();

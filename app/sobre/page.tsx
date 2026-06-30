@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { SobreTracker } from './SobreTracker';
 
 export const metadata: Metadata = {
   title: 'Sobre nós — FinancieCerto',
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 export default function SobrePage() {
   return (
     <div>
+      <SobreTracker />
 
       {/* ── SEÇÃO 1 — HERO ─────────────────────────────────────────────────── */}
       <section style={{

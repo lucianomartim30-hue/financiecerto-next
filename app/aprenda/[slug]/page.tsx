@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { getArtigo, getArtigos, ARTIGOS, type BlocoArtigo } from '@/lib/artigos';
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { article as articleSchema, faqPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
+import { ArtigoTracker } from './ArtigoTracker';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -139,6 +140,7 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
 
   return (
     <div style={{ background: 'var(--bg)' }}>
+      <ArtigoTracker slug={artigo.slug} titulo={artigo.titulo} />
       <SchemaMarkup schemas={schemas} />
 
       {/* Hero */}

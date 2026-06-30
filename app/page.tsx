@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { website, organization, breadcrumb, SITE_CONFIG } from '@/lib/schema';
+import { HomeEngagement } from './HomeEngagement';
 
 const STATS = [
   { value: '2.000+', label: 'Empreendimentos', href: '/imoveis' },
@@ -92,6 +93,7 @@ export default function Home() {
 
   return (
     <div style={{ background: 'var(--bg)' }}>
+      <HomeEngagement />
       <SchemaMarkup schemas={schemas} />
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}

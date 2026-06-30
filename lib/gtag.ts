@@ -95,3 +95,44 @@ export function trackChatMessage(params?: { page?: string; mensagem?: string }) 
     mensagem: params?.mensagem?.slice(0, 100),
   });
 }
+
+/** Artigo lido */
+export function trackArtigoLido(params?: { slug?: string; titulo?: string; tempoLeitura?: number }) {
+  gtagEvent({
+    action:   'article_read',
+    category: 'aprenda',
+    label:    params?.slug,
+    titulo:   params?.titulo,
+    tempoLeitura: params?.tempoLeitura,
+  });
+}
+
+/** Busca de empreendimentos concluída */
+export function trackBusca(params?: { termo?: string; resultados?: number; filtros?: string }) {
+  gtagEvent({
+    action:   'search_complete',
+    category: 'imoveis',
+    label:    params?.termo,
+    resultados: params?.resultados,
+    filtros:  params?.filtros,
+  });
+}
+
+/** Engajamento na home */
+export function trackHomeEngagement(params?: { elemento?: string }) {
+  gtagEvent({
+    action:   'home_engagement',
+    category: 'homepage',
+    label:    params?.elemento,
+  });
+}
+
+/** Página de conteúdo visualizada */
+export function trackPaginaConteudo(params?: { pagina?: string; tipo?: string }) {
+  gtagEvent({
+    action:   'page_view_content',
+    category: 'conteudo',
+    label:    params?.pagina,
+    tipo:     params?.tipo,
+  });
+}

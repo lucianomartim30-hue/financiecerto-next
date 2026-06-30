@@ -7,6 +7,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { formatBRL } from '@/lib/calculos';
 import type { MapViewHandle, Bounds } from '@/components/MapView';
+import { trackBusca } from '@/lib/gtag';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
@@ -450,8 +451,12 @@ function ImoveisContent() {
     setActiveLocation(query.trim());
     setDisplayCount(12);
 
-    // 1. Tenta usar coordenadas de um imóvel do catálogo no mesmo bairro (instantâneo)
+    // GA4 — evento de busca de empreendimentos
     const qNorm = normStr(query);
+    const resultados = allBuildings.filter(b => normStr(`${b.neighborhood} ${b.city} ${b.name}`).includes(qNorm)).length;
+    import('@/lib/gtag').then(m => m.trackBusca({ termo: query, resultados }));
+
+    // 1. Tenta usar coordenadas de um imóvel do catálogo no mesmo bairro (instantâneo)
     const catalogMatch = allBuildings.find(b => b.lat && b.lng && normStr(b.neighborhood + ' ' + b.city).includes(qNorm));
     if (catalogMatch) {
       mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 13);
