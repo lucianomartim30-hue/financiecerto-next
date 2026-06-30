@@ -57,9 +57,9 @@ export default function RootLayout({
       <body style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-5FCF1KE9XP"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
         />
-        <Script id="google-analytics" strategy="afterInteractive">
+        <Script id="google-analytics" strategy="beforeInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
