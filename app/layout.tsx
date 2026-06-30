@@ -25,8 +25,12 @@ export const metadata: Metadata = {
     google: 'l34uBI3ef56FcK3A9RXJPN4eiOXmRx-gJDTxcbQ_zNc',
   },
   icons: {
-    icon: '/icons/icon.svg',
-    apple: '/apple-touch-icon.png',
+    icon: [
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: '/icons/icon-192.png',
   },
   appleWebApp: {
     capable: true,
