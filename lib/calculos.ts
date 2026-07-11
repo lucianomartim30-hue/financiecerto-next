@@ -75,7 +75,7 @@ export const BANCOS_SBPE: BancoSBPE[] = [
 export const LTV_SBPE_PRICE   = 0.70;
 export const LTV_SBPE_SAC     = 0.80;
 export const PRAZO_MAX_MESES  = 420;
-export const TR_MENSAL        = 0.1679;
+export const TR_MENSAL        = 0.17;
 
 // Legado
 export const TETO_MCMV     = 350000;
