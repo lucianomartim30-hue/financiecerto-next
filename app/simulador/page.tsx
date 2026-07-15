@@ -725,9 +725,16 @@ function SimuladorInner() {
           </>
         )}
         {painelAtivo === 'sfi' && (
-          <div style={{ padding: '12px 14px', background: '#FAEEDA', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#633806' }}>
-            <strong>SFI</strong> (Sistema de Financiamento Imobiliário) é <em>paralelo ao SFH</em> — atende imóveis acima de {formatBRL(TETO_SFH)}. Sem teto de valor, sem limite de taxa, <strong>sem uso de FGTS</strong>. Taxa referência de mercado: ~{TAXA_SFI_ANUAL}% a.a. Não é financiado pela Caixa Econômica Federal exclusivamente — outros bancos também operam.
-          </div>
+          <>
+            {dados.valorMaxImovel < TETO_SFH && (
+              <div style={{ padding: '12px 14px', background: '#FEF3C7', borderRadius: 10, marginBottom: 10, fontSize: 13, color: '#92400E', fontWeight: 600 }}>
+                ⚠️ Este valor é apenas uma referência matemática. Na prática, o SFI só é usado para imóveis acima de {formatBRL(TETO_SFH)} — abaixo disso, use MCMV ou SBPE, que têm taxas menores e permitem FGTS.
+              </div>
+            )}
+            <div style={{ padding: '12px 14px', background: '#FAEEDA', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#633806' }}>
+              <strong>SFI</strong> (Sistema de Financiamento Imobiliário) é <em>paralelo ao SFH</em> — atende imóveis acima de {formatBRL(TETO_SFH)}. Sem teto de valor, sem limite de taxa, <strong>sem uso de FGTS</strong>. Taxa referência de mercado: ~{TAXA_SFI_ANUAL}% a.a. Não é financiado pela Caixa Econômica Federal exclusivamente — outros bancos também operam.
+            </div>
+          </>
         )}
         {painelAtivo === 'mcmv' && subsidioEstimado > 0 && (
           <div style={{ padding: '12px 14px', background: '#E1F5EE', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#085041' }}>
