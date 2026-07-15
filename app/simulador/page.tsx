@@ -121,9 +121,9 @@ function Hero({ etapa }: { etapa: number }) {
   const heroCopy: Record<number, { tag: string; titulo: string; sub: string }> = {
     0: { tag: 'Simulador FinancieCerto 2026', titulo: 'Primeiro entenda\nseu perfil.', sub: 'Qualquer renda, qualquer imóvel — identificamos MCMV, SBPE ou SFI e mostramos taxas e teto reais.' },
     1: { tag: 'Passo 1 de 6', titulo: 'Qual é a sua\nrenda familiar?', sub: 'Usamos a renda bruta para calcular faixa, taxa e comprometimento.' },
-    2: { tag: 'Passo 2 de 6', titulo: 'Você tem FGTS\ndisponível?', sub: 'O FGTS amplia seu poder de compra e reduz o valor financiado.' },
-    3: { tag: 'Passo 3 de 6', titulo: 'Tem entrada\noutra reserva?', sub: 'Entrada própria reduz o financiamento e pode melhorar a aprovação.' },
-    4: { tag: 'Passo 4 de 6', titulo: 'Prazo e\nperfil pessoal', sub: 'O prazo e a idade definem a parcela e o seguro MIP.' },
+    2: { tag: 'Passo 2 de 6', titulo: 'Sua idade e\ncomposição familiar', sub: 'A idade do proponente mais velho define o prazo máximo do financiamento.' },
+    3: { tag: 'Passo 3 de 6', titulo: 'Você tem FGTS\ndisponível?', sub: 'O FGTS amplia seu poder de compra e reduz o valor financiado.' },
+    4: { tag: 'Passo 4 de 6', titulo: 'Tem entrada ou\noutra reserva?', sub: 'Entrada própria reduz o financiamento e pode melhorar a aprovação.' },
     5: { tag: 'Seu perfil de compra', titulo: 'Seu teto de\ncompra.', sub: 'Veja sua faixa, a taxa real e a parcela estimada.' },
     6: { tag: 'Imóvel específico', titulo: 'Simule um\nimóvel concreto.', sub: 'Informe o valor e o estágio — calcularemos parcela, FGTS e modalidade.' },
     7: { tag: 'Resultado', titulo: 'Simulação\ncompleta.', sub: '' },
