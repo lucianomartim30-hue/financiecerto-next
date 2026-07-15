@@ -210,7 +210,7 @@ function ComparativoBancosSBPE({ financiado, prazoMeses }: { financiado: number;
   return (
     <div style={{ marginTop: 20, padding: '16px', background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: 14 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 12 }}>
-        🏦 Comparativo SBPE — Principais bancos (referência mai/2026 · + TR)
+        🏦 Comparativo SBPE — Principais bancos (referência jul/2026 · + TR)
       </div>
       <div style={{ display: 'grid', gap: 6 }}>
         {BANCOS_SBPE.map((b, i) => {
@@ -452,7 +452,7 @@ function SimuladorInner() {
       </div>
       <BtnPrimario label="Começar — leva 2 minutos" onClick={avancar} />
       <p style={{ fontSize: 12, color: 'var(--text-faint)', textAlign: 'center', marginTop: 14 }}>
-        Regras SFH/MCMV vigentes · maio/2026 · TR {TR_MENSAL}%/mês
+        Regras SFH/MCMV vigentes · jul/2026 · TR {TR_MENSAL}%/mês
       </p>
     </Etapa>
   );
@@ -1185,7 +1185,7 @@ function SimuladorInner() {
 
         {/* Nota legal */}
         <p style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 24, marginTop: 16 }}>
-          Simulação educativa — regras SFH/MCMV vigentes · mai/2026. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Taxas SBPE: referência de mercado — variam por banco, perfil e LTV. Valores exatos confirmados em cada instituição financeira. Não constitui proposta de crédito.
+          Simulação educativa — regras SFH/MCMV vigentes · jul/2026. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Taxas SBPE: referência de mercado — variam por banco, perfil e LTV. Valores exatos confirmados em cada instituição financeira. Não constitui proposta de crédito.
         </p>
 
         {/* Busca inteligente de imóveis com filtro por quartos, vagas e bairro */}

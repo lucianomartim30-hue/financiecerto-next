@@ -55,7 +55,7 @@ export const TAXA_SBPE_BALCAO = 11.49;  // Caixa — balcão
 export const TAXA_SFI_ANUAL   = 12.5;
 export const TETO_SFH         = 2_250_000;
 
-// ─── Taxas SBPE dos principais bancos (referência maio/2026 + TR) ─────────────
+// ─── Taxas SBPE dos principais bancos (referência julho/2026 + TR) ────────────
 // Fonte: simuladores oficiais dos bancos. Podem variar por perfil, LTV e relacionamento.
 export interface BancoSBPE {
   banco: string;

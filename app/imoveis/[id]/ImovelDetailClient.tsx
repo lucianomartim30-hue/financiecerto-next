@@ -549,7 +549,7 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
     <div style={{ background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: '14px', padding: '14px', marginTop: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
         <span style={{ fontSize: '14px' }}>🏦</span>
-        <p style={{ fontSize: '11px', fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Comparativo SBPE · mai/2026</p>
+        <p style={{ fontSize: '11px', fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Comparativo SBPE · jul/2026</p>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {BANCOS_SBPE.map((b, i) => {
