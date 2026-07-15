@@ -120,11 +120,32 @@ function buildSimBloco(params: SimParams): string {
       jaRecebeuBeneficio: false, dependentes,
     });
 
+    // BLOQUEADO: Mostrar motivo e orientação
+    if (r.bloqueado) {
+      return `
+━━━ SIMULAÇÃO BLOQUEADA ━━━
+❌ Esta operação não é viável nas condições informadas.
+
+**Motivo:** ${r.motivoBloqueio}
+
+**O que fazer:**
+1. Aumentar a entrada (reduz parcela e comprometimento)
+2. Aumentar o prazo (reduz parcela mensal)
+3. Procurar um imóvel mais barato
+4. Verificar se há oportunidades de benefício que você não mencionou (subsídio, FGTS, etc.)
+
+**Recomendação:** Converse com um especialista ou volte a usar o simulador com valores diferentes.
+${r.alertas.length > 0 ? '\n⚠️ Detalhes técnicos:\n' + r.alertas.map(a => '• ' + a).join('\n') : ''}
+━━━ FIM ━━━`;
+    }
+
+    // VIÁVEL: Mostrar detalhes normalmente
     const modal = r.isMCMV ? `MCMV ${r.faixa?.label}` : r.isSFI ? 'SFI' : 'SBPE (SFH)';
     const cotStr = cotista ? 'cotista FGTS' : 'sem FGTS';
     return `
 ━━━ SIMULAÇÃO CALCULADA PELO SISTEMA — APRESENTE ESSES VALORES EXATOS ━━━
 🚫 NÃO recalcule. João só apresenta os números abaixo de forma natural e consultiva.
+⚠️ Esta é uma ESTIMATIVA. Confirme com seu banco antes de tomar qualquer decisão.
 
 Imóvel: ${formatBRL(r.valorImovel)} | Modalidade: ${modal} | Taxa: ${r.taxaAnual}% a.a. + TR (${r.isMCMV ? cotStr : ''})
 Prazo: ${r.prazoMeses} meses (${Math.round(r.prazoMeses / 12)} anos)
@@ -166,7 +187,7 @@ ${usaMCMV ? `✅ MCMV ${r.faixa?.label} — ${cotStr}
 • Imóvel máximo: ${formatBRL(r.mcmv.valorMaxImovel)}
   → Banco financia: ${formatBRL(r.mcmv.valorFinanciado)} + FGTS: ${formatBRL(r.fgts)} + Entrada: ${formatBRL(entrada)}${r.subsidioEstimado > 0 ? ` + Subsídio: ${formatBRL(r.subsidioEstimado)}` : ''}
 • Parcela estimada: ${formatBRL(r.mcmv.parcela)}/mês (${r.mcmv.comprometimento.toFixed(1)}% da renda)
-• Comprometimento: ${r.mcmv.comprometimento > 30 ? '🚨 ACIMA DE 30% — banco pode reprovar. Sugerir maior entrada ou prazo máximo.' : `${r.mcmv.comprometimento.toFixed(1)}% ✅ aprovável`}
+• Comprometimento: ${r.mcmv.comprometimento > 30 ? '🚨 ACIMA DE 30% — banco pode reprovar. Sugerir maior entrada ou prazo máximo.' : `${r.mcmv.comprometimento.toFixed(1)}% ✅ dentro do limite (sujeito à análise do banco)`}
 • Subsídio estimado: ${formatBRL(r.subsidioEstimado)} (definido na Caixa por perfil e município)
 • Imóveis sugeridos: ${formatBRL(r.oruloMinPrice)} a ${formatBRL(r.oruloMaxPrice)}` : ''}
 

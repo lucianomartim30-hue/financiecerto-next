@@ -333,6 +333,8 @@ export function calcSubsidioEstimado(
 }
 
 // ─── Capacidade de financiamento com seguros ─────────────────────────────────
+// CORRIGIDO: Iteração convergente para encontrar cap onde:
+//   parcelaPrice(cap, taxa, prazo) + seguros(cap)/prazo ≤ pmMax
 function capacidadeComSeguros(
   rendaBruta: number,
   taxaAnual: number,
@@ -342,14 +344,38 @@ function capacidadeComSeguros(
 ): number {
   const pmMax = rendaBruta * comprometimentoMax;
   const i = taxaAnual / 100 / 12;
-  const fator = i === 0 ? prazoMeses : (1 - Math.pow(1 + i, -prazoMeses)) / i;
 
-  let cap = pmMax * fator;
-  for (let iter = 0; iter < 4; iter++) {
-    const seg = calcularSeguros(cap, idade);
-    const pmAjustado = Math.max(0, pmMax - seg.total);
-    cap = pmAjustado * fator;
+  // NOTA: calcularSeguros() retorna um prêmio MENSAL (MIP+DFI+txAdm sobre o saldo
+  // devedor atual) — não um total a diluir pelo prazo. Por isso soma-se direto à parcela.
+  if (i === 0) {
+    let cap = pmMax * prazoMeses;
+    for (let iter = 0; iter < 6; iter++) {
+      const seg = calcularSeguros(cap, idade);
+      cap = (pmMax - seg.total) * prazoMeses;
+      cap = Math.max(0, cap);
+    }
+    return cap;
   }
+
+  const fator = (1 - Math.pow(1 + i, -prazoMeses)) / i;
+
+  // Método de Newton: buscar cap tal que parcelaPrice(cap) + seguros(cap) = pmMax
+  let cap = pmMax * fator; // chute inicial (sem seguros)
+  for (let iter = 0; iter < 10; iter++) {
+    const seg = calcularSeguros(cap, idade);
+    const parcela = parcelaPrice(cap, taxaAnual, prazoMeses);
+    const erro = parcela + seg.total - pmMax;
+
+    if (Math.abs(erro) < 0.01) break; // Convergiu (erro < 1 centavo)
+
+    // Derivada total: d(parcela)/d(cap) = 1/fator ; d(seguros)/d(cap) ≈ mipCoeff + dfiCoeff
+    const mipCoeff = getMIPCoeff(idade);
+    const derivada = 1 / fator + mipCoeff + 0.000093;
+
+    cap = cap - erro / derivada;
+    cap = Math.max(0, cap);
+  }
+
   return cap;
 }
 
@@ -407,6 +433,9 @@ export interface ResultadoSimulacao {
   ltvUsado: number;
   ltvMax: number;
   alertas: string[];
+  // BLOQUEIO: Simulação é inviável (não mostre como "aprovada")
+  bloqueado: boolean;
+  motivoBloqueio?: string;
 }
 
 export interface InputSimulacao {
@@ -423,6 +452,7 @@ export interface InputSimulacao {
   jaRecebeuBeneficio?: boolean;
   temImovelMunicipio?: boolean;
   dependentes?: number;
+  tipoImovel?: 'residencial' | 'comercial'; // 'residencial' padrão
 }
 
 // ─── Simular (valor do imóvel informado) ──────────────────────────────────────
@@ -433,7 +463,11 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
     cotista = true, primeiroImovel = true,
     jaRecebeuBeneficio = false, temImovelMunicipio = false,
     dependentes = 0,
+    tipoImovel = 'residencial',
   } = input;
+
+  // VALIDAÇÃO: Imóvel comercial NÃO pode usar benefícios residenciais
+  const isComercial = tipoImovel === 'comercial';
 
   const prazoMaxPorIdade = Math.max(60, Math.floor((80.5 - idadeProponente) * 12));
   const prazoMeses       = Math.min(prazoAnos * 12, Math.min(prazoMaxPorIdade, PRAZO_MAX_MESES));
@@ -441,33 +475,30 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
 
   // Faixa baseada apenas na renda (menor faixa onde renda ≤ rendaMax)
   const faixaRenda   = detectarFaixaMCMV(rendaBruta);
-  const mcmvElegivel = faixaRenda !== null && !temImovelMunicipio && !jaRecebeuBeneficio;
+  // VALIDAÇÃO: Comercial NÃO é elegível ao MCMV (programa habitacional)
+  const mcmvElegivel = !isComercial && faixaRenda !== null && !temImovelMunicipio && !jaRecebeuBeneficio;
 
-  // "Poder de compra": encontra a faixa MCMV mais vantajosa para o cliente.
-  // Para cada faixa onde a renda qualifica (da menor para a maior):
-  //   a) Se o imóvel cabe diretamente no teto → usa essa faixa.
-  //   b) Se o subsídio estimado da faixa "bridga" a diferença (valorImovel - subsídio ≤ teto) → usa essa faixa.
-  //   c) Caso contrário → tenta a próxima faixa (maior teto, menor subsídio).
-  // Ex: renda R$4k (F2, teto R$275k), imóvel R$300k, subsídio F2 ≈ R$25k:
-  //   300k - 25k = 275k ≤ 275k → fica em F2 (6,5% + subsídio) em vez de F3 (7,66% sem subsídio).
-  let faixa: FaixaMCMV | null = null;
-  if (mcmvElegivel) {
-    for (const f of FAIXAS_MCMV) {
-      if (rendaBruta > f.rendaMax) continue;
-      if (valorImovel <= f.teto) {
-        faixa = f; break;
-      }
-      if (f.subsidioMax > 0) {
-        const subsidioTeste = calcSubsidioEstimado(f, rendaBruta, valorImovel, cotista, primeiroImovel, jaRecebeuBeneficio, dependentes);
-        if (subsidioTeste > 0 && valorImovel - subsidioTeste <= f.teto) {
-          faixa = f; break;
-        }
-      }
+  // CORREÇÃO: Faixa é SEMPRE determinada pela renda, NUNCA pelo imóvel.
+  // Se o imóvel ultrapassar o teto da faixa, a simulação é BLOQUEADA (não reclassificada).
+  // A pessoa recebe a orientação: "Este imóvel está fora do teto MCMV da sua faixa. Use SBPE ou aumente entrada."
+  let faixa: FaixaMCMV | null = mcmvElegivel ? faixaRenda : null; // ← só existe se elegível (residencial, sem restrições)
+  let imvelAcimaTetoComSubsidio = false;
+
+  if (mcmvElegivel && valorImovel > faixa!.teto) {
+    // Verificar se subsídio "bridga" a diferença
+    const subsidioEstimado = calcSubsidioEstimado(faixa!, rendaBruta, valorImovel, cotista, primeiroImovel, jaRecebeuBeneficio, dependentes);
+    if (subsidioEstimado > 0 && valorImovel - subsidioEstimado <= faixa!.teto) {
+      // Subsídio salva → faixa fica como está (F2, por exemplo)
+      imvelAcimaTetoComSubsidio = true;
+    } else {
+      // Imóvel não cabe mesmo com subsídio → será tratado como SBPE
+      faixa = null;
     }
   }
   const isMCMV = faixa !== null;
 
-  const fgtsElegivel   = cotista && primeiroImovel && !temImovelMunicipio;
+  // VALIDAÇÃO: Comercial NÃO pode usar FGTS (programa para habitação)
+  const fgtsElegivel   = !isComercial && cotista && primeiroImovel && !temImovelMunicipio;
   const fgtsUsado      = fgtsElegivel ? fgts : 0;
 
   const subsidioEstimado = isMCMV && faixa
@@ -509,12 +540,39 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
     comprometimento <= 25 ? 'bom' :
     comprometimento <= 30 ? 'atenção' : 'risco';
 
-  // Alertas
+  // Alertas e Bloqueios
   const alertas: string[] = [];
-  if (comprometimento > 30) alertas.push('Comprometimento acima de 30% — banco pode reprovar o crédito.');
-  if (ltvUsado > ltvMax + 0.01) alertas.push(`LTV de ${(ltvUsado * 100).toFixed(0)}% ultrapassa o limite de ${(ltvMax * 100).toFixed(0)}% — entrada insuficiente.`);
-  if (!fgtsElegivel && fgts > 0) alertas.push('FGTS não pode ser usado: verifique se é cotista há 3+ anos e se é o primeiro imóvel.');
-  if (subsidioEstimado > 0) alertas.push(`Subsídio estimado de ${formatBRL(subsidioEstimado)} incluso. Valor exato confirmado na Caixa Econômica Federal.`);
+  let bloqueado = false;
+  let motivoBloqueio: string | undefined;
+
+  // ALERTA PRINCIPAL: Imóvel comercial
+  if (isComercial) {
+    alertas.push('⚠️ Imóvel COMERCIAL: Benefícios MCMV, FGTS e subsídio habitacional NÃO se aplicam. Apenas SFI (Sistema de Financiamento Imobiliário) é disponível.');
+  }
+
+  // BLOQUEIO 1: Comprometimento > 30%
+  if (comprometimento > 30) {
+    bloqueado = true;
+    motivoBloqueio = `Comprometimento de ${comprometimento.toFixed(1)}% ultrapassa o limite de 30% — banco reprova créditos acima disso.`;
+    alertas.push('Comprometimento acima de 30% — simulação BLOQUEADA.');
+  }
+
+  // BLOQUEIO 2: LTV acima do limite
+  if (ltvUsado > ltvMax + 0.01) {
+    bloqueado = true;
+    motivoBloqueio = `LTV de ${(ltvUsado * 100).toFixed(0)}% ultrapassa o limite de ${(ltvMax * 100).toFixed(0)}% — entrada insuficiente.`;
+    alertas.push(`LTV ultrapassa limite — simulação BLOQUEADA.`);
+  }
+
+  // ALERTA (não bloqueia): FGTS inelegível
+  if (!fgtsElegivel && fgts > 0 && !isComercial) {
+    alertas.push('FGTS não pode ser usado: verifique se é cotista há 3+ anos e se é o primeiro imóvel.');
+  }
+
+  // ALERTA (não bloqueia): Subsídio estimado
+  if (subsidioEstimado > 0) {
+    alertas.push(`Subsídio estimado de ${formatBRL(subsidioEstimado)} incluso. Valor exato confirmado na Caixa Econômica Federal.`);
+  }
 
   let obraAlerta: string | undefined;
   if (naPlanta) {
@@ -545,6 +603,7 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
     seguros, comprometimento,
     naPlanta, prazoObraMeses, obraAlerta,
     saudeLabel, ltvUsado, ltvMax, alertas,
+    bloqueado, motivoBloqueio,
   };
 }
 
