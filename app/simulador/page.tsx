@@ -621,10 +621,20 @@ function SimuladorInner() {
     const saude = compr <= 20 ? 'ótimo' : compr <= 25 ? 'bom' : compr <= 30 ? 'atenção' : 'risco';
     const sc = SAUDE[saude];
 
-    const paneis: { key: 'mcmv' | 'sbpe' | 'sfi'; label: string; tagBg: string; tagTxt: string; disabled?: boolean }[] = [
+    // SFI so faz sentido para imoveis acima do teto SFH — abaixo disso, MCMV/SBPE
+    // sao sempre mais vantajosos (taxa menor, FGTS permitido). Mostrar um valor de
+    // "poder de compra" via SFI para quem esta longe desse teto é enganoso: parece
+    // uma oferta real quando na pratica ninguem financia um imovel barato pelo SFI.
+    const sfiIrrealista = sfi.valorMaxImovel < TETO_SFH;
+
+    const paneis: { key: 'mcmv' | 'sbpe' | 'sfi'; label: string; tagBg: string; tagTxt: string; disabled?: boolean; title?: string }[] = [
       { key: 'mcmv', label: faixa ? `${faixa.label} MCMV` : 'MCMV', tagBg: '#E1F5EE', tagTxt: '#0F6E56', disabled: !mcmv.elegivel },
       { key: 'sbpe', label: 'SBPE / SFH', tagBg: '#E6F1FB', tagTxt: '#185FA5' },
-      { key: 'sfi',  label: 'SFI',        tagBg: '#FAEEDA', tagTxt: '#854F0B' },
+      {
+        key: 'sfi', label: 'SFI', tagBg: '#FAEEDA', tagTxt: '#854F0B',
+        disabled: sfiIrrealista,
+        title: sfiIrrealista ? `SFI atende imóveis acima de ${formatBRL(TETO_SFH)} — não se aplica ao seu perfil atual` : undefined,
+      },
     ];
 
     // Variáveis para o card "Composição do poder de compra" (etapa 5)
@@ -638,8 +648,8 @@ function SimuladorInner() {
       <Etapa etapa={etapa}>
         {/* Seletor de modalidade */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-          {paneis.map(({ key, label, tagBg, tagTxt, disabled }) => (
-            <button key={key} onClick={() => !disabled && setPainelAtivo(key)}
+          {paneis.map(({ key, label, tagBg, tagTxt, disabled, title }) => (
+            <button key={key} onClick={() => !disabled && setPainelAtivo(key)} title={title}
               style={{
                 padding: '8px 18px', borderRadius: 99,
                 border: `${painelAtivo === key ? '2.5px' : '1.5px'} solid ${painelAtivo === key ? (disabled ? '#ccc' : dados.cor) : '#D1D5DB'}`,
@@ -649,7 +659,7 @@ function SimuladorInner() {
                 boxShadow: painelAtivo === key && !disabled ? `0 2px 10px ${dados.cor}44` : 'none',
                 cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all .2s',
               }}>
-              {label}{disabled ? ' (inelegível)' : ''}
+              {label}{disabled ? (key === 'sfi' ? ' (não se aplica)' : ' (inelegível)') : ''}
             </button>
           ))}
         </div>
