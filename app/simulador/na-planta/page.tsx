@@ -18,8 +18,30 @@ type Estagio = 'lancamento' | 'obras' | 'pronto';
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────────────────────────────────────────
-function p(s: string): number { return Number(s.replace(/\D/g, '')) || 0; }
-function fi(s: string): string { const n = s.replace(/\D/g, ''); return n ? Number(n).toLocaleString('pt-BR') : ''; }
+// Máscara monetária BR — aceita milhares "." e decimais "," sem reaplicar a
+// conversão sobre um valor ja formatado. A vírgula (quando presente) sempre
+// marca o início dos centavos; pontos digitados são tratados como separador
+// de milhar e descartados antes de reagrupar.
+function p(s: string): number {
+  const idxVirgula = s.indexOf(',');
+  if (idxVirgula === -1) {
+    return Number(s.replace(/\D/g, '')) || 0;
+  }
+  const parteInteira = s.slice(0, idxVirgula).replace(/\D/g, '');
+  const parteDecimal = s.slice(idxVirgula + 1).replace(/\D/g, '').padEnd(2, '0').slice(0, 2);
+  return (Number(parteInteira) || 0) + (Number(parteDecimal) || 0) / 100;
+}
+function fi(s: string): string {
+  const limpo = s.replace(/[^\d,]/g, '');
+  const idxVirgula = limpo.indexOf(',');
+  if (idxVirgula === -1) {
+    return limpo ? Number(limpo).toLocaleString('pt-BR') : '';
+  }
+  const parteInteira = limpo.slice(0, idxVirgula).replace(/\D/g, '');
+  const parteDecimal = limpo.slice(idxVirgula + 1).replace(/\D/g, '').slice(0, 2);
+  const inteiroFmt = parteInteira ? Number(parteInteira).toLocaleString('pt-BR') : '0';
+  return `${inteiroFmt},${parteDecimal}`;
+}
 
 /**
  * SIOPI — Sistema de Operações Imobiliárias da CEF

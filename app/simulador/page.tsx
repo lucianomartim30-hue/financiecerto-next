@@ -120,10 +120,10 @@ function BtnPrimario({ label, onClick, disabled }: { label: string; onClick: () 
 function Hero({ etapa }: { etapa: number }) {
   const heroCopy: Record<number, { tag: string; titulo: string; sub: string }> = {
     0: { tag: 'Simulador FinancieCerto 2026', titulo: 'Primeiro entenda\nseu perfil.', sub: 'Qualquer renda, qualquer imóvel — identificamos MCMV, SBPE ou SFI e mostramos taxas e teto reais.' },
-    1: { tag: 'Passo 1 de 6', titulo: 'Qual é a sua\nrenda familiar?', sub: 'Usamos a renda bruta para calcular faixa, taxa e comprometimento.' },
-    2: { tag: 'Passo 2 de 6', titulo: 'Sua idade e\ncomposição familiar', sub: 'A idade do proponente mais velho define o prazo máximo do financiamento.' },
-    3: { tag: 'Passo 3 de 6', titulo: 'Você tem FGTS\ndisponível?', sub: 'O FGTS amplia seu poder de compra e reduz o valor financiado.' },
-    4: { tag: 'Passo 4 de 6', titulo: 'Tem entrada ou\noutra reserva?', sub: 'Entrada própria reduz o financiamento e pode melhorar a aprovação.' },
+    1: { tag: 'Passo 1 de 4', titulo: 'Qual é a sua\nrenda familiar?', sub: 'Usamos a renda bruta para calcular faixa, taxa e comprometimento.' },
+    2: { tag: 'Passo 2 de 4', titulo: 'Sua idade e\ncomposição familiar', sub: 'A idade do proponente mais velho define o prazo máximo do financiamento.' },
+    3: { tag: 'Passo 3 de 4', titulo: 'Você tem FGTS\ndisponível?', sub: 'O FGTS amplia seu poder de compra e reduz o valor financiado.' },
+    4: { tag: 'Passo 4 de 4', titulo: 'Tem entrada ou\noutra reserva?', sub: 'Entrada própria reduz o financiamento e pode melhorar a aprovação.' },
     5: { tag: 'Seu perfil de compra', titulo: 'Seu teto de\ncompra.', sub: 'Veja sua faixa, a taxa real e a parcela estimada.' },
     6: { tag: 'Imóvel específico', titulo: 'Simule um\nimóvel concreto.', sub: 'Informe o valor e o estágio — calcularemos parcela, FGTS e modalidade.' },
     7: { tag: 'Resultado', titulo: 'Simulação\ncompleta.', sub: '' },
@@ -463,7 +463,7 @@ function SimuladorInner() {
     return (
       <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
-        <Barra etapa={0} total={6} />
+        <Barra etapa={0} total={4} />
         <Titulo>Qual é a renda familiar mensal?</Titulo>
         <Sub>Some a renda bruta de todos que vão participar do financiamento — casal, pais, filhos.</Sub>
 
@@ -488,7 +488,7 @@ function SimuladorInner() {
     return (
       <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
-        <Barra etapa={1} total={6} />
+        <Barra etapa={1} total={4} />
         <Titulo>Composição familiar</Titulo>
         <Sub>O prazo máximo é definido pela idade do proponente mais velho. Limite: 80 anos e 6 meses — regra da Caixa Econômica Federal.</Sub>
 
@@ -524,7 +524,7 @@ function SimuladorInner() {
     return (
       <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
-        <Barra etapa={2} total={6} />
+        <Barra etapa={2} total={4} />
         <Titulo>FGTS e elegibilidade</Titulo>
         <Sub>O FGTS pode ser usado como entrada, reduzindo o valor financiado. É liberado pela Caixa Econômica Federal para cotistas.</Sub>
 
@@ -560,7 +560,7 @@ function SimuladorInner() {
     return (
       <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
-        <Barra etapa={3} total={6} />
+        <Barra etapa={3} total={4} />
         <Titulo>Quanto você tem de entrada?</Titulo>
         <Sub>Soma o dinheiro guardado mais o FGTS disponível. Quanto mais entrada, menor a parcela e menor o risco de reprovação.</Sub>
 
@@ -914,7 +914,6 @@ function SimuladorInner() {
     return (
       <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
-        <Barra etapa={4} total={6} />
         <Titulo>Qual é o valor do imóvel?</Titulo>
         <Sub>Informe o valor do imóvel que você tem em mente para ver a simulação completa com Price e SAC.</Sub>
 
