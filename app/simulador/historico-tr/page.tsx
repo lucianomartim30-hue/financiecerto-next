@@ -136,6 +136,23 @@ function HistoricoTRContent() {
     return fmt(ac * 100, 2);
   }, []);
 
+  // Exemplo numérico da seção "Como a TR é aplicada" — sempre recalculado a partir
+  // dos campos atuais (mesmo sem clicar em "Calcular impacto"), para nunca ficar
+  // dessincronizado dos parâmetros que o usuário está vendo no formulário.
+  const exemplo = useMemo(() => {
+    const pv    = parseMoeda(valorInput) || 350000;
+    const taxa  = parseFloat(taxaInput.replace(',', '.')) || 11.19;
+    const prazo = parseInt(prazoInput) || 360;
+    const trRef = TR_HISTORICO_36M[TR_HISTORICO_36M.length - 1]; // mês mais recente da série
+    const taxaMensal     = (1 + taxa / 100) ** (1 / 12) - 1;
+    const correcao       = pv * (trRef.tr / 100);
+    const saldoCorrigido = pv + correcao;
+    const juros          = saldoCorrigido * taxaMensal;
+    const amort          = pv / prazo;
+    const parcela        = amort + juros;
+    return { pv, taxa, prazo, trRef, taxaMensal, correcao, saldoCorrigido, juros, amort, parcela };
+  }, [valorInput, taxaInput, prazoInput]);
+
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 16px 60px' }}>
 
@@ -325,8 +342,8 @@ function HistoricoTRContent() {
               Saldo Corrigido = Saldo × (1 + TR%)
             </div>
             <p style={{ fontSize: 12, color: '#3b82f6', margin: '10px 0 0' }}>
-              Exemplo com TR de 0,1679% e saldo de R$ 350.000:<br />
-              Correção = R$ 350.000 × 0,1679% = <strong>R$ 587,65</strong>
+              Exemplo com TR de {fmtPct(exemplo.trRef.tr)} ({exemplo.trRef.label}) e saldo de {formatBRL(exemplo.pv)}:<br />
+              Correção = {formatBRL(exemplo.pv)} × {fmtPct(exemplo.trRef.tr)} = <strong>{formatBRL(exemplo.correcao)}</strong>
             </p>
           </div>
 
@@ -340,8 +357,8 @@ function HistoricoTRContent() {
               Juros = Saldo Corrigido × Taxa Mensal
             </div>
             <p style={{ fontSize: 12, color: '#b45309', margin: '10px 0 0' }}>
-              Com taxa de 11,19% a.a. (≈ 0,885%/mês):<br />
-              Juros = R$ 350.587,65 × 0,885% = <strong>R$ 3.102,70</strong>
+              Com taxa de {fmt(exemplo.taxa, 2)}% a.a. (≈ {fmt(exemplo.taxaMensal * 100, 3)}%/mês):<br />
+              Juros = {formatBRL(exemplo.saldoCorrigido)} × {fmt(exemplo.taxaMensal * 100, 3)}% = <strong>{formatBRL(exemplo.juros)}</strong>
             </p>
           </div>
 
@@ -356,8 +373,8 @@ function HistoricoTRContent() {
               Parcela = Amort + Juros
             </div>
             <p style={{ fontSize: 12, color: '#15803d', margin: '10px 0 0' }}>
-              R$ 350.000 ÷ 360 meses = R$ 972,22/mês de amortização.<br />
-              Parcela = R$ 972,22 + R$ 3.102,70 = <strong>R$ 4.074,92</strong>
+              {formatBRL(exemplo.pv)} ÷ {exemplo.prazo} meses = {formatBRL(exemplo.amort)}/mês de amortização.<br />
+              Parcela = {formatBRL(exemplo.amort)} + {formatBRL(exemplo.juros)} = <strong>{formatBRL(exemplo.parcela)}</strong>
             </p>
           </div>
 
