@@ -172,6 +172,8 @@ function NaPlantaContent() {
 
   // Tipo de imóvel
   const [tipoImovel, setTipoImovel] = useState<'residencial' | 'comercial'>('residencial');
+  // VALIDAÇÃO: Comercial não é elegível a MCMV/FGTS/subsídio (benefícios exclusivos de habitação)
+  const isComercial = tipoImovel === 'comercial';
 
   // Título próprio (analytics) — sem isso, herda o título da home e some nos relatórios do GA
   useEffect(() => {
@@ -199,6 +201,8 @@ function NaPlantaContent() {
   // 1. FGTS
   const [fgtsRaw, setFgtsRaw]       = useState(() => fgtsUrl > 0 ? fi(String(fgtsUrl)) : '');
   const fgts = p(fgtsRaw);
+  // FGTS não pode ser usado em imóvel comercial — mesma regra do simulador principal
+  const fgtsUsado = isComercial ? 0 : fgts;
 
   // 2. Ato (pagamento na assinatura — recursos próprios do comprador)
   const [atoRaw, setAtoRaw]         = useState('');
@@ -227,12 +231,13 @@ function NaPlantaContent() {
   const unica = p(unicaRaw);
 
   // ── Cálculos ──────────────────────────────────────────────────────────────────
-  const faixaRenda = detectarFaixaMCMV(renda);
+  // Comercial não é elegível a MCMV — apenas SBPE (mesma regra do simulador principal)
+  const faixaRenda = isComercial ? null : detectarFaixaMCMV(renda);
 
   // Tenta todas as faixas elegíveis pela renda (igual ao simulador principal)
   // Renda de R$4k pode usar F2 (teto 275k), F3 (teto 400k) ou F4 (teto 600k)
   const faixaEfetiva: FaixaMCMV | null = (() => {
-    if (renda <= 0 || valor <= 0) return null;
+    if (isComercial || renda <= 0 || valor <= 0) return null;
     for (const f of FAIXAS_MCMV) {
       if (renda > f.rendaMax) continue;
       if (valor <= f.teto) return f;
@@ -263,7 +268,7 @@ function NaPlantaContent() {
   const temSubsidio = subsidioEstimado > 0;
 
   // Recursos externos (FGTS + subsídio — não vão para a construtora)
-  const recursosExternos = fgts + subsidioEstimado;
+  const recursosExternos = fgtsUsado + subsidioEstimado;
 
   // Total pago à construtora durante a obra
   const totalConstrutora = ato + iniciais + totalMensais + totalAnuais + unica;
@@ -334,7 +339,7 @@ function NaPlantaContent() {
         jurosEvoPico: Math.round(jurosEvoPico),
         // Resultado financeiro
         entradaMinima,
-        fgtsUsado: fgts,
+        fgtsUsado,
         subsidioEstimado,
         valorFinanciado: financiado,
         parcelaPosObra: Math.round(parcelaFin + seguros.total),
@@ -346,12 +351,12 @@ function NaPlantaContent() {
       },
       resultado: {
         valorImovel: valor, entradaMinima, recursosExternos,
-        fgts, subsidioEstimado, totalConstrutora, totalContribuicao,
+        fgtsUsado, subsidioEstimado, totalConstrutora, totalContribuicao,
         precisaPagarConstrutora, valorFinanciado: financiado,
         taxaAnual: taxa, parcela: Math.round(parcelaFin + seguros.total),
       },
     });
-  }, [valido, valor, renda, estagio, isMCMV, financiado, taxa, fgts, subsidioEstimado, qtdMensais, parcelaFin, seguros.total, entradaMinima, recursosExternos, totalContribuicao, totalConstrutora, precisaPagarConstrutora, siopiInicial, ato]);
+  }, [valido, valor, renda, estagio, tipoImovel, isMCMV, financiado, taxa, fgtsUsado, subsidioEstimado, qtdMensais, parcelaFin, seguros.total, entradaMinima, recursosExternos, totalContribuicao, totalConstrutora, precisaPagarConstrutora, siopiInicial, ato]);
 
   // ── Configuração dos estágios ─────────────────────────────────────────────────
   const estagioConfig: Record<Estagio, { label: string; desc: string; color: string; aviso?: string }> = {
@@ -474,6 +479,11 @@ function NaPlantaContent() {
                 </button>
               ))}
             </div>
+            {isComercial && (
+              <div style={{ background: '#FAEEDA', border: '1px solid #f3d9a8', borderRadius: '10px', padding: '10px 14px', marginTop: '12px' }}>
+                <p style={{ fontSize: '12px', color: '#633806' }}>⚠️ Imóvel <strong>comercial</strong>: MCMV, FGTS e subsídio habitacional não se aplicam. Apenas financiamento SBPE está disponível.</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -486,8 +496,8 @@ function NaPlantaContent() {
             </p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.6 }}>
               {precisaPagarConstrutora
-                ? `Entrada mínima estimada: ${formatBRL(entradaMinima)}${recursosExternos > 0 ? ` · FGTS${temSubsidio ? ` (${formatBRL(fgts)}) + subsídio (${formatBRL(subsidioEstimado)})` : ''}: ${formatBRL(recursosExternos)}` : ''} · falta cobrir via construtora: ${formatBRL(faltaParaConstrutora)}`
-                : `✅ FGTS${temSubsidio ? ` (${formatBRL(fgts)}) + subsídio MCMV (${formatBRL(subsidioEstimado)})` : ''}, total ${formatBRL(recursosExternos)}, cobrem a entrada mínima estimada (${formatBRL(entradaMinima)}).`}
+                ? `Entrada mínima estimada: ${formatBRL(entradaMinima)}${recursosExternos > 0 ? ` · FGTS${temSubsidio ? ` (${formatBRL(fgtsUsado)}) + subsídio (${formatBRL(subsidioEstimado)})` : ''}: ${formatBRL(recursosExternos)}` : ''} · falta cobrir via construtora: ${formatBRL(faltaParaConstrutora)}`
+                : `✅ FGTS${temSubsidio ? ` (${formatBRL(fgtsUsado)}) + subsídio MCMV (${formatBRL(subsidioEstimado)})` : ''}, total ${formatBRL(recursosExternos)}, cobrem a entrada mínima estimada (${formatBRL(entradaMinima)}).`}
             </p>
 
             {/* Nota sobre avaliação Caixa no MCMV */}
@@ -677,7 +687,7 @@ function NaPlantaContent() {
                       {([
                         { emoji: '🏛️', label: 'Financiamento bancário', val: financiado },
                         { emoji: '💰', label: 'Pagamentos à construtora', val: totalConstrutora },
-                        ...(fgts > 0        ? [{ emoji: '🏦', label: 'FGTS', val: fgts }] : []),
+                        ...(fgtsUsado > 0        ? [{ emoji: '🏦', label: 'FGTS', val: fgtsUsado }] : []),
                         ...(subsidioEstimado > 0 ? [{ emoji: '🎁', label: `Subsídio MCMV ${faixaEfetiva?.label ?? ''}`, val: subsidioEstimado }] : []),
                       ] as { emoji: string; label: string; val: number }[]).map(({ emoji, label, val }, i) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px dashed var(--border)' }}>
@@ -703,8 +713,8 @@ function NaPlantaContent() {
                           <br /><br />
                           Renda <strong>{formatBRL(renda)}/mês</strong> × 30% = <strong>{formatBRL(Math.round(renda * 0.30))}/mês</strong> de encargo máximo.
                           {' '}À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em 35 anos (incluindo seguros), o banco aprova até <strong>{formatBRL(maxFinBanco)}</strong> (LTV {Math.round(ltvPct * 100)}% do imóvel).{isMCMV ? ' Na prática, a Caixa avalia o imóvel acima do preço de venda — o financiamento pode cobrir mais de 80% do valor pago à construtora.' : ''}
-                          {(fgts > 0 || totalContribuicao > 0) && (
-                            <span> Com {[fgts > 0 ? `FGTS de ${formatBRL(fgts)}` : null, subsidioEstimado > 0 ? `subsídio de ${formatBRL(subsidioEstimado)}` : null, totalConstrutora > 0 ? `pagamentos à construtora de ${formatBRL(totalConstrutora)}` : null].filter(Boolean).join(' + ')}, o valor financiado pelo banco fica em <strong>{formatBRL(financiado)}</strong>.</span>
+                          {(fgtsUsado > 0 || totalContribuicao > 0) && (
+                            <span> Com {[fgtsUsado > 0 ? `FGTS de ${formatBRL(fgtsUsado)}` : null, subsidioEstimado > 0 ? `subsídio de ${formatBRL(subsidioEstimado)}` : null, totalConstrutora > 0 ? `pagamentos à construtora de ${formatBRL(totalConstrutora)}` : null].filter(Boolean).join(' + ')}, o valor financiado pelo banco fica em <strong>{formatBRL(financiado)}</strong>.</span>
                           )}
                           <br />
                           <span style={{ color: '#6B7280' }}>Parcela pós-obra: <strong>{formatBRL(Math.round(parcelaFin + seguros.total))}/mês</strong> ({((parcelaFin + seguros.total) / renda * 100).toFixed(1)}% da renda) — A+J: {formatBRL(Math.round(parcelaFin))}/mês + seguros: {formatBRL(seguros.total)}/mês.</span>
@@ -712,7 +722,7 @@ function NaPlantaContent() {
                       )}
                     </div>
                   )}
-                  {fgts > 0 && <LinhaDetalhe label="FGTS" valor={`− ${formatBRL(fgts)}`} sub="Aplicado na entrada" />}
+                  {fgtsUsado > 0 && <LinhaDetalhe label="FGTS" valor={`− ${formatBRL(fgtsUsado)}`} sub="Aplicado na entrada" />}
                   {temSubsidio && <LinhaDetalhe label={`Subsídio MCMV ${faixaEfetiva?.label}`} valor={`− ${formatBRL(subsidioEstimado)}`} sub="Grant do governo" />}
                   {ato > 0 && <LinhaDetalhe label="Ato (assinatura)" valor={`− ${formatBRL(ato)}`} />}
                   {iniciais > 0 && <LinhaDetalhe label={`Sinais × ${qtdIniciais}`} valor={`− ${formatBRL(iniciais)}`} />}
@@ -760,7 +770,7 @@ function NaPlantaContent() {
             {/* Na assinatura */}
             <BlocoFluxo emoji="📋" titulo="Na assinatura" cor="#44403c">
               <LinhaDetalhe label="Ato" valor={formatBRL(ato)} sub="Pagamento único na assinatura do contrato" destaque />
-              {fgts > 0 && <LinhaDetalhe label="FGTS" valor={formatBRL(fgts)} sub="Aplicado na entrada junto ao banco" />}
+              {fgtsUsado > 0 && <LinhaDetalhe label="FGTS" valor={formatBRL(fgtsUsado)} sub="Aplicado na entrada junto ao banco" />}
               {temSubsidio && <LinhaDetalhe label={`Subsídio MCMV ${faixaEfetiva?.label}`} valor={formatBRL(subsidioEstimado)} sub="Grant do governo aplicado na entrada" />}
             </BlocoFluxo>
 
