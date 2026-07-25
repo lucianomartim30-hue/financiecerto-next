@@ -19,6 +19,11 @@ function fmtInput(v: string) {
   const n = v.replace(/\D/g, '');
   return n ? Number(n).toLocaleString('pt-BR') : '';
 }
+// "Jul/26" → "Jul/2026" — usado para exibir o período coberto pela série histórica
+function expandirAno(label: string) {
+  const [mes, ano2] = label.split('/');
+  return `${mes}/20${ano2}`;
+}
 
 // ─── Card de resumo ───────────────────────────────────────────────────────────
 function CardResumo({
@@ -220,7 +225,7 @@ function HistoricoTRContent() {
         </div>
         <p style={{ margin: '12px 0 0', fontSize: 12, color: '#9ca3af' }}>
           Sistema SAC (amortização constante) — padrão dos financiamentos com TR no Brasil.
-          Período: <strong>Jun/2023 a Mai/2026</strong> · Fonte: BCB Série 226
+          Período: <strong>{expandirAno(TR_HISTORICO_36M[0].label)} a {expandirAno(TR_HISTORICO_36M[TR_HISTORICO_36M.length - 1].label)}</strong> · Fonte: BCB Série 226
         </p>
       </div>
 
@@ -411,7 +416,9 @@ function HistoricoTRContent() {
             })}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 10, color: '#9ca3af' }}>
-            <span>Jun/23</span><span>Jun/24</span><span>Jun/25</span><span>Mai/26</span>
+            {[0, 12, 24, TR_HISTORICO_36M.length - 1].map(i => (
+              <span key={i}>{TR_HISTORICO_36M[i].label}</span>
+            ))}
           </div>
           <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: 11, color: '#6b7280' }}>
             <span><span style={{ color: '#dc2626' }}>■</span> TR &gt; 0,15%</span>
