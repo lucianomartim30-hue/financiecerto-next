@@ -825,40 +825,50 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
             </button>
 
             {resultado && (() => {
+              // Usa os campos já calculados por simular() — nunca recalcular
+              // comprometimento localmente, e sempre respeitar o bloqueio
+              // quando a operação não é viável (mesma regra do /simulador).
               const parcela = resultado.parcelaPrimeiro;
-              const comprometimento = parseMoeda(renda) > 0 ? Math.round((parcela / parseMoeda(renda)) * 100) : 0;
-              const alerta = comprometimento > 30;
+              const comprometimento = Math.round(resultado.comprometimento);
+              const bloqueado = resultado.bloqueado;
               const minFiltro = Math.round(valorRef * 0.75);
               const maxFiltro = Math.round(valorRef * 1.25);
               const ctaLink = `/imoveis?min=${minFiltro}&max=${maxFiltro}${isNaPlanta(imovel.status || '') ? '&status=na planta' : ''}`;
               return (
                 <>
-                  <div style={{ background: alerta ? 'rgba(239,68,68,.06)' : 'rgba(22,163,74,.06)', border: `1px solid ${alerta ? 'rgba(239,68,68,.25)' : 'rgba(22,163,74,.25)'}`, borderRadius: '12px', padding: '16px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>1ª Parcela</p>
-                        <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : 'var(--primary)' }}>{formatBRL(parcela)}</p>
-                      </div>
-                      <div style={{ textAlign: 'center' }}>
-                        <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Comprometimento</p>
-                        <p style={{ fontSize: '22px', fontWeight: '900', color: alerta ? '#dc2626' : '#16a34a' }}>{comprometimento}%</p>
-                      </div>
+                  {bloqueado ? (
+                    <div style={{ background: 'rgba(239,68,68,.06)', border: '1.5px solid rgba(239,68,68,.3)', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+                      <p style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626', marginBottom: '6px' }}>🚫 Simulação não viável nestas condições</p>
+                      <p style={{ fontSize: '12px', color: '#7f1d1d', marginBottom: '10px' }}>{resultado.motivoBloqueio}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Comprometimento calculado: {comprometimento}% da renda (limite: 30%)</p>
                     </div>
-                    {alerta && <p style={{ fontSize: '12px', color: '#dc2626', textAlign: 'center', marginBottom: '10px' }}>⚠️ Acima de 30% da renda — risco de reprovação</p>}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      {[
-                        { l: 'Tabela Price', v: formatBRL(resultado.parcelaPrimeiro) },
-                        { l: 'SAC (1ª)', v: formatBRL(resultado.parcelaSACPrimeiro) },
-                        { l: 'Valor financiado', v: formatBRL(resultado.valorFinanciado) },
-                        { l: 'Total pago (Price)', v: formatBRL(resultado.totalPagoPrice) },
-                      ].map(({ l, v }) => (
-                        <div key={l} style={{ textAlign: 'center' }}>
-                          <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>{l}</p>
-                          <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>{v}</p>
+                  ) : (
+                    <div style={{ background: 'rgba(22,163,74,.06)', border: '1px solid rgba(22,163,74,.25)', borderRadius: '12px', padding: '16px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>1ª Parcela</p>
+                          <p style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)' }}>{formatBRL(parcela)}</p>
                         </div>
-                      ))}
+                        <div style={{ textAlign: 'center' }}>
+                          <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Comprometimento</p>
+                          <p style={{ fontSize: '22px', fontWeight: '900', color: '#16a34a' }}>{comprometimento}%</p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        {[
+                          { l: 'Tabela Price', v: formatBRL(resultado.parcelaPrimeiro) },
+                          { l: 'SAC (1ª)', v: formatBRL(resultado.parcelaSACPrimeiro) },
+                          { l: 'Valor financiado', v: formatBRL(resultado.valorFinanciado) },
+                          { l: 'Total pago (Price)', v: formatBRL(resultado.totalPagoPrice) },
+                        ].map(({ l, v }) => (
+                          <div key={l} style={{ textAlign: 'center' }}>
+                            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>{l}</p>
+                            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>{v}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   {/* CTAs pós-simulação */}
                   <Link href={ctaLink}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', background: 'var(--primary-light)', color: 'var(--primary)', border: '1.5px solid rgba(37,99,235,.25)', borderRadius: '12px', padding: '10px', fontSize: '12px', fontWeight: '700', textDecoration: 'none', textAlign: 'center' }}>
