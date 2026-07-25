@@ -165,7 +165,7 @@ function getStatus(s: string) {
   return { cor: '#475569', bg: 'rgba(71,85,105,.12)', label: s };
 }
 
-function calcEstimate(valorImovel: number): {
+function calcEstimate(valorImovel: number, isComercial = false): {
   entrada: number; parcela: number; rendaSugerida: number; faixaMCMV: FaixaMCMV | null; taxa: number;
 } {
   const entrada = Math.round(valorImovel * 0.20);
@@ -177,10 +177,12 @@ function calcEstimate(valorImovel: number): {
     return Math.round(base + financiado * 0.00003 + 25); // + seguro aprox. + tx. adm.
   };
 
+  // Imóvel comercial não é elegível a MCMV (benefício exclusivo de habitação) —
+  // pula direto para a estimativa via SBPE abaixo.
   // Faixa CONSISTENTE com a renda: a faixa do MCMV é definida pela RENDA, não
   // pelo preço. Testamos da menor faixa para a maior e usamos a primeira em que
   // a renda necessária (calculada à taxa MCMV daquela faixa) cabe na própria faixa.
-  for (const f of FAIXAS_MCMV) {
+  for (const f of isComercial ? [] : FAIXAS_MCMV) {
     if (valorImovel > f.teto) continue; // imóvel não cabe no teto desta faixa
     let taxa = f.taxaMin;
     let parcela = pmt(taxa);
@@ -583,7 +585,9 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
 function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: ImovelDetalhe; valorOverride?: number; tipologiaLabel?: string }) {
   const isBreveLancamento = !imovel.min_price || imovel.min_price < 100;
   const valorRef = valorOverride ?? (imovel.min_price ?? imovel.max_price ?? 0);
-  const est = valorRef > 0 && !isBreveLancamento ? calcEstimate(valorRef) : null;
+  // MCMV/FGTS não se aplicam a imóvel comercial (finality vem cru da Orulo — checagem tolerante a caixa)
+  const isComercial = (imovel.finality || '').toLowerCase().includes('comercial');
+  const est = valorRef > 0 && !isBreveLancamento ? calcEstimate(valorRef, isComercial) : null;
 
   // Simulator state
   const [expanded, setExpanded] = useState(false);
@@ -614,7 +618,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
     const r = parseMoeda(renda);
     const f = parseMoeda(fgts);
     const e = parseMoeda(entrada);
-    if (r >= 800) setPoder(descobrir(r, f, e, parseInt(prazo), 35));
+    if (r >= 800) setPoder(descobrir(r, f, e, parseInt(prazo), 35, true, true, false, 0, false, isComercial ? 'comercial' : 'residencial'));
     else setPoder(null);
   }, [renda, fgts, entrada, prazo]);
 
@@ -626,7 +630,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
     if (!valorRef)     { setErro('Valor do imóvel não disponível.'); return; }
     if (en + fg >= valorRef) { setErro('Entrada + FGTS não pode ser maior que o imóvel.'); return; }
     setErro('');
-    setResultado(simular({ rendaBruta: r, entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: 35 }));
+    setResultado(simular({ rendaBruta: r, entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: 35, tipoImovel: isComercial ? 'comercial' : 'residencial' }));
   }
 
   const fg = parseMoeda(fgts);

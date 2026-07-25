@@ -50,5 +50,13 @@ check('Imóvel R$1,5M (< teto SFH) → NÃO é SFI', r5a.isSFI === false);
 const r5b = simular({ rendaBruta: 50000, fgts: 0, entrada: 500000, valorImovel: 3000000, prazoAnos: 35, naPlanta: false, prazoObraAnos: 3, idadeProponente: 35 });
 check('Imóvel R$3M (> teto SFH) → é SFI', r5b.isSFI === true);
 
+// 6. descobrir() também respeita tipoImovel comercial (usado no card/página do imóvel)
+const r6 = descobrir(4000, 10000, 0, 35, 35, true, true, false, 0, false, 'comercial');
+check('descobrir() comercial → faixa MCMV = null', r6.faixa === null);
+check('descobrir() comercial → MCMV não elegível', r6.mcmv.elegivel === false);
+check('descobrir() comercial → FGTS não usado', r6.fgts === 0);
+const r6b = descobrir(4000, 10000, 0, 35, 35, true, true, false, 0, false, 'residencial');
+check('descobrir() residencial → FGTS usado normalmente', r6b.fgts === 10000);
+
 console.log(`\n${pass} passaram, ${fail} falharam`);
 process.exit(fail > 0 ? 1 : 0);

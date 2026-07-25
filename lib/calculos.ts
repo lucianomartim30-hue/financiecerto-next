@@ -660,14 +660,18 @@ export function descobrir(
   jaRecebeuBeneficio = false,
   dependentes = 0,
   temImovelMunicipio = false,
+  tipoImovel: 'residencial' | 'comercial' = 'residencial',
 ): ResultadoDescobrir {
+  // VALIDAÇÃO: Comercial não é elegível a MCMV/FGTS (benefícios exclusivos de habitação)
+  const isComercial = tipoImovel === 'comercial';
+
   const prazoMaxPorIdade = Math.max(60, Math.floor((80.5 - idadeProponente) * 12));
   const prazoMeses = Math.min(prazoAnos * 12, Math.min(prazoMaxPorIdade, PRAZO_MAX_MESES));
-  const fgtsElegivel = cotista && primeiroImovel && !temImovelMunicipio;
+  const fgtsElegivel = !isComercial && cotista && primeiroImovel && !temImovelMunicipio;
   const fgtsUsado = fgtsElegivel ? fgts : 0;
   const entradaTotal = entrada + fgtsUsado;
 
-  const faixa   = detectarFaixaMCMV(rendaBruta);
+  const faixa   = isComercial ? null : detectarFaixaMCMV(rendaBruta);
   const elegivel = faixa !== null && !jaRecebeuBeneficio && !temImovelMunicipio;
 
   // F2: escala deslizante | F3/F4: flat — ambos via taxaEfetivaMCMV()
