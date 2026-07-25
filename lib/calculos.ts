@@ -144,19 +144,26 @@ export function simularHistoricoTR(
 
   const meses: MesHistoricoTR[] = [];
 
-  for (const { label, tr } of TR_HISTORICO_36M) {
+  // Se o prazo escolhido é menor que a janela de 36 meses, o financiamento já
+  // está quitado antes do fim da série histórica. Sem essa checagem, `amort`
+  // (constante) continuaria sendo somado à parcela mesmo com saldo zerado,
+  // criando uma parcela fantasma nos meses após a quitação.
+  for (let i = 0; i < TR_HISTORICO_36M.length; i++) {
+    const { label, tr } = TR_HISTORICO_36M[i];
+    const quitado = i >= prazoMeses;
+
     // ── COM TR ────────────────────────────────────────────────────────────────
     const saldoInicial   = saldoComTR;
-    const correcaoTR     = saldoComTR * (tr / 100);
-    const saldoCorrigido = saldoComTR + correcaoTR;
-    const jurosComTR     = saldoCorrigido * taxaMensal;
-    const parcelaComTR   = amort + jurosComTR;
-    saldoComTR = Math.max(0, saldoCorrigido - amort);
+    const correcaoTR     = quitado ? 0 : saldoComTR * (tr / 100);
+    const saldoCorrigido = quitado ? 0 : saldoComTR + correcaoTR;
+    const jurosComTR     = quitado ? 0 : saldoCorrigido * taxaMensal;
+    const parcelaComTR   = quitado ? 0 : amort + jurosComTR;
+    saldoComTR = quitado ? 0 : Math.max(0, saldoCorrigido - amort);
 
     // ── SEM TR (hipotético) ───────────────────────────────────────────────────
-    const jurosSemTR   = saldoSemTR * taxaMensal;
-    const parcelaSemTR = amort + jurosSemTR;
-    saldoSemTR = Math.max(0, saldoSemTR - amort);
+    const jurosSemTR   = quitado ? 0 : saldoSemTR * taxaMensal;
+    const parcelaSemTR = quitado ? 0 : amort + jurosSemTR;
+    saldoSemTR = quitado ? 0 : Math.max(0, saldoSemTR - amort);
 
     totalCorrecaoSaldo   += correcaoTR;
     totalImpactoParcelas += parcelaComTR - parcelaSemTR;
