@@ -457,6 +457,7 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
 // Sticky Section Nav
 // ─────────────────────────────────────────────────────────────────────────────
 const NAV_SECTIONS = [
+  { id: 'contato',          label: '📞 Contato'      },
   { id: 'visao-geral',      label: 'Visão Geral'     },
   { id: 'caracteristicas',  label: 'Características' },
   { id: 'financeiro',       label: '💰 Financeiro'   },
@@ -1420,6 +1421,9 @@ export default function ImovelDetailClient({ id }: { id: string }) {
     </div>
   );
 
+  const urlImovelTopo = typeof window !== 'undefined' ? window.location.href : '';
+  const waMsgTopo = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovelTopo}`);
+
   const statusCfg = getStatus(imovel.status || '');
   // Chips de resumo rápido no header — apenas specs da unidade
   const specs = [
@@ -1514,6 +1518,21 @@ export default function ImovelDetailClient({ id }: { id: string }) {
               </>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* ── Contato rápido (topo) ───────────────────────────────────────── */}
+      <div id="contato" style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 24px 0', scrollMarginTop: '100px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: 'linear-gradient(135deg, #0f172a, #1e3a5f)', borderRadius: '16px', padding: '18px 20px' }}>
+          <div>
+            <p style={{ fontSize: '15px', fontWeight: '800', color: '#fff', marginBottom: '2px' }}>Interessado neste imóvel?</p>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.75)' }}>Fale agora com um consultor pelo WhatsApp</p>
+          </div>
+          <a href={`https://wa.me/5511933661403?text=${waMsgTopo}`} target="_blank" rel="noopener noreferrer"
+            onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood })); }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            <span>💬</span> Falar com consultor
+          </a>
         </div>
       </div>
 
