@@ -639,7 +639,8 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   const dentroAlcance = poderTotal > 0 && poderTotal >= valorRef;
   const diffPoder = poderTotal - valorRef;
 
-  const waMsg = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.`);
+  const urlImovel = typeof window !== 'undefined' ? window.location.href : '';
+  const waMsg = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovel}`);
 
   return (
     <div id="financeiro" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
