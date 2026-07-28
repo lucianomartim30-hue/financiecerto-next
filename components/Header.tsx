@@ -80,7 +80,12 @@ export default function Header() {
               flexShrink: 0,
             }}>
               <svg width="26" height="24" viewBox="0 0 28 26" fill="none">
+                <rect x="18" y="6" width="2.2" height="8" fill="white"/>
                 <path d="M2,14 L14,2 L26,14 L22,14 L22,25 L6,25 L6,14 Z" fill="white"/>
+                <rect x="12.3" y="14.5" width="1.1" height="1.1" fill="#2563eb"/>
+                <rect x="14.6" y="14.5" width="1.1" height="1.1" fill="#2563eb"/>
+                <rect x="12.3" y="16.2" width="1.1" height="1.1" fill="#2563eb"/>
+                <rect x="14.6" y="16.2" width="1.1" height="1.1" fill="#2563eb"/>
                 <rect x="11" y="18" width="6" height="7" rx="1" fill="#2563eb"/>
               </svg>
             </div>
