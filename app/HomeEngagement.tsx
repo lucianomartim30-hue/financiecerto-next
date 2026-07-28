@@ -18,19 +18,20 @@ export function HomeEngagement() {
       import('@/lib/gtag').then(m => m.trackHomeEngagement({ elemento: 'aprenda_cta' }));
     };
 
-    // Procura botões com data-track e adiciona listeners
-    const simuladorBtn = document.querySelector('[data-track="simulador"]');
-    const imoveisBtn = document.querySelector('[data-track="imoveis"]');
-    const aprendaBtn = document.querySelector('[data-track="aprenda"]');
+    // Procura todos os botões com data-track e adiciona listeners
+    // (querySelectorAll pois o mesmo CTA aparece mais de uma vez na página — hero + seção final)
+    const simuladorBtns = document.querySelectorAll('[data-track="simulador"]');
+    const imoveisBtns = document.querySelectorAll('[data-track="imoveis"]');
+    const aprendaBtns = document.querySelectorAll('[data-track="aprenda"]');
 
-    simuladorBtn?.addEventListener('click', handleSimuladorClick);
-    imoveisBtn?.addEventListener('click', handleImoveisClick);
-    aprendaBtn?.addEventListener('click', handleAprendaClick);
+    simuladorBtns.forEach(el => el.addEventListener('click', handleSimuladorClick));
+    imoveisBtns.forEach(el => el.addEventListener('click', handleImoveisClick));
+    aprendaBtns.forEach(el => el.addEventListener('click', handleAprendaClick));
 
     return () => {
-      simuladorBtn?.removeEventListener('click', handleSimuladorClick);
-      imoveisBtn?.removeEventListener('click', handleImoveisClick);
-      aprendaBtn?.removeEventListener('click', handleAprendaClick);
+      simuladorBtns.forEach(el => el.removeEventListener('click', handleSimuladorClick));
+      imoveisBtns.forEach(el => el.removeEventListener('click', handleImoveisClick));
+      aprendaBtns.forEach(el => el.removeEventListener('click', handleAprendaClick));
     };
   }, []);
 

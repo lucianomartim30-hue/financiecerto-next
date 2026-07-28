@@ -158,10 +158,10 @@ export default function Home() {
 
           {/* CTAs — dois caminhos com a mesma importância */}
           <div className="home-ctas" style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/simulador" className="btn-primary" style={{ fontSize: '16px', padding: '15px 32px' }}>
+            <Link href="/simulador" className="btn-primary" data-track="simulador" style={{ fontSize: '16px', padding: '15px 32px' }}>
               Descobrir meu perfil →
             </Link>
-            <Link href="/imoveis" className="btn-primary-green" style={{ fontSize: '16px', padding: '15px 32px' }}>
+            <Link href="/imoveis" className="btn-primary-green" data-track="imoveis" style={{ fontSize: '16px', padding: '15px 32px' }}>
               🏠 Ver imóveis disponíveis →
             </Link>
           </div>
@@ -369,10 +369,10 @@ export default function Home() {
             Descubra seu perfil financeiro ou já vá direto aos imóveis disponíveis.
           </p>
           <div className="home-ctas" style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/simulador" className="btn-primary" style={{ fontSize: '16px', padding: '16px 36px' }}>
+            <Link href="/simulador" className="btn-primary" data-track="simulador" style={{ fontSize: '16px', padding: '16px 36px' }}>
               Descobrir meu perfil →
             </Link>
-            <Link href="/imoveis" className="btn-primary-green" style={{ fontSize: '16px', padding: '16px 36px' }}>
+            <Link href="/imoveis" className="btn-primary-green" data-track="imoveis" style={{ fontSize: '16px', padding: '16px 36px' }}>
               🏠 Ver imóveis disponíveis →
             </Link>
           </div>
