@@ -118,6 +118,30 @@ button, input, select, textarea { font-family: inherit; }
 }
 .btn-primary:active { transform: scale(0.98); }
 
+.btn-primary-green {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: #16a34a;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 13px 26px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(22,163,74,.3);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.btn-primary-green:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(22,163,74,.4);
+  text-decoration: none;
+  color: #fff;
+}
+.btn-primary-green:active { transform: scale(0.98); }
+
 .btn-outline {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   background: transparent;

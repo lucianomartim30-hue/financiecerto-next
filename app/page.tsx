@@ -156,30 +156,23 @@ export default function Home() {
             capacidade real e recomenda apenas imóveis que você consegue financiar — de econômicos a médio e alto padrão.
           </p>
 
-          {/* CTAs — linha 1 */}
-          <div className="home-ctas" style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {/* CTAs — dois caminhos com a mesma importância */}
+          <div className="home-ctas" style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/simulador" className="btn-primary" style={{ fontSize: '16px', padding: '15px 32px' }}>
               Descobrir meu perfil →
             </Link>
-            <Link href="/simulador/na-planta" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
-              📐 Simular na planta
-            </Link>
-            <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '14px 26px' }}>
-              🏠 Simular pronto
+            <Link href="/imoveis" className="btn-primary-green" style={{ fontSize: '16px', padding: '15px 32px' }}>
+              🏠 Ver imóveis disponíveis →
             </Link>
           </div>
 
-          {/* CTA verde — para quem já conhece seu perfil */}
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
-            <Link href="/imoveis" style={{
-              display: 'inline-flex', alignItems: 'center', gap: '10px',
-              background: '#16a34a', color: '#fff',
-              border: 'none', borderRadius: '12px',
-              fontSize: '15px', fontWeight: '700',
-              padding: '13px 28px', textDecoration: 'none',
-              boxShadow: '0 2px 8px rgba(22,163,74,.25)',
-            }}>
-              ✅ Já sei meu perfil — buscar empreendimentos em SP →
+          {/* Sub-opções do simulador */}
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '14px' }}>
+            <Link href="/simulador/na-planta" className="btn-outline" style={{ fontSize: '14px', padding: '10px 20px' }}>
+              📐 Simular na planta
+            </Link>
+            <Link href="/simulador" className="btn-outline" style={{ fontSize: '14px', padding: '10px 20px' }}>
+              🏠 Simular pronto
             </Link>
           </div>
 
@@ -369,34 +362,26 @@ export default function Home() {
             letterSpacing: '-1px',
             marginBottom: '16px',
           }}>
-            Pronto para descobrir{' '}
-            <span className="gradient-text">seu perfil?</span>
+            Pronto para <span className="gradient-text">começar?</span>
           </h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '36px', fontSize: '17px', lineHeight: '1.7' }}>
             Gratuito, sem cadastro e resultado em menos de 2 minutos.
-            Nossa inteligência financeira analisa seu perfil e encontra os melhores caminhos.
+            Descubra seu perfil financeiro ou já vá direto aos imóveis disponíveis.
           </p>
-          <div className="home-ctas" style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div className="home-ctas" style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <Link href="/simulador" className="btn-primary" style={{ fontSize: '16px', padding: '16px 36px' }}>
               Descobrir meu perfil →
             </Link>
-            <Link href="/simulador/na-planta" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
-              📐 Simular na planta
-            </Link>
-            <Link href="/simulador" className="btn-outline" style={{ fontSize: '16px', padding: '15px 24px' }}>
-              🏠 Simular pronto
+            <Link href="/imoveis" className="btn-primary-green" style={{ fontSize: '16px', padding: '16px 36px' }}>
+              🏠 Ver imóveis disponíveis →
             </Link>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '10px' }}>
-            <Link href="/imoveis" style={{
-              display: 'inline-flex', alignItems: 'center', gap: '10px',
-              background: '#16a34a', color: '#fff',
-              border: 'none', borderRadius: '12px',
-              fontSize: '15px', fontWeight: '700',
-              padding: '13px 28px', textDecoration: 'none',
-              boxShadow: '0 2px 8px rgba(22,163,74,.25)',
-            }}>
-              ✅ Já sei meu perfil — buscar empreendimentos em SP →
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '14px' }}>
+            <Link href="/simulador/na-planta" className="btn-outline" style={{ fontSize: '14px', padding: '10px 20px' }}>
+              📐 Simular na planta
+            </Link>
+            <Link href="/simulador" className="btn-outline" style={{ fontSize: '14px', padding: '10px 20px' }}>
+              🏠 Simular pronto
             </Link>
           </div>
         </div>
