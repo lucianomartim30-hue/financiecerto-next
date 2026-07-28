@@ -789,7 +789,7 @@ function ImoveisContent() {
                     onFocus={e => { e.currentTarget.style.background = 'rgba(255,255,255,.15)'; setShowSuggestions(true); }}
                     onBlur={e => { e.currentTarget.style.background = 'rgba(255,255,255,.08)'; }}
                     ref={inputRef}
-                    style={{ width: '130px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '13px' }}
+                    style={{ width: '190px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '13px' }}
                   />
                 </div>
                 {search && (
