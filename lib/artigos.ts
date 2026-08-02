@@ -742,11 +742,14 @@ export const ARTIGOS: Artigo[] = [
     leituraMin: 8,
     secoes: [
       {
-        titulo: 'O que são HIS e HMP',
+        titulo: 'HIS e MCMV não são a mesma coisa — entenda com um exemplo simples',
         blocos: [
-          { tipo: 'p', texto: '**HIS (Habitação de Interesse Social)** e **HMP (Habitação de Mercado Popular)** são categorias de empreendimento definidas pela Prefeitura de São Paulo, criadas para garantir moradia com preço controlado para famílias de baixa e média renda. Diferente do MCMV — que é um programa federal de financiamento — HIS e HMP são **classificações urbanísticas do imóvel em si**: definem o preço máximo de venda e o público que pode comprar, independentemente de qual banco financia.' },
-          { tipo: 'p', texto: 'Esses empreendimentos costumam ser construídos dentro das **ZEIS (Zonas Especiais de Interesse Social)** — áreas do território definidas pelo Plano Diretor de São Paulo justamente para viabilizar a produção de HIS e HMP, com incentivos urbanísticos (mais altura, menos exigência de vagas de garagem) em troca do preço controlado.' },
-          { tipo: 'destaque', texto: 'Resumindo: MCMV é COMO você financia (o programa/banco). HIS e HMP são O QUE você está comprando (a categoria do imóvel, com preço-teto e público-alvo definidos pela Prefeitura). Um imóvel HIS quase sempre se encaixa também no MCMV Faixa 1 ou 2 — mas são classificações diferentes, de órgãos diferentes.' },
+          { tipo: 'p', texto: 'Muita gente confunde HIS/HMP com o MCMV, porque eles quase sempre aparecem juntos. Mas são **duas coisas diferentes, de dois governos diferentes** — e entender isso evita confusão na hora de comprar.' },
+          { tipo: 'p', texto: 'Pense assim: imagine uma loja de roupas. O **MCMV é a forma de pagamento** — tipo um cartão de crédito especial que o Governo Federal oferece, com juros menores (ou até desconto) dependendo de quanto você ganha. Já **HIS e HMP são uma etiqueta que a Prefeitura de São Paulo cola em certos apartamentos**, dizendo: "este aqui só pode custar até tal preço, e só pode ser vendido para quem ganha até tal valor por mês".' },
+          { tipo: 'p', texto: 'Ou seja: você pode pagar um apartamento com a etiqueta HIS usando o cartão especial do MCMV — e é isso que acontece na maioria das vezes. Mas a etiqueta (HIS/HMP, da Prefeitura) e a forma de pagamento (MCMV, do Governo Federal) são regras de **órgãos diferentes**, com regras próprias — inclusive sobre quando você pode vender ou alugar depois, como você vai ver mais abaixo.' },
+          { tipo: 'destaque', texto: 'Resumindo bem simples:<br/>• MCMV → COMO você paga (o financiamento, o banco, a taxa de juros)<br/>• HIS / HMP → O QUE você está comprando (a etiqueta de preço e de público daquele apartamento específico, definida pela Prefeitura)' },
+          { tipo: 'p', texto: '**HIS (Habitação de Interesse Social)** e **HMP (Habitação de Mercado Popular)** são essas "etiquetas" — categorias de empreendimento definidas pela Prefeitura de São Paulo, criadas para garantir moradia com preço controlado para famílias de baixa e média renda.' },
+          { tipo: 'p', texto: 'Esses empreendimentos costumam ser construídos dentro das **ZEIS (Zonas Especiais de Interesse Social)** — áreas do território que o Plano Diretor de São Paulo separou de propósito para viabilizar a construção de HIS e HMP, dando incentivos à construtora (pode construir mais alto, precisa de menos vagas de garagem) em troca de vender com preço controlado.' },
         ],
       },
       {
