@@ -223,6 +223,8 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
   const [failedPhotos, setFailedPhotos] = useState<Set<number>>(new Set());
   // mosaicFailed: slots do mosaico que falharam (para ocultar o container)
   const [mosaicFailed, setMosaicFailed] = useState<Set<number>>(new Set());
+  // lightboxLoading: true enquanto tenta variantes de uma foto quebrada (mostra spinner em vez de tela vazia)
+  const [lightboxLoading, setLightboxLoading] = useState(false);
 
   const total = photos.length;
 
@@ -250,6 +252,30 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
     return '';
   }
 
+  // Tenta carregar uma URL com prazo máximo — evita ficar preso esperando
+  // um host morto responder (o timeout do navegador pode levar dezenas de segundos).
+  function loadWithTimeout(url: string, timeoutMs = 1500): Promise<boolean> {
+    return new Promise(resolve => {
+      const img = new Image();
+      let done = false;
+      const timer = setTimeout(() => { if (!done) { done = true; resolve(false); } }, timeoutMs);
+      img.onload  = () => { if (!done) { done = true; clearTimeout(timer); resolve(true); } };
+      img.onerror = () => { if (!done) { done = true; clearTimeout(timer); resolve(false); } };
+      img.src = url;
+    });
+  }
+
+  // Percorre a cadeia de variantes a partir de startUrl, com timeout curto por tentativa.
+  // Retorna a primeira URL que carregar, ou null se toda a cadeia falhar.
+  async function resolveFrom(startUrl: string, timeoutMs = 1500): Promise<string | null> {
+    let cur = startUrl;
+    for (let i = 0; i < 6 && cur; i++) {
+      if (await loadWithTimeout(cur, timeoutMs)) return cur;
+      cur = nextVariantUrl(cur);
+    }
+    return null;
+  }
+
   // Próximo índice válido (pula fotos confirmadas como quebradas)
   function nextValid(from: number, dir: 1 | -1): number {
     let idx = (from + dir + total) % total;
@@ -261,36 +287,42 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
     return idx;
   }
 
-  // onError do mosaico: tenta variante; se esgotada, oculta o container inteiro e registra falha
+  // onError do mosaico: tenta as variantes restantes com timeout curto;
+  // se todas esgotarem, oculta o container inteiro e registra falha
   function mosaicOnError(e: React.SyntheticEvent<HTMLImageElement>, idx: number) {
     const img = e.currentTarget;
-    const next = nextVariantUrl(img.src);
-    if (next) { img.src = next; return; }
-    // Oculta o container pai para não mostrar caixa preta
     const container = img.closest('[data-mosaic-slot]') as HTMLElement | null;
-    if (container) container.style.display = 'none';
-    setMosaicFailed(prev => new Set([...prev, idx]));
-    setFailedPhotos(prev => new Set([...prev, idx]));
+    resolveFrom(nextVariantUrl(img.src)).then(url => {
+      if (url) { img.src = url; return; }
+      // Oculta o container pai para não mostrar caixa preta
+      if (container) container.style.display = 'none';
+      setMosaicFailed(prev => new Set([...prev, idx]));
+      setFailedPhotos(prev => new Set([...prev, idx]));
+    });
   }
 
-  // onError do lightbox: tenta variante; se esgotada, pula para próxima foto válida
+  // onError do lightbox: tenta as variantes restantes com timeout curto;
+  // se todas esgotarem, pula para a próxima foto válida
   function lightboxOnError(idx: number) {
+    setLightboxLoading(true);
     const currentUrl = lightboxUrlOverrides.get(idx) ?? photos[idx];
-    const next = nextVariantUrl(currentUrl);
-    if (next) {
-      setLightboxUrlOverrides(prev => new Map(prev).set(idx, next));
-      return;
-    }
-    // Todas variantes falharam — registra e pula automaticamente
-    setFailedPhotos(prev => {
-      const updated = new Set([...prev, idx]);
-      // Calcula próximo válido com o set atualizado
-      let ni = (idx + 1) % total;
-      let tries = 0;
-      while (updated.has(ni) && tries < total) { ni = (ni + 1) % total; tries++; }
-      if (tries < total) setLightbox(ni);
-      else setLightbox(null); // todas falharam — fecha lightbox
-      return updated;
+    resolveFrom(nextVariantUrl(currentUrl)).then(url => {
+      setLightboxLoading(false);
+      if (url) {
+        setLightboxUrlOverrides(prev => new Map(prev).set(idx, url));
+        return;
+      }
+      // Todas variantes falharam — registra e pula automaticamente
+      setFailedPhotos(prev => {
+        const updated = new Set([...prev, idx]);
+        // Calcula próximo válido com o set atualizado
+        let ni = (idx + 1) % total;
+        let tries = 0;
+        while (updated.has(ni) && tries < total) { ni = (ni + 1) % total; tries++; }
+        if (tries < total) setLightbox(ni);
+        else setLightbox(null); // todas falharam — fecha lightbox
+        return updated;
+      });
     });
   }
 
@@ -417,20 +449,29 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
         >
           <button
             style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}
-            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? nextValid(l, -1) : null); }}
+            onClick={(e) => { e.stopPropagation(); setLightboxLoading(false); setLightbox(l => l !== null ? nextValid(l, -1) : null); }}
           >‹</button>
 
           {/* Foto em tamanho natural — key força remount ao navegar para novo índice */}
-          <img
-            key={lightbox}
-            src={lightboxUrlOverrides.get(lightbox) ?? photos[lightbox]}
-            alt={`${name} — foto ${lightbox + 1}`}
-            onError={() => lightboxOnError(lightbox)}
-            style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
-          />
+          {lightboxLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'rgba(255,255,255,.7)' }}>
+              <div style={{ width: '36px', height: '36px', border: '3px solid rgba(255,255,255,.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <span style={{ fontSize: '13px' }}>Carregando foto...</span>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : (
+            <img
+              key={lightbox}
+              src={lightboxUrlOverrides.get(lightbox) ?? photos[lightbox]}
+              alt={`${name} — foto ${lightbox + 1}`}
+              onError={() => lightboxOnError(lightbox)}
+              onLoad={() => setLightboxLoading(false)}
+              style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
+            />
+          )}
 
           <button
-            onClick={(e) => { e.stopPropagation(); setLightbox(l => l !== null ? nextValid(l, 1) : null); }}
+            onClick={(e) => { e.stopPropagation(); setLightboxLoading(false); setLightbox(l => l !== null ? nextValid(l, 1) : null); }}
             style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: '28px', width: '48px', height: '48px', borderRadius: '50%', cursor: 'pointer' }}
           >›</button>
 

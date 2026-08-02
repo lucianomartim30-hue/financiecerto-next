@@ -73,6 +73,32 @@ function imageLargeUrl(id: string | number): string {
   return `${ORULO_IMG_BASE}/large/${id}.jpg`;
 }
 
+// Busca as URLs reais de fotos/plantas via os endpoints dedicados da Orulo.
+// Necessário porque os arrays images[]/floor_plans[] do building só trazem IDs
+// numéricos — o nome de arquivo real no CDN é um hash (ex: cyoat7xnxktqn32eoj3wuuw5b8kz.jpg),
+// não o ID. Adivinhar a URL a partir do ID numérico sempre resulta em 404.
+// Doc: GET /buildings/{id}/images|floor_plans?dimensions[]=2280x1800&dimensions[]=1024x1024
+async function fetchMediaUrlMap(id: string, token: string, kind: 'images' | 'floor_plans'): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const qs = new URLSearchParams([['dimensions[]', '2280x1800'], ['dimensions[]', '1024x1024']]);
+    const resp = await fetch(`${ORULO_BASE}/api/v2/buildings/${id}/${kind}?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!resp.ok) return map;
+    const data = await resp.json();
+    const items = (data[kind] ?? []) as Record<string, string>[];
+    for (const item of items) {
+      const url = item['2280x1800'] || item['1024x1024'];
+      if (item.id && url) map.set(String(item.id), url);
+    }
+  } catch {
+    // Endpoint indisponível — segue com o fallback de adivinhação existente
+  }
+  return map;
+}
+
 function pickUrl(obj: Record<string, string> | null | undefined): string {
   if (!obj) return '';
   // Se tem ID mas nenhuma URL de resolução conhecida, monta via CDN (large)
@@ -107,9 +133,11 @@ export async function GET(
     }
 
     const token = await getToken();
-    const resp = await fetch(`${ORULO_BASE}/api/v2/buildings/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const [resp, imageUrlMap, floorPlanUrlMap] = await Promise.all([
+      fetch(`${ORULO_BASE}/api/v2/buildings/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+      fetchMediaUrlMap(id, token, 'images'),
+      fetchMediaUrlMap(id, token, 'floor_plans'),
+    ]);
 
     if (resp.status === 404) return NextResponse.json({ error: 'Imóvel não encontrado.' }, { status: 404 });
     if (!resp.ok) throw new Error(`Órulo building/${id} error ${resp.status}`);
@@ -133,14 +161,15 @@ export async function GET(
 
     const imagesRaw = ((b.images ?? b.photos ?? b.building_images ?? b.building_photos ?? []) as Record<string, unknown>[]);
     for (const img of imagesRaw.slice(0, 30)) {
-      // Orulo v2 aninha as URLs dentro de img.image = { '1024x1024': '...', '520x280': '...' }
-      // Verificamos primeiro o objeto aninhado (URLs reais do CDN), depois campos de raiz,
-      // e só como último recurso construímos a URL via ID.
+      const imgId = (img.id ?? img['image_id']) as string | number | undefined;
+      // Prioridade: URL real buscada via /buildings/{id}/images (confiável) →
+      // objeto aninhado img.image (quando a API já embute a URL) → campos de raiz →
+      // último recurso: adivinhar via ID (geralmente resulta em 404, mantido por segurança)
+      const urlFromMap = imgId ? imageUrlMap.get(String(imgId)) : undefined;
       const nested = (img.image ?? img.images) as Record<string, string> | undefined;
       const urlFromNested = nested ? pickUrl(nested) : '';
       const urlFromFields = pickUrl(img as Record<string, string>);
-      const imgId = (img.id ?? img['image_id']) as string | number | undefined;
-      const url = urlFromNested || urlFromFields || (imgId ? imageUrl(imgId) : '');
+      const url = urlFromMap || urlFromNested || urlFromFields || (imgId ? imageUrl(imgId) : '');
       if (url && !photos.includes(url)) photos.push(url);
     }
 
@@ -149,9 +178,10 @@ export async function GET(
     const floorPlansRaw = (b.floor_plans ?? b.blueprints ?? b.plants ?? []) as Record<string, unknown>[];
     const blueprints = floorPlansRaw.map(bp => {
       const bpId = (bp.id ?? bp['image_id']) as string | number | undefined;
-      const url = bpId
-        ? imageLargeUrl(bpId)   // plantas em alta resolução
-        : pickUrl((bp.image ?? bp) as Record<string, string>);
+      const url =
+        (bpId ? floorPlanUrlMap.get(String(bpId)) : undefined) ||
+        pickUrl((bp.image ?? bp) as Record<string, string>) ||
+        (bpId ? imageLargeUrl(bpId) : '');   // último recurso — geralmente 404
       return {
         name: (bp.description ?? bp.name ?? bp.label ?? 'Planta') as string,
         url,
