@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { REGIONS } from '@/lib/regions';
 
 const LINKS = {
   Simuladores: [
@@ -12,6 +13,7 @@ const LINKS = {
     { label: 'Sobre nós', href: '/sobre' },
     { label: 'Contato', href: '/contato' },
   ],
+  'Imóveis por região': REGIONS.map(r => ({ label: `Imóveis ${r.article} ${r.name}`, href: `/regiao/${r.slug}` })),
 };
 
 export default function Footer() {

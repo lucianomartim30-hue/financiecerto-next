@@ -9,6 +9,7 @@ import { MetadataRoute } from 'next';
 import { kvGetCatalog } from '@/lib/orulo-kv';
 import { neighborhoodToSlug } from '@/lib/locations';
 import { getArtigos } from '@/lib/artigos';
+import { REGIONS } from '@/lib/regions';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -39,6 +40,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/glossario`,           lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${BASE}/aprenda`,             lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
   ];
+
+  // ── Páginas de região (zonas de São Paulo) ────────────────────────────────
+  const regionPages: MetadataRoute.Sitemap = REGIONS.map(r => ({
+    url:             `${BASE}/regiao/${r.slug}`,
+    lastModified:    now,
+    changeFrequency: 'hourly' as const,
+    priority:        0.85,
+  }));
 
   // ── Artigos do hub /aprenda ───────────────────────────────────────────────
   const artigoPages: MetadataRoute.Sitemap = getArtigos().map(a => ({
@@ -82,5 +91,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // KV indisponível — retorna só as páginas estáticas
   }
 
-  return [...staticPages, ...artigoPages, ...buildingPages, ...bairroPages];
+  return [...staticPages, ...regionPages, ...artigoPages, ...buildingPages, ...bairroPages];
 }
