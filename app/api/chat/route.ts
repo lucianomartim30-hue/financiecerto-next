@@ -472,11 +472,16 @@ E em PARALELO, paga AO BANCO:
 6. **Juros evolutivos** — juros mensais à Caixa sobre o saldo já liberado à construtora (MCMV)
 NUNCA diga "sinal/entrada" como se fosse um único pagamento. O correto é "ato" para o pagamento na assinatura, e o fluxo completo tem as etapas acima. O total pago à construtora (ato + sinais + mensais + anuais + balão) + FGTS + subsídio = entrada total; o restante é financiado pelo banco.
 
-**HIS — Habitação de Interesse Social**
-- Imóveis para MCMV Faixa 1 em empreendimentos com análise prévia no SICAQ
-- Aprovação inicial da Caixa Econômica Federal antes da obra começar
-- Assinatura do financiamento pode ocorrer no lançamento ou durante a obra
-- Quanto mais avançada a obra na assinatura → maior será o primeiro juros evolutivo
+**HIS, HMP — classificações urbanísticas (Prefeitura de SP), diferente do MCMV**
+- HIS (Habitação de Interesse Social) e HMP (Habitação de Mercado Popular) são categorias de preço-teto e renda-alvo definidas pela Prefeitura de SP — não são o mesmo que as Faixas do MCMV (que é o programa federal de financiamento), mas costumam se sobrepor
+- HIS 1: renda familiar até R$ 4.863,00 (~3 SM), imóvel até R$ 276.102,20 (Decreto 64.895/2026) — costuma corresponder à Faixa 1 do MCMV
+- HIS 2: renda familiar até R$ 9.726,00 (~6 SM), imóvel até R$ 383.636,74 — costuma corresponder à Faixa 2 do MCMV
+- HMP: renda familiar até R$ 16.210,00 (~10 SM), imóvel até R$ 537.672,71 — ponte entre habitação social e mercado, geralmente Faixa 3 do MCMV ou SBPE
+- Construídos em ZEIS (Zonas Especiais de Interesse Social, zoneamento do Plano Diretor de SP)
+- CDHU é o programa ESTADUAL de seleção por pontuação (sorteio só para desempate) para moradia própria direta — diferente de comprar HIS/HMP de uma construtora num lançamento normal (processo comum, sem sorteio)
+- REGRA IMPORTANTE: por 10 anos a partir da 1ª venda ou do Habite-se, a unidade deve continuar destinada ao público HIS/HMP — revenda exige renda compatível do próximo comprador, e locação por TEMPORADA (Airbnb) é EXPRESSAMENTE PROIBIDA nesse período
+- Sempre recomendar confirmar as regras exatas no contrato e com o agente financeiro antes de vender/alugar
+- Quem quer investir em locação por temporada deve procurar unidades NR (não residencial), não HIS/HMP
 
 **Estágios do empreendimento e impacto**
 - Pré-lançamento: sem Registro de Incorporação (RI) — não pode assinar financiamento; assina apenas reserva/proposta
@@ -681,8 +686,11 @@ SIOPI: sistema da Caixa que registra as medições de avanço de obra e libera v
 Juros Evolutivos: juros pagos ao banco durante a obra sobre o saldo já liberado — crescem mensalmente
 Cronograma Físico-Financeiro: planilha de avanço da obra com datas e percentuais de liberação de verbas
 Interveniente Quitante: banco que quita o saldo devedor de outro banco durante a portabilidade do crédito
-Distrato: cancelamento do contrato de compra e venda — regras pelo Lei 13.786/2018 (15% de retenção)
-HIS: Habitação de Interesse Social — tipo de empreendimento para MCMV Faixas 1 e 2
+Distrato: cancelamento do contrato de compra e venda — Lei 13.786/2018, incorporadora retém 25% a 50% do pago
+HIS 1 / HIS 2: Habitação de Interesse Social — classificação da Prefeitura de SP por renda (HIS 1 até 3 SM, HIS 2 de 3 a 6 SM), preço-teto próprio, diferente das Faixas do MCMV mas costuma se sobrepor a elas
+HMP: Habitação de Mercado Popular — renda 6 a 10 SM, ponte entre habitação social e mercado convencional
+ZEIS: Zona Especial de Interesse Social — zoneamento do Plano Diretor de SP onde HIS/HMP são construídos
+NR: unidade Não Residencial — uso comercial/hospedagem, permite locação de curta duração (Airbnb), financia só via SFI, sem FGTS
 
 ━━━ INTERPRETAÇÃO DO CONTEXTO EM TEMPO REAL ━━━
 Quando o CONTEXTO DA SESSÃO contiver dados do simulador ou imóvel:

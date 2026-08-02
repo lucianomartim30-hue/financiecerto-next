@@ -728,6 +728,205 @@ export const ARTIGOS: Artigo[] = [
     ctaSimulador: { texto: 'Simular com FGTS', href: '/simulador' },
     relacionados: ['mcmv-sbpe-sfi-qual-modalidade-escolher', 'sac-ou-price-qual-sistema-amortizacao-escolher'],
   },
+  {
+    slug: 'his-hmp-o-que-sao-quem-pode-comprar',
+    keyword: 'HIS e HMP o que são',
+    titulo: 'HIS e HMP: O Que São, Quem Pode Comprar e Regras de Revenda e Aluguel',
+    tituloSEO: 'HIS e HMP: Quem Pode Comprar e Regras de Revenda/Aluguel (2026)',
+    metaDescription:
+      'Entenda HIS 1, HIS 2 e HMP: faixas de renda, valores máximos em São Paulo, quem pode comprar, e as regras de revenda e aluguel — incluindo a proibição de locação por temporada.',
+    resumo:
+      'HIS e HMP são categorias de habitação popular que aparecem direto no nome de muitos lançamentos em São Paulo — mas poucos compradores sabem exatamente o que muda entre elas, quem pode comprar, e o que acontece se quiser vender ou alugar depois. Aqui você vê as faixas de renda, os valores atualizados de 2026 e as regras reais de revenda e locação.',
+    publicado: '2026-08-02',
+    atualizado: '2026-08-02',
+    leituraMin: 8,
+    secoes: [
+      {
+        titulo: 'O que são HIS e HMP',
+        blocos: [
+          { tipo: 'p', texto: '**HIS (Habitação de Interesse Social)** e **HMP (Habitação de Mercado Popular)** são categorias de empreendimento definidas pela Prefeitura de São Paulo, criadas para garantir moradia com preço controlado para famílias de baixa e média renda. Diferente do MCMV — que é um programa federal de financiamento — HIS e HMP são **classificações urbanísticas do imóvel em si**: definem o preço máximo de venda e o público que pode comprar, independentemente de qual banco financia.' },
+          { tipo: 'p', texto: 'Esses empreendimentos costumam ser construídos dentro das **ZEIS (Zonas Especiais de Interesse Social)** — áreas do território definidas pelo Plano Diretor de São Paulo justamente para viabilizar a produção de HIS e HMP, com incentivos urbanísticos (mais altura, menos exigência de vagas de garagem) em troca do preço controlado.' },
+          { tipo: 'destaque', texto: 'Resumindo: MCMV é COMO você financia (o programa/banco). HIS e HMP são O QUE você está comprando (a categoria do imóvel, com preço-teto e público-alvo definidos pela Prefeitura). Um imóvel HIS quase sempre se encaixa também no MCMV Faixa 1 ou 2 — mas são classificações diferentes, de órgãos diferentes.' },
+        ],
+      },
+      {
+        titulo: 'HIS 1, HIS 2 e HMP: faixas e valores (2026)',
+        blocos: [
+          { tipo: 'p', texto: 'Os valores em vigor são do **Decreto nº 64.895, de 5 de janeiro de 2026** (publicado no Diário Oficial do Município em 06/01/2026), que definiu a renda familiar máxima e o valor de venda máximo por categoria:' },
+          { tipo: 'tabela',
+            cabecalho: ['Categoria', 'Renda familiar máx.', 'Renda per capita máx.', 'Valor máx. de venda'],
+            linhas: [
+              ['HIS 1', 'R$ 4.863,00', 'R$ 810,50', 'R$ 276.102,20'],
+              ['HIS 2', 'R$ 9.726,00', 'R$ 1.621,00', 'R$ 383.636,74'],
+              ['HMP', 'R$ 16.210,00', 'R$ 2.431,50', 'R$ 537.672,71'],
+            ],
+          },
+          { tipo: 'p', texto: 'Esses valores em reais equivalem, aproximadamente, a 3, 6 e 10 salários mínimos de 2026 — por isso o mercado costuma descrever as faixas dessa forma no dia a dia, mas o enquadramento oficial usa os valores exatos em reais acima (ou a renda per capita, o que for mais favorável à família).' },
+          { tipo: 'p', texto: 'Na prática, HIS 1 costuma corresponder à Faixa 1 do MCMV, HIS 2 à Faixa 2, e HMP funciona como uma ponte entre a habitação social e o mercado convencional — muitas vezes financiada pela Faixa 3 do MCMV ou pelo SBPE, dependendo da renda exata do comprador.' },
+        ],
+      },
+      {
+        titulo: 'Quem pode comprar',
+        blocos: [
+          { tipo: 'lista', itens: [
+            'Renda familiar dentro da faixa da categoria (comprovada na análise de crédito)',
+            'Não possuir outro imóvel residencial (regra geral de programas de habitação social)',
+            'Passar pela análise de crédito do agente financeiro, como em qualquer financiamento',
+            'Em alguns empreendimentos com cotas ou seleção da Prefeitura/CDHU, pode haver exigência de vínculo com a região (morar ou trabalhar nas proximidades)',
+          ] },
+          { tipo: 'p', texto: 'O critério central não é simplesmente "ter renda baixa" — é **necessidade de moradia**. Por isso a análise cruza renda, ausência de outro imóvel e, em processos de seleção pública, critérios adicionais de vulnerabilidade.' },
+        ],
+      },
+      {
+        titulo: 'ZEIS, sorteio e CDHU: como o acesso é organizado',
+        blocos: [
+          { tipo: 'p', texto: 'Vale separar dois processos que às vezes se confundem:' },
+          { tipo: 'lista', itens: [
+            '**ZEIS** é só o zoneamento — a área onde a lei permite/incentiva construir HIS e HMP. Comprar um imóvel HIS de uma construtora privada, num lançamento normal, não passa por sorteio nenhum.',
+            '**CDHU (Companhia de Desenvolvimento Habitacional e Urbano)** é o programa do Governo do Estado de SP que constrói e distribui moradias próprias por **seleção com pontuação** (sorteio é usado só para desempate). Critérios comuns: crianças de até 7 anos incompletos (3 pontos), casal jovem entre 18-35 anos (1 ponto), já recebe auxílio-moradia da CDHU (1 ponto), mora ou trabalha a até 1,5 km do empreendimento (1 ponto). Famílias com renda até 5 salários mínimos podem ter juro zero no financiamento pela CDHU.',
+          ] },
+          { tipo: 'destaque', texto: 'Ou seja: se você está comprando de uma construtora num lançamento HIS/HMP à venda no mercado, o processo é o mesmo de qualquer compra (proposta, análise de crédito, contrato). O sorteio/seleção por pontuação é específico dos programas públicos diretos (CDHU), não do mercado privado.' },
+        ],
+      },
+      {
+        titulo: 'Posso vender ou alugar depois de comprar?',
+        blocos: [
+          { tipo: 'p', texto: 'Essa é a parte que mais gera dúvida — e onde HIS/HMP têm uma regra própria, mais restritiva que o MCMV em geral:' },
+          { tipo: 'lista', itens: [
+            '**Prazo de destinação social:** por **10 anos** a partir da primeira comercialização ou da emissão do Habite-se, a unidade deve continuar destinada ao público HIS/HMP.',
+            '**Revenda dentro desse prazo:** é possível, mas o comprador seguinte também precisa comprovar renda compatível com a categoria (HIS 1, HIS 2 ou HMP) — não é uma venda livre no mercado como um imóvel comum.',
+            '**Aluguel por temporada (Airbnb):** **proibição expressa**. Unidades HIS e HMP não podem ser usadas para locação de curta duração enquanto durar a destinação social.',
+          ] },
+          { tipo: 'p', texto: 'Isso é mais restritivo que a regra geral do MCMV por faixa: no MCMV "comum" (fora de HIS/HMP), a Faixa 1 não pode vender nem alugar antes de quitar o financiamento ou completar carência de 5 a 10 anos (varia por contrato); já as Faixas 2 e 3 podem vender a qualquer momento, quitando ou transferindo o financiamento. Em HIS/HMP, a restrição de 10 anos e a exigência de renda compatível no comprador seguinte valem **além** dessas regras do financiamento.' },
+          { tipo: 'destaque', texto: 'Descumprir essas regras (alugar por temporada, vender para alguém fora da faixa de renda) pode ser tratado como quebra contratual — com risco de ação judicial e devolução de eventual subsídio. As regras exatas variam por contrato e por qual agente financeiro está envolvido: **sempre confirme no seu contrato de compra e venda e com o banco antes de vender ou alugar.**' },
+        ],
+      },
+      {
+        titulo: 'Investidor pode comprar HIS ou HMP?',
+        blocos: [
+          { tipo: 'p', texto: 'Comprar não é proibido para quem também investe — mas o produto **não foi desenhado para isso**. O critério de elegibilidade é necessidade de moradia, a revenda exige comprovação de renda do próximo comprador, e a locação por temporada é proibida. Ou seja: não dá para tratar um HIS/HMP como imóvel de renda via Airbnb.' },
+          { tipo: 'p', texto: 'Quem busca especificamente um imóvel para alugar por temporada tem uma categoria construída exatamente para isso: as **unidades NR (não residencial)**. Veja o [artigo completo sobre imóveis NR](/aprenda/imoveis-nr-nao-residencial-o-que-e-quem-pode-comprar) para entender a diferença.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'Qual a diferença entre HIS 1 e HIS 2?',
+        resposta: 'HIS 1 é para famílias com renda familiar até R$ 4.863,00 (imóvel até R$ 276.102,20, Decreto 64.895/2026). HIS 2 é para renda até R$ 9.726,00 (imóvel até R$ 383.636,74). Em salários mínimos, isso equivale a aproximadamente 3 e 6 salários. HIS 1 costuma corresponder à Faixa 1 do MCMV, e HIS 2 à Faixa 2.' },
+      { pergunta: 'HMP é a mesma coisa que MCMV Faixa 3?',
+        resposta: 'Não são a mesma classificação — HMP é uma categoria de preço/público definida pela Prefeitura de São Paulo (renda familiar até R$ 16.210,00, imóvel até R$ 537.672,71, Decreto 64.895/2026), enquanto a Faixa 3 do MCMV é uma faixa de financiamento federal. Na prática, costumam se sobrepor, mas o enquadramento é feito separadamente.' },
+      { pergunta: 'Posso alugar um imóvel HIS ou HMP por temporada (Airbnb)?',
+        resposta: 'Não. Há proibição expressa de locação de curta temporada em unidades HIS e HMP enquanto durar o prazo de destinação social (10 anos a partir da primeira venda ou do Habite-se).' },
+      { pergunta: 'Quanto tempo preciso esperar antes de vender um imóvel HIS?',
+        resposta: 'A unidade precisa permanecer destinada ao público HIS/HMP por 10 anos a partir da primeira comercialização ou do Habite-se. É possível revender dentro desse prazo, mas o próximo comprador também precisa se enquadrar na faixa de renda da categoria.' },
+      { pergunta: 'CDHU e HIS são a mesma coisa?',
+        resposta: 'Não. HIS é a categoria/classificação do imóvel (renda, preço-teto). CDHU é a companhia do Governo do Estado de SP que constrói e distribui moradias próprias por seleção com pontuação (sorteio só para desempate) — um dos caminhos possíveis para acessar um imóvel HIS, mas não o único: construtoras privadas também vendem HIS em lançamentos normais.' },
+      { pergunta: 'Investidor pode comprar imóvel HIS ou HMP?',
+        resposta: 'Não é proibido comprar, mas o produto não foi feito para investimento: a revenda exige comprovar renda compatível no próximo comprador, e a locação por temporada (Airbnb) é proibida. Quem quer um imóvel para alugar por temporada deve procurar unidades NR, feitas para esse fim.' },
+    ],
+    fatosChaveParaJoao: [
+      'HIS (Habitação de Interesse Social) e HMP (Habitação de Mercado Popular) são classificações urbanísticas da Prefeitura de SP (preço-teto + renda-alvo), DIFERENTES do MCMV (que é o programa federal de financiamento). Um imóvel pode ser HIS E financiado pelo MCMV ao mesmo tempo — são camadas diferentes.',
+      'Valores exatos (Decreto 64.895, de 05/01/2026, em vigor desde a publicação): HIS 1 = renda familiar até R$4.863,00 (per capita R$810,50), imóvel até R$276.102,20. HIS 2 = renda até R$9.726,00 (per capita R$1.621,00), imóvel até R$383.636,74. HMP = renda até R$16.210,00 (per capita R$2.431,50), imóvel até R$537.672,71. Equivalem a ~3, 6 e 10 salários mínimos — útil para explicar rápido, mas o enquadramento oficial usa os valores em reais.',
+      'HIS/HMP são construídos em ZEIS (Zonas Especiais de Interesse Social) — zoneamento do Plano Diretor que dá incentivo urbanístico em troca do preço controlado.',
+      'CDHU é o programa ESTADUAL de seleção com pontuação (sorteio só desempate) para moradia própria — diferente de comprar HIS de uma construtora privada num lançamento normal (processo comum, sem sorteio).',
+      'REGRA CRÍTICA: por 10 anos a partir da 1ª venda ou do Habite-se, a unidade HIS/HMP deve continuar destinada ao público da categoria. Revenda exige comprovação de renda do próximo comprador. Locação por temporada (Airbnb) é EXPRESSAMENTE PROIBIDA nesse período.',
+      'Isso é MAIS restritivo que a regra geral do MCMV por faixa (Faixa 1 sem vender/alugar até quitar/5-10 anos; Faixas 2/3 podem vender a qualquer momento) — em HIS/HMP a restrição de 10 anos e a exigência de renda do comprador seguinte valem ALÉM das regras do financiamento em si.',
+      'Sempre recomendar ao usuário: confirmar as regras exatas no contrato de compra e venda e com o agente financeiro antes de vender ou alugar — variam por contrato/programa.',
+      'Investidor não é proibido de comprar, mas HIS/HMP não serve para renda via Airbnb (proibido). Quem quer isso deve olhar unidades NR — ver artigo relacionado.',
+    ],
+    ctaSimulador: { texto: 'Descobrir minha faixa MCMV', href: '/simulador' },
+    relacionados: ['mcmv-sbpe-sfi-qual-modalidade-escolher', 'imoveis-nr-nao-residencial-o-que-e-quem-pode-comprar'],
+  },
+  {
+    slug: 'imoveis-nr-nao-residencial-o-que-e-quem-pode-comprar',
+    keyword: 'imóvel NR o que é',
+    titulo: 'Imóveis NR (Não Residencial): O Que São e Quem Pode Comprar',
+    tituloSEO: 'Imóveis NR (Não Residencial): O Que São e Como Funcionam (2026)',
+    metaDescription:
+      'Entenda o que é uma unidade NR (não residencial): a diferença para um apartamento comum, como é financiada (SFI) e por que é a categoria certa para quem quer alugar por temporada/Airbnb.',
+    resumo:
+      'Você já deve ter visto "unidade NR" no card de algum lançamento e ficado na dúvida do que significa. NR quer dizer não residencial — uma categoria de unidade dentro do próprio empreendimento, com regras de uso, financiamento e locação bem diferentes de um apartamento comum. Aqui você entende o que é, quem compra e por que é a categoria usada para investir em locação por temporada.',
+    publicado: '2026-08-02',
+    atualizado: '2026-08-02',
+    leituraMin: 7,
+    secoes: [
+      {
+        titulo: 'O que é uma unidade NR',
+        blocos: [
+          { tipo: 'p', texto: '**NR significa "não residencial"** — é uma unidade dentro de um empreendimento (às vezes o prédio inteiro, às vezes só algumas unidades misturadas com apartamentos comuns) destinada a uso comercial, de serviços ou hospedagem, e não para moradia fixa no sentido tradicional.' },
+          { tipo: 'p', texto: 'É comum em empreendimentos do tipo **studio compacto**, voltados para localização estratégica (perto de polos empresariais, aeroportos, regiões turísticas), com metragens reduzidas e serviços agregados (lavanderia, limpeza, recepção) — pensados para estadias mais curtas do que uma moradia comum.' },
+        ],
+      },
+      {
+        titulo: 'NR x apartamento residencial: a diferença que importa',
+        blocos: [
+          { tipo: 'p', texto: 'A diferença prática mais importante está no **tipo de contrato de locação permitido**:' },
+          { tipo: 'tabela',
+            cabecalho: ['', 'Apartamento residencial', 'Unidade NR'],
+            linhas: [
+              ['Locação mínima', 'Normalmente 30 meses (locação residencial)', 'Sem mínimo — locação de curta duração (diária/semanal)'],
+              ['Uso típico', 'Moradia fixa', 'Hospedagem, temporada, escritório/serviço'],
+              ['Financiamento MCMV/SBPE', 'Sim', 'Não'],
+              ['Uso de FGTS', 'Sim (dentro das regras)', 'Não'],
+            ],
+          },
+          { tipo: 'destaque', texto: 'É essa liberdade de contrato curto que torna a unidade NR compatível com plataformas como Airbnb e Booking — um apartamento residencial comum, dentro das normas de locação tradicional, não tem essa flexibilidade de prazo.' },
+        ],
+      },
+      {
+        titulo: 'Como se financia um imóvel NR',
+        blocos: [
+          { tipo: 'p', texto: 'Por não ser residencial, a unidade NR **não se encaixa no MCMV nem no SBPE**, e não permite uso de FGTS. O caminho de financiamento é o **SFI (Sistema de Financiamento Imobiliário)** — o mesmo usado para imóveis de alto padrão acima do teto do SFH:' },
+          { tipo: 'lista', itens: [
+            '**Taxa de mercado**, geralmente mais alta que SBPE (na faixa de 12,5% a.a. + TR)',
+            '**Entrada mais alta** — normalmente acima de 30% do valor do imóvel',
+            '**Sem uso de FGTS** em nenhuma hipótese',
+            '**Sem teto de valor** — mas também sem subsídio ou condição facilitada',
+          ] },
+        ],
+      },
+      {
+        titulo: 'Quem pode comprar',
+        blocos: [
+          { tipo: 'p', texto: 'Não há uma restrição formal de perfil — pessoa física ou jurídica pode comprar. Na prática, o público típico é o **investidor** que busca renda de aluguel por temporada, não quem procura moradia própria fixa. A entrada mais alta e a ausência de subsídio tornam a unidade NR pouco atrativa para quem busca só onde morar com o menor investimento inicial possível.' },
+        ],
+      },
+      {
+        titulo: 'NR e Airbnb: o contraste com HIS/HMP',
+        blocos: [
+          { tipo: 'p', texto: 'Vale um contraste direto: unidades **HIS e HMP proíbem expressamente** a locação por temporada durante o prazo de destinação social (veja o [artigo sobre HIS e HMP](/aprenda/his-hmp-o-que-sao-quem-pode-comprar)). Já a unidade **NR é desenhada exatamente para esse uso** — é a categoria correta para quem quer investir com foco em locação de curta duração.' },
+        ],
+      },
+      {
+        titulo: 'Vale a pena comprar um NR para investir?',
+        blocos: [
+          { tipo: 'p', texto: 'Depende de contas que vão além do preço do imóvel: taxa de ocupação esperada na região, valor médio da diária, taxa de condomínio (que pode ser mais alta em prédios com muita rotatividade), e a regulamentação local de locação por temporada — algumas cidades e condomínios têm restrições próprias, além das regras do próprio imóvel.' },
+          { tipo: 'destaque', texto: 'Como o financiamento é via SFI (taxa de mercado, sem subsídio, entrada alta), o retorno do investimento depende quase inteiramente da rentabilidade do aluguel — vale simular o financiamento e comparar com uma estimativa realista de ocupação e diária antes de decidir.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'Imóvel NR pode ser usado para morar?',
+        resposta: 'Fisicamente sim, mas não é o uso previsto pela categoria — o proprietário pode ocupar, mas não terá as mesmas condições de financiamento (MCMV/SBPE) nem as proteções de locação residencial tradicional.' },
+      { pergunta: 'Dá para usar FGTS para comprar um imóvel NR?',
+        resposta: 'Não, em nenhuma hipótese. Por não ser residencial, a unidade NR só se financia via SFI, que não permite uso de FGTS.' },
+      { pergunta: 'Preciso de uma entrada maior para financiar um NR?',
+        resposta: 'Sim, normalmente acima de 30% do valor do imóvel, contra os 10-20% comuns em MCMV/SBPE — o SFI opera com regras de mercado livre, sem os limites protegidos do SFH.' },
+      { pergunta: 'Qual a taxa de financiamento de um imóvel NR?',
+        resposta: 'Por ser via SFI, a taxa é de mercado — geralmente em torno de 12,5% ao ano + TR em 2026, mais alta que o SBPE (11,19% a 11,97%) e bem acima do MCMV.' },
+      { pergunta: 'Uma unidade NR pode virar residencial depois?',
+        resposta: 'Não é uma simples troca de categoria — depende de aprovação/regularização junto à prefeitura e ao condomínio, e normalmente não é um processo simples nem garantido. Antes de comprar pensando nisso, vale confirmar a viabilidade com um profissional especializado.' },
+    ],
+    fatosChaveParaJoao: [
+      'NR = unidade Não Residencial dentro de um empreendimento — uso comercial/serviços/hospedagem, não moradia fixa tradicional.',
+      'Diferença-chave: apartamento residencial exige contrato de locação mínimo (normalmente 30 meses); unidade NR permite locação de curta duração (diária/semanal) — por isso é compatível com Airbnb/Booking.',
+      'Financiamento de NR: só via SFI (não entra em MCMV nem SBPE). Taxa de mercado (~12,5% a.a.+TR em 2026), entrada normalmente acima de 30%, SEM uso de FGTS em nenhuma hipótese.',
+      'Contraste importante para o usuário: HIS/HMP PROÍBEM locação por temporada; NR é FEITO para esse uso. Se o usuário quer investir em Airbnb, a resposta é NR, não HIS/HMP nem MCMV residencial comum.',
+      'Perfil típico do comprador de NR: investidor buscando renda de aluguel por temporada, não morador buscando moradia própria com condição facilitada (não há subsídio nem taxa reduzida).',
+      'Retorno do investimento em NR depende de ocupação/diária da região — recomendar sempre simular o financiamento e cruzar com estimativa realista de rentabilidade de locação antes de decidir.',
+    ],
+    ctaSimulador: { texto: 'Simular financiamento SFI', href: '/simulador' },
+    relacionados: ['his-hmp-o-que-sao-quem-pode-comprar', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
+  },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
