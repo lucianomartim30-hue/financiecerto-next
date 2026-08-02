@@ -270,6 +270,9 @@ export default function RegiaoContent({
         page:          String(p),
         state:         region.state,
       });
+      if (region.cities && region.cities.length > 0) {
+        params.set('cities', region.cities.join(','));
+      }
       if (minPrice)                             params.set('min_price',    minPrice);
       if (maxPrice)                             params.set('max_price',    maxPrice);
       if (quartos !== 'todos') {
@@ -306,7 +309,14 @@ export default function RegiaoContent({
   });
 
   // Bairros com pelo menos 1 imóvel encontrado nesta busca — vira lista de links internos
-  const bairrosComImoveis = [...new Set(imoveis.map(i => i.neighborhood).filter(Boolean))].sort();
+  // (só faz sentido para regiões por bairro dentro de São Paulo capital — /bairro/[slug] é SP-only)
+  const bairrosComImoveis = region.cities
+    ? []
+    : [...new Set(imoveis.map(i => i.neighborhood).filter(Boolean))].sort();
+  // Regiões por município (ex: ABC Paulista) mostram as cidades encontradas em vez de bairros
+  const cidadesComImoveis = region.cities
+    ? [...new Set(imoveis.map(i => i.city).filter(Boolean))].sort()
+    : [];
 
   const quartosPills = [
     { key: 'todos', label: 'Todos' },
@@ -355,7 +365,7 @@ export default function RegiaoContent({
                 fontSize: '11px', fontWeight: '700', color: '#475569',
                 letterSpacing: '1.2px', textTransform: 'uppercase', marginBottom: '10px',
               }}>
-                REGIÃO · {region.city.toUpperCase()} · {region.state}
+                REGIÃO · {(region.city || 'GRANDE SÃO PAULO').toUpperCase()} · {region.state}
               </p>
               <h1 style={{
                 fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: '800',
@@ -605,6 +615,26 @@ export default function RegiaoContent({
                 }}>
                   {nb}
                 </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Cidades desta região (regiões por município, ex: ABC Paulista) */}
+        {!loading && cidadesComImoveis.length > 0 && (
+          <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              Cidades da {region.name} com imóveis disponíveis
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {cidadesComImoveis.map(c => (
+                <span key={c} style={{
+                  padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: '600',
+                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                  color: 'var(--text-muted)',
+                }}>
+                  {c}
+                </span>
               ))}
             </div>
           </div>

@@ -11,8 +11,10 @@ export interface Region {
   article: 'na' | 'no';
   city: string;
   state: string;
-  /** Nomes de bairro "bonitos" (com acento), como aparecem tipicamente no catálogo da Orulo. */
+  /** Nomes de bairro "bonitos" (com acento), como aparecem tipicamente no catálogo da Orulo. Vazio quando a região filtra por cidade (ver `cities`). */
   neighborhoods: string[];
+  /** Quando definido, a região agrupa municípios inteiros (ex: ABC Paulista) em vez de bairros de um único município. */
+  cities?: string[];
 }
 
 export const REGIONS: Region[] = [
@@ -78,6 +80,18 @@ export const REGIONS: Region[] = [
       'Centro', 'República', 'Bela Vista', 'Liberdade', 'Cambuci', 'Consolação',
       'Santa Cecília', 'Higienópolis', 'Bom Retiro', 'Cerqueira César', 'Luz', 'Pari',
       'Barra Funda', 'Aclimação', 'Paraíso', 'Limão', 'Sumaré', 'Carandiru',
+    ],
+  },
+  {
+    slug: 'abc-paulista',
+    name: 'ABC Paulista',
+    article: 'no',
+    city: '',
+    state: 'SP',
+    neighborhoods: [],
+    cities: [
+      'Santo André', 'São Bernardo do Campo', 'São Caetano do Sul', 'Diadema',
+      'Mauá', 'Ribeirão Pires', 'Rio Grande da Serra',
     ],
   },
 ];

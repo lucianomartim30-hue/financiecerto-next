@@ -11,13 +11,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const region = slugToRegion(slug);
   if (!region) return {};
-  const top = region.neighborhoods.slice(0, 6).join(', ');
+  const isCityRegion = !!region.cities?.length;
+  const top = (region.cities?.length ? region.cities : region.neighborhoods).slice(0, 6).join(', ');
+  const place = isCityRegion ? region.name : `${region.name} de São Paulo`;
   return {
-    title: `Imóveis ${region.article} ${region.name} de São Paulo | FinancieCerto`,
-    description: `Encontre apartamentos e lançamentos ${region.article} ${region.name} de São Paulo — ${top} e mais. Compare financiamentos, simule MCMV e descubra imóveis compatíveis com sua renda.`,
+    title: `Imóveis ${region.article} ${place} | FinancieCerto`,
+    description: `Encontre apartamentos e lançamentos ${region.article} ${place} — ${top} e mais. Compare financiamentos, simule MCMV e descubra imóveis compatíveis com sua renda.`,
     openGraph: {
-      title: `Imóveis ${region.article} ${region.name} de São Paulo | FinancieCerto`,
-      description: `${region.name} de São Paulo — apartamentos, lançamentos e financiamento imobiliário em ${top}.`,
+      title: `Imóveis ${region.article} ${place} | FinancieCerto`,
+      description: `${place} — apartamentos, lançamentos e financiamento imobiliário em ${top}.`,
     },
   };
 }
