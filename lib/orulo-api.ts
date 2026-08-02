@@ -131,6 +131,13 @@ export function normalizeBuilding(b: Record<string, unknown>) {
     if (fb) { lat = fb.lat; lng = fb.lng; }
   }
 
+  // Tipos de unidade do empreendimento (Apartamento, Cobertura Duplex, Studio, Duplex...)
+  // Vem de typologies[].type — só presente na resposta de detalhe do building.
+  const typologiesRaw = (b.typologies as Record<string, unknown>[] | undefined) ?? [];
+  const property_types = [...new Set(
+    typologiesRaw.map(t => (t.type as string) || '').filter(Boolean)
+  )];
+
   return {
     id:            String(b.id),
     name:          (b.name as string) || 'Empreendimento',
@@ -183,6 +190,7 @@ export function normalizeBuilding(b: Record<string, unknown>) {
       return inferFinalityFromName(name, developer);
     })(),
     updated_at:    (b.updated_at as string) || null,
+    property_types,
   };
 }
 

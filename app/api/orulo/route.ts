@@ -114,6 +114,7 @@ function applyFilters(
     neighborhood,
     neighborhoods,
     cities,
+    propertyTypes,
     minPrice, maxPrice,
     bedroomsMin, bedroomsMax,
     status,
@@ -122,6 +123,7 @@ function applyFilters(
     neighborhood?:  string | null;
     neighborhoods?: string[] | null;
     cities?:        string[] | null;
+    propertyTypes?: string[] | null;
     minPrice?:      string | null;
     maxPrice?:      string | null;
     bedroomsMin?:   string | null;
@@ -133,6 +135,10 @@ function applyFilters(
   let all = buildings;
   const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 
+  if (propertyTypes && propertyTypes.length > 0) {
+    const set = new Set(propertyTypes.map(normalize));
+    all = all.filter(b => (b.property_types || []).some(t => set.has(normalize(t))));
+  }
   if (cities && cities.length > 0) {
     const set = new Set(cities.map(normalize));
     all = all.filter(b => set.has(normalize(b.city || '')));
@@ -203,6 +209,8 @@ export async function GET(req: NextRequest) {
     const neighborhoods = neighborhoodsParam ? neighborhoodsParam.split(',').map(s => s.trim()).filter(Boolean) : null;
     const citiesParam  = searchParams.get('cities') || '';
     const cities = citiesParam ? citiesParam.split(',').map(s => s.trim()).filter(Boolean) : null;
+    const typesParam  = searchParams.get('types') || '';
+    const propertyTypes = typesParam ? typesParam.split(',').map(s => s.trim()).filter(Boolean) : null;
     const bedroomsMin  = searchParams.get('bedrooms_min');
     const bedroomsMax  = searchParams.get('bedrooms_max');
     const statusReq    = searchParams.get('status');
@@ -211,7 +219,7 @@ export async function GET(req: NextRequest) {
     // ── Mock ────────────────────────────────────────────────────────────────
     if (process.env.USE_MOCK === 'true') {
       let buildings = MOCK_BUILDINGS.map(b => ({ ...b, status_norm: normalizeStatus(b.status), lat: null as number | null, lng: null as number | null }));
-      buildings = applyFilters(buildings as unknown as NormalizedBuilding[], { neighborhood, neighborhoods, cities, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q }) as unknown as typeof buildings;
+      buildings = applyFilters(buildings as unknown as NormalizedBuilding[], { neighborhood, neighborhoods, cities, propertyTypes, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q }) as unknown as typeof buildings;
       return NextResponse.json({ buildings, total: buildings.length, page: 1, pages: 1, source: 'mock' });
     }
 
@@ -240,7 +248,7 @@ export async function GET(req: NextRequest) {
         all = all.filter(b => (b.city || '').toLowerCase().includes(lc));
       }
 
-      all = applyFilters(all, { neighborhood, neighborhoods, cities, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q });
+      all = applyFilters(all, { neighborhood, neighborhoods, cities, propertyTypes, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q });
 
       const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
 
@@ -275,7 +283,7 @@ export async function GET(req: NextRequest) {
     if (neighborhood || (neighborhoods && neighborhoods.length > 0) || (cities && cities.length > 0) || returnAll) {
       // Busca completa multi-página
       const liveBuildings = await fetchLiveCatalog(token, cityTarget);
-      let all = applyFilters(liveBuildings, { neighborhood, neighborhoods, cities, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q });
+      let all = applyFilters(liveBuildings, { neighborhood, neighborhoods, cities, propertyTypes, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q });
       const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
 
       if (returnAll) {

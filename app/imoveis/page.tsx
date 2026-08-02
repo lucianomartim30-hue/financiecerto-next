@@ -73,6 +73,7 @@ interface Imovel {
   address_full?: string; street?: string;
   status: string; status_norm: string;
   finality?: string; finality_norm?: string;
+  property_types?: string[];
   lat: number | null; lng: number | null;
   delivery_date: string | null;
 }
@@ -220,6 +221,7 @@ function ImoveisContent() {
 
   const [filterStatus,   setFilterStatus]   = useState(searchParams.get('status') || '');
   const [filterFinality, setFilterFinality] = useState(searchParams.get('tipo') || '');
+  const [filterTipologia, setFilterTipologia] = useState(searchParams.get('tipologia') || '');
   const [filterMin,      setFilterMin]      = useState(Number(searchParams.get('min') || 0));
   const [filterMax,      setFilterMax]      = useState(Number(searchParams.get('max') || 0));
   const [filterBedrooms, setFilterBedrooms] = useState(0);
@@ -345,7 +347,7 @@ function ImoveisContent() {
       .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { setDisplayCount(12); }, [activeLocation, filterStatus, filterFinality, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
+  useEffect(() => { setDisplayCount(12); }, [activeLocation, filterStatus, filterFinality, filterTipologia, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax]);
   // Reseta paginação quando o mapa é movido (novos cards aparecem do início)
   useEffect(() => { if (!activeLocation) setDisplayCount(12); }, [debouncedBounds, activeLocation]);
 
@@ -369,8 +371,9 @@ function ImoveisContent() {
       const effectiveFn = fn === '' ? 'residencial' : fn;
       if (effectiveFn !== filterFinality) return false;
     }
+    if (filterTipologia && !(b.property_types || []).includes(filterTipologia)) return false;
     return true;
-  }, [activeLocation, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality]);
+  }, [activeLocation, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
 
   // Conta quantos imóveis existem para cada tipo de finalidade no catálogo
   const finalityCounts = useMemo(() => {
@@ -380,6 +383,15 @@ function ImoveisContent() {
       if (fn in counts) counts[fn]++;
     });
     return counts;
+  }, [allBuildings]);
+
+  // Conta quantos imóveis existem para cada tipologia de unidade (Apartamento, Cobertura, Studio...)
+  const tipologiaCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allBuildings.forEach(b => {
+      (b.property_types || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
   }, [allBuildings]);
 
   // Pins do mapa: mostra só os do viewport atual (performance — evita centenas de DOM nodes)
@@ -493,7 +505,7 @@ function ImoveisContent() {
 
   const clearAll = useCallback(() => {
     setActiveLocation(''); setSearch('');
-    setFilterStatus(''); setFilterFinality(''); setFilterMin(0); setFilterMax(0);
+    setFilterStatus(''); setFilterFinality(''); setFilterTipologia(''); setFilterMin(0); setFilterMax(0);
     setFilterBedrooms(0); setFilterVagas(0); setFilterBaths(0);
     setFilterAreaMin(0); setFilterAreaMax(0);
     setMinInput(''); setMaxInput(''); setAreaMinInput(''); setAreaMaxInput('');
@@ -510,7 +522,7 @@ function ImoveisContent() {
     setOpenDropdown(prev => prev === name ? null : name);
   }, []);
 
-  const hasFilters = !!(activeLocation || filterStatus || filterFinality || filterMin || filterMax || filterBedrooms || filterVagas || filterBaths || filterAreaMin || filterAreaMax);
+  const hasFilters = !!(activeLocation || filterStatus || filterFinality || filterTipologia || filterMin || filterMax || filterBedrooms || filterVagas || filterBaths || filterAreaMin || filterAreaMax);
   const maisCount = [filterBedrooms, filterVagas, filterBaths, filterMin, filterMax, filterAreaMin, filterAreaMax].filter(Boolean).length;
 
   const pillStyle = (active: boolean): React.CSSProperties => ({
@@ -714,6 +726,25 @@ function ImoveisContent() {
         </div>
       )}
 
+      {/* ── Dropdown Tipologia ─────────────────────────────────────────────── */}
+      {openDropdown === 'tipologia' && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '220px', maxHeight: '360px', overflowY: 'auto' }}>
+          <button onClick={() => { setFilterTipologia(''); setOpenDropdown(null); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: filterTipologia === '' ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: filterTipologia === '' ? '700' : '400', color: filterTipologia === '' ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
+            {filterTipologia === '' && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
+            <span style={{ flex: 1 }}>Todas as tipologias</span>
+          </button>
+          {tipologiaCounts.map(([val, count]) => (
+            <button key={val} onClick={() => { setFilterTipologia(val); setOpenDropdown(null); }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: filterTipologia === val ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: filterTipologia === val ? '700' : '400', color: filterTipologia === val ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
+              {filterTipologia === val && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
+              <span style={{ flex: 1 }}>{val}</span>
+              <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '400' }}>{count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Dropdown Mais ───────────────────────────────────────────────────── */}
       {openDropdown === 'mais' && (
         <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '18px 16px 14px', zIndex: 9001, width: `${Math.min(270, typeof window !== 'undefined' ? window.innerWidth - 16 : 270)}px` }}>
@@ -844,6 +875,11 @@ function ImoveisContent() {
           {filterFinality === 'residencial' ? '🏠 Residencial'
             : filterFinality === 'comercial' ? '🏢 Comercial'
             : 'Tipo'} <span style={{ fontSize: '10px' }}>▾</span>
+        </button>
+
+        {/* Tipologia */}
+        <button style={pillStyle(!!filterTipologia)} onClick={(e) => openDrop('tipologia', e)}>
+          {filterTipologia || 'Tipologia'} <span style={{ fontSize: '10px' }}>▾</span>
         </button>
 
         {/* Mais filtros */}
