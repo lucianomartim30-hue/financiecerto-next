@@ -112,6 +112,24 @@ export const REGIONS: Region[] = [
       "Santa Bárbara D'Oeste",
     ],
   },
+  {
+    slug: 'litoral-norte-sc',
+    name: 'Litoral Norte de Santa Catarina',
+    article: 'no',
+    city: '',
+    state: 'SC',
+    neighborhoods: [],
+    cities: ['Itapema', 'Porto Belo', 'Balneário Camboriú', 'Itajaí', 'Bombinhas'],
+  },
+  {
+    slug: 'florianopolis',
+    name: 'Florianópolis',
+    article: 'em',
+    city: 'Florianópolis',
+    state: 'SC',
+    neighborhoods: [],
+    cities: ['Florianópolis'],
+  },
 ];
 
 export function slugToRegion(slug: string): Region | null {
