@@ -113,22 +113,13 @@ export const REGIONS: Region[] = [
     ],
   },
   {
-    slug: 'litoral-norte-sc',
-    name: 'Litoral Norte de Santa Catarina',
-    article: 'no',
+    slug: 'santa-catarina',
+    name: 'Santa Catarina',
+    article: 'em',
     city: '',
     state: 'SC',
     neighborhoods: [],
-    cities: ['Itapema', 'Porto Belo', 'Balneário Camboriú', 'Itajaí', 'Bombinhas'],
-  },
-  {
-    slug: 'florianopolis',
-    name: 'Florianópolis',
-    article: 'em',
-    city: 'Florianópolis',
-    state: 'SC',
-    neighborhoods: [],
-    cities: ['Florianópolis'],
+    cities: ['Itapema', 'Porto Belo', 'Balneário Camboriú', 'Itajaí', 'Bombinhas', 'Florianópolis'],
   },
 ];
 
