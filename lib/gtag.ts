@@ -136,3 +136,23 @@ export function trackPaginaConteudo(params?: { pagina?: string; tipo?: string })
     tipo:     params?.tipo,
   });
 }
+
+/** Clique em link de navegação (header/footer) */
+export function trackNavClick(params?: { destino?: string; texto?: string; origem?: 'header' | 'footer' }) {
+  gtagEvent({
+    action:   'nav_click',
+    category: params?.origem ?? 'navegacao',
+    label:    params?.texto ?? params?.destino,
+    destino:  params?.destino,
+  });
+}
+
+/** Clique em CTA (ex.: botão de simulador dentro de artigo) */
+export function trackCtaClick(params?: { origem?: string; destino?: string; texto?: string }) {
+  gtagEvent({
+    action:   'cta_click',
+    category: params?.origem ?? 'cta',
+    label:    params?.texto ?? params?.destino,
+    destino:  params?.destino,
+  });
+}

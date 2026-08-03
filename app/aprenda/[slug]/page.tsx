@@ -5,6 +5,7 @@ import { getArtigo, getArtigos, ARTIGOS, type BlocoArtigo } from '@/lib/artigos'
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { article as articleSchema, faqPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
 import { ArtigoTracker } from './ArtigoTracker';
+import { CtaSimuladorLink } from './CtaSimuladorLink';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -187,9 +188,7 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,.75)', margin: '0 0 18px' }}>
             Simule com a sua renda e o seu imóvel — gratuito, em menos de 2 minutos.
           </p>
-          <Link href={artigo.ctaSimulador.href} className="btn-primary" style={{ background: '#fff', color: '#1e3a5f' }}>
-            {artigo.ctaSimulador.texto} →
-          </Link>
+          <CtaSimuladorLink slug={artigo.slug} href={artigo.ctaSimulador.href} texto={artigo.ctaSimulador.texto} />
         </div>
 
         {/* CTA João */}

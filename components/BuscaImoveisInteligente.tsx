@@ -66,6 +66,7 @@ function CardImovel({ im }: { im: ImovelCard }) {
   return (
     <Link
       href={`/imoveis/${im.id}`}
+      onClick={() => import('@/lib/gtag').then(m => m.trackImovelView({ imovel: im.name, bairro: im.neighborhood, preco: im.min_price ?? undefined }))}
       style={{
         display: 'block', background: 'var(--bg-card)',
         border: '1px solid var(--border)', borderRadius: 14,
@@ -104,9 +105,12 @@ function CardImovel({ im }: { im: ImovelCard }) {
 export default function BuscaImoveisInteligente({
   valorImovel,
   naPlanta = false,
+  faixaLabel,
 }: {
   valorImovel: number;
   naPlanta?: boolean;
+  /** Faixa/modalidade já calculada pelo simulador (ex.: "Faixa 2 MCMV", "SBPE (SFH)") — mostrada como contexto, sem alterar a busca. */
+  faixaLabel?: string;
 }) {
   const [quartos, setQuartos] = useState<number | null>(null);
   const [vagas,   setVagas]   = useState<number | null>(null);
@@ -235,6 +239,7 @@ export default function BuscaImoveisInteligente({
         </p>
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,.6)', marginTop: 4 }}>
           Orçamento: {formatBRL(valorMin)} – {formatBRL(valorMax)}
+          {faixaLabel ? ` · seu perfil: ${faixaLabel}` : ''}
         </p>
       </div>
 

@@ -74,6 +74,7 @@ interface Imovel {
   status: string; status_norm: string;
   finality?: string; finality_norm?: string;
   property_types?: string[];
+  typology_ranges?: { type: string; price_min: number | null; price_max: number | null; bedrooms_min: number | null; bedrooms_max: number | null; area_min: number | null; area_max: number | null }[];
   lat: number | null; lng: number | null;
   delivery_date: string | null;
 }
@@ -135,11 +136,19 @@ function fmtRange(min: number | null, max: number | null, unit: string) {
 }
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
-function ImovelCard({ im }: { im: Imovel }) {
+function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: string }) {
   const sc = getStatus(im.status_norm || im.status || '');
+  // Quando há filtro de tipologia ativo, mostra a faixa específica daquele tipo de
+  // unidade (ex.: Cobertura Horizontal) em vez da faixa do prédio inteiro — senão o
+  // card mostra o apartamento padrão mais barato do prédio, não a unidade filtrada.
+  const faixaTipologia = tipologiaAtiva ? im.typology_ranges?.find(t => t.type === tipologiaAtiva) : null;
+  const precoExibido   = faixaTipologia?.price_min    ?? im.min_price;
+  const quartosMin     = faixaTipologia?.bedrooms_min ?? im.bedrooms_min;
+  const quartosMax     = faixaTipologia?.bedrooms_max ?? im.bedrooms_max;
+  const areaExibida    = faixaTipologia?.area_min     ?? im.area_min;
   return (
     <Link href={`/imoveis/${im.id}`} style={{ textDecoration: 'none', display: 'block' }}
-      onClick={() => { import('@/lib/gtag').then(m => m.trackImovelView({ imovel: im.name, bairro: im.neighborhood, preco: im.min_price ?? undefined })); }}
+      onClick={() => { import('@/lib/gtag').then(m => m.trackImovelView({ imovel: im.name, bairro: im.neighborhood, preco: precoExibido ?? undefined })); }}
     >
       <div style={{
         background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px',
@@ -165,10 +174,11 @@ function ImovelCard({ im }: { im: Imovel }) {
           <p style={{ fontSize: '10px', color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             📍 {[im.neighborhood || im.city, im.street].filter(Boolean).join(' · ')}
           </p>
-          <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{im.min_price ? formatBRL(im.min_price) : 'Consultar'}</p>
+          <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{precoExibido ? formatBRL(precoExibido) : 'Consultar'}</p>
           <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '2px' }}>
-            {fmtRange(im.bedrooms_min, im.bedrooms_max, 'qts') && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>🛏 {fmtRange(im.bedrooms_min, im.bedrooms_max, 'qts')}</span>}
-            {im.area_min && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>▦ {im.area_min}m²</span>}
+            {tipologiaAtiva && <span style={{ fontSize: '9px', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '5px', padding: '1px 4px', fontWeight: 700 }}>{tipologiaAtiva}</span>}
+            {fmtRange(quartosMin, quartosMax, 'qts') && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>🛏 {fmtRange(quartosMin, quartosMax, 'qts')}</span>}
+            {areaExibida && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>▦ {areaExibida}m²</span>}
             {fmtRange(im.vagas_min, im.vagas_max, 'vg') && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>🅿 {fmtRange(im.vagas_min, im.vagas_max, 'vg')}</span>}
           </div>
         </div>
@@ -224,18 +234,20 @@ function ImoveisContent() {
   const [filterTipologia, setFilterTipologia] = useState(searchParams.get('tipologia') || '');
   const [filterMin,      setFilterMin]      = useState(Number(searchParams.get('min') || 0));
   const [filterMax,      setFilterMax]      = useState(Number(searchParams.get('max') || 0));
-  const [filterBedrooms, setFilterBedrooms] = useState(0);
+  const [filterBedrooms, setFilterBedrooms] = useState(Number(searchParams.get('bedrooms_min') || 0));
   const [filterVagas,    setFilterVagas]    = useState(0);
   const [filterBaths,    setFilterBaths]    = useState(0);
   const [filterAreaMin,  setFilterAreaMin]  = useState(0);
   const [filterAreaMax,  setFilterAreaMax]  = useState(0);
 
   // Localização buscada (texto commitado — filtra cards + mapa)
-  const [activeLocation, setActiveLocation] = useState(searchParams.get('q') || '');
+  // "q" é o campo de busca livre da própria página; "neighborhood" é o param que os links
+  // vindos do simulador usam para pré-aplicar o bairro escolhido — os dois caem no mesmo filtro.
+  const [activeLocation, setActiveLocation] = useState(searchParams.get('q') || searchParams.get('neighborhood') || '');
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [search, setSearch] = useState(searchParams.get('q') || '');
+  const [search, setSearch] = useState(searchParams.get('q') || searchParams.get('neighborhood') || '');
   const [geocoding, setGeocoding] = useState(false);
   const [minInput, setMinInput] = useState('');
   const [maxInput, setMaxInput] = useState('');
@@ -553,7 +565,7 @@ function ImoveisContent() {
       ) : (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '10px' }}>
-            {visibleBuildings.slice(0, displayCount).map(im => <ImovelCard key={im.id} im={im} />)}
+            {visibleBuildings.slice(0, displayCount).map(im => <ImovelCard key={im.id} im={im} tipologiaAtiva={filterTipologia} />)}
           </div>
           {visibleBuildings.length > displayCount && (
             <button onClick={() => setDisplayCount(c => c + 12)}

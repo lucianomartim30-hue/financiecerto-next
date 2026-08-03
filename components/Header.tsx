@@ -140,7 +140,10 @@ export default function Header() {
                       <Link
                         key={opt.href}
                         href={opt.href}
-                        onClick={() => setSimOpen(false)}
+                        onClick={() => {
+                          setSimOpen(false);
+                          import('@/lib/gtag').then(m => m.trackNavClick({ destino: opt.href, texto: opt.label, origem: 'header' }));
+                        }}
                         style={{
                           display: 'flex',
                           alignItems: 'flex-start',
@@ -201,6 +204,7 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  onClick={() => import('@/lib/gtag').then(m => m.trackNavClick({ destino: link.href, texto: link.label, origem: 'header' }))}
                   style={{
                     padding: '8px 14px',
                     borderRadius: '8px',
@@ -221,7 +225,12 @@ export default function Header() {
 
           {/* ── CTA + Hamburger ────────────────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            <Link href="/simulador" className="btn-primary header-cta" style={{ fontSize: '13px', padding: '8px 18px' }}>
+            <Link
+              href="/simulador"
+              className="btn-primary header-cta"
+              onClick={() => import('@/lib/gtag').then(m => m.trackNavClick({ destino: '/simulador', texto: 'Descobrir perfil', origem: 'header' }))}
+              style={{ fontSize: '13px', padding: '8px 18px' }}
+            >
               Descobrir perfil
             </Link>
             <button
@@ -322,7 +331,10 @@ export default function Header() {
                   <Link
                     key={opt.href}
                     href={opt.href}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      import('@/lib/gtag').then(m => m.trackNavClick({ destino: opt.href, texto: opt.label, origem: 'header' }));
+                    }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: '12px',
                       padding: '13px 20px 13px 32px',
@@ -350,7 +362,10 @@ export default function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setMenuOpen(false)}
+                onClick={() => {
+                  setMenuOpen(false);
+                  import('@/lib/gtag').then(m => m.trackNavClick({ destino: link.href, texto: link.label, origem: 'header' }));
+                }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
                   padding: '13px 20px',
@@ -369,7 +384,10 @@ export default function Header() {
           <div style={{ height: '1px', background: 'var(--border)', margin: '8px 20px' }} />
           <Link
             href="/simulador"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => {
+              setMenuOpen(false);
+              import('@/lib/gtag').then(m => m.trackNavClick({ destino: '/simulador', texto: 'Descobrir meu perfil', origem: 'header' }));
+            }}
             className="btn-primary"
             style={{ display: 'flex', margin: '12px 20px', textDecoration: 'none' }}
           >

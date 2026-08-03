@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { REGIONS } from '@/lib/regions';
 
@@ -59,6 +61,7 @@ export default function Footer() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  onClick={() => import('@/lib/gtag').then(m => m.trackNavClick({ destino: link.href, texto: link.label, origem: 'footer' }))}
                   style={{ fontSize: '14px', color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.15s' }}
                 >
                   {link.label}

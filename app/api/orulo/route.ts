@@ -30,6 +30,11 @@ import {
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
 
+// O fallback ao vivo (cache KV vazio/frio) pode varrer o estado inteiro em lotes
+// pequenos e pausados — mais lento que os 10s padrão da Vercel, mas evita
+// rate-limit silencioso da Orulo. Normalmente nem entra em uso (KV já populado).
+export const maxDuration = 60;
+
 // ── Municípios da Região Metropolitana de São Paulo (RMSP) — constante global ─
 const GRANDE_SP = new Set([
   'são paulo','guarulhos','osasco','santo andré','são bernardo do campo',
@@ -42,6 +47,15 @@ const GRANDE_SP = new Set([
   'rio grande da serra','salesópolis','santa isabel','são lourenço da serra',
   'vargem grande paulista','embu-guaçu',
 ]);
+
+// ── Região de Campinas — segunda praça atendida fora da Grande SP ─────────────
+const OUTRAS_PRACAS = new Set([
+  'campinas','hortolândia','americana','paulínia','valinhos',
+  "santa bárbara d'oeste",
+]);
+
+// Municípios liberados a aparecer no catálogo (Grande SP + Região de Campinas).
+const CIDADES_LIBERADAS = new Set([...GRANDE_SP, ...OUTRAS_PRACAS]);
 
 // ── Auto-trigger: dispara sync em background quando catálogo está incompleto ──
 // Garante que o catálogo se reconstrói sozinho sem intervenção manual.
@@ -169,7 +183,12 @@ function applyFilters(
 // ── Fallback: busca ao vivo via API de pesquisa ───────────────────────────────
 // Usado quando o KV não está disponível ou vazio.
 
-const BATCH_SIZE     = 100;
+// Orulo rejeita silenciosamente a maioria das requisições acima de ~20 paralelas
+// (mesmo limite documentado em /api/orulo/sync). Passar disso faz fetchSearchPage
+// retornar página vazia (catch interno), e o resultado final aparenta "0 imóveis"
+// mesmo quando eles existem — por isso o batch é pequeno e tem pausa entre lotes.
+const BATCH_SIZE     = 20;
+const BATCH_DELAY_MS = 250;
 const MAX_CITY_PAGES = 250;
 
 async function fetchLiveCatalog(token: string, city: string): Promise<NormalizedBuilding[]> {
@@ -178,15 +197,13 @@ async function fetchLiveCatalog(token: string, city: string): Promise<Normalized
   const pagesToFetch = Math.min(totalPages, MAX_CITY_PAGES);
 
   const remaining = Array.from({ length: pagesToFetch - 1 }, (_, i) => i + 2);
-  const b1 = remaining.slice(0, BATCH_SIZE);
-  const b2 = remaining.slice(BATCH_SIZE);
-
-  const [res1, res2] = await Promise.all([
-    Promise.all(b1.map(p => fetchSearchPage(token, city, p))),
-    Promise.all(b2.map(p => fetchSearchPage(token, city, p))),
-  ]);
-
-  const all = [p1, ...res1, ...res2].flatMap(r => r.buildings);
+  const res1: Awaited<ReturnType<typeof fetchSearchPage>>[] = [];
+  for (let i = 0; i < remaining.length; i += BATCH_SIZE) {
+    if (i > 0) await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
+    const chunk = remaining.slice(i, i + BATCH_SIZE);
+    res1.push(...await Promise.all(chunk.map(p => fetchSearchPage(token, city, p))));
+  }
+  const all = [p1, ...res1].flatMap(r => r.buildings);
 
   // Deduplicar
   const seen = new Set<string>();
@@ -236,7 +253,7 @@ export async function GET(req: NextRequest) {
       let all = cached;
 
       // Filtra por Grande SP por padrão (somente municípios da RMSP)
-      all = all.filter(b => GRANDE_SP.has((b.city || '').toLowerCase().trim()));
+      all = all.filter(b => CIDADES_LIBERADAS.has((b.city || '').toLowerCase().trim()));
 
       // Filtra Breve Lançamento: só exibe se tiver delivery_date nos próximos 2 meses.
       // Empreendimentos já lançados (com min_price > 0) sempre aparecem.

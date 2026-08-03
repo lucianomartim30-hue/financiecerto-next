@@ -7,8 +7,8 @@
 export interface Region {
   slug: string;
   name: string;
-  /** Preposição para uso em frases: "na Zona Sul" (na) vs "no Centro" (no). */
-  article: 'na' | 'no';
+  /** Preposição para uso em frases: "na Zona Sul" (na) vs "no Centro" (no) vs "em Campinas" (em). */
+  article: 'na' | 'no' | 'em';
   city: string;
   state: string;
   /** Nomes de bairro "bonitos" (com acento), como aparecem tipicamente no catálogo da Orulo. Vazio quando a região filtra por cidade (ver `cities`). */
@@ -83,15 +83,33 @@ export const REGIONS: Region[] = [
     ],
   },
   {
-    slug: 'abc-paulista',
-    name: 'ABC Paulista',
-    article: 'no',
+    slug: 'grande-sao-paulo',
+    name: 'Grande São Paulo',
+    article: 'na',
     city: '',
     state: 'SP',
     neighborhoods: [],
     cities: [
+      // ABC
       'Santo André', 'São Bernardo do Campo', 'São Caetano do Sul', 'Diadema',
       'Mauá', 'Ribeirão Pires', 'Rio Grande da Serra',
+      // Osasco e região oeste
+      'Osasco', 'Barueri', 'Taboão da Serra', 'Carapicuíba', 'Itapevi',
+      'Santana de Parnaíba', 'Vargem Grande Paulista', 'Cotia',
+      // Guarulhos
+      'Guarulhos', 'Itaquaquecetuba',
+    ],
+  },
+  {
+    slug: 'campinas-e-regiao',
+    name: 'Região de Campinas',
+    article: 'na',
+    city: '',
+    state: 'SP',
+    neighborhoods: [],
+    cities: [
+      'Campinas', 'Hortolândia', 'Americana', 'Paulínia', 'Valinhos',
+      "Santa Bárbara D'Oeste",
     ],
   },
 ];

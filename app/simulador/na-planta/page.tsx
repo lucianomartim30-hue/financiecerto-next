@@ -9,6 +9,7 @@ import {
 } from '@/lib/calculos';
 import Link from 'next/link';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
+import { HisHmpHint } from '@/components/HisHmpHint';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -875,6 +876,7 @@ function NaPlantaContent() {
         )}
 
         {/* ── Busca inteligente de imóveis ─────────────────────────────── */}
+        {valido && isMCMV && faixaEfetiva && faixaEfetiva.numero <= 2 && <HisHmpHint />}
         {valido && <BuscaImoveisInteligente valorImovel={valor} naPlanta={true} />}
 
       </div>

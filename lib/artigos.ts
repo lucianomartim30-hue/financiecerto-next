@@ -263,7 +263,7 @@ export const ARTIGOS: Artigo[] = [
       'Regra rápida pro João: cruzar renda do usuário com valor do imóvel desejado decide a modalidade — não basta olhar só a renda.',
     ],
     ctaSimulador: { texto: 'Descobrir minha modalidade', href: '/simulador' },
-    relacionados: ['juros-evolucao-obra', 'sac-ou-price-qual-sistema-amortizacao-escolher'],
+    relacionados: ['juros-evolucao-obra', 'sac-ou-price-qual-sistema-amortizacao-escolher', 'his-hmp-o-que-sao-quem-pode-comprar', 'imoveis-nr-nao-residencial-o-que-e-quem-pode-comprar'],
   },
   {
     slug: 'sac-ou-price-qual-sistema-amortizacao-escolher',
@@ -929,6 +929,182 @@ export const ARTIGOS: Artigo[] = [
     ],
     ctaSimulador: { texto: 'Simular financiamento SFI', href: '/simulador' },
     relacionados: ['his-hmp-o-que-sao-quem-pode-comprar', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
+  },
+  {
+    slug: 'brasileiro-no-exterior-financiar-imovel',
+    keyword: 'financiar imóvel no Brasil morando no exterior',
+    titulo: 'Brasileiro no Exterior Pode Financiar Imóvel no Brasil? Guia Completo',
+    tituloSEO: 'Financiar Imóvel no Brasil Morando no Exterior: Guia 2026',
+    metaDescription:
+      'Brasileiro morando fora pode financiar imóvel no Brasil? Entenda CPF, comprovação de renda, uso do FGTS, procuração e como enviar dinheiro do exterior.',
+    resumo:
+      'Morar fora do Brasil não impede você de financiar um imóvel aqui — mas muda alguns detalhes práticos: como comprovar renda, se dá para usar o FGTS, e se é preciso vir ao Brasil para assinar o contrato. Este guia reúne o que muda para quem mora fora e quer financiar um imóvel no Brasil.',
+    publicado: '2026-08-02',
+    atualizado: '2026-08-02',
+    leituraMin: 7,
+    secoes: [
+      {
+        titulo: 'Sim, dá para financiar morando fora — com algumas condições',
+        blocos: [
+          { tipo: 'p', texto: 'Brasileiro que mora no exterior consegue financiar imóvel no Brasil normalmente, contanto que tenha **CPF regular**, consiga **comprovar renda** (do Brasil ou do país onde mora) e resolva a questão da **assinatura do contrato** — presencial ou por procuração.' },
+          { tipo: 'lista', itens: [
+            'CPF ativo e regular na Receita Federal',
+            'Comprovação de renda — do Brasil (DIRPF) ou do exterior, dependendo do banco',
+            'Conta bancária no Brasil (ou um procurador que tenha)',
+            'Definição de como o contrato será assinado — presencial ou procuração pública',
+          ] },
+          { tipo: 'destaque', texto: 'O maior filtro na prática não é "morar fora" em si — é conseguir comprovar renda no formato que o banco escolhido pede, e resolver a assinatura do contrato sem precisar viajar.' },
+        ],
+      },
+      {
+        titulo: 'CPF: o documento que não pode faltar',
+        blocos: [
+          { tipo: 'p', texto: 'Sem CPF regular, nenhum banco no Brasil processa financiamento. Se você já tinha CPF antes de se mudar, geralmente ele continua válido — só vale confirmar que não está suspenso ou pendente de regularização na Receita Federal antes de iniciar o processo.' },
+          { tipo: 'p', texto: 'Quem nunca teve CPF, ou precisa regularizar, pode resolver isso pelo **consulado brasileiro** no país onde mora, sem precisar viajar ao Brasil.' },
+        ],
+      },
+      {
+        titulo: 'Como comprovar renda estrangeira',
+        blocos: [
+          { tipo: 'p', texto: 'Aqui está a maior diferença entre as instituições:' },
+          { tipo: 'tabela', cabecalho: ['Instituição', 'Como comprova renda', 'Observação'], linhas: [
+            ['Caixa Econômica Federal', 'Declaração de Imposto de Renda (DIRPF) do último ano', 'Mais rígida — pode exigir renda declarada no Brasil'],
+            ['Bancos privados', 'Varia por banco — alguns aceitam renda estrangeira com tradução juramentada', 'Consulte caso a caso antes de escolher'],
+            ['Fintechs / SCDs (Sociedades de Crédito Direto)', 'Documentos de renda do país onde mora, com tradução juramentada', 'Processo mais digital e flexível, mas taxa costuma ser mais alta'],
+          ] },
+          { tipo: 'destaque', texto: 'Se sua renda é só do exterior (sem DIRPF brasileira robusta), fintechs tendem a ser o caminho mais viável — mas vale comparar taxa e CET (Custo Efetivo Total) antes de fechar.' },
+        ],
+      },
+      {
+        titulo: 'FGTS: dá para usar morando fora?',
+        blocos: [
+          { tipo: 'p', texto: 'Se você tem saldo de FGTS de um período em que trabalhou registrado no Brasil, esse saldo continua seu e pode ser usado normalmente na compra — mesmo morando fora hoje — desde que cumpra as regras padrão de uso: ser cotista há pelo menos 3 anos, ser o primeiro imóvel residencial no município onde mora/trabalha, entre outras.' },
+          { tipo: 'destaque', texto: 'O que muda é a elegibilidade a subsídio do MCMV: isso depende de renda dentro da faixa do programa, normalmente comprovada com padrão brasileiro — morar fora não impede usar o FGTS, mas pode dificultar entrar na faixa que dá direito a subsídio.' },
+        ],
+      },
+      {
+        titulo: 'Assinatura do contrato: precisa vir ao Brasil?',
+        blocos: [
+          { tipo: 'p', texto: 'Bancos tradicionais, de forma geral, **não aceitam assinatura totalmente remota** para contrato de financiamento imobiliário. As duas saídas mais comuns são vir ao Brasil para assinar pessoalmente, ou outorgar **procuração pública** (feita em cartório ou no consulado brasileiro) para alguém assinar em seu nome.' },
+          { tipo: 'p', texto: 'Antes de escolher o banco, confirme diretamente com ele se aceitam procuração e quais os requisitos exatos — isso varia e pode ser o fator decisivo entre uma instituição e outra.' },
+        ],
+      },
+      {
+        titulo: 'Enviando dinheiro do exterior para a entrada',
+        blocos: [
+          { tipo: 'p', texto: 'Se a entrada ou parte dos recursos vier do exterior, o valor passa por câmbio (com IOF sobre a remessa) até chegar em conta no Brasil. Guarde a documentação da remessa — comprovante de origem dos recursos é algo que o banco pode pedir durante a análise.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'Preciso estar fisicamente no Brasil para financiar um imóvel morando fora?',
+        resposta: 'Não necessariamente. Bancos tradicionais costumam exigir assinatura presencial ou procuração pública — muitos casos se resolvem sem viajar, mas confirme o processo com o banco escolhido antes de fechar negócio.' },
+      { pergunta: 'Posso usar meu FGTS morando fora do Brasil?',
+        resposta: 'Sim, se o saldo veio de período trabalhado com carteira assinada no Brasil e você cumpre as regras padrão de uso (3 anos de cotista, primeiro imóvel no município, etc). O que pode ficar mais difícil é comprovar renda dentro da faixa que dá direito a subsídio do MCMV.' },
+      { pergunta: 'Fintech financia mais fácil que banco tradicional para quem mora fora?',
+        resposta: 'Costuma aceitar renda estrangeira com mais flexibilidade (tradução juramentada em vez de DIRPF), mas geralmente com taxa mais alta que a Caixa ou bancos com relacionamento. Vale comparar o CET, não só a taxa nominal.' },
+      { pergunta: 'Pago imposto sobre o dinheiro que mando do exterior para comprar o imóvel?',
+        resposta: 'A remessa em si passa por câmbio com IOF. Guarde a documentação de origem dos recursos — isso não é opcional se o banco pedir comprovação durante a análise do financiamento.' },
+      { pergunta: 'Meu CPF está irregular, o que fazer morando fora?',
+        resposta: 'Dá para regularizar pelo consulado brasileiro no país onde você mora, sem precisar viajar ao Brasil — é o primeiro passo antes de iniciar qualquer processo de financiamento.' },
+    ],
+    fatosChaveParaJoao: [
+      'Brasileiro morando fora PODE financiar imóvel no Brasil, precisando de CPF regular, comprovação de renda (DIRPF na Caixa; fintechs aceitam renda estrangeira com tradução juramentada) e resolver a assinatura — presencial ou procuração pública.',
+      'FGTS de período trabalhado no Brasil continua utilizável mesmo morando fora, desde que cumpridas as regras padrão (3 anos de cotista, primeiro imóvel no município). O que pode ficar mais difícil é comprovar renda dentro da faixa que dá direito a subsídio MCMV.',
+      'Caixa é mais rígida (exige DIRPF do último ano); fintechs/SCDs são mais flexíveis com renda estrangeira mas costumam ter taxa mais alta — comparar CET, não só taxa nominal.',
+      'Bancos tradicionais normalmente não aceitam assinatura 100% remota — procuração pública (cartório ou consulado) resolve a maioria dos casos, mas confirmar sempre com o banco escolhido antes.',
+      'Dinheiro enviado do exterior para comprar imóvel passa por câmbio (IOF) e deve ter origem comprovável — guardar documentação da remessa.',
+    ],
+    ctaSimulador: { texto: 'Simular meu financiamento', href: '/simulador' },
+    relacionados: ['estrangeiro-comprar-imovel-brasil-golden-visa', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
+  },
+  {
+    slug: 'estrangeiro-comprar-imovel-brasil-golden-visa',
+    keyword: 'estrangeiro comprar imóvel no Brasil',
+    titulo: 'Estrangeiro Pode Comprar Imóvel no Brasil? CPF, Financiamento e Golden Visa',
+    tituloSEO: 'Estrangeiro Comprar Imóvel no Brasil: Guia Completo 2026 (Golden Visa)',
+    metaDescription:
+      'Estrangeiro pode comprar imóvel urbano no Brasil sem restrição de nacionalidade. Entenda CPF, financiamento, impostos e o Visto de Investidor Imobiliário (Golden Visa) a partir de R$1 milhão.',
+    resumo:
+      'Não existe proibição para estrangeiro comprar imóvel urbano no Brasil — mas o caminho até a compra (e até o financiamento) tem etapas próprias, diferentes das de quem já mora e tem renda formal no país. Este guia reúne CPF, formas de pagamento, o Visto de Investidor Imobiliário (Golden Visa) e os impostos que incidem sobre quem não é residente.',
+    publicado: '2026-08-02',
+    atualizado: '2026-08-02',
+    leituraMin: 8,
+    secoes: [
+      {
+        titulo: 'Sim, estrangeiro pode comprar imóvel urbano no Brasil',
+        blocos: [
+          { tipo: 'p', texto: 'Não há restrição de nacionalidade para comprar **imóvel urbano** no Brasil — vale para turista, residente ou quem nunca pisou no país. A situação muda para **imóvel rural**, que tem regras próprias de limite e autorização (Lei 5.709/1971) — fora do escopo deste guia, focado em imóveis urbanos residenciais e comerciais.' },
+          { tipo: 'destaque', texto: 'O que de fato varia por perfil não é "poder comprar" — é como pagar: à vista, financiado, e se há (ou não) direito a residência associado ao investimento.' },
+        ],
+      },
+      {
+        titulo: 'CPF: o primeiro passo, mesmo sem morar no Brasil',
+        blocos: [
+          { tipo: 'p', texto: 'Sem CPF, nenhum banco ou cartório processa a compra. O documento pode ser obtido pelo **consulado brasileiro** no país de origem, apresentando passaporte válido — não é necessário viajar ao Brasil para tirar o CPF.' },
+        ],
+      },
+      {
+        titulo: 'Como pagar: à vista, financiamento ou construtora',
+        blocos: [
+          { tipo: 'p', texto: 'A compra **à vista** é o caminho mais simples e o mais comum entre estrangeiros — evita as exigências extras de financiamento bancário.' },
+          { tipo: 'p', texto: 'Para **financiamento bancário** (SFH/SBPE ou SFI), instituições costumam exigir **CRNM (Carteira de Registro Nacional Migratório) ou visto permanente**, além de entrada mais alta — normalmente entre 20% e 50% do valor do imóvel, dependendo do banco e do perfil.' },
+          { tipo: 'lista', itens: [
+            'Caixa Econômica Federal: mais restritiva para estrangeiro em crédito convencional',
+            'Bancos privados e fintechs: costumam aceitar renda comprovada no país de origem, com tradução juramentada',
+            'Financiamento direto com a construtora: alternativa comum quando o banco tradicional não atende o perfil',
+          ] },
+          { tipo: 'destaque', texto: 'MCMV e uso de FGTS não se aplicam a estrangeiro sem residência/contribuição formal no Brasil — na prática, o caminho de financiamento bancário passa por SBPE (até R$2,25M) ou SFI (acima disso), sempre com taxa de mercado, sem subsídio.' },
+        ],
+      },
+      {
+        titulo: 'Golden Visa: residência no Brasil por investir em imóvel',
+        blocos: [
+          { tipo: 'p', texto: 'O **Visto de Investidor Imobiliário** (conhecido como Golden Visa brasileiro) dá autorização de residência a quem investe em imóvel urbano acima de um valor mínimo. É regulamentado pela **Resolução Normativa CNIg nº 36/2018**, alterada pela **RN nº 46/2022**.' },
+          { tipo: 'tabela', cabecalho: ['Região do imóvel', 'Valor mínimo do investimento'], linhas: [
+            ['Sul, Sudeste e Centro-Oeste', 'R$ 1.000.000'],
+            ['Norte e Nordeste', 'a partir de R$ 700.000 (redução de até 30%)'],
+          ] },
+          { tipo: 'lista', itens: [
+            'Pode somar mais de um imóvel para atingir o valor mínimo',
+            'A parte do valor acima do mínimo exigido pode ser financiada',
+            'Autorização de residência inicial: 4 anos',
+            'Permanência mínima exigida: 14 dias (corridos ou não) a cada 2 anos, contados do registro na Polícia Federal',
+            'Após os 4 anos, pode solicitar residência por prazo indeterminado, mantendo o imóvel e cumprindo a permanência mínima',
+          ] },
+          { tipo: 'destaque', texto: 'Regras de prazo e permanência de visto podem ser atualizadas — antes de decidir com base nisso, confirme a versão vigente com um advogado de imigração. Os valores mínimos de investimento são o dado mais estável e confirmado desta seção.' },
+        ],
+      },
+      {
+        titulo: 'Impostos que incidem sobre quem não é residente',
+        blocos: [
+          { tipo: 'p', texto: 'ITBI e IPTU incidem da mesma forma que para qualquer comprador — não há taxa diferenciada por nacionalidade na compra em si.' },
+          { tipo: 'p', texto: 'Já sobre **aluguel recebido por não residente**, a alíquota de Imposto de Renda é **15%**, retida na fonte — ou **25%** se o beneficiário mora em país considerado paraíso fiscal pela legislação brasileira. Não há faixa de isenção, diferente da tabela progressiva de quem mora no Brasil. O recolhimento é feito por um procurador no Brasil, via DARF específico.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'Estrangeiro sem visto pode comprar imóvel no Brasil?',
+        resposta: 'Sim, para compra à vista de imóvel urbano não há exigência de visto — só CPF. Visto ou CRNM passa a ser relevante se quiser financiamento bancário tradicional.' },
+      { pergunta: 'Estrangeiro pode usar o MCMV?',
+        resposta: 'Na prática não — o programa é voltado a quem tem renda formal comprovável dentro do padrão brasileiro e reside no país. O caminho de financiamento para estrangeiro costuma ser SBPE ou SFI, sem subsídio.' },
+      { pergunta: 'O Golden Visa brasileiro dá cidadania?',
+        resposta: 'Não diretamente — dá autorização de residência (inicialmente 4 anos, depois por prazo indeterminado). Cidadania por naturalização segue processo e prazos próprios, separados do visto de investidor.' },
+      { pergunta: 'Preciso de advogado para comprar imóvel sendo estrangeiro?',
+        resposta: 'Não é obrigatório para uma compra simples à vista, mas é altamente recomendado para financiamento, Golden Visa ou qualquer dúvida sobre documentação — evita erros que custam caro para corrigir depois.' },
+      { pergunta: 'Quanto de imposto pago se alugar o imóvel morando fora do Brasil?',
+        resposta: '15% de Imposto de Renda retido na fonte sobre o valor líquido do aluguel, sem faixa de isenção — ou 25% se você mora em país considerado paraíso fiscal pela legislação brasileira.' },
+    ],
+    fatosChaveParaJoao: [
+      'Estrangeiro pode comprar imóvel urbano no Brasil sem restrição de nacionalidade (rural tem regras à parte, Lei 5.709/1971, fora do escopo do site).',
+      'CPF é obrigatório e pode ser obtido remotamente via consulado brasileiro, sem precisar viajar ao Brasil.',
+      'Financiamento bancário tradicional geralmente exige CRNM ou visto permanente; entrada de 20% a 50%; Caixa mais restritiva, fintechs mais flexíveis com renda estrangeira.',
+      'MCMV e FGTS não estão disponíveis para estrangeiro sem residência/contribuição formal no Brasil — o caminho de financiamento é SBPE (até R$2,25M) ou SFI (acima), sempre taxa de mercado sem subsídio.',
+      'Golden Visa / Visto de Investidor Imobiliário (RN 36/2018, alterada pela RN 46/2022): imóvel urbano ≥R$1.000.000 (Sul/Sudeste/Centro-Oeste) ou ≥R$700.000 (Norte/Nordeste) dá residência de 4 anos, permanência mínima de 14 dias a cada 2 anos, convertível em residência por prazo indeterminado. Recomendar confirmação com advogado de imigração para prazos vigentes.',
+      'IR sobre aluguel recebido por não residente: 15% retido na fonte (25% se residente em paraíso fiscal), sem faixa de isenção — diferente da tabela progressiva de residentes no Brasil.',
+    ],
+    ctaSimulador: { texto: 'Simular financiamento', href: '/simulador' },
+    relacionados: ['brasileiro-no-exterior-financiar-imovel', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
   },
 ];
 

@@ -10,6 +10,7 @@ import {
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
+import { HisHmpHint } from '@/components/HisHmpHint';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtInput(v: string): string {
@@ -1197,8 +1198,10 @@ function SimuladorInner() {
           Simulação educativa — regras SFH/MCMV vigentes · jul/2026. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Taxas SBPE: referência de mercado — variam por banco, perfil e LTV. Valores exatos confirmados em cada instituição financeira. Não constitui proposta de crédito.
         </p>
 
+        {sim.isMCMV && sim.faixa && sim.faixa.numero <= 2 && <HisHmpHint />}
+
         {/* Busca inteligente de imóveis com filtro por quartos, vagas e bairro */}
-        <BuscaImoveisInteligente valorImovel={sim.valorImovel} naPlanta={sim.naPlanta} />
+        <BuscaImoveisInteligente valorImovel={sim.valorImovel} naPlanta={sim.naPlanta} faixaLabel={modalLabel} />
 
         <button onClick={() => { setEtapa(0); setE(E0); setPerfil(null); setSim(null); }}
           style={{ marginTop: 16, width: '100%', padding: '15px 0', borderRadius: 12, border: '1.5px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>

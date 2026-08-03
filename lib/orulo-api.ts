@@ -138,6 +138,37 @@ export function normalizeBuilding(b: Record<string, unknown>) {
     typologiesRaw.map(t => (t.type as string) || '').filter(Boolean)
   )];
 
+  // Faixa de preço/quartos/área POR tipologia — necessário porque o prédio pode
+  // ter várias tipologias com especificações bem diferentes (ex.: Apartamento
+  // padrão barato + Cobertura Horizontal cara). Sem isso, o card sempre mostra
+  // a faixa do prédio inteiro (geralmente a unidade mais barata/comum), o que
+  // engana quando o usuário filtra por uma tipologia específica.
+  const byType = new Map<string, { prices: number[]; bedrooms: number[]; areas: number[] }>();
+  for (const t of typologiesRaw) {
+    const type = (t.type as string) || '';
+    if (!type) continue;
+    if (!byType.has(type)) byType.set(type, { prices: [], bedrooms: [], areas: [] });
+    const entry = byType.get(type)!;
+    const price = Number(t.discount_price ?? t.original_price ?? t.price ?? NaN);
+    if (isFinite(price) && price > 0) entry.prices.push(price);
+    const bedrooms = Number(t.bedrooms ?? t.rooms ?? NaN);
+    if (isFinite(bedrooms) && bedrooms > 0) entry.bedrooms.push(bedrooms);
+    const area = Number(t.private_area ?? t.area ?? NaN);
+    if (isFinite(area) && area > 0) entry.areas.push(area);
+  }
+  const typology_ranges = property_types.map(type => {
+    const e = byType.get(type)!;
+    return {
+      type,
+      price_min:    e.prices.length   ? Math.min(...e.prices)   : null,
+      price_max:    e.prices.length   ? Math.max(...e.prices)   : null,
+      bedrooms_min: e.bedrooms.length ? Math.min(...e.bedrooms) : null,
+      bedrooms_max: e.bedrooms.length ? Math.max(...e.bedrooms) : null,
+      area_min:     e.areas.length    ? Math.min(...e.areas)    : null,
+      area_max:     e.areas.length    ? Math.max(...e.areas)    : null,
+    };
+  });
+
   return {
     id:            String(b.id),
     name:          (b.name as string) || 'Empreendimento',
@@ -191,6 +222,7 @@ export function normalizeBuilding(b: Record<string, unknown>) {
     })(),
     updated_at:    (b.updated_at as string) || null,
     property_types,
+    typology_ranges,
   };
 }
 
