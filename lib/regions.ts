@@ -90,14 +90,12 @@ export const REGIONS: Region[] = [
     state: 'SP',
     neighborhoods: [],
     cities: [
-      // ABC
+      // ABC — 4 principais
       'Santo André', 'São Bernardo do Campo', 'São Caetano do Sul', 'Diadema',
-      'Mauá', 'Ribeirão Pires', 'Rio Grande da Serra',
       // Osasco e região oeste
-      'Osasco', 'Barueri', 'Taboão da Serra', 'Carapicuíba', 'Itapevi',
-      'Santana de Parnaíba', 'Vargem Grande Paulista', 'Cotia',
+      'Osasco', 'Barueri', 'Taboão da Serra', 'Santana de Parnaíba',
       // Guarulhos
-      'Guarulhos', 'Itaquaquecetuba',
+      'Guarulhos',
     ],
   },
   {

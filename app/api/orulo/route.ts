@@ -35,17 +35,10 @@ import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
 // rate-limit silencioso da Orulo. Normalmente nem entra em uso (KV já populado).
 export const maxDuration = 60;
 
-// ── Municípios da Região Metropolitana de São Paulo (RMSP) — constante global ─
+// ── Municípios da Região Metropolitana de São Paulo (RMSP) liberados no portal ─
 const GRANDE_SP = new Set([
   'são paulo','guarulhos','osasco','santo andré','são bernardo do campo',
-  'são caetano do sul','diadema','mauá','carapicuíba','itaquaquecetuba',
-  'barueri','taboão da serra','cotia','suzano','mogi das cruzes',
-  'embu das artes','itapevi','francisco morato','franco da rocha',
-  'caieiras','cajamar','ribeirão pires','ferraz de vasconcelos','poá',
-  'mairiporã','santana de parnaíba','arujá','biritiba-mirim','guararema',
-  'itapecerica da serra','jandira','juquitiba','pirapora do bom jesus',
-  'rio grande da serra','salesópolis','santa isabel','são lourenço da serra',
-  'vargem grande paulista','embu-guaçu',
+  'são caetano do sul','diadema','barueri','taboão da serra','santana de parnaíba',
 ]);
 
 // ── Região de Campinas — segunda praça atendida fora da Grande SP ─────────────
