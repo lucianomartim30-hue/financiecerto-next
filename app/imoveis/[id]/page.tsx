@@ -12,7 +12,9 @@
 
 import type { Metadata } from 'next';
 import { cache } from 'react';
+import { notFound } from 'next/navigation';
 import { kvGetCatalog } from '@/lib/orulo-kv';
+import { getToken, fetchBuildingDetail } from '@/lib/orulo-api';
 import ImovelDetailClient from './ImovelDetailClient';
 
 const BASE = 'https://www.financiecerto.com.br';
@@ -24,12 +26,20 @@ function fmtBRL(v: number | null | undefined): string {
   return 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
 }
 
-// React cache() — deduplica a busca KV dentro do mesmo request
-// (generateMetadata e a função page chamam getBuildingData com o mesmo id)
+// React cache() — deduplica a busca entre generateMetadata e a página no mesmo request.
+// Checa o KV primeiro (rápido); se o imóvel não estiver mais no catálogo (saiu de
+// venda, filtrado, etc.), confirma ao vivo na Orulo antes de decidir que não existe —
+// evita 404 falso para imóvel que só não foi sincronizado ainda.
 const getBuildingData = cache(async (id: string) => {
   try {
     const catalog = await kvGetCatalog();
-    return catalog?.find(b => b.id === id) ?? null;
+    const cached = catalog?.find(b => b.id === id);
+    if (cached) return cached;
+  } catch { /* segue para o fallback ao vivo */ }
+
+  try {
+    const token = await getToken();
+    return await fetchBuildingDetail(token, id);
   } catch {
     return null;
   }
@@ -116,6 +126,10 @@ export default async function ImovelPage({
 }) {
   const { id } = await params;
   const b = await getBuildingData(id);
+
+  // Imóvel não existe mais em lugar nenhum (nem KV, nem Orulo ao vivo) — 404 real,
+  // não uma página "vazia" com 200 OK (isso é o que gera soft-404 no Google).
+  if (!b) notFound();
 
   // ── Schema.org: RealEstateListing ──
   const listingSchema = b
