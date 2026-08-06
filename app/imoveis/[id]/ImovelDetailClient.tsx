@@ -86,6 +86,27 @@ interface RelatedImovel {
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 /**
+ * Registra automaticamente um lead no painel /admin/leads quando alguém clica
+ * em "Falar com consultor". Fire-and-forget — nunca deve travar/atrapalhar o
+ * clique real do WhatsApp, por isso ignora qualquer erro silenciosamente.
+ */
+function registrarLead(imovel: ImovelDetalhe | null): void {
+  if (!imovel) return;
+  fetch('/api/leads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      imovelId:   imovel.id,
+      imovelName: imovel.name,
+      bairro:     imovel.neighborhood,
+      cidade:     imovel.city,
+      preco:      imovel.min_price,
+      oruloUrl:   imovel.sharing_url,
+    }),
+  }).catch(() => {});
+}
+
+/**
  * Classifica o campo virtual_tour da Orulo.
  * Retorna 'tour' se for uma plataforma de tour 360° reconhecida,
  * ou 'site' se for apenas o site/contato da construtora.
@@ -931,7 +952,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
 
         {/* CTA WhatsApp */}
         <a href={`https://wa.me/5511933661403?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
-          onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood })); }}
+          onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood })); registrarLead(imovel); }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
           <span>💬</span> Falar com consultor
         </a>
@@ -1570,7 +1591,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.75)' }}>Fale agora com um consultor pelo WhatsApp</p>
           </div>
           <a href={`https://wa.me/5511933661403?text=${waMsgTopo}`} target="_blank" rel="noopener noreferrer"
-            onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood })); }}
+            onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood })); registrarLead(imovel); }}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             <span>💬</span> Falar com consultor
           </a>
