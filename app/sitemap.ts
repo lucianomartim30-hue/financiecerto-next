@@ -10,6 +10,7 @@ import { kvGetCatalog } from '@/lib/orulo-kv';
 import { neighborhoodToSlug } from '@/lib/locations';
 import { getArtigos } from '@/lib/artigos';
 import { REGIONS } from '@/lib/regions';
+import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -61,7 +62,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let buildingPages: MetadataRoute.Sitemap = [];
   let bairroPages:   MetadataRoute.Sitemap = [];
   try {
-    const catalog = await kvGetCatalog();
+    const rawCatalog = await kvGetCatalog();
+    // O KV guarda o catálogo nacional bruto (todas as cidades ativas na Orulo,
+    // mesmo as nunca liberadas no site). Sem este filtro o sitemap submete ao
+    // Google imóveis e bairros de cidades que não aparecem em nenhuma busca do
+    // site — páginas fantasma, indexadas como soft-404 (ex: bairro de Goiânia).
+    const catalog = rawCatalog?.filter(b => CIDADES_LIBERADAS.has((b.city || '').toLowerCase().trim()));
     if (catalog && catalog.length > 0) {
       // Páginas individuais de imóvel
       buildingPages = catalog.map(b => ({

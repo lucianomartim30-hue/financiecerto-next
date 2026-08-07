@@ -29,34 +29,12 @@ import {
 } from '@/lib/orulo-api';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
+import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 
 // O fallback ao vivo (cache KV vazio/frio) pode varrer o estado inteiro em lotes
 // pequenos e pausados — mais lento que os 10s padrão da Vercel, mas evita
 // rate-limit silencioso da Orulo. Normalmente nem entra em uso (KV já populado).
 export const maxDuration = 60;
-
-// ── Municípios da Região Metropolitana de São Paulo (RMSP) liberados no portal ─
-const GRANDE_SP = new Set([
-  'são paulo','guarulhos','osasco','santo andré','são bernardo do campo',
-  'são caetano do sul','diadema','barueri','taboão da serra','santana de parnaíba',
-]);
-
-// ── Região de Campinas — segunda praça atendida fora da Grande SP ─────────────
-const OUTRAS_PRACAS = new Set([
-  'campinas','hortolândia','americana','paulínia','valinhos',
-  "santa bárbara d'oeste",
-]);
-
-// ── Santa Catarina — litoral norte + capital ──────────────────────────────────
-const SANTA_CATARINA = new Set([
-  'florianópolis','itajaí','bombinhas','itapema','balneário camboriú','porto belo',
-]);
-
-// ── Curitiba (PR) ──────────────────────────────────────────────────────────────
-const CURITIBA = new Set(['curitiba']);
-
-// Municípios liberados a aparecer no catálogo (Grande SP + outras praças + SC + PR).
-const CIDADES_LIBERADAS = new Set([...GRANDE_SP, ...OUTRAS_PRACAS, ...SANTA_CATARINA, ...CURITIBA]);
 
 // ── Auto-trigger: dispara sync em background quando catálogo está incompleto ──
 // Garante que o catálogo se reconstrói sozinho sem intervenção manual.
