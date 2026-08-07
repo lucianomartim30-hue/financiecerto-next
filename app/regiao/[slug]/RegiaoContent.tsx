@@ -418,72 +418,74 @@ export default function RegiaoContent({
           {/* Linha principal */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
 
-            {/* Context chip — região bloqueada; clicar no nome abre a lista de cidades */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                background: 'var(--primary-light)', border: '1.5px solid rgba(37,99,235,.3)',
-                borderRadius: '10px', padding: '8px 12px',
-                fontSize: '13px', fontWeight: '700', color: 'var(--primary)',
-              }}>
-                <span>📍</span>
-                {region.cities && region.cities.length > 0 ? (
-                  <button
-                    onClick={() => setCityMenuOpen(v => !v)}
-                    style={{
-                      background: 'none', border: 'none', padding: 0, margin: 0,
-                      font: 'inherit', color: 'inherit', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '5px',
-                    }}
-                  >
-                    {cidade || region.name}
-                    <span style={{ fontSize: '10px', opacity: 0.6, transform: cityMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▼</span>
-                  </button>
-                ) : region.name}
-                <Link href="/imoveis" title="Limpar contexto"
-                  onClick={() => { setCidade(''); setUrlParam('cidade', ''); }}
-                  style={{ marginLeft: '2px', color: 'var(--primary)', textDecoration: 'none', opacity: 0.55, fontSize: '14px' }}>
-                  ✕
-                </Link>
-              </div>
+            {/* Context chip — região bloqueada (só rótulo, sem clique escondido) */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+              background: 'var(--primary-light)', border: '1.5px solid rgba(37,99,235,.3)',
+              borderRadius: '10px', padding: '8px 12px',
+              fontSize: '13px', fontWeight: '700', color: 'var(--primary)',
+            }}>
+              <span>📍</span>
+              {region.name}
+              <Link href="/imoveis" title="Limpar contexto"
+                onClick={() => { setCidade(''); setUrlParam('cidade', ''); }}
+                style={{ marginLeft: '2px', color: 'var(--primary)', textDecoration: 'none', opacity: 0.55, fontSize: '14px' }}>
+                ✕
+              </Link>
+            </div>
 
-              {/* Dropdown de cidades da região */}
-              {cityMenuOpen && region.cities && region.cities.length > 0 && (
-                <div style={{
-                  position: 'absolute', top: 'calc(100% + 6px)', left: 0,
-                  background: 'var(--bg-card)', border: '1.5px solid var(--border)',
-                  borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,.14)',
-                  padding: '8px', minWidth: '220px', zIndex: 20,
-                  display: 'flex', flexDirection: 'column', gap: '2px',
+            {/* Filtro de cidade — botão próprio e visível, igual ao "Filtros" */}
+            {region.cities && region.cities.length > 0 && (
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <button onClick={() => setCityMenuOpen(v => !v)} style={{
+                  background:   cidade ? 'var(--primary-light)' : 'var(--bg)',
+                  color:        cidade ? 'var(--primary)'       : 'var(--text-muted)',
+                  border:       `1.5px solid ${cidade ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: '10px', padding: '8px 14px', fontSize: '13px',
+                  fontWeight: '600', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '5px',
                 }}>
-                  <button
-                    onClick={() => { setCidade(''); setUrlParam('cidade', ''); setCityMenuOpen(false); }}
-                    style={{
-                      textAlign: 'left', padding: '8px 10px', borderRadius: '8px', border: 'none',
-                      background: !cidade ? 'var(--primary-light)' : 'transparent',
-                      color: !cidade ? 'var(--primary)' : 'var(--text)',
-                      fontWeight: !cidade ? '700' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                  >
-                    Todas as cidades ({region.name})
-                  </button>
-                  {region.cities.map(c => (
+                  <span>🏙️</span> {cidade || 'Cidade'}
+                  <span style={{ fontSize: '10px', transform: cityMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform .2s', display: 'inline-block' }}>▼</span>
+                </button>
+
+                {cityMenuOpen && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', left: 0,
+                    background: 'var(--bg-card)', border: '1.5px solid var(--border)',
+                    borderRadius: '12px', boxShadow: '0 12px 32px rgba(0,0,0,.14)',
+                    padding: '8px', minWidth: '220px', zIndex: 20,
+                    display: 'flex', flexDirection: 'column', gap: '2px',
+                  }}>
                     <button
-                      key={c}
-                      onClick={() => { setCidade(c); setUrlParam('cidade', c); setCityMenuOpen(false); }}
+                      onClick={() => { setCidade(''); setUrlParam('cidade', ''); setCityMenuOpen(false); }}
                       style={{
                         textAlign: 'left', padding: '8px 10px', borderRadius: '8px', border: 'none',
-                        background: cidade === c ? 'var(--primary-light)' : 'transparent',
-                        color: cidade === c ? 'var(--primary)' : 'var(--text)',
-                        fontWeight: cidade === c ? '700' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
+                        background: !cidade ? 'var(--primary-light)' : 'transparent',
+                        color: !cidade ? 'var(--primary)' : 'var(--text)',
+                        fontWeight: !cidade ? '700' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
                       }}
                     >
-                      {c}
+                      Todas as cidades ({region.name})
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                    {region.cities.map(c => (
+                      <button
+                        key={c}
+                        onClick={() => { setCidade(c); setUrlParam('cidade', c); setCityMenuOpen(false); }}
+                        style={{
+                          textAlign: 'left', padding: '8px 10px', borderRadius: '8px', border: 'none',
+                          background: cidade === c ? 'var(--primary-light)' : 'transparent',
+                          color: cidade === c ? 'var(--primary)' : 'var(--text)',
+                          fontWeight: cidade === c ? '700' : '500', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Toggle filtros avançados */}
             <button onClick={() => setShowAdvanced(v => !v)} style={{

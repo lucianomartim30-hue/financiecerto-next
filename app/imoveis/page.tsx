@@ -53,6 +53,11 @@ const SP_BAIRROS: string[] = [
   'Poá','Ribeirão Pires','Suzano','Ferraz de Vasconcelos',
   'Santana de Parnaíba','Itaquaquecetuba','Mogi das Cruzes',
   'Jandira','Itapevi','Vargem Grande Paulista',
+  // Região de Campinas
+  'Campinas','Hortolândia','Americana','Paulínia','Valinhos',
+  "Santa Bárbara D'Oeste",
+  // Santa Catarina
+  'Itapema','Porto Belo','Balneário Camboriú','Itajaí','Bombinhas','Florianópolis',
 ];
 
 // Normaliza string para comparação: minúsculo, sem acentos
