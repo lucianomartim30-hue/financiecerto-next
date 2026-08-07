@@ -119,6 +119,14 @@ export const REGIONS: Region[] = [
     neighborhoods: [],
     cities: ['Itapema', 'Porto Belo', 'Balneário Camboriú', 'Itajaí', 'Bombinhas', 'Florianópolis'],
   },
+  {
+    slug: 'curitiba',
+    name: 'Curitiba',
+    article: 'em',
+    city: 'Curitiba',
+    state: 'PR',
+    neighborhoods: [],
+  },
 ];
 
 export function slugToRegion(slug: string): Region | null {

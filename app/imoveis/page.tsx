@@ -58,6 +58,8 @@ const SP_BAIRROS: string[] = [
   "Santa Bárbara D'Oeste",
   // Santa Catarina
   'Itapema','Porto Belo','Balneário Camboriú','Itajaí','Bombinhas','Florianópolis',
+  // Curitiba
+  'Curitiba',
 ];
 
 // Normaliza string para comparação: minúsculo, sem acentos

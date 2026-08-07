@@ -52,8 +52,11 @@ const SANTA_CATARINA = new Set([
   'florianópolis','itajaí','bombinhas','itapema','balneário camboriú','porto belo',
 ]);
 
-// Municípios liberados a aparecer no catálogo (Grande SP + outras praças + SC).
-const CIDADES_LIBERADAS = new Set([...GRANDE_SP, ...OUTRAS_PRACAS, ...SANTA_CATARINA]);
+// ── Curitiba (PR) ──────────────────────────────────────────────────────────────
+const CURITIBA = new Set(['curitiba']);
+
+// Municípios liberados a aparecer no catálogo (Grande SP + outras praças + SC + PR).
+const CIDADES_LIBERADAS = new Set([...GRANDE_SP, ...OUTRAS_PRACAS, ...SANTA_CATARINA, ...CURITIBA]);
 
 // ── Auto-trigger: dispara sync em background quando catálogo está incompleto ──
 // Garante que o catálogo se reconstrói sozinho sem intervenção manual.
