@@ -4,6 +4,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, type FaixaMCMV } from '@/lib/calculos';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
+import { getStatusCfg, isNaPlanta } from '@/lib/status';
+import { buildSimuladorLink } from '@/lib/simulador-link';
+import { bairroPath } from '@/lib/locations';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -162,28 +165,8 @@ function faixaRange(min: number | null, max: number | null, unit: string) {
   return `${min} ${unit}`;
 }
 
-const STATUS_CFG: Record<string, { cor: string; bg: string; label: string }> = {
-  'na planta':      { cor: '#2563eb', bg: 'rgba(37,99,235,.12)',  label: 'Na Planta' },
-  'planta':         { cor: '#2563eb', bg: 'rgba(37,99,235,.12)',  label: 'Na Planta' },
-  'pre-lançamento': { cor: '#7c3aed', bg: 'rgba(124,58,237,.12)', label: 'Pré-Lançamento' },
-  'lançamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.12)', label: 'Lançamento' },
-  'lancamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.12)', label: 'Lançamento' },
-  'em obras':       { cor: '#d97706', bg: 'rgba(217,119,6,.12)',  label: 'Em Obras' },
-  'em construção':  { cor: '#d97706', bg: 'rgba(217,119,6,.12)',  label: 'Em Construção' },
-  'em andamento':   { cor: '#d97706', bg: 'rgba(217,119,6,.12)',  label: 'Em Andamento' },
-  'pronto':         { cor: '#16a34a', bg: 'rgba(22,163,74,.12)',  label: 'Pronto' },
-  'entregue':       { cor: '#16a34a', bg: 'rgba(22,163,74,.12)',  label: 'Entregue' },
-};
 function getStatus(s: string) {
-  const key = s.toLowerCase().trim();
-  if (STATUS_CFG[key]) return STATUS_CFG[key];
-  if (key.includes('planta'))  return STATUS_CFG['na planta'];
-  if (key.includes('lança'))   return STATUS_CFG['lançamento'];
-  if (key.includes('constru') || key.includes('obra') || key.includes('andamento'))
-    return STATUS_CFG['em obras'];
-  if (key.includes('pronto') || key.includes('entreg') || key.includes('conclui'))
-    return STATUS_CFG['pronto'];
-  return { cor: '#475569', bg: 'rgba(71,85,105,.12)', label: s };
+  return getStatusCfg(s);
 }
 
 function calcEstimate(valorImovel: number, isComercial = false): {
@@ -228,10 +211,6 @@ function calcEstimate(valorImovel: number, isComercial = false): {
   return { entrada, parcela, rendaSugerida, faixaMCMV: null, taxa };
 }
 
-function isNaPlanta(status: string) {
-  const k = status.toLowerCase();
-  return k.includes('planta') || k.includes('lança') || k.includes('constru') || k.includes('obra') || k.includes('andamento');
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hero Gallery — mosaico estilo Orulo (1 principal + 2 laterais + lightbox)
@@ -897,7 +876,12 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
               const bloqueado = resultado.bloqueado;
               const minFiltro = Math.round(valorRef * 0.75);
               const maxFiltro = Math.round(valorRef * 1.25);
-              const ctaLink = `/imoveis?min=${minFiltro}&max=${maxFiltro}${isNaPlanta(imovel.status || '') ? '&status=na planta' : ''}`;
+              const naPlantaImovel = isNaPlanta(imovel.status || '');
+              const ctaLink = `/imoveis?min=${minFiltro}&max=${maxFiltro}${naPlantaImovel ? '&status=na planta' : ''}`;
+              const simuladorLink = buildSimuladorLink(
+                { min_price: valorRef || imovel.min_price, max_price: imovel.max_price, status: imovel.status },
+                { renda: parseMoeda(renda), entrada: en, fgts: fg },
+              );
               return (
                 <>
                   {bloqueado ? (
@@ -938,9 +922,10 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', background: 'var(--primary-light)', color: 'var(--primary)', border: '1.5px solid rgba(37,99,235,.25)', borderRadius: '12px', padding: '10px', fontSize: '12px', fontWeight: '700', textDecoration: 'none', textAlign: 'center' }}>
                     🏠 Ver imóveis compatíveis — {formatBRL(minFiltro)} a {formatBRL(maxFiltro)}
                   </Link>
-                  <Link href="/simulador"
+                  <Link href={simuladorLink}
+                    onClick={() => import('@/lib/gtag').then(m => m.trackSimulacaoInicio({ origem: 'imovel', naPlanta: naPlantaImovel }))}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: '12px', padding: '9px', fontSize: '12px', fontWeight: '600', textDecoration: 'none', textAlign: 'center' }}>
-                    📊 Simulador completo com todos os cenários →
+                    {naPlantaImovel ? '🏗️ Simulador de obra completo →' : '📊 Simulador completo com todos os cenários →'}
                   </Link>
                 </>
               );
@@ -952,7 +937,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
 
         {/* CTA WhatsApp */}
         <a href={`https://wa.me/5511933661403?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
-          onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood })); registrarLead(imovel); }}
+          onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood, canal: 'whatsapp' })); registrarLead(imovel); }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
           <span>💬</span> Falar com consultor
         </a>
@@ -1504,7 +1489,13 @@ export default function ImovelDetailClient({ id }: { id: string }) {
           <div style={{ fontSize: '12px', color: 'var(--text-faint)' }}>
             <Link href="/imoveis" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}>← Imóveis</Link>
             <span style={{ margin: '0 6px' }}>·</span>
-            <span>{imovel.neighborhood}</span>
+            {imovel.neighborhood && (imovel.state === 'SP' || imovel.state === 'PR') ? (
+              <Link href={bairroPath(imovel.neighborhood, imovel.state)} style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>
+                Ver mais em {imovel.neighborhood}
+              </Link>
+            ) : (
+              <span>{imovel.neighborhood}</span>
+            )}
             <span style={{ margin: '0 6px' }}>·</span>
             <span style={{ color: 'var(--text)' }}>{imovel.name}</span>
           </div>
@@ -1591,7 +1582,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.75)' }}>Fale agora com um consultor pelo WhatsApp</p>
           </div>
           <a href={`https://wa.me/5511933661403?text=${waMsgTopo}`} target="_blank" rel="noopener noreferrer"
-            onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood })); registrarLead(imovel); }}
+            onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood, canal: 'whatsapp' })); registrarLead(imovel); }}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             <span>💬</span> Falar com consultor
           </a>

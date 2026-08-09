@@ -25,15 +25,29 @@ export function gtagEvent({ action, category, label, value, ...rest }: GtagEvent
 
 // ── Eventos padronizados ────────────────────────────────────────────────────
 
-/** Clique em "Falar com consultor/corretor" — evento de lead (conversão) */
-export function trackLead(params?: { imovel?: string; bairro?: string }) {
+/**
+ * Clique em "Falar com consultor/corretor" — evento de lead (conversão).
+ * `canal` identifica a via de contato (hoje só existe whatsapp); deixar
+ * opcional preserva as chamadas antigas que não o passam.
+ */
+export function trackLead(params?: { imovel?: string; bairro?: string; canal?: 'whatsapp' | 'telefone' | 'formulario' }) {
   gtagEvent({
     action:   'generate_lead',
     category: 'engagement',
     label:    params?.imovel ?? 'corretor',
     imovel:   params?.imovel,
     bairro:   params?.bairro,
+    canal:    params?.canal,
   });
+  if (params?.canal === 'whatsapp') {
+    gtagEvent({
+      action:   'whatsapp_click',
+      category: 'engagement',
+      label:    params?.imovel,
+      imovel:   params?.imovel,
+      bairro:   params?.bairro,
+    });
+  }
 }
 
 /** Simulação de perfil concluída */
@@ -44,6 +58,21 @@ export function trackSimulacao(params?: { modalidade?: string; faixa?: string })
     label:     params?.modalidade ?? 'MCMV',
     modalidade: params?.modalidade,
     faixa:     params?.faixa,
+  });
+}
+
+/**
+ * Início de uma simulação — usuário entrou no wizard com intenção de simular
+ * (não apenas visualizou a página). Sem este evento não dá pra medir abandono
+ * do funil (só a conclusão era medida antes).
+ */
+export function trackSimulacaoInicio(params?: { origem?: string; naPlanta?: boolean }) {
+  gtagEvent({
+    action:   'simulation_start',
+    category: 'simulador',
+    label:    params?.origem ?? 'direto',
+    origem:   params?.origem,
+    naPlanta: params?.naPlanta,
   });
 }
 

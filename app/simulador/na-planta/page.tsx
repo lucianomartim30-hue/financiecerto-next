@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   formatBRL, parcelaPrice, calcularSeguros,
@@ -165,6 +165,8 @@ function NaPlantaContent() {
   const maxFinMcmv  = Number(sp.get('mcmv')     || 0);
   const maxFinSbpe  = Number(sp.get('sbpe')     || 0);
   const fgtsUrl     = Number(sp.get('fgts')     || 0);
+  const valorUrl    = Number(sp.get('valor')    || 0);
+  const estagioUrl  = sp.get('estagio');
 
   // Renda
   const [rendaRaw, setRendaRaw] = useState('');
@@ -181,8 +183,10 @@ function NaPlantaContent() {
     document.title = 'Simulador Imóvel na Planta | FinancieCerto';
   }, []);
 
-  // Estágio
-  const [estagio, setEstagio] = useState<Estagio>('lancamento');
+  // Estágio — vindo da página do imóvel (status real do empreendimento), se houver
+  const [estagio, setEstagio] = useState<Estagio>(
+    estagioUrl === 'obras' || estagioUrl === 'pronto' ? estagioUrl : 'lancamento',
+  );
   const [siopiPctRaw, setSiopiPctRaw] = useState<string>('15');
 
   useEffect(() => {
@@ -194,8 +198,8 @@ function NaPlantaContent() {
     ? 1.0
     : Math.min(1, Math.max(0, Number(siopiPctRaw.replace(',', '.') || '0') / 100));
 
-  // Valor do imóvel
-  const [valorRaw, setValorRaw] = useState('');
+  // Valor do imóvel — pré-preenchido quando vindo da página do imóvel
+  const [valorRaw, setValorRaw] = useState(() => valorUrl > 0 ? fi(String(valorUrl)) : '');
   const valor = p(valorRaw);
 
   // ── Fluxo de pagamento à construtora ─────────────────────────────────────────
@@ -315,6 +319,16 @@ function NaPlantaContent() {
   // Válido para mostrar resultado completo
   const temDados = valor > 0 && renda > 0;
   const valido   = temDados && ato > 0;
+
+  // Dispara simulation_start uma única vez, quando os dados mínimos aparecem
+  // (seja por digitação ou por vir pré-preenchido da página do imóvel).
+  const inicioDisparado = useRef(false);
+  useEffect(() => {
+    if (temDados && !inicioDisparado.current) {
+      inicioDisparado.current = true;
+      import('@/lib/gtag').then(m => m.trackSimulacaoInicio({ origem: valorUrl > 0 ? 'imovel' : 'wizard', naPlanta: true }));
+    }
+  }, [temDados]);
 
   // ── saveSimContext para o João ────────────────────────────────────────────────
   useEffect(() => {

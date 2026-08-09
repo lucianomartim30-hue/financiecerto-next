@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { formatBRL } from '@/lib/calculos';
 import { bairroPath } from '@/lib/locations';
 import type { Region } from '@/lib/regions';
+import { getStatusCfg } from '@/lib/status';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -20,29 +21,6 @@ interface Imovel {
   neighborhood: string; city: string; state: string;
   photo: string | null; orulo_url: string | null; sharing_url: string | null;
   status: string; address_full: string; street: string; number: string;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Status config
-// ──────────────────────────────────────────────────────────────────────────────
-const STATUS_CFG: Record<string, { cor: string; bg: string; label: string }> = {
-  'na planta':     { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
-  'lançamento':    { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
-  'em obras':      { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Obras' },
-  'em construção': { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Construção' },
-  'em andamento':  { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Andamento' },
-  'pronto':        { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Pronto' },
-  'entregue':      { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Entregue' },
-};
-
-function getStatusCfg(status: string) {
-  const k = (status || '').toLowerCase().trim();
-  if (STATUS_CFG[k]) return STATUS_CFG[k];
-  if (k.includes('planta'))                                  return STATUS_CFG['na planta'];
-  if (k.includes('lança'))                                   return STATUS_CFG['lançamento'];
-  if (k.includes('constru') || k.includes('obra'))           return STATUS_CFG['em obras'];
-  if (k.includes('pronto')  || k.includes('entreg'))         return STATUS_CFG['pronto'];
-  return { cor: '#475569', bg: 'rgba(71,85,105,.18)', label: status };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

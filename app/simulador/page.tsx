@@ -323,16 +323,36 @@ function SimuladorInner() {
     const naPlantaStr    = searchParams.get('naPlanta');
     const idadeStr       = searchParams.get('idade');
 
-    if (!valorImovelStr || !rendaStr) return; // sem dados suficientes
+    if (!valorImovelStr) return; // sem imóvel de referência, fluxo normal do wizard
 
     const valorImovel = Number(valorImovelStr);
-    const rendaNum    = Number(rendaStr);
-    const entradaNum  = Number(entradaStr) || 0;
+    if (valorImovel < 1000) return;
+
     const prazoNum    = Number(prazoStr) || 35;
     const naPlanta    = naPlantaStr === 'true';
     const idadeNum    = Number(idadeStr) || 35;
 
-    if (valorImovel < 1000 || rendaNum < 500) return;
+    import('@/lib/gtag').then(m => m.trackSimulacaoInicio({ origem: 'imovel', naPlanta }));
+
+    // Veio da página do imóvel mas ainda não sabemos a renda (usuário não
+    // simulou antes) — pré-preenche o imóvel e pede renda primeiro, em vez
+    // de descartar o valor e mandar a pessoa para o wizard do zero.
+    if (!rendaStr) {
+      setE(prev => ({
+        ...prev,
+        valorImovel: fmtInput(String(valorImovel)),
+        prazoAnos:   prazoNum,
+        naPlanta,
+        idade:       String(idadeNum),
+      }));
+      setEtapa(1);
+      return;
+    }
+
+    const rendaNum    = Number(rendaStr);
+    const entradaNum  = Number(entradaStr) || 0;
+
+    if (rendaNum < 500) return;
 
     const novoEstado: Estado = {
       ...E0,
@@ -428,6 +448,7 @@ function SimuladorInner() {
   }
 
   function avancar() {
+    if (etapa === 0) import('@/lib/gtag').then(m => m.trackSimulacaoInicio({ origem: 'wizard', naPlanta: false }));
     if (etapa === 4) calcularPerfil();
     if (etapa === 6 && e.valorImovel) calcularSim(); // calcula ao sair do etapa de escolha do imóvel
     setEtapa(n => Math.min(n + 1, 7));

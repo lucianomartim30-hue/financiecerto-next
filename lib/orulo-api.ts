@@ -5,6 +5,8 @@
  */
 
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
+import { normalizeStatus } from '@/lib/status';
+export { normalizeStatus };
 
 export const ORULO_BASE = 'https://www.orulo.com.br';
 export const SITE_BASE  = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.financiecerto.com.br';
@@ -78,17 +80,6 @@ export function inferFinalityFromName(name: string, developer = ''): string {
   return '';
 }
 
-export function normalizeStatus(raw: string): string {
-  const s = (raw || '')
-    .toLowerCase()
-    .replace(/[áàãâ]/g, 'a').replace(/[éèê]/g, 'e').replace(/[íìî]/g, 'i')
-    .replace(/[óòõô]/g, 'o').replace(/[úùû]/g, 'u').replace(/ç/g, 'c')
-    .trim();
-  if (s.includes('planta') || s.includes('lanca') || s.includes('lancamento') || s === 'pre-lancamento') return 'na planta';
-  if (s.includes('obra') || s.includes('constru') || s.includes('andamento') || s === 'under_construction') return 'em obras';
-  if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui') || s === 'novo' || s === 'new' || s === 'ready') return 'pronto';
-  return s;
-}
 
 function extractNeighborhood(address: Record<string, unknown>): string {
   return (
