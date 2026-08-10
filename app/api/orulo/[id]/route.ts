@@ -274,7 +274,10 @@ export async function GET(
         area:         t.private_area ? `${t.private_area}` : (t.area ? `${t.area}` : ''),
         private_area: t.private_area ? `${t.private_area}` : '',
         total_area:   t.total_area   ? `${t.total_area}`   : '',
-        price:        price ? `R$ ${price.toLocaleString('pt-BR')}` : 'Consultar',
+        // Arredondado em reais inteiros — o resto do site nunca mostra centavos
+        // (card financeiro, cards de listagem etc.), então exibir aqui os centavos
+        // crus da Orulo criava dois valores visualmente diferentes pro mesmo preço.
+        price:        price ? `R$ ${price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : 'Consultar',
         stock:        (t.stock ?? null) as number | null,   // unidades disponíveis
         total_units:  (t.total_units ?? null) as number | null,
         photo:        null,
