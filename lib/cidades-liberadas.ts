@@ -27,9 +27,12 @@ const SANTA_CATARINA = new Set([
 // ── Curitiba (PR) ──────────────────────────────────────────────────────────────
 const CURITIBA = new Set(['curitiba']);
 
-// Municípios liberados a aparecer no catálogo (Grande SP + outras praças + SC + PR).
+// ── Rio Grande do Sul — capital + litoral norte ───────────────────────────────
+const RIO_GRANDE_DO_SUL = new Set(['porto alegre', 'capão da canoa']);
+
+// Municípios liberados a aparecer no catálogo (Grande SP + outras praças + SC + PR + RS).
 export const CIDADES_LIBERADAS = new Set([
-  ...GRANDE_SP, ...OUTRAS_PRACAS, ...SANTA_CATARINA, ...CURITIBA,
+  ...GRANDE_SP, ...OUTRAS_PRACAS, ...SANTA_CATARINA, ...CURITIBA, ...RIO_GRANDE_DO_SUL,
 ]);
 
 /**
@@ -43,4 +46,5 @@ export const CIDADES_POR_ESTADO: Record<string, string[]> = {
   SP: [...GRANDE_SP, ...OUTRAS_PRACAS],
   PR: [...CURITIBA],
   SC: [...SANTA_CATARINA],
+  RS: [...RIO_GRANDE_DO_SUL],
 };

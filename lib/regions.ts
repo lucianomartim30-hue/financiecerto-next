@@ -127,6 +127,15 @@ export const REGIONS: Region[] = [
     state: 'PR',
     neighborhoods: [],
   },
+  {
+    slug: 'rio-grande-do-sul',
+    name: 'Rio Grande do Sul',
+    article: 'no',
+    city: '',
+    state: 'RS',
+    neighborhoods: [],
+    cities: ['Porto Alegre', 'Capão da Canoa'],
+  },
 ];
 
 export function slugToRegion(slug: string): Region | null {

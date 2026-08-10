@@ -62,6 +62,8 @@ const SP_BAIRROS: string[] = [
   'Itapema','Porto Belo','Balneário Camboriú','Itajaí','Bombinhas','Florianópolis',
   // Curitiba
   'Curitiba',
+  // Rio Grande do Sul
+  'Porto Alegre','Capão da Canoa',
 ];
 
 // Normaliza string para comparação: minúsculo, sem acentos
