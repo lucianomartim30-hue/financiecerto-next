@@ -110,7 +110,9 @@ export default function AdminBuscasSalvasPage() {
           <div key={b.id} style={{ background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '16px 18px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: '200px' }}>
-                <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: '2px' }}>{b.contato}</p>
+                <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: '2px' }}>
+                  📱 {b.whatsapp}{b.email && <span style={{ fontWeight: '500', color: 'var(--text-muted)' }}> · ✉️ {b.email}</span>}
+                </p>
                 <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>{b.descricaoFiltros}</p>
                 <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>{formatData(b.criadoEm)}</p>
               </div>

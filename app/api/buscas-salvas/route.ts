@@ -17,11 +17,13 @@ function isAuthed(req: NextRequest): boolean {
   return cookie === sessionToken(configured);
 }
 
-// Aceita telefone BR (com/sem DDI, 10-11 dígitos) ou e-mail simples.
-function isContatoValido(contato: string): boolean {
-  const digits = contato.replace(/\D/g, '');
-  if (digits.length >= 10 && digits.length <= 13) return true;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contato.trim());
+// Telefone BR (com/sem DDI, 10-11 dígitos).
+function isWhatsappValido(whatsapp: string): boolean {
+  const digits = whatsapp.replace(/\D/g, '');
+  return digits.length >= 10 && digits.length <= 13;
+}
+function isEmailValido(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
 export async function GET(req: NextRequest) {
@@ -35,17 +37,21 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { contato, descricaoFiltros, filtrosQuery, consentimento } = body ?? {};
+    const { whatsapp, email, descricaoFiltros, filtrosQuery, consentimento } = body ?? {};
 
-    if (!contato || typeof contato !== 'string' || !isContatoValido(contato)) {
-      return NextResponse.json({ error: 'Informe um telefone ou e-mail válido.' }, { status: 400 });
+    if (!whatsapp || typeof whatsapp !== 'string' || !isWhatsappValido(whatsapp)) {
+      return NextResponse.json({ error: 'Informe um WhatsApp válido.' }, { status: 400 });
+    }
+    if (email && (typeof email !== 'string' || !isEmailValido(email))) {
+      return NextResponse.json({ error: 'E-mail inválido.' }, { status: 400 });
     }
     if (!consentimento) {
       return NextResponse.json({ error: 'É necessário aceitar o uso do contato.' }, { status: 400 });
     }
 
     const busca = await kvAddBuscaSalva({
-      contato: String(contato).trim(),
+      whatsapp: String(whatsapp).trim(),
+      email: email ? String(email).trim() : '',
       descricaoFiltros: String(descricaoFiltros || 'Todos os imóveis'),
       filtrosQuery: String(filtrosQuery || ''),
     });

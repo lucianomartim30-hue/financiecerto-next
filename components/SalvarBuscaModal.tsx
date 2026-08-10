@@ -14,14 +14,15 @@ interface Props {
  * nunca de forma intrusiva/automática. Consentimento LGPD é obrigatório.
  */
 export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClose }: Props) {
-  const [contato, setContato] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [email, setEmail] = useState('');
   const [consentimento, setConsentimento] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState(false);
 
   async function salvar() {
-    if (!contato.trim()) { setErro('Informe seu telefone ou e-mail.'); return; }
+    if (!whatsapp.trim()) { setErro('Informe seu WhatsApp.'); return; }
     if (!consentimento) { setErro('Confirme que pode te avisar sobre essa busca.'); return; }
     setEnviando(true);
     setErro('');
@@ -29,7 +30,7 @@ export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClo
       const res = await fetch('/api/buscas-salvas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contato: contato.trim(), descricaoFiltros, filtrosQuery, consentimento }),
+        body: JSON.stringify({ whatsapp: whatsapp.trim(), email: email.trim(), descricaoFiltros, filtrosQuery, consentimento }),
       });
       const data = await res.json();
       if (!res.ok) { setErro(data.error || 'Não foi possível salvar.'); return; }
@@ -69,11 +70,18 @@ export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClo
             </p>
 
             <input
-              type="text"
-              value={contato}
-              onChange={e => setContato(e.target.value)}
-              placeholder="Telefone (WhatsApp) ou e-mail"
+              type="tel"
+              value={whatsapp}
+              onChange={e => setWhatsapp(e.target.value)}
+              placeholder="WhatsApp — ex: (11) 99999-9999"
               autoFocus
+              style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '14px', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '10px' }}
+            />
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="E-mail (opcional)"
               style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '10px', fontSize: '14px', outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '12px' }}
             />
 

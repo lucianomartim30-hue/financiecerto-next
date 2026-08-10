@@ -11,7 +11,8 @@ import { randomUUID } from 'crypto';
 
 export interface BuscaSalva {
   id: string;
-  contato: string;              // telefone ou e-mail informado
+  whatsapp: string;              // obrigatório — canal que já é usado hoje pra atender
+  email: string;                 // opcional ('' se não informado) — único canal automatizável hoje (Zoho Mail)
   descricaoFiltros: string;     // texto amigável, ex: "2+ quartos, até R$ 500.000, Moema"
   filtrosQuery: string;         // querystring bruta de /imoveis no momento do save (para reconstruir o link)
   consentimento: boolean;       // LGPD — sempre true (bloqueado no form), guardado para auditoria
@@ -45,7 +46,7 @@ export async function kvGetBuscasSalvas(): Promise<BuscaSalva[]> {
 }
 
 export async function kvAddBuscaSalva(
-  input: { contato: string; descricaoFiltros: string; filtrosQuery: string },
+  input: { whatsapp: string; email: string; descricaoFiltros: string; filtrosQuery: string },
 ): Promise<BuscaSalva | null> {
   const kv = await getKv();
   if (!kv) return null;
