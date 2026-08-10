@@ -157,7 +157,12 @@ function fmtInput(raw: string) {
 }
 function parseTipologiaPrice(price: string): number | null {
   if (!price || price === 'Consultar') return null;
-  const n = parseInt(price.replace(/[^0-9]/g, ''), 10);
+  // Formato BR: "R$ 658.366,68" — ponto é separador de milhar, vírgula é decimal.
+  // Um replace ingênuo de "tudo que não é dígito" trata a vírgula como parte do
+  // número inteiro e infla o valor em 100x (658.366,68 → 65836668 em vez de 658367).
+  const cleaned    = price.replace(/[^\d,.-]/g, '');
+  const normalized = cleaned.replace(/\./g, '').replace(',', '.');
+  const n = Math.round(parseFloat(normalized));
   return n > 0 ? n : null;
 }
 function faixaRange(min: number | null, max: number | null, unit: string) {
