@@ -1,6 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { kvGetCatalog } from '@/lib/orulo-kv';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
+
+/**
+ * Fallback quando a Orulo já removeu o imóvel da lista ativa (vendido,
+ * despublicado) mas o nosso cache (KV) ainda não foi ressincronizado —
+ * a listagem continua mostrando o card, e sem isso o clique caía num
+ * "Imóvel não encontrado" (ver relato do usuário 2026-08-09/10). Serve os
+ * dados já cacheados (mais leves, sem galeria completa) em vez de um erro.
+ */
+async function fallbackFromCache(id: string) {
+  try {
+    const catalog = await kvGetCatalog();
+    const cached = catalog?.find(b => b.id === id);
+    if (!cached) return null;
+    return {
+      id: cached.id,
+      name: cached.name,
+      developer: cached.developer,
+      developer_logo: null,
+      developer_website: null,
+      min_price: cached.min_price,
+      max_price: cached.max_price,
+      bedrooms_min: cached.bedrooms_min,
+      bedrooms_max: cached.bedrooms_max,
+      area_min: cached.area_min,
+      area_max: cached.area_max,
+      bathrooms_min: cached.bathrooms_min,
+      bathrooms_max: cached.bathrooms_max,
+      vagas_min: cached.vagas_min,
+      vagas_max: cached.vagas_max,
+      neighborhood: cached.neighborhood,
+      city: cached.city,
+      state: cached.state,
+      zipcode: '',
+      address_full: cached.address_full,
+      latitude: cached.lat,
+      longitude: cached.lng,
+      status: cached.status,
+      delivery_date: cached.delivery_date,
+      launch_date: null,
+      total_units: null,
+      stock: null,
+      number_of_floors: null,
+      number_of_towers: null,
+      virtual_tour: null,
+      finality: cached.finality || null,
+      description: '',
+      photos: cached.photo ? [cached.photo] : [],
+      blueprints: [],
+      amenities: [],
+      typologies: [],
+      sharing_url: cached.sharing_url || cached.orulo_url || null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 let _tokenCache = { token: null as string | null, expiresAt: 0 };
 
@@ -139,7 +196,11 @@ export async function GET(
       fetchMediaUrlMap(id, token, 'floor_plans'),
     ]);
 
-    if (resp.status === 404) return NextResponse.json({ error: 'Imóvel não encontrado.' }, { status: 404 });
+    if (resp.status === 404) {
+      const fallback = await fallbackFromCache(id);
+      if (fallback) return NextResponse.json(fallback);
+      return NextResponse.json({ error: 'Imóvel não encontrado.' }, { status: 404 });
+    }
     if (!resp.ok) throw new Error(`Órulo building/${id} error ${resp.status}`);
 
     const raw = await resp.json();
@@ -282,6 +343,10 @@ export async function GET(
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido';
     console.error(`[api/orulo/${id}]`, msg);
+    // Erro transitório (rede, timeout, rate-limit) — tenta servir do cache
+    // antes de mostrar erro; melhor um dado levemente desatualizado do que nada.
+    const fallback = await fallbackFromCache(id);
+    if (fallback) return NextResponse.json(fallback);
     return NextResponse.json({ error: 'Erro ao buscar imóvel.' }, { status: 500 });
   }
 }
