@@ -686,7 +686,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   const waMsg = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovel}`);
 
   return (
-    <div id="financeiro" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
 
       {/* Header do bloco */}
       <div style={{ padding: '20px 20px 0', background: 'linear-gradient(135deg, #0f172a, #1e3a5f)' }}>
@@ -1405,12 +1405,18 @@ export default function ImovelDetailClient({ id }: { id: string }) {
   const [bpImgError, setBpImgError] = useState(false);
   const [valorTipologia, setValorTipologia] = useState<number | undefined>(undefined);
   const [labelTipologia, setLabelTipologia] = useState<string | undefined>(undefined);
-  const blocoRef = useRef<HTMLDivElement>(null);
+  // O card financeiro existe em duas versões no DOM ao mesmo tempo — uma para
+  // mobile, outra para desktop — e o CSS (media query) esconde uma delas
+  // conforme a largura da tela. Rolar sempre para as duas é seguro: a que
+  // estiver com display:none simplesmente não rola (sem efeito visível).
+  const blocoMobileRef  = useRef<HTMLDivElement>(null);
+  const blocoDesktopRef = useRef<HTMLDivElement>(null);
 
   const handleSimularTipologia = useCallback((preco: number, label: string) => {
     setValorTipologia(preco);
     setLabelTipologia(label);
-    blocoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    blocoMobileRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    blocoDesktopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, []);
 
   useEffect(() => {
@@ -1639,7 +1645,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             </div>
 
             {/* Financeiro (mobile only — aparece na coluna esquerda em telas pequenas) */}
-            <div ref={blocoRef} className="financeiro-mobile" style={{ display: 'none' }}>
+            <div id="financeiro" ref={blocoMobileRef} className="financeiro-mobile" style={{ display: 'none' }}>
               <BlocoFinanceiro imovel={imovel} valorOverride={valorTipologia} tipologiaLabel={labelTipologia} />
             </div>
 
@@ -1660,7 +1666,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
           </div>
 
           {/* ── RIGHT: sticky financial card ──────────────────────────── */}
-          <div className="financeiro-desktop" style={{ position: 'sticky', top: 'calc(var(--header-h) + 52px + 24px)', maxHeight: 'calc(100vh - var(--header-h) - 100px)', overflowY: 'auto' }}>
+          <div ref={blocoDesktopRef} className="financeiro-desktop" style={{ position: 'sticky', top: 'calc(var(--header-h) + 52px + 24px)', maxHeight: 'calc(100vh - var(--header-h) - 100px)', overflowY: 'auto' }}>
             <BlocoFinanceiro imovel={imovel} valorOverride={valorTipologia} tipologiaLabel={labelTipologia} />
           </div>
         </div>
