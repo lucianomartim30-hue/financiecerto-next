@@ -243,6 +243,27 @@ function ImoveisContent() {
   // vindos do simulador usam para pré-aplicar o bairro escolhido — os dois caem no mesmo filtro.
   const [activeLocation, setActiveLocation] = useState(searchParams.get('q') || searchParams.get('neighborhood') || '');
 
+  // ── Padrão por região (geo por IP, sem pedir permissão do navegador) ───────
+  // Só entra em jogo em uma visita "fria" — sem nenhum filtro/busca já na URL —
+  // pra não sobrepor um link específico que alguém tenha compartilhado.
+  const [geoCities, setGeoCities] = useState<string[] | null>(null);
+  const [geoLabel,  setGeoLabel]  = useState<string | null>(null);
+  const [geoAtivo,  setGeoAtivo]  = useState(false);
+  useEffect(() => {
+    const semFiltroNaUrl = !searchParams.get('q') && !searchParams.get('neighborhood') &&
+      !searchParams.get('min') && !searchParams.get('max') && !searchParams.get('bedrooms_min') &&
+      !searchParams.get('status') && !searchParams.get('tipo') && !searchParams.get('tipologia');
+    if (!semFiltroNaUrl) return;
+    fetch('/api/geo').then(r => r.json()).then(data => {
+      if (data.cities && data.cities.length > 0) {
+        setGeoCities(data.cities);
+        setGeoLabel(data.state === 'SP' ? 'São Paulo' : (data.city || data.state));
+        setGeoAtivo(true);
+      }
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [search, setSearch] = useState(searchParams.get('q') || searchParams.get('neighborhood') || '');
@@ -368,6 +389,11 @@ function ImoveisContent() {
       const haystack = normStr(`${b.neighborhood} ${b.city} ${b.name}`);
       if (!haystack.includes(q)) return false;
     }
+    // ── Padrão por região (geo por IP) — só quando a pessoa não buscou nada ────
+    else if (geoAtivo && geoCities) {
+      const cidade = normStr(b.city || '');
+      if (!geoCities.some(c => normStr(c) === cidade)) return false;
+    }
     if (filterMin      && (b.min_price    ?? 0)  < filterMin)     return false;
     if (filterMax      && (b.min_price    ?? 0)  > filterMax)     return false;
     if (filterBedrooms && (b.bedrooms_max ?? 99) < filterBedrooms) return false;
@@ -383,7 +409,7 @@ function ImoveisContent() {
     }
     if (filterTipologia && !(b.property_types || []).includes(filterTipologia)) return false;
     return true;
-  }, [activeLocation, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
+  }, [activeLocation, geoAtivo, geoCities, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
 
   // Conta quantos imóveis existem para cada tipo de finalidade no catálogo
   const finalityCounts = useMemo(() => {
@@ -883,6 +909,16 @@ function ImoveisContent() {
           <button onClick={() => { setActiveLocation(''); setSearch(''); }}
             style={{ height: '36px', padding: '0 10px', borderRadius: '18px', border: '1.5px solid #60a5fa', background: 'rgba(96,165,250,.15)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
             📍 {activeLocation} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
+          </button>
+        )}
+
+        {/* Chip de região automática (geo por IP) — some ao buscar outra localização ou ao ser fechado */}
+        {!activeLocation && geoAtivo && geoLabel && (
+          <button
+            onClick={() => setGeoAtivo(false)}
+            title="Ver imóveis de todas as cidades"
+            style={{ height: '36px', padding: '0 10px', borderRadius: '18px', border: '1.5px solid #34d399', background: 'rgba(52,211,153,.15)', color: '#059669', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            📍 Perto de você — {geoLabel} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
           </button>
         )}
 

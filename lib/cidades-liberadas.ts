@@ -31,3 +31,16 @@ const CURITIBA = new Set(['curitiba']);
 export const CIDADES_LIBERADAS = new Set([
   ...GRANDE_SP, ...OUTRAS_PRACAS, ...SANTA_CATARINA, ...CURITIBA,
 ]);
+
+/**
+ * Cidades liberadas agrupadas por estado (sigla IBGE) — usado para o padrão
+ * "mostrar primeiro os imóveis da região de quem está acessando" (detecção
+ * por IP via headers da Vercel, sem pedir geolocalização do navegador).
+ * Adicionar um estado novo aqui (RS, RJ, ...) já ativa o mecanismo pra ele
+ * automaticamente, sem tocar em mais nada.
+ */
+export const CIDADES_POR_ESTADO: Record<string, string[]> = {
+  SP: [...GRANDE_SP, ...OUTRAS_PRACAS],
+  PR: [...CURITIBA],
+  SC: [...SANTA_CATARINA],
+};
