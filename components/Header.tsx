@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { getFavoritosCount, onFavoritosChange } from '@/lib/favoritos';
 
 // ── Links simples da nav ───────────────────────────────────────────────────────
 const NAV_SIMPLE = [
@@ -37,6 +38,12 @@ export default function Header() {
   const [simOpen,  setSimOpen]      = useState(false);
   const [simMobile, setSimMobile]   = useState(false);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [favCount, setFavCount] = useState(0);
+
+  useEffect(() => {
+    setFavCount(getFavoritosCount());
+    return onFavoritosChange(() => setFavCount(getFavoritosCount()));
+  }, []);
 
   const isSimActive = pathname.startsWith('/simulador');
 
@@ -221,6 +228,31 @@ export default function Header() {
                 </Link>
               );
             })}
+
+            {/* Favoritos */}
+            <Link
+              href="/favoritos"
+              onClick={() => import('@/lib/gtag').then(m => m.trackNavClick({ destino: '/favoritos', texto: 'Favoritos', origem: 'header' }))}
+              style={{
+                position: 'relative',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: pathname === '/favoritos' ? '700' : '600',
+                color: pathname === '/favoritos' ? 'var(--primary)' : 'var(--text)',
+                background: pathname === '/favoritos' ? 'var(--primary-light)' : 'transparent',
+                textDecoration: 'none',
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ♡ Favoritos
+              {favCount > 0 && (
+                <span style={{ marginLeft: '5px', fontSize: '10px', fontWeight: '800', background: '#dc2626', color: '#fff', padding: '1px 6px', borderRadius: '99px' }}>
+                  {favCount}
+                </span>
+              )}
+            </Link>
           </nav>
 
           {/* ── CTA + Hamburger ────────────────────────────────────────────── */}
@@ -380,6 +412,30 @@ export default function Header() {
               </Link>
             );
           })}
+
+          <Link
+            href="/favoritos"
+            onClick={() => {
+              setMenuOpen(false);
+              import('@/lib/gtag').then(m => m.trackNavClick({ destino: '/favoritos', texto: 'Favoritos', origem: 'header' }));
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '13px 20px',
+              background: pathname === '/favoritos' ? 'var(--primary-light)' : 'transparent',
+              color: pathname === '/favoritos' ? 'var(--primary)' : 'var(--text)',
+              fontWeight: pathname === '/favoritos' ? '700' : '600',
+              fontSize: '15px', textDecoration: 'none',
+            }}
+          >
+            <span style={{ fontSize: '18px', width: '24px', textAlign: 'center' }}>♡</span>
+            Favoritos
+            {favCount > 0 && (
+              <span style={{ fontSize: '10px', fontWeight: '800', background: '#dc2626', color: '#fff', padding: '1px 6px', borderRadius: '99px' }}>
+                {favCount}
+              </span>
+            )}
+          </Link>
 
           <div style={{ height: '1px', background: 'var(--border)', margin: '8px 20px' }} />
           <Link

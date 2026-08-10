@@ -7,6 +7,7 @@ import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { getStatusCfg, isNaPlanta } from '@/lib/status';
 import { buildSimuladorLink } from '@/lib/simulador-link';
 import { bairroPath } from '@/lib/locations';
+import FavoritoButton from '@/components/FavoritoButton';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -1419,6 +1420,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
         if (!res.ok) throw new Error('Não encontrado');
         const data: ImovelDetalhe = await res.json();
         setImovel(data);
+        import('@/lib/vistos-recentemente').then(m => m.registrarVisto(data.id));
         // Salva contexto completo para João consultor
         try {
           const ctx = {
@@ -1500,6 +1502,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             <span style={{ color: 'var(--text)' }}>{imovel.name}</span>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <FavoritoButton id={imovel.id} nome={imovel.name} size="sm" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', width: '34px', height: '34px' }} />
             <button
               onClick={() => { navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
               style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '600', color: copied ? '#16a34a' : 'var(--text-muted)', background: copied ? '#E1F5EE' : 'var(--bg-card)', border: `1px solid ${copied ? '#86EFAC' : 'var(--border)'}`, borderRadius: '8px', padding: '5px 12px', cursor: 'pointer', transition: 'all 0.2s' }}>

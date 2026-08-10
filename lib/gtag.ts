@@ -76,6 +76,17 @@ export function trackSimulacaoInicio(params?: { origem?: string; naPlanta?: bool
   });
 }
 
+/** Favoritar/desfavoritar um imóvel */
+export function trackFavoritar(params?: { imovel?: string; favoritado?: boolean }) {
+  gtagEvent({
+    action:     'favorite_property',
+    category:   'engagement',
+    label:      params?.imovel,
+    imovel:     params?.imovel,
+    favoritado: params?.favoritado,
+  });
+}
+
 /** Formulário de contato enviado */
 export function trackContato(assunto?: string) {
   gtagEvent({
