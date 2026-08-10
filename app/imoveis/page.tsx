@@ -978,12 +978,14 @@ function ImoveisContent() {
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
               {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis em SP`}
             </span>
-            <button
-              onClick={() => setShowSalvarBusca(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '20px', padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-            >
-              🔔 Salvar
-            </button>
+            {hasFilters && (
+              <button
+                onClick={() => setShowSalvarBusca(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '20px', padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+              >
+                🔔 Salvar
+              </button>
+            )}
           </div>
           {renderCards(2)}
         </div>
@@ -1010,12 +1012,14 @@ function ImoveisContent() {
                 </span>
               </span>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <button
-                  onClick={() => setShowSalvarBusca(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '20px', padding: '5px 11px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-                >
-                  🔔 Salvar busca
-                </button>
+                {hasFilters && (
+                  <button
+                    onClick={() => setShowSalvarBusca(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '20px', padding: '5px 11px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    🔔 Salvar busca
+                  </button>
+                )}
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {[{ c: '#2563eb', l: 'Na Planta' }, { c: '#d97706', l: 'Em Obras' }, { c: '#16a34a', l: 'Pronto' }].map(({ c, l }) => (
                     <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
