@@ -9,7 +9,6 @@ import { formatBRL } from '@/lib/calculos';
 import type { MapViewHandle, Bounds } from '@/components/MapView';
 import { trackBusca } from '@/lib/gtag';
 import { getStatusCfg } from '@/lib/status';
-import FavoritoButton from '@/components/FavoritoButton';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 
@@ -165,7 +164,6 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
           <span style={{ position: 'absolute', top: '7px', left: '7px', background: sc.cor, color: '#fff', fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
             {sc.label}
           </span>
-          <FavoritoButton id={im.id} nome={im.name} size="sm" style={{ position: 'absolute', top: '5px', right: '5px', width: '26px', height: '26px', fontSize: '13px' }} />
         </div>
         <div style={{ padding: '9px 10px 11px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text)', lineHeight: '1.35', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{im.name}</p>

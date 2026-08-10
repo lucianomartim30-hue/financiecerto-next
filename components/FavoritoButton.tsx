@@ -35,6 +35,7 @@ export default function FavoritoButton({ id, nome, size = 'sm', style }: Props) 
     <button
       type="button"
       aria-label={fav ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+      title={fav ? 'Remover dos favoritos' : 'Favoritar'}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

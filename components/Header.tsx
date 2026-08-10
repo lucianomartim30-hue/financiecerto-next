@@ -228,35 +228,36 @@ export default function Header() {
                 </Link>
               );
             })}
-
-            {/* Favoritos */}
-            <Link
-              href="/favoritos"
-              onClick={() => import('@/lib/gtag').then(m => m.trackNavClick({ destino: '/favoritos', texto: 'Favoritos', origem: 'header' }))}
-              style={{
-                position: 'relative',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: pathname === '/favoritos' ? '700' : '600',
-                color: pathname === '/favoritos' ? 'var(--primary)' : 'var(--text)',
-                background: pathname === '/favoritos' ? 'var(--primary-light)' : 'transparent',
-                textDecoration: 'none',
-                transition: 'all 0.15s',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              ♡ Favoritos
-              {favCount > 0 && (
-                <span style={{ marginLeft: '5px', fontSize: '10px', fontWeight: '800', background: '#dc2626', color: '#fff', padding: '1px 6px', borderRadius: '99px' }}>
-                  {favCount}
-                </span>
-              )}
-            </Link>
           </nav>
 
           {/* ── CTA + Hamburger ────────────────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            {/* Favoritos — ícone discreto, não é uma seção de conteúdo */}
+            <Link
+              href="/favoritos"
+              title="Favoritos"
+              onClick={() => import('@/lib/gtag').then(m => m.trackNavClick({ destino: '/favoritos', texto: 'Favoritos', origem: 'header' }))}
+              className="header-cta"
+              style={{
+                position: 'relative',
+                width: '38px', height: '38px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '10px',
+                fontSize: '18px',
+                color: pathname === '/favoritos' ? 'var(--primary)' : 'var(--text-muted)',
+                background: pathname === '/favoritos' ? 'var(--primary-light)' : 'transparent',
+                textDecoration: 'none',
+                transition: 'all 0.15s',
+                flexShrink: 0,
+              }}
+            >
+              ♡
+              {favCount > 0 && (
+                <span style={{ position: 'absolute', top: '2px', right: '2px', fontSize: '9px', fontWeight: '800', background: '#dc2626', color: '#fff', minWidth: '15px', height: '15px', borderRadius: '99px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
+                  {favCount}
+                </span>
+              )}
+            </Link>
             <Link
               href="/simulador"
               className="btn-primary header-cta"
