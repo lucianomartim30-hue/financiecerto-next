@@ -54,7 +54,7 @@ export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClo
         {sucesso ? (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <p style={{ fontSize: '36px', marginBottom: '10px' }}>🔔</p>
-            <p style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>Busca salva!</p>
+            <p style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>Alerta ativado!</p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
               Vamos te avisar quando surgir um imóvel compatível.
             </p>
@@ -62,10 +62,10 @@ export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClo
           </div>
         ) : (
           <>
-            <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '4px' }}>🔔 Salvar esta busca</p>
+            <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '4px' }}>🔔 Ativar alerta para esta busca</p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '4px' }}>{descricaoFiltros}</p>
             <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '18px' }}>
-              O catálogo muda o tempo todo — deixe seu contato e avisamos quando entrar um imóvel assim.
+              O catálogo muda o tempo todo — deixe seu contato e avisamos assim que entrar um imóvel assim.
             </p>
 
             <input
@@ -84,7 +84,7 @@ export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClo
                 onChange={e => setConsentimento(e.target.checked)}
                 style={{ marginTop: '2px', flexShrink: 0 }}
               />
-              Autorizo o FinancieCerto a usar meu contato exclusivamente para avisar sobre imóveis compatíveis com esta busca, conforme a LGPD.
+              Autorizo o FinancieCerto a usar meu contato exclusivamente para me avisar sobre imóveis compatíveis com este alerta, conforme a LGPD.
             </label>
 
             {erro && <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '12px' }}>{erro}</p>}
@@ -102,7 +102,7 @@ export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClo
                 className="btn-primary"
                 style={{ flex: 2, opacity: enviando ? 0.7 : 1 }}
               >
-                {enviando ? 'Salvando...' : 'Salvar busca'}
+                {enviando ? 'Ativando...' : 'Ativar alerta'}
               </button>
             </div>
           </>

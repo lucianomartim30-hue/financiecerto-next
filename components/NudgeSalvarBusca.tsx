@@ -45,7 +45,7 @@ export default function NudgeSalvarBusca() {
       <div style={{ flex: 1 }}>
         <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)', marginBottom: '3px' }}>Gostou dos favoritos?</p>
         <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px', lineHeight: 1.4 }}>
-          Filtre o que você procura em Imóveis e salve a busca — a gente avisa quando entrar algo parecido.
+          Filtre o que você procura em Imóveis e ative um alerta — a gente avisa quando entrar algo parecido.
         </p>
         <div style={{ display: 'flex', gap: '8px' }}>
           <Link
@@ -53,7 +53,7 @@ export default function NudgeSalvarBusca() {
             onClick={dismiss}
             style={{ fontSize: '12px', fontWeight: '700', color: '#fff', background: 'var(--primary)', borderRadius: '8px', padding: '7px 12px', textDecoration: 'none' }}
           >
-            Salvar busca
+            Ativar alerta
           </Link>
           <button
             onClick={dismiss}

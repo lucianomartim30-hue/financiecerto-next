@@ -983,7 +983,7 @@ function ImoveisContent() {
                 onClick={() => setShowSalvarBusca(true)}
                 style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '20px', padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
               >
-                🔔 Salvar
+                🔔 Alerta
               </button>
             )}
           </div>
@@ -1017,7 +1017,7 @@ function ImoveisContent() {
                     onClick={() => setShowSalvarBusca(true)}
                     style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '20px', padding: '5px 11px', cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >
-                    🔔 Salvar busca
+                    🔔 Ativar alerta
                   </button>
                 )}
                 <div style={{ display: 'flex', gap: '8px' }}>
