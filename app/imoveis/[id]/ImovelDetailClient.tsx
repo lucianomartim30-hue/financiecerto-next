@@ -1235,6 +1235,63 @@ function SecaoLocalizacao({ imovel }: { imovel: ImovelDetalhe }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Vistos recentemente — histórico local (sem conta), ajuda quem está
+// comparando vários empreendimentos a retomar de onde parou.
+// ─────────────────────────────────────────────────────────────────────────────
+function SecaoVistosRecentemente({ currentId }: { currentId: string }) {
+  const [vistos, setVistos] = useState<RelatedImovel[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    import('@/lib/vistos-recentemente').then(({ getVistosIds }) => {
+      const ids = getVistosIds(currentId).slice(0, 6);
+      if (ids.length === 0) { setLoading(false); return; }
+      fetch('/api/orulo?all=1')
+        .then(r => r.json())
+        .then((data: { buildings?: RelatedImovel[] }) => {
+          const porId = new Map((data.buildings || []).map(im => [im.id, im]));
+          setVistos(ids.map(id => porId.get(id)).filter((im): im is RelatedImovel => !!im));
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    });
+  }, [currentId]);
+
+  if (loading || vistos.length === 0) return null;
+
+  return (
+    <div id="vistos-recentemente" style={{ scrollMarginTop: '100px' }}>
+      <SectionHeader title="Você viu recentemente" />
+      <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'thin' }}>
+        {vistos.map(im => {
+          const sc = getStatus(im.status || '');
+          return (
+            <Link key={im.id} href={`/imoveis/${im.id}`}
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden', textDecoration: 'none', display: 'block', flex: '0 0 180px' }}>
+              <div style={{ height: '100px', background: '#E2E8F0', position: 'relative', overflow: 'hidden' }}>
+                {im.photo ? (
+                  <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={e => { e.currentTarget.style.display = 'none'; }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>🏢</div>
+                )}
+                <div style={{ position: 'absolute', top: '7px', left: '7px', background: sc.bg, color: sc.cor, border: `1px solid ${sc.cor}33`, borderRadius: '20px', padding: '2px 8px', fontSize: '9px', fontWeight: '700' }}>
+                  {sc.label}
+                </div>
+              </div>
+              <div style={{ padding: '10px' }}>
+                <p style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text)', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{im.name}</p>
+                {im.min_price && <p style={{ fontSize: '12px', fontWeight: '900', color: 'var(--primary)' }}>{formatBRL(im.min_price)}</p>}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Imóveis relacionados
 // ─────────────────────────────────────────────────────────────────────────────
 // Distância em km entre dois pontos (Haversine)
@@ -1668,6 +1725,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
               lat={imovel.latitude}
               lng={imovel.longitude}
             />
+            <SecaoVistosRecentemente currentId={imovel.id} />
           </div>
 
           {/* ── RIGHT: sticky financial card ──────────────────────────── */}
