@@ -11,6 +11,7 @@ const inter = Inter({
   variable: "--font-inter",
 });
 import Header from "@/components/Header";
+import NudgeSalvarBusca from "@/components/NudgeSalvarBusca";
 import ChatFab from "@/components/ChatFab";
 import FooterWrapper from "@/components/FooterWrapper";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
@@ -77,6 +78,7 @@ export default function RootLayout({
         </main>
         <FooterWrapper />
         <ChatFab />
+        <NudgeSalvarBusca />
         <Analytics />
         <SpeedInsights />
         <ServiceWorkerRegister />

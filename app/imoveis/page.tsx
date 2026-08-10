@@ -11,6 +11,7 @@ import { trackBusca } from '@/lib/gtag';
 import { getStatusCfg } from '@/lib/status';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
+const SalvarBuscaModal = dynamic(() => import('@/components/SalvarBuscaModal'), { ssr: false });
 
 // ─── Lista estática de bairros de São Paulo (para autocomplete completo) ───────
 const SP_BAIRROS: string[] = [
@@ -534,6 +535,17 @@ function ImoveisContent() {
   const hasFilters = !!(activeLocation || filterStatus || filterFinality || filterTipologia || filterMin || filterMax || filterBedrooms || filterVagas || filterBaths || filterAreaMin || filterAreaMax);
   const maisCount = [filterBedrooms, filterVagas, filterBaths, filterMin, filterMax, filterAreaMin, filterAreaMax].filter(Boolean).length;
 
+  // Descrição amigável da busca atual — usada no modal "Salvar esta busca" (Fase 3)
+  const [showSalvarBusca, setShowSalvarBusca] = useState(false);
+  const descricaoFiltrosAtual = [
+    activeLocation || null,
+    filterBedrooms ? `${filterBedrooms}+ quartos` : null,
+    filterMin ? `a partir de ${formatBRL(filterMin)}` : null,
+    filterMax ? `até ${formatBRL(filterMax)}` : null,
+    filterStatus || null,
+    filterFinality || null,
+  ].filter(Boolean).join(' · ') || 'Todos os imóveis';
+
   const pillStyle = (active: boolean): React.CSSProperties => ({
     height: '36px', padding: '0 12px', borderRadius: '18px',
     border: `1.5px solid ${active ? '#60a5fa' : 'rgba(255,255,255,.2)'}`,
@@ -966,14 +978,12 @@ function ImoveisContent() {
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
               {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis em SP`}
             </span>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {[{ c: '#2563eb', l: 'Na Planta' }, { c: '#d97706', l: 'Em Obras' }, { c: '#16a34a', l: 'Pronto' }].map(({ c, l }) => (
-                <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: c }} />
-                  <span style={{ fontSize: '9px', color: '#9ca3af' }}>{l}</span>
-                </div>
-              ))}
-            </div>
+            <button
+              onClick={() => setShowSalvarBusca(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '20px', padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              🔔 Salvar
+            </button>
           </div>
           {renderCards(2)}
         </div>
@@ -999,13 +1009,21 @@ function ImoveisContent() {
                   {activeLocation ? `em ${activeLocation}` : 'em São Paulo'}
                 </span>
               </span>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {[{ c: '#2563eb', l: 'Na Planta' }, { c: '#d97706', l: 'Em Obras' }, { c: '#16a34a', l: 'Pronto' }].map(({ c, l }) => (
-                  <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: c }} />
-                    <span style={{ fontSize: '9px', color: '#9ca3af' }}>{l}</span>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button
+                  onClick={() => setShowSalvarBusca(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '20px', padding: '5px 11px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  🔔 Salvar busca
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[{ c: '#2563eb', l: 'Na Planta' }, { c: '#d97706', l: 'Em Obras' }, { c: '#16a34a', l: 'Pronto' }].map(({ c, l }) => (
+                    <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: c }} />
+                      <span style={{ fontSize: '9px', color: '#9ca3af' }}>{l}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1015,6 +1033,14 @@ function ImoveisContent() {
             </div>
           </div>
         </div>
+      )}
+
+      {showSalvarBusca && (
+        <SalvarBuscaModal
+          descricaoFiltros={descricaoFiltrosAtual}
+          filtrosQuery={typeof window !== 'undefined' ? window.location.search : ''}
+          onClose={() => setShowSalvarBusca(false)}
+        />
       )}
 
       <style>{`
