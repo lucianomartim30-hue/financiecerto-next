@@ -9,6 +9,26 @@ import { randomUUID } from 'crypto';
 
 export type LeadStatus = 'novo' | 'conversando' | 'visita' | 'fechado' | 'perdido';
 
+/** Simulação já feita pelo visitante antes do clique — contexto financeiro do lead (Fase 4). */
+export interface LeadSimulacao {
+  modalidade: string;              // MCMV | SBPE | SFI
+  faixa?: string;
+  renda?: number;
+  parcela?: number;
+  comprometimento?: number;        // % da renda
+}
+
+/** Fluxo de pagamento montado no simulador na planta — "cenário de proposta" (Fase 4). */
+export interface LeadCenarioProposta {
+  valorImovel: number;
+  fgts: number;
+  ato: number;
+  sinais: number;
+  mensais: number;
+  anuais: number;
+  chaves: number;
+}
+
 export interface Lead {
   id: string;
   imovelId: string;
@@ -20,6 +40,10 @@ export interface Lead {
   criadoEm: string;
   status: LeadStatus;
   nota: string;
+  // Fase 4 — contexto financeiro, presente só quando o visitante já simulou antes do clique
+  simulacao?: LeadSimulacao | null;
+  cenarioProposta?: LeadCenarioProposta | null;
+  favoritosCount?: number;
 }
 
 const KV_LEADS_KEY = 'leads:list';
@@ -48,7 +72,13 @@ export async function kvGetLeads(): Promise<Lead[]> {
 }
 
 export async function kvAddLead(
-  input: { imovelId: string; imovelName: string; bairro: string; cidade: string; preco: number | null; oruloUrl: string | null },
+  input: {
+    imovelId: string; imovelName: string; bairro: string; cidade: string;
+    preco: number | null; oruloUrl: string | null;
+    simulacao?: LeadSimulacao | null;
+    cenarioProposta?: LeadCenarioProposta | null;
+    favoritosCount?: number;
+  },
 ): Promise<Lead | null> {
   const kv = await getKv();
   if (!kv) return null;

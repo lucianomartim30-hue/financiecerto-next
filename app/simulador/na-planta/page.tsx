@@ -58,6 +58,59 @@ function salvarContexto(data: Record<string, unknown>) {
   try { sessionStorage.setItem('fc_sim_context', JSON.stringify(data)); } catch { /* ignore */ }
 }
 
+/**
+ * CTA que leva o fluxo de pagamento já montado (ato/sinais/mensais/anuais/
+ * chaves) direto pro consultor — "cenário de proposta" (Fase 4). Antes desta
+ * seção, o simulador na-planta não tinha NENHUM caminho de lead: a pessoa
+ * montava o fluxo inteiro e, pra falar com alguém, precisava sair da página.
+ */
+function CTAConsultorCenario({
+  valor, fgts, ato, sinais, mensais, anuais, chaves, modalidade, faixa, renda,
+}: {
+  valor: number; fgts: number; ato: number; sinais: number; mensais: number;
+  anuais: number; chaves: number; modalidade: string; faixa?: string; renda: number;
+}) {
+  const [enviado, setEnviado] = useState(false);
+
+  function registrarLeadCenario() {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imovelId: 'simulacao-na-planta',
+        imovelName: `Simulação na planta — ${formatBRL(valor)}`,
+        bairro: '', cidade: '', preco: valor, oruloUrl: url,
+        simulacao: { modalidade, faixa, renda: renda || undefined },
+        cenarioProposta: { valorImovel: valor, fgts, ato, sinais, mensais, anuais, chaves },
+      }),
+    }).catch(() => {});
+    setEnviado(true);
+  }
+
+  const msg = encodeURIComponent(
+    `Olá! Montei um cenário de pagamento no simulador na planta do FinancieCerto para um imóvel de ${formatBRL(valor)} (${modalidade}${faixa ? ` ${faixa}` : ''}) e gostaria de conversar com um consultor sobre esta proposta.`
+  );
+
+  return (
+    <div style={{ background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '16px', padding: '20px', marginTop: '20px', textAlign: 'center' }}>
+      <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>📋 Gostou deste cenário?</p>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+        Leve esse fluxo de pagamento direto pro consultor — sujeito à análise e aceite da incorporadora.
+      </p>
+      <a
+        href={`https://wa.me/5511933661403?text=${msg}`}
+        target="_blank" rel="noopener noreferrer"
+        onClick={registrarLeadCenario}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#25D366', color: '#fff', borderRadius: '12px', padding: '12px 24px', fontSize: '14px', fontWeight: '700', textDecoration: 'none' }}
+      >
+        💬 Quero avançar com este cenário
+      </a>
+      {enviado && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '10px' }}>Cenário enviado — o consultor já recebe seus dados.</p>}
+    </div>
+  );
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // UI Components
 // ──────────────────────────────────────────────────────────────────────────────
@@ -888,6 +941,15 @@ function NaPlantaContent() {
             </BlocoFluxo>
           </div>
         )}
+
+        {/* ── CTA — leva o cenário montado direto pro consultor ────────── */}
+        {valido && <CTAConsultorCenario
+          valor={valor} fgts={fgtsUsado} ato={ato} sinais={iniciais}
+          mensais={totalMensais} anuais={totalAnuais} chaves={unica}
+          modalidade={isMCMV ? (faixaEfetiva ? `MCMV ${faixaEfetiva.label}` : 'MCMV') : 'SBPE'}
+          faixa={faixaEfetiva?.label}
+          renda={renda}
+        />}
 
         {/* ── Busca inteligente de imóveis ─────────────────────────────── */}
         {valido && isMCMV && faixaEfetiva && faixaEfetiva.numero <= 2 && <HisHmpHint />}

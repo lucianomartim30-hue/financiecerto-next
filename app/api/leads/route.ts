@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kvGetLeads, kvAddLead } from '@/lib/leads-kv';
+import { kvGetLeads, kvAddLead, type LeadSimulacao, type LeadCenarioProposta } from '@/lib/leads-kv';
 import { sessionToken } from '../admin-auth/route';
 
 const COOKIE_NAME = 'admin_leads_session';
@@ -28,11 +28,37 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { imovelId, imovelName, bairro, cidade, preco, oruloUrl } = body ?? {};
+    const { imovelId, imovelName, bairro, cidade, preco, oruloUrl, simulacao, cenarioProposta, favoritosCount } = body ?? {};
 
     if (!imovelId || !imovelName) {
       return NextResponse.json({ error: 'Dados incompletos.' }, { status: 400 });
     }
+
+    // Objetos opcionais — só repassa se vierem no formato esperado (evita
+    // gravar lixo no KV vindo de um client desatualizado ou adulterado).
+    const simulacaoValida: LeadSimulacao | null =
+      simulacao && typeof simulacao === 'object' && typeof simulacao.modalidade === 'string'
+        ? {
+            modalidade:       String(simulacao.modalidade),
+            faixa:            simulacao.faixa ? String(simulacao.faixa) : undefined,
+            renda:            typeof simulacao.renda === 'number' ? simulacao.renda : undefined,
+            parcela:          typeof simulacao.parcela === 'number' ? simulacao.parcela : undefined,
+            comprometimento:  typeof simulacao.comprometimento === 'number' ? simulacao.comprometimento : undefined,
+          }
+        : null;
+
+    const cenarioValido: LeadCenarioProposta | null =
+      cenarioProposta && typeof cenarioProposta === 'object' && typeof cenarioProposta.valorImovel === 'number'
+        ? {
+            valorImovel: cenarioProposta.valorImovel,
+            fgts:    Number(cenarioProposta.fgts)    || 0,
+            ato:     Number(cenarioProposta.ato)     || 0,
+            sinais:  Number(cenarioProposta.sinais)  || 0,
+            mensais: Number(cenarioProposta.mensais) || 0,
+            anuais:  Number(cenarioProposta.anuais)  || 0,
+            chaves:  Number(cenarioProposta.chaves)  || 0,
+          }
+        : null;
 
     const lead = await kvAddLead({
       imovelId:   String(imovelId),
@@ -41,6 +67,9 @@ export async function POST(req: NextRequest) {
       cidade:     cidade ? String(cidade) : '',
       preco:      typeof preco === 'number' ? preco : null,
       oruloUrl:   oruloUrl ? String(oruloUrl) : null,
+      simulacao:       simulacaoValida,
+      cenarioProposta: cenarioValido,
+      favoritosCount:  typeof favoritosCount === 'number' ? favoritosCount : undefined,
     });
 
     if (!lead) {

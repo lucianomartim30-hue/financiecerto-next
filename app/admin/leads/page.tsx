@@ -175,18 +175,44 @@ export default function AdminLeadsPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-                <a href={`/imoveis/${lead.imovelId}`} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '12px', fontWeight: '600', color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                  Ver no site →
-                </a>
+                {lead.imovelId !== 'simulacao-na-planta' && (
+                  <a href={`/imoveis/${lead.imovelId}`} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '12px', fontWeight: '600', color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    Ver no site →
+                  </a>
+                )}
                 {lead.oruloUrl && (
                   <a href={lead.oruloUrl} target="_blank" rel="noopener noreferrer"
                     style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                    Abrir na Orulo →
+                    {lead.imovelId === 'simulacao-na-planta' ? 'Ver simulação →' : 'Abrir na Orulo →'}
                   </a>
                 )}
               </div>
             </div>
+
+            {(lead.simulacao || lead.cenarioProposta || typeof lead.favoritosCount === 'number') && (
+              <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {lead.simulacao && (
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#2563eb', background: 'rgba(37,99,235,.1)', borderRadius: '6px', padding: '3px 8px' }}>
+                    📊 {lead.simulacao.modalidade}{lead.simulacao.faixa ? ` ${lead.simulacao.faixa}` : ''}
+                    {lead.simulacao.renda ? ` · renda ${formatBRL(lead.simulacao.renda)}` : ''}
+                    {lead.simulacao.comprometimento ? ` · ${lead.simulacao.comprometimento}% comprometido` : ''}
+                  </span>
+                )}
+                {lead.cenarioProposta && (
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#7c3aed', background: 'rgba(124,58,237,.1)', borderRadius: '6px', padding: '3px 8px' }}>
+                    📋 Cenário: ato {formatBRL(lead.cenarioProposta.ato)}
+                    {lead.cenarioProposta.fgts > 0 ? ` · FGTS ${formatBRL(lead.cenarioProposta.fgts)}` : ''}
+                    {lead.cenarioProposta.mensais > 0 ? ` · mensais ${formatBRL(lead.cenarioProposta.mensais)}` : ''}
+                  </span>
+                )}
+                {typeof lead.favoritosCount === 'number' && lead.favoritosCount > 0 && (
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', background: 'rgba(220,38,38,.08)', borderRadius: '6px', padding: '3px 8px' }}>
+                    ❤️ {lead.favoritosCount} favorito{lead.favoritosCount !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
               <select

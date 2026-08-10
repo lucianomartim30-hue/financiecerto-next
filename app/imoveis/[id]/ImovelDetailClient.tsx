@@ -8,6 +8,7 @@ import { getStatusCfg, isNaPlanta } from '@/lib/status';
 import { buildSimuladorLink } from '@/lib/simulador-link';
 import { bairroPath } from '@/lib/locations';
 import FavoritoButton from '@/components/FavoritoButton';
+import { getFavoritosCount } from '@/lib/favoritos';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -96,6 +97,19 @@ interface RelatedImovel {
  */
 function registrarLead(imovel: ImovelDetalhe | null): void {
   if (!imovel) return;
+
+  // Contexto financeiro (Fase 4) — só existe se o visitante já rodou uma
+  // simulação no card ao lado antes de clicar no WhatsApp. Vem de
+  // sessionStorage (não de state React) porque o clique acontece em um
+  // componente irmão do card financeiro, sem acesso direto ao seu estado.
+  let simulacao = null;
+  try {
+    const raw = sessionStorage.getItem('fc_last_simulacao');
+    if (raw) simulacao = JSON.parse(raw);
+  } catch { /* ignore */ }
+
+  const favoritosCount = getFavoritosCount();
+
   fetch('/api/leads', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -106,6 +120,8 @@ function registrarLead(imovel: ImovelDetalhe | null): void {
       cidade:     imovel.city,
       preco:      imovel.min_price,
       oruloUrl:   imovel.sharing_url,
+      simulacao,
+      favoritosCount,
     }),
   }).catch(() => {});
 }
@@ -678,7 +694,19 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
     if (!valorRef)     { setErro('Valor do imóvel não disponível.'); return; }
     if (en + fg >= valorRef) { setErro('Entrada + FGTS não pode ser maior que o imóvel.'); return; }
     setErro('');
-    setResultado(simular({ rendaBruta: r, entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: 35, tipoImovel: isComercial ? 'comercial' : 'residencial' }));
+    const r2 = simular({ rendaBruta: r, entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: 35, tipoImovel: isComercial ? 'comercial' : 'residencial' });
+    setResultado(r2);
+    // Contexto pro lead (Fase 4) — lido por registrarLead() se o usuário
+    // clicar no WhatsApp em seguida, mesmo que o clique não seja neste card.
+    try {
+      sessionStorage.setItem('fc_last_simulacao', JSON.stringify({
+        modalidade: r2.modalidade,
+        faixa: r2.faixa?.label,
+        renda: r,
+        parcela: r2.bloqueado ? undefined : r2.parcelaPrimeiro,
+        comprometimento: Math.round(r2.comprometimento),
+      }));
+    } catch { /* ignore */ }
   }
 
   const fg = parseMoeda(fgts);
