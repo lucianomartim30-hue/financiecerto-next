@@ -255,14 +255,25 @@ function NaPlantaContent() {
   const [valorRaw, setValorRaw] = useState(() => valorUrl > 0 ? fi(String(valorUrl)) : '');
   const valor = p(valorRaw);
 
-  // ── Fluxo de pagamento à construtora ─────────────────────────────────────────
-  // 1. FGTS
-  const [fgtsRaw, setFgtsRaw]       = useState(() => fgtsUrl > 0 ? fi(String(fgtsUrl)) : '');
-  const fgts = p(fgtsRaw);
+  // ── Recursos para o financiamento (separados do fluxo à construtora) ─────────
+  // FGTS agora é dois campos: saldo (informativo) e quanto o usuário pretende
+  // considerar nesta simulação — não presumimos mais uso de 100% do saldo.
+  const [fgtsSaldoRaw, setFgtsSaldoRaw] = useState(() => fgtsUrl > 0 ? fi(String(fgtsUrl)) : '');
+  const fgtsSaldo = p(fgtsSaldoRaw);
+  const [fgtsConsideradoRaw, setFgtsConsideradoRaw] = useState(() => fgtsUrl > 0 ? fi(String(fgtsUrl)) : '');
+  const fgtsConsiderado = p(fgtsConsideradoRaw);
+  const fgts = fgtsConsiderado;
   // FGTS não pode ser usado em imóvel comercial — mesma regra do simulador principal
   const fgtsUsado = isComercial ? 0 : fgts;
 
-  // 2. Ato (pagamento na assinatura — recursos próprios do comprador)
+  // Quanto a pessoa pretende usar de entrada/recursos próprios (modelo top-down) —
+  // os campos abaixo (ato/sinais/mensais/anuais/chaves) são a distribuição real
+  // desse valor, nunca o contrário.
+  const [entradaPlanejadaRaw, setEntradaPlanejadaRaw] = useState('');
+  const entradaPlanejada = p(entradaPlanejadaRaw);
+
+  // ── Fluxo de pagamento à construtora ─────────────────────────────────────────
+  // 1. Ato (pagamento na assinatura — recursos próprios do comprador)
   const [atoRaw, setAtoRaw]         = useState('');
   const ato = p(atoRaw);
 
@@ -328,16 +339,40 @@ function NaPlantaContent() {
   // Recursos externos (FGTS + subsídio — não vão para a construtora)
   const recursosExternos = fgtsUsado + subsidioEstimado;
 
-  // Total pago à construtora durante a obra
+  // Total pago à construtora durante a obra — é a distribuição real do que a
+  // pessoa disse (Card 3) que pretende usar de entrada, item a item.
   const totalConstrutora = ato + iniciais + totalMensais + totalAnuais + unica;
+  const distribuido = totalConstrutora;
+  const faltaDistribuir = entradaPlanejada - distribuido;
+  const excedeuPlanejado = entradaPlanejada > 0 && faltaDistribuir < 0;
 
-  // Contribuição total = recursos externos + pagamentos à construtora
+  // Contribuição total = recursos externos (FGTS + subsídio) + pagamentos à construtora
   const totalContribuicao = recursosExternos + totalConstrutora;
 
-  // Financiamento real
-  const financiado = valor > 0
-    ? Math.max(0, Math.min(maxFinBanco, valor - totalContribuicao))
+  // ── Os quatro conceitos separados (nunca "preço - entrada = financiamento
+  // aprovado automaticamente") ──────────────────────────────────────────────
+  // 1. Preço do imóvel: `valor`.
+  // 2. Recursos utilizados: `totalContribuicao` (FGTS + subsídio + fluxo à construtora).
+  // 3. Necessidade de financiamento: o que sobra do preço depois dos recursos.
+  const necessidadeFinanciamento = valor > 0 ? Math.max(0, valor - totalContribuicao) : 0;
+  // 4. Capacidade estimada de financiamento: teto calculado pelo perfil (LTV/renda) —
+  //    é a mesma variável `maxFinBanco` já calculada acima, só com nome explícito aqui.
+  const capacidadeEstimada = maxFinBanco;
+  // Diferença: quando a necessidade excede a capacidade, isto é o que falta —
+  // nunca escondido dentro de um único número "financiado".
+  const diferencaRecursos = Math.max(0, necessidadeFinanciamento - capacidadeEstimada);
+
+  // Valor efetivamente usado nos cálculos de parcela/seguros abaixo — é o menor
+  // entre o que precisa ser financiado e o que o perfil comporta. Continua sendo
+  // só uma estimativa (nunca uma aprovação bancária real).
+  const valorAFinanciar = valor > 0
+    ? Math.max(0, Math.min(capacidadeEstimada, necessidadeFinanciamento))
     : 0;
+
+  // Bloqueio duro: os recursos somados (FGTS+subsídio+fluxo) não podem
+  // matematicamente ultrapassar o preço do imóvel — isso é inconsistência,
+  // não uma questão de planejamento.
+  const excedePrecoImovel = valor > 0 && totalContribuicao > valor;
 
   // Quanto falta após FGTS + subsídio (deve ser coberto via construtora)
   const faltaParaConstrutora = Math.max(0, entradaMinima - recursosExternos);
@@ -348,15 +383,15 @@ function NaPlantaContent() {
   //   Seguros FIXOS no valor total financiado durante toda a obra — NÃO proporcionais ao liberado.
   //   MIP R$50,86 + DFI R$24,85 + TX ADM R$25,00 = R$100,71/mês constante (36 meses de obra).
   //   Encargo real: mês 1 R$480,96 → mês 36 R$1.738,85 → pós-entrega R$1.966,27
-  const seguros      = calcularSeguros(financiado);                            // seguros FIXOS no valor total financiado (obra + pós-entrega)
-  const parcelaFin   = parcelaPrice(financiado, taxa, 35 * 12);
-  const jurosEvo1    = isMCMV && financiado > 0 && siopiInicial > 0           // encargo inicial: juros sobre valor liberado + seguros fixos totais
-    ? calcJurosEvo(financiado, taxa, siopiInicial) + seguros.total
+  const seguros      = calcularSeguros(valorAFinanciar);                       // seguros FIXOS no valor a financiar (obra + pós-entrega)
+  const parcelaFin   = parcelaPrice(valorAFinanciar, taxa, 35 * 12);
+  const jurosEvo1    = isMCMV && valorAFinanciar > 0 && siopiInicial > 0     // encargo inicial: juros sobre valor liberado + seguros fixos totais
+    ? calcJurosEvo(valorAFinanciar, taxa, siopiInicial) + seguros.total
     : 0;
-  const jurosEvoPico = isMCMV && financiado > 0                               // encargo máximo (100% liberado, últimos meses da obra)
-    ? calcJurosEvo(financiado, taxa, 1.0) + seguros.total
+  const jurosEvoPico = isMCMV && valorAFinanciar > 0                          // encargo máximo (100% liberado, últimos meses da obra)
+    ? calcJurosEvo(valorAFinanciar, taxa, 1.0) + seguros.total
     : 0;
-  const jurosEvoMedio = isMCMV && financiado > 0                              // encargo médio da obra (coef 0,655 = fração média liberada)
+  const jurosEvoMedio = isMCMV && valorAFinanciar > 0                         // encargo médio da obra (coef 0,655 = fração média liberada)
     ? Math.round(parcelaFin * 0.655 + seguros.total)
     : 0;
 
@@ -409,7 +444,10 @@ function NaPlantaContent() {
         entradaMinima,
         fgtsUsado,
         subsidioEstimado,
-        valorFinanciado: financiado,
+        necessidadeFinanciamento,
+        capacidadeEstimadaFinanciamento: capacidadeEstimada,
+        diferencaRecursos,
+        valorFinanciado: valorAFinanciar,
         parcelaPosObra: Math.round(parcelaFin + seguros.total),
         seguros: Math.round(seguros.total),
         // Análise
@@ -420,11 +458,13 @@ function NaPlantaContent() {
       resultado: {
         valorImovel: valor, entradaMinima, recursosExternos,
         fgtsUsado, subsidioEstimado, totalConstrutora, totalContribuicao,
-        precisaPagarConstrutora, valorFinanciado: financiado,
+        precisaPagarConstrutora,
+        necessidadeFinanciamento, capacidadeEstimadaFinanciamento: capacidadeEstimada, diferencaRecursos,
+        valorFinanciado: valorAFinanciar,
         taxaAnual: taxa, parcela: Math.round(parcelaFin + seguros.total),
       },
     });
-  }, [valido, valor, renda, estagio, tipoImovel, isMCMV, financiado, taxa, fgtsUsado, subsidioEstimado, qtdMensais, parcelaFin, seguros.total, entradaMinima, recursosExternos, totalContribuicao, totalConstrutora, precisaPagarConstrutora, siopiInicial, ato]);
+  }, [valido, valor, renda, estagio, tipoImovel, isMCMV, valorAFinanciar, necessidadeFinanciamento, capacidadeEstimada, diferencaRecursos, taxa, fgtsUsado, subsidioEstimado, qtdMensais, parcelaFin, seguros.total, entradaMinima, recursosExternos, totalContribuicao, totalConstrutora, precisaPagarConstrutora, siopiInicial, ato]);
 
   // ── Configuração dos estágios ─────────────────────────────────────────────────
   const estagioConfig: Record<Estagio, { label: string; desc: string; color: string; aviso?: string }> = {
@@ -555,7 +595,90 @@ function NaPlantaContent() {
           </div>
         </div>
 
-        {/* ── CARD 2: Fluxo de pagamento à construtora ─────────────────── */}
+        {/* ── CARD 2: Recursos para o financiamento (FGTS + subsídio) ──── */}
+        {temDados && estagio !== 'pronto' && (
+          <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border)', padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px' }}>
+            <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>
+              💰 Recursos para o financiamento
+            </p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '18px', lineHeight: 1.6 }}>
+              O FGTS é tratado separadamente dos pagamentos diretos à incorporadora. Sua utilização dependerá da modalidade da operação, do momento da compra e das regras aplicáveis.
+            </p>
+            <div className="fc-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Saldo do FGTS</p>
+                <CampoCompacto value={fgtsSaldoRaw} onChange={v => setFgtsSaldoRaw(fi(v))} placeholder="0" />
+              </div>
+              <div>
+                <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Quanto pretende considerar aqui</p>
+                <CampoCompacto value={fgtsConsideradoRaw} onChange={v => setFgtsConsideradoRaw(fi(v))} placeholder="0" />
+              </div>
+            </div>
+            {fgtsSaldo > 0 && fgtsConsiderado !== fgtsSaldo && (
+              <button onClick={() => setFgtsConsideradoRaw(fi(String(fgtsSaldo)))} style={{ marginTop: '10px', fontSize: '11px', fontWeight: '700', color: '#059669', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                Usar saldo total ({formatBRL(fgtsSaldo)})
+              </button>
+            )}
+            {temSubsidio && (
+              <div style={{ marginTop: '14px', padding: '10px 14px', borderRadius: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                <p style={{ fontSize: '13px', fontWeight: '700', color: '#15803d', marginBottom: '2px' }}>
+                  🏦 + Subsídio MCMV {faixaEfetiva?.label}: <strong>{formatBRL(subsidioEstimado)}</strong>
+                </p>
+                <p style={{ fontSize: '11px', color: '#166534' }}>
+                  Aplicado automaticamente · valor exato confirmado na Caixa Econômica Federal
+                </p>
+              </div>
+            )}
+            {isMCMV && faixaEfetiva && !temSubsidio && (
+              <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '10px' }}>
+                ℹ️ MCMV {faixaEfetiva.label} — sem subsídio (disponível apenas nas Faixas 1 e 2)
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* ── CARD 3: Entrada planejada (modelo top-down) ──────────────── */}
+        {temDados && estagio !== 'pronto' && (
+          <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border)', padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px' }}>
+            <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>
+              Quanto você pretende usar de entrada/recursos próprios?
+            </p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.6 }}>
+              {entradaMinima > 0
+                ? `Sugestão pelo seu perfil: ${formatBRL(entradaMinima)}. Você decide o valor — a seguir a gente ajuda a distribuir.`
+                : 'A seguir vamos ajudar você a distribuir esse valor entre ato, sinais, mensais, anuais e chaves.'}
+            </p>
+            <CampoValor label="Entrada planejada" value={entradaPlanejadaRaw} onChange={v => setEntradaPlanejadaRaw(fi(v))} placeholder={entradaMinima > 0 ? String(Math.round(entradaMinima)) : '100.000'} />
+            {entradaPlanejada > 0 && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '-8px' }}>
+                <div style={{ flex: '1 1 100px', background: 'var(--bg)', borderRadius: '10px', padding: '10px 12px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '10px', color: 'var(--text-faint)' }}>Planejado</p>
+                  <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)' }}>{formatBRL(entradaPlanejada)}</p>
+                </div>
+                <div style={{ flex: '1 1 100px', background: 'var(--bg)', borderRadius: '10px', padding: '10px 12px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '10px', color: 'var(--text-faint)' }}>Já distribuído</p>
+                  <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)' }}>{formatBRL(distribuido)}</p>
+                </div>
+                <div style={{ flex: '1 1 100px', background: excedeuPlanejado ? '#fef2f2' : 'var(--bg)', borderRadius: '10px', padding: '10px 12px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{excedeuPlanejado ? 'Excedeu em' : 'Falta distribuir'}</p>
+                  <p style={{ fontSize: '15px', fontWeight: '800', color: excedeuPlanejado ? '#dc2626' : '#16a34a' }}>{formatBRL(Math.abs(faltaDistribuir))}</p>
+                </div>
+              </div>
+            )}
+            {excedeuPlanejado && (
+              <div style={{ marginTop: '14px', padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px' }}>
+                <p style={{ fontSize: '12px', color: '#991b1b', marginBottom: '8px' }}>
+                  Você distribuiu {formatBRL(Math.abs(faltaDistribuir))} a mais do que planejou.
+                </p>
+                <button onClick={() => setEntradaPlanejadaRaw(fi(String(distribuido)))} style={{ fontSize: '12px', fontWeight: '700', color: '#fff', background: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer' }}>
+                  Atualizar entrada planejada para {formatBRL(distribuido)}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CARD 4: Fluxo de pagamento à construtora ─────────────────── */}
         {temDados && estagio !== 'pronto' && (
           <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border)', padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px' }}>
 
@@ -592,40 +715,10 @@ function NaPlantaContent() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-              {/* ① FGTS */}
+              {/* ① Ato */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <NumStep n={1} cor="#059669" />
-                  <div>
-                    <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>FGTS disponível</p>
-                    <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Saldo da conta FGTS — reduz o valor financiado</p>
-                  </div>
-                </div>
-                <CampoCompacto value={fgtsRaw} onChange={v => setFgtsRaw(fi(v))} placeholder="0" />
-                {/* Subsídio auto-calculado */}
-                {temSubsidio && (
-                  <div style={{ marginTop: '10px', padding: '10px 14px', borderRadius: '10px', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-                    <p style={{ fontSize: '13px', fontWeight: '700', color: '#15803d', marginBottom: '2px' }}>
-                      🏦 + Subsídio MCMV {faixaEfetiva?.label}: <strong>{formatBRL(subsidioEstimado)}</strong>
-                    </p>
-                    <p style={{ fontSize: '11px', color: '#166534' }}>
-                      Aplicado automaticamente · valor exato confirmado na Caixa Econômica Federal
-                    </p>
-                  </div>
-                )}
-                {isMCMV && faixaEfetiva && !temSubsidio && (
-                  <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '6px' }}>
-                    ℹ️ MCMV {faixaEfetiva.label} — sem subsídio (disponível apenas nas Faixas 1 e 2)
-                  </p>
-                )}
-              </div>
-
-              <div style={{ height: '1px', background: 'var(--border)' }} />
-
-              {/* ② Ato */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <NumStep n={2} />
+                  <NumStep n={1} />
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Ato — pagamento na assinatura</p>
                     <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Valor pago à construtora na assinatura do contrato</p>
@@ -644,10 +737,10 @@ function NaPlantaContent() {
                 )}
               </div>
 
-              {/* ③ Sinais / iniciais */}
+              {/* ② Sinais / iniciais */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <NumStep n={3} />
+                  <NumStep n={2} />
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Sinais / iniciais (opcional)</p>
                     <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Parcelas de entrada nos primeiros meses após o ato</p>
@@ -662,10 +755,10 @@ function NaPlantaContent() {
                 {iniciaisUnit > 0 && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '5px' }}>Total: {formatBRL(iniciais)}</p>}
               </div>
 
-              {/* ④ Mensais */}
+              {/* ③ Mensais */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <NumStep n={4} />
+                  <NumStep n={3} />
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Parcela mensal durante a obra</p>
                     <p style={{ fontSize: '11px', color: ok30 ? 'var(--text-faint)' : '#dc2626' }}>
@@ -704,10 +797,10 @@ function NaPlantaContent() {
                 )}
               </div>
 
-              {/* ⑤ Anuais */}
+              {/* ④ Anuais */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <NumStep n={5} />
+                  <NumStep n={4} />
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Reforços anuais — opcional</p>
                     <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Normalmente em dezembro, conforme tabela da construtora</p>
@@ -722,10 +815,10 @@ function NaPlantaContent() {
                 {anuaisUnit > 0 && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '5px' }}>Total anuais: {formatBRL(totalAnuais)}</p>}
               </div>
 
-              {/* ⑥ Parcela nas chaves */}
+              {/* ⑤ Parcela nas chaves */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <NumStep n={6} />
+                  <NumStep n={5} />
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Parcela nas chaves — opcional</p>
                     <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Pagamento maior na entrega das chaves</p>
@@ -742,8 +835,25 @@ function NaPlantaContent() {
                   <p style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,.65)', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px' }}>
                     {isMCMV ? 'MCMV Crédito Associativo' : 'SBPE / Mercado'}
                   </p>
-                  <p style={{ fontSize: '30px', fontWeight: '800', color: '#fff', lineHeight: 1 }}>{formatBRL(financiado)}</p>
-                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.7)', marginTop: '4px' }}>valor financiado pelo banco</p>
+                  <p style={{ fontSize: '28px', fontWeight: '800', color: '#fff', lineHeight: 1 }}>{formatBRL(necessidadeFinanciamento)}</p>
+                  <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.7)', marginTop: '4px' }}>necessidade de financiamento (preço − recursos que você planeja usar)</p>
+                  <div style={{ display: 'flex', gap: '20px', marginTop: '14px', flexWrap: 'wrap' }}>
+                    <div>
+                      <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.6)' }}>Capacidade estimada (seu perfil)</p>
+                      <p style={{ fontSize: '17px', fontWeight: '700', color: '#fff' }}>{formatBRL(capacidadeEstimada)}</p>
+                    </div>
+                    {diferencaRecursos > 0 && (
+                      <div>
+                        <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.6)' }}>Diferença estimada</p>
+                        <p style={{ fontSize: '17px', fontWeight: '800', color: '#fca5a5' }}>{formatBRL(diferencaRecursos)}</p>
+                      </div>
+                    )}
+                  </div>
+                  {diferencaRecursos > 0 && (
+                    <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.75)', marginTop: '10px', lineHeight: 1.5 }}>
+                      ⚠️ Pelo seu perfil, a capacidade estimada é {formatBRL(diferencaRecursos)} menor que a necessidade calculada — considere planejar mais recursos próprios, revisar o valor do imóvel ou consultar um especialista.
+                    </p>
+                  )}
                 </div>
                 <div style={{ background: 'var(--bg-card)', padding: '16px 18px' }}>
                   {/* ── Composição do poder de compra ─────────────────────── */}
@@ -753,7 +863,7 @@ function NaPlantaContent() {
                         📊 Composição do poder de compra
                       </p>
                       {([
-                        { emoji: '🏛️', label: 'Financiamento bancário', val: financiado },
+                        { emoji: '🏛️', label: 'Necessidade de financiamento', val: necessidadeFinanciamento },
                         { emoji: '💰', label: 'Pagamentos à construtora', val: totalConstrutora },
                         ...(fgtsUsado > 0        ? [{ emoji: '🏦', label: 'FGTS', val: fgtsUsado }] : []),
                         ...(subsidioEstimado > 0 ? [{ emoji: '🎁', label: `Subsídio MCMV ${faixaEfetiva?.label ?? ''}`, val: subsidioEstimado }] : []),
@@ -780,9 +890,9 @@ function NaPlantaContent() {
                           O banco avalia o <strong>encargo mensal completo</strong> — não o valor bruto liberado. O encargo inclui <strong>A+J + MIP + DFI + tarifa</strong> e não pode ultrapassar <strong>30% da renda bruta</strong> (Res. CMN 4.676/2018).
                           <br /><br />
                           Renda <strong>{formatBRL(renda)}/mês</strong> × 30% = <strong>{formatBRL(Math.round(renda * 0.30))}/mês</strong> de encargo máximo.
-                          {' '}À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em 35 anos (incluindo seguros), o banco aprova até <strong>{formatBRL(maxFinBanco)}</strong> (LTV {Math.round(ltvPct * 100)}% do imóvel).{isMCMV ? ' Na prática, a Caixa avalia o imóvel acima do preço de venda — o financiamento pode cobrir mais de 80% do valor pago à construtora.' : ''}
+                          {' '}À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em 35 anos (incluindo seguros), a <strong>capacidade estimada pelo seu perfil</strong> é de até <strong>{formatBRL(capacidadeEstimada)}</strong> (LTV {Math.round(ltvPct * 100)}% do imóvel) — não é uma aprovação bancária real.{isMCMV ? ' Na prática, a Caixa avalia o imóvel acima do preço de venda — o financiamento pode cobrir mais de 80% do valor pago à construtora.' : ''}
                           {(fgtsUsado > 0 || totalContribuicao > 0) && (
-                            <span> Com {[fgtsUsado > 0 ? `FGTS de ${formatBRL(fgtsUsado)}` : null, subsidioEstimado > 0 ? `subsídio de ${formatBRL(subsidioEstimado)}` : null, totalConstrutora > 0 ? `pagamentos à construtora de ${formatBRL(totalConstrutora)}` : null].filter(Boolean).join(' + ')}, o valor financiado pelo banco fica em <strong>{formatBRL(financiado)}</strong>.</span>
+                            <span> Com {[fgtsUsado > 0 ? `FGTS de ${formatBRL(fgtsUsado)}` : null, subsidioEstimado > 0 ? `subsídio de ${formatBRL(subsidioEstimado)}` : null, totalConstrutora > 0 ? `pagamentos à construtora de ${formatBRL(totalConstrutora)}` : null].filter(Boolean).join(' + ')}, a <strong>necessidade de financiamento</strong> fica em <strong>{formatBRL(necessidadeFinanciamento)}</strong>{diferencaRecursos > 0 ? `, R$ ${formatBRL(diferencaRecursos).replace('R$', '').trim()} acima da capacidade estimada` : ''}.</span>
                           )}
                           <br />
                           <span style={{ color: '#6B7280' }}>Parcela pós-obra: <strong>{formatBRL(Math.round(parcelaFin + seguros.total))}/mês</strong> ({((parcelaFin + seguros.total) / renda * 100).toFixed(1)}% da renda) — A+J: {formatBRL(Math.round(parcelaFin))}/mês + seguros: {formatBRL(seguros.total)}/mês.</span>
@@ -900,7 +1010,15 @@ function NaPlantaContent() {
             <BlocoFluxo emoji="🔑" titulo="Na entrega das chaves (habite-se)" cor="#2563eb">
               {unica > 0 && <LinhaDetalhe label="Parcela nas chaves" valor={formatBRL(unica)} sub="Pago na entrega — reajustado pelo INCC" />}
               {saldoNaEntrega > 0 && <LinhaDetalhe label="Saldo restante da entrada" valor={formatBRL(saldoNaEntrega)} sub="Reajustado pelo INCC — pago à construtora na entrega" />}
-              <LinhaDetalhe label={`Financiamento ${isMCMV ? 'MCMV' : 'SBPE'}`} valor={formatBRL(financiado)} sub={`${valor > 0 && financiado > 0 ? ((financiado / valor) * 100).toFixed(0) : 0}% do valor — Caixa / banco`} destaque />
+              <LinhaDetalhe label="Necessidade de financiamento" valor={formatBRL(necessidadeFinanciamento)} sub={`${valor > 0 ? ((necessidadeFinanciamento / valor) * 100).toFixed(0) : 0}% do valor do imóvel`} destaque />
+              <LinhaDetalhe label={`Capacidade estimada — ${isMCMV ? 'MCMV' : 'SBPE'}`} valor={formatBRL(capacidadeEstimada)} sub="Teto calculado pelo perfil (renda/LTV) — não é uma aprovação bancária" />
+              {diferencaRecursos > 0 && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', marginTop: '4px' }}>
+                  <p style={{ fontSize: '12px', color: '#991b1b' }}>
+                    ⚠️ Diferença estimada: <strong>{formatBRL(diferencaRecursos)}</strong> — pode ser necessário planejar mais recursos próprios ou revisar o cenário.
+                  </p>
+                </div>
+              )}
               <div style={{ background: isMCMV ? '#f0fdf4' : '#eff6ff', border: `1px solid ${isMCMV ? '#bbf7d0' : '#bfdbfe'}`, borderRadius: '10px', padding: '12px 14px', marginTop: '10px' }}>
                 <p style={{ fontSize: '12px', color: isMCMV ? '#166534' : '#1d4ed8', lineHeight: 1.6 }}>
                   {isMCMV
@@ -942,8 +1060,18 @@ function NaPlantaContent() {
           </div>
         )}
 
+        {/* ── Bloqueio duro: recursos somados ultrapassam o preço do imóvel ── */}
+        {valido && excedePrecoImovel && (
+          <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '16px', padding: '20px', marginTop: '20px', textAlign: 'center' }}>
+            <p style={{ fontSize: '15px', fontWeight: '800', color: '#991b1b', marginBottom: '6px' }}>🚫 Os valores informados ultrapassam o preço do imóvel</p>
+            <p style={{ fontSize: '13px', color: '#7f1d1d', lineHeight: 1.6 }}>
+              FGTS + subsídio + fluxo à construtora somam {formatBRL(totalContribuicao)}, {formatBRL(totalContribuicao - valor)} a mais que o preço do imóvel ({formatBRL(valor)}). Revise os valores antes de avançar com este cenário.
+            </p>
+          </div>
+        )}
+
         {/* ── CTA — leva o cenário montado direto pro consultor ────────── */}
-        {valido && <CTAConsultorCenario
+        {valido && !excedePrecoImovel && <CTAConsultorCenario
           valor={valor} fgts={fgtsUsado} ato={ato} sinais={iniciais}
           mensais={totalMensais} anuais={totalAnuais} chaves={unica}
           modalidade={isMCMV ? (faixaEfetiva ? `MCMV ${faixaEfetiva.label}` : 'MCMV') : 'SBPE'}
