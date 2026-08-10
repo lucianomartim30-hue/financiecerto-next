@@ -16,6 +16,8 @@
 import { normalizeStatus } from '@/lib/status';
 
 export interface SimuladorLinkImovel {
+  id?: string | null;
+  name?: string | null;
   min_price?: number | null;
   max_price?: number | null;
   status?: string | null;
@@ -45,11 +47,14 @@ export function buildSimuladorLink(imovel: SimuladorLinkImovel, ctx?: SimuladorL
   const valor = n(imovel.min_price) || n(imovel.max_price);
   const statusNorm = normalizeStatus(imovel.status || '');
   const naPlanta = statusNorm === 'na planta' || statusNorm === 'em obras';
+  const desconhecido = statusNorm === 'unknown';
 
   if (naPlanta) {
     const params = new URLSearchParams();
     if (valor) params.set('valor', String(valor));
     params.set('estagio', statusNorm === 'em obras' ? 'obras' : 'lancamento');
+    if (imovel.id)   params.set('imovelId', String(imovel.id));
+    if (imovel.name) params.set('imovelName', imovel.name);
     if (ctx?.renda)  params.set('renda', String(n(ctx.renda)));
     if (ctx?.mcmv)   params.set('mcmv',  String(n(ctx.mcmv)));
     if (ctx?.sbpe)   params.set('sbpe',  String(n(ctx.sbpe)));
@@ -57,12 +62,18 @@ export function buildSimuladorLink(imovel: SimuladorLinkImovel, ctx?: SimuladorL
     return `/simulador/na-planta?${params.toString()}`;
   }
 
+  // Status não identificado (Orulo não informou/valor inconsistente): cai no simulador
+  // genérico como fallback seguro, mas leva um sinalizador para a página avisar o usuário
+  // em vez de tratar o imóvel como "pronto" silenciosamente.
   const params = new URLSearchParams();
   if (valor) params.set('valorImovel', String(valor));
+  if (imovel.id)   params.set('imovelId', String(imovel.id));
+  if (imovel.name) params.set('imovelName', imovel.name);
   if (ctx?.renda)   params.set('renda', String(n(ctx.renda)));
   if (ctx?.entrada) params.set('entrada', String(n(ctx.entrada)));
   if (ctx?.idade)   params.set('idade', String(n(ctx.idade)));
   params.set('naPlanta', 'false');
+  if (desconhecido) params.set('statusDesconhecido', '1');
   const qs = params.toString();
   return qs ? `/simulador?${qs}` : '/simulador';
 }

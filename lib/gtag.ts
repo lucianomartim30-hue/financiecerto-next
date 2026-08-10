@@ -26,28 +26,43 @@ export function gtagEvent({ action, category, label, value, ...rest }: GtagEvent
 // ── Eventos padronizados ────────────────────────────────────────────────────
 
 /**
- * Clique em "Falar com consultor/corretor" — evento de lead (conversão).
- * `canal` identifica a via de contato (hoje só existe whatsapp); deixar
- * opcional preserva as chamadas antigas que não o passam.
+ * Clique em "Falar com consultor" pelo WhatsApp — mede INTENÇÃO, dispara sempre
+ * no clique. Não é o mesmo que um lead confirmado: o usuário pode clicar e não
+ * enviar a mensagem, ou o registro no backend pode falhar. Para o lead
+ * confirmado, ver `trackLeadCriado` — só dispara depois que /api/leads responde
+ * com sucesso, evitando inflar "leads" no Analytics com simples cliques.
  */
-export function trackLead(params?: { imovel?: string; bairro?: string; canal?: 'whatsapp' | 'telefone' | 'formulario' }) {
+export function trackWhatsappClick(params?: {
+  imovelId?: string; imovel?: string; bairro?: string; status?: string;
+  posicao?: 'topo' | 'sidebar' | 'outras'; pagina?: string;
+}) {
   gtagEvent({
-    action:   'generate_lead',
+    action:   'whatsapp_click',
     category: 'engagement',
     label:    params?.imovel ?? 'corretor',
+    imovelId: params?.imovelId,
     imovel:   params?.imovel,
     bairro:   params?.bairro,
-    canal:    params?.canal,
+    status:   params?.status,
+    posicao:  params?.posicao,
+    pagina:   params?.pagina,
   });
-  if (params?.canal === 'whatsapp') {
-    gtagEvent({
-      action:   'whatsapp_click',
-      category: 'engagement',
-      label:    params?.imovel,
-      imovel:   params?.imovel,
-      bairro:   params?.bairro,
-    });
-  }
+}
+
+/**
+ * Lead efetivamente criado no backend (POST /api/leads respondeu com sucesso).
+ * Só dispara depois da confirmação — é o evento de conversão real para o GA4,
+ * distinto do clique (`trackWhatsappClick`), que só mede intenção.
+ */
+export function trackLeadCriado(params?: { imovelId?: string; imovel?: string; origem?: string }) {
+  gtagEvent({
+    action:   'lead_created',
+    category: 'engagement',
+    label:    params?.imovel ?? 'corretor',
+    imovelId: params?.imovelId,
+    imovel:   params?.imovel,
+    origem:   params?.origem,
+  });
 }
 
 /** Simulação de perfil concluída */

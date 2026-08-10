@@ -79,6 +79,9 @@ export default function AdminLeadsPage() {
   const [leads, setLeads]     = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro]   = useState<LeadStatus | 'todos'>('todos');
+  // Nome/link dos imóveis favoritados (lead.favoritosIds só guarda IDs) — resolvido
+  // uma vez contra o catálogo público, igual à página /favoritos.
+  const [catalogo, setCatalogo] = useState<Record<string, { name: string }>>({});
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -91,6 +94,18 @@ export default function AdminLeadsPage() {
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  useEffect(() => {
+    if (!authed) return;
+    fetch('/api/orulo?all=1')
+      .then(r => r.json())
+      .then(data => {
+        const map: Record<string, { name: string }> = {};
+        for (const b of (data.buildings || [])) map[b.id] = { name: b.name };
+        setCatalogo(map);
+      })
+      .catch(() => {});
+  }, [authed]);
 
   async function atualizarStatus(id: string, status: LeadStatus) {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l)); // otimista
@@ -190,7 +205,7 @@ export default function AdminLeadsPage() {
               </div>
             </div>
 
-            {(lead.simulacao || lead.cenarioProposta || typeof lead.favoritosCount === 'number') && (
+            {(lead.simulacao || lead.cenarioProposta || typeof lead.favoritosCount === 'number' || lead.atribuicao || lead.conversao) && (
               <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {lead.simulacao && (
                   <span style={{ fontSize: '11px', fontWeight: '700', color: '#2563eb', background: 'rgba(37,99,235,.1)', borderRadius: '6px', padding: '3px 8px' }}>
@@ -204,6 +219,9 @@ export default function AdminLeadsPage() {
                     📋 Cenário: ato {formatBRL(lead.cenarioProposta.ato)}
                     {lead.cenarioProposta.fgts > 0 ? ` · FGTS ${formatBRL(lead.cenarioProposta.fgts)}` : ''}
                     {lead.cenarioProposta.mensais > 0 ? ` · mensais ${formatBRL(lead.cenarioProposta.mensais)}` : ''}
+                    {typeof lead.cenarioProposta.necessidadeFinanciamento === 'number' ? ` · necessidade ${formatBRL(lead.cenarioProposta.necessidadeFinanciamento)}` : ''}
+                    {typeof lead.cenarioProposta.capacidadeEstimada === 'number' ? ` · capacidade ${formatBRL(lead.cenarioProposta.capacidadeEstimada)}` : ''}
+                    {typeof lead.cenarioProposta.diferencaRecursos === 'number' && lead.cenarioProposta.diferencaRecursos > 0 ? ` · falta ${formatBRL(lead.cenarioProposta.diferencaRecursos)}` : ''}
                   </span>
                 )}
                 {typeof lead.favoritosCount === 'number' && lead.favoritosCount > 0 && (
@@ -211,6 +229,28 @@ export default function AdminLeadsPage() {
                     ❤️ {lead.favoritosCount} favorito{lead.favoritosCount !== 1 ? 's' : ''}
                   </span>
                 )}
+                {lead.atribuicao && (
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#0F6E56', background: 'rgba(15,110,86,.1)', borderRadius: '6px', padding: '3px 8px' }}>
+                    🔎 {lead.atribuicao.first_source}
+                    {lead.atribuicao.first_medium && lead.atribuicao.first_medium !== lead.atribuicao.first_source ? ` · ${lead.atribuicao.first_medium}` : ''}
+                  </span>
+                )}
+                {lead.conversao && (
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#475569', background: 'rgba(71,85,105,.1)', borderRadius: '6px', padding: '3px 8px' }}>
+                    🎯 {lead.conversao.conversion_action}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {lead.favoritosIds && lead.favoritosIds.length > 0 && (
+              <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {lead.favoritosIds.map(id => (
+                  <a key={id} href={`/imoveis/${id}`} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '11px', fontWeight: '600', color: '#dc2626', background: 'rgba(220,38,38,.06)', border: '1px solid rgba(220,38,38,.2)', borderRadius: '6px', padding: '3px 8px', textDecoration: 'none' }}>
+                    ❤️ {catalogo[id]?.name || id} →
+                  </a>
+                ))}
               </div>
             )}
 

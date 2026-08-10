@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kvGetLeads, kvAddLead, type LeadSimulacao, type LeadCenarioProposta } from '@/lib/leads-kv';
+import { kvGetLeads, kvAddLead, type LeadSimulacao, type LeadCenarioProposta, type LeadAtribuicao, type LeadConversao } from '@/lib/leads-kv';
 import { sessionToken } from '../admin-auth/route';
 
 const COOKIE_NAME = 'admin_leads_session';
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { imovelId, imovelName, bairro, cidade, preco, oruloUrl, simulacao, cenarioProposta, favoritosCount } = body ?? {};
+    const { imovelId, imovelName, bairro, cidade, preco, oruloUrl, simulacao, cenarioProposta, favoritosCount, favoritosIds, atribuicao, conversao } = body ?? {};
 
     if (!imovelId || !imovelName) {
       return NextResponse.json({ error: 'Dados incompletos.' }, { status: 400 });
@@ -57,6 +57,39 @@ export async function POST(req: NextRequest) {
             mensais: Number(cenarioProposta.mensais) || 0,
             anuais:  Number(cenarioProposta.anuais)  || 0,
             chaves:  Number(cenarioProposta.chaves)  || 0,
+            entradaPlanejada:          typeof cenarioProposta.entradaPlanejada === 'number' ? cenarioProposta.entradaPlanejada : undefined,
+            distribuido:               typeof cenarioProposta.distribuido === 'number' ? cenarioProposta.distribuido : undefined,
+            necessidadeFinanciamento:  typeof cenarioProposta.necessidadeFinanciamento === 'number' ? cenarioProposta.necessidadeFinanciamento : undefined,
+            capacidadeEstimada:        typeof cenarioProposta.capacidadeEstimada === 'number' ? cenarioProposta.capacidadeEstimada : undefined,
+            diferencaRecursos:         typeof cenarioProposta.diferencaRecursos === 'number' ? cenarioProposta.diferencaRecursos : undefined,
+          }
+        : null;
+
+    // Limite razoável no payload — favoritar 200 imóveis não deve inflar o registro do lead.
+    const favoritosIdsValidos: string[] | undefined =
+      Array.isArray(favoritosIds)
+        ? favoritosIds.filter((x): x is string => typeof x === 'string').slice(0, 20)
+        : undefined;
+
+    const atribuicaoValida: LeadAtribuicao | null =
+      atribuicao && typeof atribuicao === 'object' && typeof atribuicao.first_source === 'string'
+        ? {
+            first_source:           String(atribuicao.first_source),
+            first_medium:           String(atribuicao.first_medium || ''),
+            first_referrer_domain:  atribuicao.first_referrer_domain ? String(atribuicao.first_referrer_domain) : null,
+            first_landing_page:     String(atribuicao.first_landing_page || ''),
+            utm_source:             atribuicao.utm_source ? String(atribuicao.utm_source) : null,
+            utm_medium:             atribuicao.utm_medium ? String(atribuicao.utm_medium) : null,
+            utm_campaign:           atribuicao.utm_campaign ? String(atribuicao.utm_campaign) : null,
+          }
+        : null;
+
+    const conversaoValida: LeadConversao | null =
+      conversao && typeof conversao === 'object' && typeof conversao.conversion_action === 'string'
+        ? {
+            conversion_page:       String(conversao.conversion_page || ''),
+            conversion_imovel_id:  conversao.conversion_imovel_id ? String(conversao.conversion_imovel_id) : null,
+            conversion_action:     String(conversao.conversion_action),
           }
         : null;
 
@@ -70,6 +103,9 @@ export async function POST(req: NextRequest) {
       simulacao:       simulacaoValida,
       cenarioProposta: cenarioValido,
       favoritosCount:  typeof favoritosCount === 'number' ? favoritosCount : undefined,
+      favoritosIds:    favoritosIdsValidos,
+      atribuicao:      atribuicaoValida,
+      conversao:       conversaoValida,
     });
 
     if (!lead) {

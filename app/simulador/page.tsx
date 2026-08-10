@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -308,11 +308,20 @@ function SimuladorInner() {
   // Qual painel o usuário quer ver na revelação: mcmv | sbpe | sfi
   const [painelAtivo, setPainelAtivo] = useState<'mcmv' | 'sbpe' | 'sfi'>('mcmv');
   const [tipoImovel,  setTipoImovel]  = useState<'residencial' | 'comercial'>('residencial');
+  // Evita duplicar `simulation_start` no GA4 quando o usuário volta pro passo 0
+  // (botão "voltar" ou "reiniciar") e avança de novo — sem isso, cada reinício
+  // vira um novo "início de simulação" artificial nos relatórios.
+  const inicioDisparado = useRef(false);
 
   // Título próprio (analytics) — sem isso, herda o título da home e some nos relatórios do GA
   useEffect(() => {
     document.title = 'Simulador de Financiamento | FinancieCerto';
   }, []);
+
+  // Imóvel veio com status não identificado (ver lib/status.ts) — o cálculo
+  // abaixo assume "pronto" como fallback seguro, mas o usuário precisa saber
+  // que isso não foi confirmado, já que muda o resultado (não há fluxo de obra).
+  const statusDesconhecido = searchParams.get('statusDesconhecido') === '1';
 
   // Lê URL params vindos da página do imóvel e vai direto ao resultado
   useEffect(() => {
@@ -332,7 +341,10 @@ function SimuladorInner() {
     const naPlanta    = naPlantaStr === 'true';
     const idadeNum    = Number(idadeStr) || 35;
 
-    import('@/lib/gtag').then(m => m.trackSimulacaoInicio({ origem: 'imovel', naPlanta }));
+    if (!inicioDisparado.current) {
+      inicioDisparado.current = true;
+      import('@/lib/gtag').then(m => m.trackSimulacaoInicio({ origem: 'imovel', naPlanta }));
+    }
 
     // Veio da página do imóvel mas ainda não sabemos a renda (usuário não
     // simulou antes) — pré-preenche o imóvel e pede renda primeiro, em vez
@@ -448,7 +460,10 @@ function SimuladorInner() {
   }
 
   function avancar() {
-    if (etapa === 0) import('@/lib/gtag').then(m => m.trackSimulacaoInicio({ origem: 'wizard', naPlanta: false }));
+    if (etapa === 0 && !inicioDisparado.current) {
+      inicioDisparado.current = true;
+      import('@/lib/gtag').then(m => m.trackSimulacaoInicio({ origem: 'wizard', naPlanta: false }));
+    }
     if (etapa === 4) calcularPerfil();
     if (etapa === 6 && e.valorImovel) calcularSim(); // calcula ao sair do etapa de escolha do imóvel
     setEtapa(n => Math.min(n + 1, 7));
@@ -485,6 +500,14 @@ function SimuladorInner() {
     return (
       <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
+        {statusDesconhecido && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', marginBottom: 18, background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12 }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+            <span style={{ fontSize: 12.5, color: '#92400E', lineHeight: 1.5 }}>
+              Não identificamos com segurança o estágio deste empreendimento (pronto, em obras ou lançamento) — os resultados vão considerar um financiamento padrão.
+            </span>
+          </div>
+        )}
         <Barra etapa={0} total={4} />
         <Titulo>Qual é a renda familiar mensal?</Titulo>
         <Sub>Some a renda bruta de todos que vão participar do financiamento — casal, pais, filhos.</Sub>
@@ -1039,6 +1062,16 @@ function SimuladorInner() {
     return (
       <Etapa etapa={etapa}>
         <BtnVoltar onClick={voltar} />
+
+        {statusDesconhecido && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', marginBottom: 18, background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 12 }}>
+            <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+            <span style={{ fontSize: 12.5, color: '#92400E', lineHeight: 1.5 }}>
+              Não foi possível identificar com segurança o estágio deste empreendimento (pronto, em obras ou lançamento).
+              Os valores abaixo consideram um financiamento padrão — confirme o estágio real com o consultor antes de decidir.
+            </span>
+          </div>
+        )}
 
         {/* Header */}
         <div className="fc-header-bleed" style={{ margin: '-32px -28px 28px', padding: '36px 28px 32px', background: `linear-gradient(135deg, ${sc.cor} 0%, ${sc.cor}CC 100%)`, borderRadius: '20px 20px 0 0', textAlign: 'center' }}>

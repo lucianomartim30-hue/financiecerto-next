@@ -10,6 +10,8 @@ import {
 import Link from 'next/link';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
 import { HisHmpHint } from '@/components/HisHmpHint';
+import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
+import { getPrimeiraOrigem, buildConversao } from '@/lib/atribuicao';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -65,27 +67,57 @@ function salvarContexto(data: Record<string, unknown>) {
  * montava o fluxo inteiro e, pra falar com alguém, precisava sair da página.
  */
 function CTAConsultorCenario({
-  valor, fgts, ato, sinais, mensais, anuais, chaves, modalidade, faixa, renda,
+  imovelId, imovelName, valor, fgts, ato, sinais, mensais, anuais, chaves, modalidade, faixa, renda,
+  entradaPlanejada, distribuido, necessidadeFinanciamento, capacidadeEstimada, diferencaRecursos,
 }: {
+  imovelId?: string; imovelName?: string;
   valor: number; fgts: number; ato: number; sinais: number; mensais: number;
   anuais: number; chaves: number; modalidade: string; faixa?: string; renda: number;
+  entradaPlanejada: number; distribuido: number; necessidadeFinanciamento: number;
+  capacidadeEstimada: number; diferencaRecursos: number;
 }) {
   const [enviado, setEnviado] = useState(false);
+  // Simulação avulsa (sem imóvel real vinculado) preserva o comportamento anterior.
+  const idLead = imovelId || 'simulacao-na-planta';
+  const nomeLead = imovelName || `Simulação na planta — ${formatBRL(valor)}`;
 
-  function registrarLeadCenario() {
+  async function registrarLeadCenario() {
     const url = typeof window !== 'undefined' ? window.location.href : '';
-    fetch('/api/leads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        imovelId: 'simulacao-na-planta',
-        imovelName: `Simulação na planta — ${formatBRL(valor)}`,
-        bairro: '', cidade: '', preco: valor, oruloUrl: url,
-        simulacao: { modalidade, faixa, renda: renda || undefined },
-        cenarioProposta: { valorImovel: valor, fgts, ato, sinais, mensais, anuais, chaves },
-      }),
-    }).catch(() => {});
+    const atribuicao = getPrimeiraOrigem();
+    const conversao = buildConversao({ imovelId: imovelId || null, action: 'cenario_na_planta' });
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imovelId: idLead,
+          imovelName: nomeLead,
+          bairro: '', cidade: '', preco: valor, oruloUrl: url,
+          simulacao: { modalidade, faixa, renda: renda || undefined },
+          cenarioProposta: {
+            valorImovel: valor, fgts, ato, sinais, mensais, anuais, chaves,
+            entradaPlanejada, distribuido, necessidadeFinanciamento, capacidadeEstimada, diferencaRecursos,
+          },
+          favoritosCount: getFavoritosCount(),
+          favoritosIds: getFavoritoIds(),
+          atribuicao,
+          conversao,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data?.ok) {
+          const { trackLeadCriado } = await import('@/lib/gtag');
+          trackLeadCriado({ imovelId: idLead, imovel: nomeLead, origem: atribuicao?.first_source });
+        }
+      }
+    } catch { /* fire-and-forget */ }
     setEnviado(true);
+  }
+
+  function onClickWhatsapp() {
+    import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: idLead, imovel: nomeLead, status: 'na planta', posicao: 'outras', pagina: '/simulador/na-planta' }));
+    registrarLeadCenario();
   }
 
   const msg = encodeURIComponent(
@@ -101,7 +133,7 @@ function CTAConsultorCenario({
       <a
         href={`https://wa.me/5511933661403?text=${msg}`}
         target="_blank" rel="noopener noreferrer"
-        onClick={registrarLeadCenario}
+        onClick={onClickWhatsapp}
         style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#25D366', color: '#fff', borderRadius: '12px', padding: '12px 24px', fontSize: '14px', fontWeight: '700', textDecoration: 'none' }}
       >
         💬 Quero avançar com este cenário
@@ -220,6 +252,8 @@ function NaPlantaContent() {
   const fgtsUrl     = Number(sp.get('fgts')     || 0);
   const valorUrl    = Number(sp.get('valor')    || 0);
   const estagioUrl  = sp.get('estagio');
+  const imovelIdUrl   = sp.get('imovelId')   || undefined;
+  const imovelNameUrl = sp.get('imovelName') || undefined;
 
   // Renda
   const [rendaRaw, setRendaRaw] = useState('');
@@ -1072,11 +1106,15 @@ function NaPlantaContent() {
 
         {/* ── CTA — leva o cenário montado direto pro consultor ────────── */}
         {valido && !excedePrecoImovel && <CTAConsultorCenario
+          imovelId={imovelIdUrl} imovelName={imovelNameUrl}
           valor={valor} fgts={fgtsUsado} ato={ato} sinais={iniciais}
           mensais={totalMensais} anuais={totalAnuais} chaves={unica}
           modalidade={isMCMV ? (faixaEfetiva ? `MCMV ${faixaEfetiva.label}` : 'MCMV') : 'SBPE'}
           faixa={faixaEfetiva?.label}
           renda={renda}
+          entradaPlanejada={entradaPlanejada} distribuido={distribuido}
+          necessidadeFinanciamento={necessidadeFinanciamento} capacidadeEstimada={capacidadeEstimada}
+          diferencaRecursos={diferencaRecursos}
         />}
 
         {/* ── Busca inteligente de imóveis ─────────────────────────────── */}

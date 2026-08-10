@@ -6,25 +6,37 @@
  * BairroContent.tsx — risco real de divergência ao tratar um caso novo.
  */
 
-export type StatusNorm = 'na planta' | 'em obras' | 'pronto';
+export type StatusNorm = 'na planta' | 'em obras' | 'pronto' | 'unknown';
 
-/** "Breve Lançamento", "Em Construção", "Pronto para morar" → 'na planta' | 'em obras' | 'pronto' */
-export function normalizeStatus(raw: string): StatusNorm | string {
+/**
+ * "Breve Lançamento", "Em Construção", "Pronto para morar" → 'na planta' | 'em obras' | 'pronto'.
+ * Um status vazio ou não reconhecido NUNCA deve virar 'pronto' silenciosamente — isso mudaria
+ * o cálculo financeiro (assume imóvel já entregue) e o caminho do simulador sem base real.
+ * Nesses casos retorna 'unknown' explicitamente; quem consome decide o fallback (ver isNaPlanta,
+ * isStatusDesconhecido, buildSimuladorLink).
+ */
+export function normalizeStatus(raw: string): StatusNorm {
   const s = (raw || '')
     .toLowerCase()
     .replace(/[áàãâ]/g, 'a').replace(/[éèê]/g, 'e').replace(/[íìî]/g, 'i')
     .replace(/[óòõô]/g, 'o').replace(/[úùû]/g, 'u').replace(/ç/g, 'c')
     .trim();
+  if (!s) return 'unknown';
   if (s.includes('planta') || s.includes('lanca') || s.includes('lancamento') || s === 'pre-lancamento') return 'na planta';
   if (s.includes('obra') || s.includes('constru') || s.includes('andamento') || s === 'under_construction') return 'em obras';
   if (s.includes('pronto') || s.includes('entreg') || s.includes('conclui') || s === 'novo' || s === 'new' || s === 'ready') return 'pronto';
-  return s;
+  return 'unknown';
 }
 
 /** True se o status (bruto ou já normalizado) representa "ainda não pronto" — usado para decidir /simulador vs /simulador/na-planta. */
 export function isNaPlanta(status: string): boolean {
   const n = normalizeStatus(status);
   return n === 'na planta' || n === 'em obras';
+}
+
+/** True quando não foi possível identificar com segurança o estágio do empreendimento. */
+export function isStatusDesconhecido(status: string): boolean {
+  return normalizeStatus(status) === 'unknown';
 }
 
 export interface StatusCfg {
@@ -44,6 +56,7 @@ const STATUS_CFG: Record<string, StatusCfg> = {
   'em andamento':   { cor: '#d97706', bg: 'rgba(217,119,6,.15)',  label: 'Em Andamento' },
   'pronto':         { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Pronto' },
   'entregue':       { cor: '#16a34a', bg: 'rgba(22,163,74,.15)',  label: 'Entregue' },
+  'unknown':        { cor: '#475569', bg: 'rgba(71,85,105,.18)',  label: 'Estágio a confirmar' },
 };
 
 const FALLBACK_CFG: StatusCfg = { cor: '#475569', bg: 'rgba(71,85,105,.18)', label: '' };

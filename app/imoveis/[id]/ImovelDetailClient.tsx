@@ -8,7 +8,8 @@ import { getStatusCfg, isNaPlanta } from '@/lib/status';
 import { buildSimuladorLink } from '@/lib/simulador-link';
 import { bairroPath } from '@/lib/locations';
 import FavoritoButton from '@/components/FavoritoButton';
-import { getFavoritosCount } from '@/lib/favoritos';
+import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
+import { getPrimeiraOrigem, buildConversao } from '@/lib/atribuicao';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -92,10 +93,13 @@ interface RelatedImovel {
 // ─────────────────────────────────────────────────────────────────────────────
 /**
  * Registra automaticamente um lead no painel /admin/leads quando alguém clica
- * em "Falar com consultor". Fire-and-forget — nunca deve travar/atrapalhar o
- * clique real do WhatsApp, por isso ignora qualquer erro silenciosamente.
+ * em "Falar com consultor". Nunca deve travar/atrapalhar o clique real do
+ * WhatsApp (que abre em nova aba via href, independente desta chamada) —
+ * por isso ignora qualquer erro silenciosamente. Só dispara `lead_created`
+ * no GA4 depois que o backend confirma a gravação (evita inflar "leads" com
+ * simples cliques que não viraram registro real).
  */
-function registrarLead(imovel: ImovelDetalhe | null): void {
+async function registrarLead(imovel: ImovelDetalhe | null, posicao: 'topo' | 'sidebar'): Promise<void> {
   if (!imovel) return;
 
   // Contexto financeiro (Fase 4) — só existe se o visitante já rodou uma
@@ -109,21 +113,36 @@ function registrarLead(imovel: ImovelDetalhe | null): void {
   } catch { /* ignore */ }
 
   const favoritosCount = getFavoritosCount();
+  const favoritosIds = getFavoritoIds();
+  const atribuicao = getPrimeiraOrigem();
+  const conversao = buildConversao({ imovelId: imovel.id, action: `whatsapp_${posicao}` });
 
-  fetch('/api/leads', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      imovelId:   imovel.id,
-      imovelName: imovel.name,
-      bairro:     imovel.neighborhood,
-      cidade:     imovel.city,
-      preco:      imovel.min_price,
-      oruloUrl:   imovel.sharing_url,
-      simulacao,
-      favoritosCount,
-    }),
-  }).catch(() => {});
+  try {
+    const res = await fetch('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        imovelId:   imovel.id,
+        imovelName: imovel.name,
+        bairro:     imovel.neighborhood,
+        cidade:     imovel.city,
+        preco:      imovel.min_price,
+        oruloUrl:   imovel.sharing_url,
+        simulacao,
+        favoritosCount,
+        favoritosIds,
+        atribuicao,
+        conversao,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data?.ok) {
+        const { trackLeadCriado } = await import('@/lib/gtag');
+        trackLeadCriado({ imovelId: imovel.id, imovel: imovel.name, origem: atribuicao?.first_source });
+      }
+    }
+  } catch { /* fire-and-forget — falha de rede não deve incomodar o usuário */ }
 }
 
 /**
@@ -913,7 +932,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
               const naPlantaImovel = isNaPlanta(imovel.status || '');
               const ctaLink = `/imoveis?min=${minFiltro}&max=${maxFiltro}${naPlantaImovel ? '&status=na planta' : ''}`;
               const simuladorLink = buildSimuladorLink(
-                { min_price: valorRef || imovel.min_price, max_price: imovel.max_price, status: imovel.status },
+                { id: imovel.id, name: imovel.name, min_price: valorRef || imovel.min_price, max_price: imovel.max_price, status: imovel.status },
                 { renda: parseMoeda(renda), entrada: en, fgts: fg },
               );
               return (
@@ -971,7 +990,10 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
 
         {/* CTA WhatsApp */}
         <a href={`https://wa.me/5511933661403?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
-          onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood, canal: 'whatsapp' })); registrarLead(imovel); }}
+          onClick={() => {
+            import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'sidebar', pagina: '/imoveis/[id]' }));
+            registrarLead(imovel, 'sidebar');
+          }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
           <span>💬</span> Falar com consultor
         </a>
@@ -1681,7 +1703,10 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.75)' }}>Fale agora com um consultor pelo WhatsApp</p>
           </div>
           <a href={`https://wa.me/5511933661403?text=${waMsgTopo}`} target="_blank" rel="noopener noreferrer"
-            onClick={() => { import('@/lib/gtag').then(m => m.trackLead({ imovel: imovel?.name, bairro: imovel?.neighborhood, canal: 'whatsapp' })); registrarLead(imovel); }}
+            onClick={() => {
+              import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'topo', pagina: '/imoveis/[id]' }));
+              registrarLead(imovel, 'topo');
+            }}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
             <span>💬</span> Falar com consultor
           </a>

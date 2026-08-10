@@ -18,7 +18,7 @@ export interface LeadSimulacao {
   comprometimento?: number;        // % da renda
 }
 
-/** Fluxo de pagamento montado no simulador na planta — "cenário de proposta" (Fase 4). */
+/** Fluxo de pagamento montado no simulador na planta — "cenário de proposta" (Fase 4 + Bloco A/B). */
 export interface LeadCenarioProposta {
   valorImovel: number;
   fgts: number;
@@ -27,6 +27,30 @@ export interface LeadCenarioProposta {
   mensais: number;
   anuais: number;
   chaves: number;
+  // Bloco A/B — modelo top-down completo (necessidade vs. capacidade vs. entrada planejada)
+  entradaPlanejada?: number;
+  distribuido?: number;
+  necessidadeFinanciamento?: number;
+  capacidadeEstimada?: number;
+  diferencaRecursos?: number;
+}
+
+/** Origem da visita (first-touch) — nunca sobrescrita durante a sessão (Bloco B item 7). */
+export interface LeadAtribuicao {
+  first_source: string;
+  first_medium: string;
+  first_referrer_domain: string | null;
+  first_landing_page: string;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+}
+
+/** Ponto de conversão — página/ação no momento em que o lead foi gerado (Bloco B item 7). */
+export interface LeadConversao {
+  conversion_page: string;
+  conversion_imovel_id: string | null;
+  conversion_action: string;
 }
 
 export interface Lead {
@@ -44,6 +68,10 @@ export interface Lead {
   simulacao?: LeadSimulacao | null;
   cenarioProposta?: LeadCenarioProposta | null;
   favoritosCount?: number;
+  // Bloco B — favoritos com identificação (não só a contagem), origem e ponto de conversão
+  favoritosIds?: string[];
+  atribuicao?: LeadAtribuicao | null;
+  conversao?: LeadConversao | null;
 }
 
 const KV_LEADS_KEY = 'leads:list';
@@ -78,6 +106,9 @@ export async function kvAddLead(
     simulacao?: LeadSimulacao | null;
     cenarioProposta?: LeadCenarioProposta | null;
     favoritosCount?: number;
+    favoritosIds?: string[];
+    atribuicao?: LeadAtribuicao | null;
+    conversao?: LeadConversao | null;
   },
 ): Promise<Lead | null> {
   const kv = await getKv();
