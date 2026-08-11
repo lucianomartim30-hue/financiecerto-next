@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { slugToLocation } from "@/lib/locations";
 import BairroContent from "./BairroContent";
@@ -29,9 +28,5 @@ export default async function BairroPage({
   const loc = slugToLocation(slug);
   // Estado sem cidade mapeada (ex: GO, RJ) → nunca foi liberado no site.
   if (!loc.city) notFound();
-  return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
-      <BairroContent location={loc} searchParams={sp} />
-    </Suspense>
-  );
+  return <BairroContent location={loc} searchParams={sp} />;
 }

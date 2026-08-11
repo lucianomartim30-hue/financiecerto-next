@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { slugToRegion, REGIONS } from "@/lib/regions";
 import RegiaoContent from "./RegiaoContent";
@@ -35,9 +34,5 @@ export default async function RegiaoPage({
   const sp = await searchParams;
   const region = slugToRegion(slug);
   if (!region) notFound();
-  return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--bg)" }} />}>
-      <RegiaoContent region={region} searchParams={sp} />
-    </Suspense>
-  );
+  return <RegiaoContent region={region} searchParams={sp} />;
 }
