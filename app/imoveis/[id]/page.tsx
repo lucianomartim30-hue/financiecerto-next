@@ -15,6 +15,7 @@ import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { kvGetCatalog } from '@/lib/orulo-kv';
 import { getToken, fetchBuildingDetail } from '@/lib/orulo-api';
+import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
 import ImovelDetailClient from './ImovelDetailClient';
 
 const BASE = 'https://www.financiecerto.com.br';
@@ -76,7 +77,7 @@ export async function generateMetadata(
         : `${b.area_min} m²`
       : null;
 
-  const priceStr = b.min_price ? `a partir de ${fmtBRL(b.min_price)}` : null;
+  const priceStr = temPrecoReal(b) ? `a partir de ${fmtBRL(b.min_price)}` : null;
 
   // ── Title ──
   const suffix = [bedroomStr, priceStr].filter(Boolean).join(', ');
@@ -149,7 +150,7 @@ export default async function ImovelPage({
           .join(', '),
         url: `${BASE}/imoveis/${id}`,
         image: b.photo ?? undefined,
-        ...(b.min_price && {
+        ...(temPrecoReal(b) && {
           offers: {
             '@type': 'Offer',
             price: b.min_price,

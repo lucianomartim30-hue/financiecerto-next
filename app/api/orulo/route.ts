@@ -28,6 +28,7 @@ import {
   type NormalizedBuilding,
 } from '@/lib/orulo-api';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
+import { filterBreveLancamento } from '@/lib/filtro-breve-lancamento';
 import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
 import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 
@@ -74,30 +75,9 @@ const MOCK_BUILDINGS = [
   { id: '5', name: 'Jabaquara Residences',      developer: 'Trisul',          min_price: 250000, max_price: 350000, bedrooms_min: 2, bedrooms_max: 2, area_min: 55, area_max: 70, bathrooms_min: 2, bathrooms_max: 2, vagas_min: 1, vagas_max: 1, neighborhood: 'Jabaquara',     city: 'São Paulo', state: 'SP', photo: null, orulo_url: 'https://orulo.com.br', status: 'Na Planta' },
 ];
 
-// ── Filtro de Breve Lançamento ────────────────────────────────────────────────
-// Remove empreendimentos sem tabela de preço (Breve Lançamento) que não têm
-// data de lançamento definida OU cuja data está além de 2 meses.
-// Empreendimentos já lançados (min_price > 0) sempre passam.
-
-function filterBreveLancamento(buildings: NormalizedBuilding[]): NormalizedBuilding[] {
-  const now = new Date();
-  const twoMonthsAhead = new Date(now);
-  twoMonthsAhead.setMonth(twoMonthsAhead.getMonth() + 2);
-
-  return buildings.filter(b => {
-    // Já foi lançado (tem tabela de preço) → sempre exibe
-    if (b.min_price && b.min_price >= 100) return true;
-
-    // Breve Lançamento — verifica delivery_date
-    if (!b.delivery_date) return false; // sem data → oculta
-
-    const launchDate = new Date(b.delivery_date);
-    if (isNaN(launchDate.getTime())) return false; // data inválida → oculta
-
-    // Só exibe se o lançamento está nos próximos 2 meses
-    return launchDate >= now && launchDate <= twoMonthsAhead;
-  });
-}
+// Filtro de Breve Lançamento — movido para lib/filtro-breve-lancamento.ts para
+// poder ser reutilizado em app/sitemap.ts (route.ts só pode exportar handlers
+// HTTP, não helpers soltos).
 
 // ── Filtros sobre o catálogo ──────────────────────────────────────────────────
 

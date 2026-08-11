@@ -10,6 +10,7 @@ import { bairroPath } from '@/lib/locations';
 import FavoritoButton from '@/components/FavoritoButton';
 import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
 import { getPrimeiraOrigem, buildConversao } from '@/lib/atribuicao';
+import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -786,7 +787,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {[
                 { label: 'Renda sugerida', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.rendaSugerida) + '/mês' : '—'), icon: '💼', color: '#2563eb' },
-                { label: 'Entrada (20%)', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.entrada) : '—'), icon: '🏦', color: '#7c3aed' },
+                { label: 'Entrada (referência 20%)', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.entrada) : '—'), icon: '🏦', color: '#7c3aed' },
                 { label: 'Parcela estimada', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.parcela) + '/mês' : '—'), icon: '📅', color: '#0f6e56' },
                 { label: est?.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : 'SBPE / SFI', value: isBreveLancamento ? 'A Definir' : (est?.faixaMCMV ? `até R$ ${est.faixaMCMV.rendaMax.toLocaleString('pt-BR')}` : 'Renda livre'), icon: est?.faixaMCMV ? '🏠' : '🏛️', color: est?.faixaMCMV ? '#16a34a' : '#d97706' },
               ].map(({ label, value, icon, color }) => (
@@ -1537,6 +1538,12 @@ export default function ImovelDetailClient({ id }: { id: string }) {
         const res = await fetch(`/api/orulo/${id}`);
         if (!res.ok) throw new Error('Não encontrado');
         const data: ImovelDetalhe = await res.json();
+        // A Orulo usa min_price=0.1 como sentinela de "Breve Lançamento sem tabela
+        // publicada" — sem isso, a UI (e o cálculo de simulação) tratam 0.1 como
+        // preço real e mostram "R$ 0". Normaliza pra null aqui, fonte única, em
+        // vez de checar em cada lugar que lê min_price/max_price.
+        if (data.min_price != null && !temPrecoReal({ min_price: data.min_price })) data.min_price = null;
+        if (data.max_price != null && !temPrecoReal({ min_price: data.max_price })) data.max_price = null;
         setImovel(data);
         import('@/lib/vistos-recentemente').then(m => m.registrarVisto(data.id));
         // Salva contexto completo para João consultor
