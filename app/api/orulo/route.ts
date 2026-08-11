@@ -120,8 +120,13 @@ function applyFilters(
     const set = new Set(neighborhoods.map(normalize));
     all = all.filter(b => set.has(normalize(b.neighborhood || '')));
   } else if (neighborhood) {
-    const nb = neighborhood.toLowerCase();
-    all = all.filter(b => (b.neighborhood || '').toLowerCase().includes(nb));
+    // Comparação sem acento: slugToLocation() decodifica o slug da URL sem
+    // diacríticos ("taboao-pr" → "Taboao"), mas o catálogo guarda o nome real
+    // ("Taboão"). Um match ingênuo por .toLowerCase() nunca bate nesses casos
+    // e a página de bairro renderiza vazia (soft-404) — afeta qualquer bairro
+    // com acento, não só os de fora de SP.
+    const nb = normalize(neighborhood);
+    all = all.filter(b => normalize(b.neighborhood || '').includes(nb));
   }
   if (q && !neighborhood) {
     const lq = q.toLowerCase();

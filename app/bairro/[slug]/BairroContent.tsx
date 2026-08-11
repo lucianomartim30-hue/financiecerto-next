@@ -256,7 +256,7 @@ export default function BairroContent({
         city:         location.city,
         neighborhood: location.neighborhood,
         page:         String(p),
-        state:        'SP',
+        state:        location.state,
       });
       if (minPrice)                             params.set('min_price',    minPrice);
       if (maxPrice)                             params.set('max_price',    maxPrice);
