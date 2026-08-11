@@ -256,6 +256,10 @@ function ImoveisContent() {
       !searchParams.get('min') && !searchParams.get('max') && !searchParams.get('bedrooms_min') &&
       !searchParams.get('status') && !searchParams.get('tipo') && !searchParams.get('tipologia');
     if (!semFiltroNaUrl) return;
+    // Se a pessoa já fechou o chip de região antes, respeita — a geolocalização por
+    // IP erra de vez em quando (operadora móvel registrada em outra cidade, por
+    // exemplo), e insistir toda visita depois de já ter sido corrigida é ruim.
+    try { if (localStorage.getItem('fc_geo_dismissed') === '1') return; } catch { /* ignore */ }
     fetch('/api/geo').then(r => r.json()).then(data => {
       if (data.cities && data.cities.length > 0) {
         setGeoCities(data.cities);
@@ -917,7 +921,7 @@ function ImoveisContent() {
         {/* Chip de região automática (geo por IP) — some ao buscar outra localização ou ao ser fechado */}
         {!activeLocation && geoAtivo && geoLabel && (
           <button
-            onClick={() => setGeoAtivo(false)}
+            onClick={() => { setGeoAtivo(false); try { localStorage.setItem('fc_geo_dismissed', '1'); } catch { /* ignore */ } }}
             title="Ver imóveis de todas as cidades"
             style={{ height: '36px', padding: '0 10px', borderRadius: '18px', border: '1.5px solid #34d399', background: 'rgba(52,211,153,.15)', color: '#059669', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
             📍 Perto de você — {geoLabel} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
