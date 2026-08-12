@@ -240,18 +240,18 @@ export default function Header() {
               className="header-cta"
               style={{
                 position: 'relative',
-                width: '38px', height: '38px',
+                width: '40px', height: '40px',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 borderRadius: '10px',
-                fontSize: '18px',
-                color: pathname === '/favoritos' ? 'var(--primary)' : 'var(--text-muted)',
+                fontSize: '22px',
+                color: pathname === '/favoritos' || favCount > 0 ? '#dc2626' : 'var(--text-muted)',
                 background: pathname === '/favoritos' ? 'var(--primary-light)' : 'transparent',
                 textDecoration: 'none',
                 transition: 'all 0.15s',
                 flexShrink: 0,
               }}
             >
-              ♡
+              {favCount > 0 ? '❤️' : '🤍'}
               {favCount > 0 && (
                 <span style={{ position: 'absolute', top: '2px', right: '2px', fontSize: '9px', fontWeight: '800', background: '#dc2626', color: '#fff', minWidth: '15px', height: '15px', borderRadius: '99px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}>
                   {favCount}
