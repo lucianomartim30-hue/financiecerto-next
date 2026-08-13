@@ -12,6 +12,10 @@ function normalize(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 }
 
+// GRANDE_SP guarda os nomes com acento ("são paulo") — comparar contra uma
+// string já normalizada (sem acento) nunca bate. Normaliza o set uma vez aqui.
+const GRANDE_SP_NORMALIZADO = new Set([...GRANDE_SP].map(normalize));
+
 export function ofereceAgendarVisita(city: string | null | undefined, minPrice: number | null | undefined): boolean {
-  return GRANDE_SP.has(normalize(city || '')) && !!minPrice;
+  return GRANDE_SP_NORMALIZADO.has(normalize(city || '')) && !!minPrice;
 }
