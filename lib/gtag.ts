@@ -34,7 +34,7 @@ export function gtagEvent({ action, category, label, value, ...rest }: GtagEvent
  */
 export function trackWhatsappClick(params?: {
   imovelId?: string; imovel?: string; bairro?: string; status?: string;
-  posicao?: 'topo' | 'sidebar' | 'outras'; pagina?: string;
+  posicao?: 'topo' | 'sidebar' | 'topo-visita' | 'sidebar-visita' | 'outras'; pagina?: string;
 }) {
   gtagEvent({
     action:   'whatsapp_click',

@@ -20,6 +20,10 @@ import ImovelDetailClient from './ImovelDetailClient';
 
 const BASE = 'https://www.financiecerto.com.br';
 
+function fmtBRL(v: number | null | undefined): string {
+  if (!v) return '';
+  return 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+}
 
 // React cache() — deduplica a busca entre generateMetadata e a página no mesmo request.
 // Checa o KV primeiro (rápido); se o imóvel não estiver mais no catálogo (saiu de
@@ -71,16 +75,18 @@ export async function generateMetadata(
         : `${b.area_min} m²`
       : null;
 
-  // Preço fica de fora do título/descrição de propósito: o snippet do Google
-  // sempre mostra o preço da menor tipologia (ex: 1 quarto), e quem clica
-  // pensando nesse valor e depois vê o preço real da planta que quer (ex: 2
-  // quartos, +R$150k) sente que foi enganado e sai na hora. Falar só das
-  // características deixa a decisão de preço pra quando a pessoa já está na
-  // página, vendo a faixa completa por tipologia. (O preço continua no JSON-LD
-  // — dado estruturado pro Google, não texto visível no snippet.)
+  // O preço volta a aparecer (é o que mais puxa clique), mas com um qualificador
+  // quando há mais de uma tipologia — sem isso, o snippet mostra "a partir de
+  // R$X" ao lado de uma faixa de quartos, e quem clica pensando nesse valor pra
+  // uma unidade maior se sente enganado ao ver que R$X é só da menor. Com o
+  // qualificador, a expectativa já chega certa.
+  const temFaixaDeQuartos = b.bedrooms_max != null && b.bedrooms_max !== b.bedrooms_min;
+  const priceStr = temPrecoReal(b)
+    ? `a partir de ${fmtBRL(b.min_price)}${temFaixaDeQuartos ? ' (unidade menor)' : ''}`
+    : null;
 
   // ── Title ──
-  const suffix = [bedroomStr, areaStr].filter(Boolean).join(', ');
+  const suffix = [bedroomStr, priceStr].filter(Boolean).join(', ');
   const title = suffix
     ? `${b.name} — ${suffix} | FinancieCerto`
     : `${b.name} | FinancieCerto`;
@@ -88,8 +94,8 @@ export async function generateMetadata(
   // ── Description ──
   const descParts = [
     `${b.name} da ${b.developer} em ${b.neighborhood}, ${b.city}`,
-    [bedroomStr, areaStr].filter(Boolean).join(', '),
-    'Veja fotos, plantas e simule o financiamento para descobrir se você tem perfil para comprar este imóvel.',
+    [bedroomStr, areaStr, priceStr].filter(Boolean).join(', '),
+    'Simule o financiamento e descubra se você tem perfil para comprar este imóvel.',
   ].filter(Boolean);
   const description = descParts.join('. ');
 
