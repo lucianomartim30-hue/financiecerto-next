@@ -6,6 +6,11 @@ import { getImoveisDestaque } from '@/lib/imoveis-destaque';
 import { formatBRL } from '@/lib/calculos';
 import { getStatusCfg } from '@/lib/status';
 
+// Sem isso a home fica presa no snapshot do catálogo do último deploy —
+// imóvel vendido, preço mudado ou erro de cadastro corrigido na Orulo só
+// apareceria aqui depois do próximo `git push`. Revalida a cada hora.
+export const revalidate = 3600;
+
 const STATS = [
   { value: '2.000+', label: 'Empreendimentos', href: '/imoveis' },
   { value: 'MCMV · SBPE · SFI', label: 'Todos os perfis de renda', href: '/simulador' },

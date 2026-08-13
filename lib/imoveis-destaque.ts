@@ -9,6 +9,7 @@
 import { kvGetCatalog } from './orulo-kv';
 import { filterBreveLancamento, temPrecoReal } from './filtro-breve-lancamento';
 import { REGIONS } from './regions';
+import { inferFinalityFromName } from './orulo-api';
 
 export interface ImovelDestaque {
   id: string;
@@ -41,6 +42,11 @@ export async function getImoveisDestaque(limit = 6): Promise<ImovelDestaque[]> {
       normalize(b.city || '') === 'sao paulo' &&
       ZONA_SUL_OESTE.has(normalize(b.neighborhood || '')) &&
       b.finality_norm !== 'comercial' &&
+      // A Orulo às vezes marca unidade não-residencial (ex: "- NR" no nome)
+      // como finality "Residencial" por erro de cadastro — confia primeiro
+      // no campo, mas confere o nome de novo aqui como segunda checagem,
+      // independente do que a API já decidiu.
+      inferFinalityFromName(b.name, b.developer) !== 'comercial' &&
       !!b.photo,
     );
     picks = filterBreveLancamento(picks).filter(temPrecoReal);
