@@ -86,7 +86,7 @@ const FEATURES = [
 ];
 
 export default async function Home() {
-  const destaques = await getImoveisDestaque(6);
+  const destaques = await getImoveisDestaque(12);
   const schemas = [
     website,
     organization,
