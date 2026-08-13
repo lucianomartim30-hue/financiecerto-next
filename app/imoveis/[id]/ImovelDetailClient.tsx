@@ -11,6 +11,7 @@ import FavoritoButton from '@/components/FavoritoButton';
 import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
 import { getPrimeiraOrigem, buildConversao } from '@/lib/atribuicao';
 import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
+import { ofereceAgendarVisita } from '@/lib/atende-presencial';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -736,7 +737,12 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   const diffPoder = poderTotal - valorRef;
 
   const urlImovel = typeof window !== 'undefined' ? window.location.href : '';
-  const waMsg = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovel}`);
+  const atendeVisita = ofereceAgendarVisita(imovel.city, imovel.min_price);
+  const waMsg = encodeURIComponent(
+    atendeVisita
+      ? `Olá! Gostaria de agendar uma visita ao imóvel *${imovel.name}* que vi no FinancieCerto.\n${urlImovel}`
+      : `Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovel}`
+  );
 
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
@@ -989,14 +995,14 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
           </>
         )}
 
-        {/* CTA WhatsApp */}
+        {/* CTA WhatsApp — "Agendar visita" só em SP/Grande SP com preço já publicado */}
         <a href={`https://wa.me/5511933661403?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
           onClick={() => {
             import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'sidebar', pagina: '/imoveis/[id]' }));
             registrarLead(imovel, 'sidebar');
           }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
-          <span>💬</span> Falar com consultor
+          <span>{atendeVisita ? '📅' : '💬'}</span> {atendeVisita ? 'Agendar visita' : 'Falar com consultor'}
         </a>
       </div>
     </div>
@@ -1596,7 +1602,12 @@ export default function ImovelDetailClient({ id }: { id: string }) {
   );
 
   const urlImovelTopo = typeof window !== 'undefined' ? window.location.href : '';
-  const waMsgTopo = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovelTopo}`);
+  const atendeVisitaTopo = ofereceAgendarVisita(imovel.city, imovel.min_price);
+  const waMsgTopo = encodeURIComponent(
+    atendeVisitaTopo
+      ? `Olá! Gostaria de agendar uma visita ao imóvel *${imovel.name}* que vi no FinancieCerto.\n${urlImovelTopo}`
+      : `Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovelTopo}`
+  );
 
   const statusCfg = getStatus(imovel.status || '');
   // Chips de resumo rápido no header — apenas specs da unidade
@@ -1707,7 +1718,9 @@ export default function ImovelDetailClient({ id }: { id: string }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', background: 'linear-gradient(135deg, #0f172a, #1e3a5f)', borderRadius: '16px', padding: '18px 20px' }}>
           <div>
             <p style={{ fontSize: '15px', fontWeight: '800', color: '#fff', marginBottom: '2px' }}>Interessado neste imóvel?</p>
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.75)' }}>Fale agora com um consultor pelo WhatsApp</p>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.75)' }}>
+              {atendeVisitaTopo ? 'Agende uma visita pelo WhatsApp' : 'Fale agora com um consultor pelo WhatsApp'}
+            </p>
           </div>
           <a href={`https://wa.me/5511933661403?text=${waMsgTopo}`} target="_blank" rel="noopener noreferrer"
             onClick={() => {
@@ -1715,7 +1728,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
               registrarLead(imovel, 'topo');
             }}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-            <span>💬</span> Falar com consultor
+            <span>{atendeVisitaTopo ? '📅' : '💬'}</span> {atendeVisitaTopo ? 'Agendar visita' : 'Falar com consultor'}
           </a>
         </div>
       </div>

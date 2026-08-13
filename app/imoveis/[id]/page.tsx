@@ -20,12 +20,6 @@ import ImovelDetailClient from './ImovelDetailClient';
 
 const BASE = 'https://www.financiecerto.com.br';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function fmtBRL(v: number | null | undefined): string {
-  if (!v) return '';
-  return 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
-}
 
 // React cache() — deduplica a busca entre generateMetadata e a página no mesmo request.
 // Checa o KV primeiro (rápido); se o imóvel não estiver mais no catálogo (saiu de
@@ -77,10 +71,16 @@ export async function generateMetadata(
         : `${b.area_min} m²`
       : null;
 
-  const priceStr = temPrecoReal(b) ? `a partir de ${fmtBRL(b.min_price)}` : null;
+  // Preço fica de fora do título/descrição de propósito: o snippet do Google
+  // sempre mostra o preço da menor tipologia (ex: 1 quarto), e quem clica
+  // pensando nesse valor e depois vê o preço real da planta que quer (ex: 2
+  // quartos, +R$150k) sente que foi enganado e sai na hora. Falar só das
+  // características deixa a decisão de preço pra quando a pessoa já está na
+  // página, vendo a faixa completa por tipologia. (O preço continua no JSON-LD
+  // — dado estruturado pro Google, não texto visível no snippet.)
 
   // ── Title ──
-  const suffix = [bedroomStr, priceStr].filter(Boolean).join(', ');
+  const suffix = [bedroomStr, areaStr].filter(Boolean).join(', ');
   const title = suffix
     ? `${b.name} — ${suffix} | FinancieCerto`
     : `${b.name} | FinancieCerto`;
@@ -88,8 +88,8 @@ export async function generateMetadata(
   // ── Description ──
   const descParts = [
     `${b.name} da ${b.developer} em ${b.neighborhood}, ${b.city}`,
-    [bedroomStr, areaStr, priceStr].filter(Boolean).join(', '),
-    'Simule o financiamento e descubra se você tem perfil para comprar este imóvel.',
+    [bedroomStr, areaStr].filter(Boolean).join(', '),
+    'Veja fotos, plantas e simule o financiamento para descobrir se você tem perfil para comprar este imóvel.',
   ].filter(Boolean);
   const description = descParts.join('. ');
 

@@ -8,7 +8,9 @@
  */
 
 // ── Municípios da Região Metropolitana de São Paulo (RMSP) liberados no portal ─
-const GRANDE_SP = new Set([
+// Exportado porque também define onde o corretor atende presencialmente — usado
+// pra decidir se um imóvel oferece "Agendar visita" (ver lib/atende-presencial.ts).
+export const GRANDE_SP = new Set([
   'são paulo','guarulhos','osasco','santo andré','são bernardo do campo',
   'são caetano do sul','diadema','barueri','taboão da serra','santana de parnaíba',
 ]);
