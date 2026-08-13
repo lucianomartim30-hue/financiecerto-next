@@ -408,10 +408,19 @@ function ImoveisContent() {
     if (filterAreaMin  && (b.area_max     ?? 0)  < filterAreaMin) return false;
     if (filterAreaMax  && (b.area_min     ?? 0)  > filterAreaMax) return false;
     if (filterStatus   && b.status_norm !== filterStatus)         return false;
-    if (filterFinality) {
+    {
       const fn = getEffectiveFinality(b);
       const effectiveFn = fn === '' ? 'residencial' : fn;
-      if (effectiveFn !== filterFinality) return false;
+      if (filterFinality === 'todos') {
+        // Escolha explícita de ver tudo — não filtra por finalidade.
+      } else if (filterFinality) {
+        if (effectiveFn !== filterFinality) return false;
+      } else if (effectiveFn === 'comercial') {
+        // Sem filtro de tipo escolhido: portal mostra só residencial por
+        // padrão — comercial só aparece se a pessoa escolher isso explicitamente
+        // no filtro "Tipo".
+        return false;
+      }
     }
     if (filterTipologia && !(b.property_types || []).includes(filterTipologia)) return false;
     return true;
@@ -764,7 +773,7 @@ function ImoveisContent() {
       {openDropdown === 'tipo' && (
         <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '210px' }}>
           {[
-            { val: '',            icon: '🏘', label: 'Todos os tipos', count: allBuildings.length },
+            { val: 'todos',       icon: '🏘', label: 'Todos os tipos (incl. comercial)', count: allBuildings.length },
             { val: 'residencial', icon: '🏠', label: 'Residencial',    count: finalityCounts.residencial },
             { val: 'comercial',   icon: '🏢', label: 'Comercial',      count: finalityCounts.comercial },
           ].map(({ val, icon, label, count }) => (
@@ -937,6 +946,7 @@ function ImoveisContent() {
         <button style={pillStyle(!!filterFinality)} onClick={(e) => openDrop('tipo', e)}>
           {filterFinality === 'residencial' ? '🏠 Residencial'
             : filterFinality === 'comercial' ? '🏢 Comercial'
+            : filterFinality === 'todos' ? '🏘 Todos os tipos'
             : 'Tipo'} <span style={{ fontSize: '10px' }}>▾</span>
         </button>
 
