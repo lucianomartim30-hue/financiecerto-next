@@ -2,6 +2,9 @@ import Link from 'next/link';
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { website, organization, breadcrumb, SITE_CONFIG } from '@/lib/schema';
 import { HomeEngagement } from './HomeEngagement';
+import { getImoveisDestaque } from '@/lib/imoveis-destaque';
+import { formatBRL } from '@/lib/calculos';
+import { getStatusCfg } from '@/lib/status';
 
 const STATS = [
   { value: '2.000+', label: 'Empreendimentos', href: '/imoveis' },
@@ -82,7 +85,8 @@ const FEATURES = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const destaques = await getImoveisDestaque(6);
   const schemas = [
     website,
     organization,
@@ -210,6 +214,58 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── Imóveis em destaque (Zona Sul/Oeste) ──────────────────────────────── */}
+      {destaques.length > 0 && (
+        <section style={{ padding: '80px 24px', background: '#ffffff', borderBottom: '1px solid var(--border)' }}>
+          <div className="container">
+            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+              <p className="section-label">Selecionados pra você</p>
+              <h2 style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: '800', marginBottom: '12px', letterSpacing: '-0.5px' }}>
+                Imóveis em destaque na Zona Sul, Oeste e Centro
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '500px', margin: '0 auto' }}>
+                Empreendimentos de São Paulo já com simulação de financiamento pronta.
+              </p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+              {destaques.map(im => {
+                const cfg = getStatusCfg(im.status_norm || '');
+                return (
+                  <Link key={im.id} href={`/imoveis/${im.id}`} className="card card-hover" style={{ overflow: 'hidden', textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ position: 'relative', width: '100%', paddingTop: '62%', background: '#0f2744' }}>
+                      {im.photo && (
+                        <img src={im.photo} alt={im.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      )}
+                      <span style={{ position: 'absolute', top: '10px', left: '10px', background: cfg.bg, color: cfg.cor, fontSize: '10px', fontWeight: '800', padding: '4px 10px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.5px', backdropFilter: 'blur(6px)' }}>
+                        {cfg.label}
+                      </span>
+                    </div>
+                    <div style={{ padding: '16px' }}>
+                      <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {im.name}
+                      </p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '10px' }}>
+                        📍 {im.neighborhood}, São Paulo
+                      </p>
+                      {im.min_price && (
+                        <p style={{ fontSize: '16px', fontWeight: '900', color: 'var(--primary)' }}>
+                          {formatBRL(im.min_price)}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            <div style={{ textAlign: 'center', marginTop: '36px' }}>
+              <Link href="/regiao/zona-sul-sp" className="btn-outline" style={{ marginRight: '12px', marginBottom: '8px' }}>Ver mais na Zona Sul →</Link>
+              <Link href="/regiao/zona-oeste-sp" className="btn-outline" style={{ marginRight: '12px', marginBottom: '8px' }}>Ver mais na Zona Oeste →</Link>
+              <Link href="/regiao/centro-sp" className="btn-outline" style={{ marginBottom: '8px' }}>Ver mais no Centro →</Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Como funciona ───────────────────────────────────────────────────── */}
       <section style={{

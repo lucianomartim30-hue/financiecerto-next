@@ -12,6 +12,7 @@ import { getArtigos } from '@/lib/artigos';
 import { REGIONS } from '@/lib/regions';
 import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 import { filterBreveLancamento } from '@/lib/filtro-breve-lancamento';
+import { ZONA_SUL_OESTE, normalize } from '@/lib/imoveis-destaque';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -76,13 +77,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // por isso indexava exatamente esse tipo de página fina como soft-404.
     if (catalog) catalog = filterBreveLancamento(catalog);
     if (catalog && catalog.length > 0) {
-      // Páginas individuais de imóvel
-      buildingPages = catalog.map(b => ({
-        url:             `${BASE}/imoveis/${b.id}`,
-        lastModified:    safeIso(b.updated_at, now),
-        changeFrequency: 'weekly' as const,
-        priority:        0.7,
-      }));
+      // Páginas individuais de imóvel — prioridade maior pra Zona Sul/Oeste de SP
+      // (foco comercial do corretor): sinaliza pro Google que esses imóveis
+      // importam mais do que a média do catálogo.
+      buildingPages = catalog.map(b => {
+        const emFoco = normalize(b.city || '') === 'sao paulo' && ZONA_SUL_OESTE.has(normalize(b.neighborhood || ''));
+        return {
+          url:             `${BASE}/imoveis/${b.id}`,
+          lastModified:    safeIso(b.updated_at, now),
+          changeFrequency: 'weekly' as const,
+          priority:        emFoco ? 0.85 : 0.7,
+        };
+      });
 
       // Páginas de bairro — uma por bairro único do catálogo
       const slugsSeen = new Set<string>();
