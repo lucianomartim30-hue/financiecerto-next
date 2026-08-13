@@ -40,12 +40,27 @@ export async function getImoveisDestaque(limit = 6): Promise<ImovelDestaque[]> {
     let picks = catalog.filter(b =>
       normalize(b.city || '') === 'sao paulo' &&
       ZONA_SUL_OESTE.has(normalize(b.neighborhood || '')) &&
+      b.finality_norm !== 'comercial' &&
       !!b.photo,
     );
     picks = filterBreveLancamento(picks).filter(temPrecoReal);
-    picks.sort((a, b) => (b.min_price ?? 0) - (a.min_price ?? 0));
+    picks.sort((a, b) => (a.min_price ?? 0) - (b.min_price ?? 0));
 
-    return picks.slice(0, limit).map(b => ({
+    // Amostragem espalhada pela faixa de preço (não só os mais caros nem só
+    // os mais baratos) — pega posições distribuídas ao longo da lista já
+    // ordenada, pra mostrar variedade real de padrão na vitrine da home.
+    const n = picks.length;
+    const chosen: typeof picks = [];
+    if (n <= limit) {
+      chosen.push(...picks);
+    } else {
+      for (let i = 0; i < limit; i++) {
+        const idx = Math.floor(((i + 0.5) / limit) * n);
+        chosen.push(picks[Math.min(idx, n - 1)]);
+      }
+    }
+
+    return chosen.map(b => ({
       id: b.id,
       name: b.name,
       neighborhood: b.neighborhood,
