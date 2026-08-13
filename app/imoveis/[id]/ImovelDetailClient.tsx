@@ -1326,7 +1326,7 @@ function SecaoVistosRecentemente({ currentId }: { currentId: string }) {
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>🏢</div>
                 )}
-                <div style={{ position: 'absolute', top: '7px', left: '7px', background: sc.bg, color: sc.cor, border: `1px solid ${sc.cor}33`, borderRadius: '20px', padding: '2px 8px', fontSize: '9px', fontWeight: '700' }}>
+                <div style={{ position: 'absolute', top: '7px', left: '7px', background: sc.cor, color: '#fff', borderRadius: '6px', padding: '3px 7px', fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                   {sc.label}
                 </div>
               </div>
@@ -1457,7 +1457,7 @@ function SecaoRelacionados({
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>🏢</div>
                 )}
-                <div style={{ position: 'absolute', top: '10px', left: '10px', background: sc.bg, color: sc.cor, border: `1px solid ${sc.cor}33`, borderRadius: '20px', padding: '3px 10px', fontSize: '10px', fontWeight: '700' }}>
+                <div style={{ position: 'absolute', top: '10px', left: '10px', background: sc.cor, color: '#fff', borderRadius: '6px', padding: '3px 8px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                   {sc.label}
                 </div>
               </div>

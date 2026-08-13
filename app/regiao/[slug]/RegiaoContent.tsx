@@ -100,11 +100,10 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
           background: 'linear-gradient(to top, rgba(0,0,0,.6) 0%, transparent 100%)',
           pointerEvents: 'none' }} />
         {b.status && (
-          <div style={{ position: 'absolute', top: '10px', left: '10px',
-            background: statusCfg.bg, backdropFilter: 'blur(8px)',
-            border: `1px solid ${statusCfg.cor}50`, color: statusCfg.cor,
-            fontSize: '9px', fontWeight: '800', padding: '3px 8px',
-            borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+          <div style={{ position: 'absolute', top: '7px', left: '7px',
+            background: statusCfg.cor, color: '#fff',
+            fontSize: '9px', fontWeight: '800', padding: '3px 7px',
+            borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
             {statusCfg.label}
           </div>
         )}

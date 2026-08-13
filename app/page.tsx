@@ -237,7 +237,7 @@ export default async function Home() {
                       {im.photo && (
                         <img src={im.photo} alt={im.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                       )}
-                      <span style={{ position: 'absolute', top: '10px', left: '10px', background: cfg.bg, color: cfg.cor, fontSize: '10px', fontWeight: '800', padding: '4px 10px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.5px', backdropFilter: 'blur(6px)' }}>
+                      <span style={{ position: 'absolute', top: '7px', left: '7px', background: cfg.cor, color: '#fff', fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                         {cfg.label}
                       </span>
                     </div>
