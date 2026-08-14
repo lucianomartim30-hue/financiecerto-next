@@ -136,6 +136,14 @@ export const REGIONS: Region[] = [
     neighborhoods: [],
     cities: ['Porto Alegre', 'Capão da Canoa'],
   },
+  {
+    slug: 'rio-de-janeiro',
+    name: 'Rio de Janeiro',
+    article: 'no',
+    city: 'Rio de Janeiro',
+    state: 'RJ',
+    neighborhoods: [],
+  },
 ];
 
 export function slugToRegion(slug: string): Region | null {

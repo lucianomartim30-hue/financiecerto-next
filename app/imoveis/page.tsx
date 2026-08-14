@@ -64,6 +64,8 @@ const SP_BAIRROS: string[] = [
   'Curitiba',
   // Rio Grande do Sul
   'Porto Alegre','Capão da Canoa',
+  // Rio de Janeiro
+  'Rio de Janeiro',
 ];
 
 // Normaliza string para comparação: minúsculo, sem acentos

@@ -32,9 +32,12 @@ const CURITIBA = new Set(['curitiba']);
 // ── Rio Grande do Sul — capital + litoral norte ───────────────────────────────
 const RIO_GRANDE_DO_SUL = new Set(['porto alegre', 'capão da canoa']);
 
-// Municípios liberados a aparecer no catálogo (Grande SP + outras praças + SC + PR + RS).
+// ── Rio de Janeiro (RJ) ────────────────────────────────────────────────────────
+const RIO_DE_JANEIRO = new Set(['rio de janeiro']);
+
+// Municípios liberados a aparecer no catálogo (Grande SP + outras praças + SC + PR + RS + RJ).
 export const CIDADES_LIBERADAS = new Set([
-  ...GRANDE_SP, ...OUTRAS_PRACAS, ...SANTA_CATARINA, ...CURITIBA, ...RIO_GRANDE_DO_SUL,
+  ...GRANDE_SP, ...OUTRAS_PRACAS, ...SANTA_CATARINA, ...CURITIBA, ...RIO_GRANDE_DO_SUL, ...RIO_DE_JANEIRO,
 ]);
 
 /**
