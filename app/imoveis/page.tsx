@@ -13,7 +13,14 @@ import { getStatusCfg } from '@/lib/status';
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 const SalvarBuscaModal = dynamic(() => import('@/components/SalvarBuscaModal'), { ssr: false });
 
-// ─── Lista estática de bairros de São Paulo (para autocomplete completo) ───────
+// ─── Lista estática de bairros da cidade de São Paulo (capital) — usada para
+// completar o autocomplete mesmo em bairros sem imóveis no catálogo ainda.
+// IMPORTANTE: só bairros reais da capital entram aqui. Nomes de outras cidades
+// (Grande SP, Campinas, litoral de SC, Curitiba, RS, RJ...) NÃO podem estar
+// nesta lista — antes ficavam todos juntos numa lista só, o que fazia um bairro
+// "Centro" buscado em São Paulo poder resolver para o Centro de outra cidade
+// (ex: Porto Alegre) só porque os nomes coincidiam. Ver CIDADES_BUSCA abaixo
+// para a lista de cidades — a busca agora sempre escolhe cidade primeiro.
 const SP_BAIRROS: string[] = [
   // Centro / Centro Expandido
   'Bela Vista','Bom Retiro','Brás','Cambuci','Consolação','Higienópolis',
@@ -48,24 +55,27 @@ const SP_BAIRROS: string[] = [
   'Vila Carrão','Vila Constância','Artur Alvim','Cidade Patriarca',
   'Guaianases','Itaquera','José Bonifácio','Parque São Lucas',
   'São Mateus','Vila Jacuí','Iguatemi','Jardim Anália Franco',
-  // Grande SP
-  'Alphaville','Barueri','Osasco','Guarulhos','São Caetano do Sul',
-  'Santo André','São Bernardo do Campo','Diadema','Mauá','Carapicuíba',
-  'Cotia','Embu das Artes','Granja Viana','Taboão da Serra',
-  'Poá','Ribeirão Pires','Suzano','Ferraz de Vasconcelos',
-  'Santana de Parnaíba','Itaquaquecetuba','Mogi das Cruzes',
-  'Jandira','Itapevi','Vargem Grande Paulista',
-  // Região de Campinas
-  'Campinas','Hortolândia','Americana','Paulínia','Valinhos',
-  "Santa Bárbara D'Oeste",
-  // Santa Catarina
-  'Itapema','Porto Belo','Balneário Camboriú','Itajaí','Bombinhas','Florianópolis',
-  // Curitiba
-  'Curitiba',
-  // Rio Grande do Sul
-  'Porto Alegre','Capão da Canoa',
-  // Rio de Janeiro
-  'Rio de Janeiro',
+];
+
+// ─── Cidades onde o portal atua, agrupadas por região — alimenta o seletor de
+// cidade da busca. A pessoa escolhe a cidade primeiro; só depois os bairros
+// daquela cidade (com imóveis) aparecem — evita a ambiguidade de bairros com
+// o mesmo nome em cidades diferentes (ex: "Centro" existe em várias).
+const CIDADES_BUSCA: { grupo: string; cidades: string[] }[] = [
+  { grupo: 'São Paulo (capital)', cidades: ['São Paulo'] },
+  {
+    grupo: 'Grande São Paulo', cidades: [
+      'Guarulhos','Osasco','Santo André','São Bernardo do Campo','São Caetano do Sul',
+      'Diadema','Mauá','Carapicuíba','Cotia','Embu das Artes','Barueri','Taboão da Serra',
+      'Poá','Ribeirão Pires','Suzano','Ferraz de Vasconcelos','Santana de Parnaíba',
+      'Itaquaquecetuba','Mogi das Cruzes','Jandira','Itapevi','Vargem Grande Paulista',
+    ],
+  },
+  { grupo: 'Região de Campinas', cidades: ['Campinas','Hortolândia','Americana','Paulínia','Valinhos',"Santa Bárbara D'Oeste"] },
+  { grupo: 'Santa Catarina', cidades: ['Florianópolis','Itajaí','Bombinhas','Itapema','Balneário Camboriú','Porto Belo'] },
+  { grupo: 'Paraná', cidades: ['Curitiba'] },
+  { grupo: 'Rio Grande do Sul', cidades: ['Porto Alegre','Capão da Canoa'] },
+  { grupo: 'Rio de Janeiro', cidades: ['Rio de Janeiro'] },
 ];
 
 // Normaliza string para comparação: minúsculo, sem acentos
@@ -247,6 +257,11 @@ function ImoveisContent() {
   // vindos do simulador usam para pré-aplicar o bairro escolhido — os dois caem no mesmo filtro.
   const [activeLocation, setActiveLocation] = useState(searchParams.get('q') || searchParams.get('neighborhood') || '');
 
+  // Cidade escolhida para a busca por bairro — sempre um valor concreto (nunca
+  // "todas"), pra que o bairro digitado/selecionado só possa casar com imóveis
+  // dessa cidade. Ver CIDADES_BUSCA acima.
+  const [searchCity, setSearchCity] = useState(searchParams.get('city') || 'São Paulo');
+
   // ── Padrão por região (geo por IP, sem pedir permissão do navegador) ───────
   // Só entra em jogo em uma visita "fria" — sem nenhum filtro/busca já na URL —
   // pra não sobrepor um link específico que alguém tenha compartilhado.
@@ -323,12 +338,19 @@ function ImoveisContent() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Atualiza sugestões ao digitar
-  // Mescla lista estática completa + bairros do catálogo (para mostrar todos, não só os com imóveis)
+  // Atualiza sugestões ao digitar — SEMPRE restrito à cidade escolhida em
+  // searchCity, pra nunca misturar bairros de cidades diferentes com o mesmo
+  // nome (ex: "Centro" em SP vs. Porto Alegre).
   const allNeighborhoods = useMemo(() => {
-    const fromCatalog = allBuildings.map(b => b.neighborhood).filter(Boolean);
+    const fromCatalog = allBuildings
+      .filter(b => normStr(b.city || '') === normStr(searchCity))
+      .map(b => b.neighborhood).filter(Boolean);
     const merged = new Map<string, boolean>(); // key=normStr → has catalog properties
-    SP_BAIRROS.forEach(nb => merged.set(normStr(nb), false));
+    // Backfill de bairros sem imóveis ainda só existe para a capital (única
+    // cidade com lista curada) — nas demais, mostra só o que tem no catálogo.
+    if (normStr(searchCity) === normStr('São Paulo')) {
+      SP_BAIRROS.forEach(nb => merged.set(normStr(nb), false));
+    }
     fromCatalog.forEach(nb => {
       const k = normStr(nb);
       merged.set(k, true);        // marca como "tem imóveis"
@@ -339,7 +361,7 @@ function ImoveisContent() {
       name: catalogByNorm.get(k) || SP_BAIRROS.find(nb => normStr(nb) === k) || k,
       hasCatalog: merged.get(k) ?? false,
     })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [allBuildings]);
+  }, [allBuildings, searchCity]);
 
   const filteredSuggestions = useMemo(() => {
     if (!deferredSearch.trim()) return [] as { name: string; hasCatalog: boolean }[];
@@ -391,10 +413,15 @@ function ImoveisContent() {
   useEffect(() => { if (!activeLocation) setDisplayCount(12); }, [debouncedBounds, activeLocation]);
 
   const baseFilter = useCallback((b: Imovel) => {
-    // ── Filtro de localização (bairro / cidade digitado pelo usuário) ──────────
+    // ── Filtro de localização (bairro digitado/selecionado pelo usuário) ───────
+    // Sempre restrito à cidade escolhida em searchCity — sem isso, um bairro
+    // buscado em São Paulo (ex: "Centro") podia casar com o mesmo nome de
+    // bairro em outra cidade (ex: Centro de Porto Alegre) e mostrar o lugar
+    // errado no mapa/lista.
     if (activeLocation) {
+      if (normStr(b.city || '') !== normStr(searchCity)) return false;
       const q = normStr(activeLocation);
-      const haystack = normStr(`${b.neighborhood} ${b.city} ${b.name}`);
+      const haystack = normStr(`${b.neighborhood} ${b.name}`);
       if (!haystack.includes(q)) return false;
     }
     // ── Padrão por região (geo por IP) — só quando a pessoa não buscou nada ────
@@ -426,7 +453,7 @@ function ImoveisContent() {
     }
     if (filterTipologia && !(b.property_types || []).includes(filterTipologia)) return false;
     return true;
-  }, [activeLocation, geoAtivo, geoCities, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
+  }, [activeLocation, searchCity, geoAtivo, geoCities, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
 
   // Conta quantos imóveis existem para cada tipo de finalidade no catálogo
   const finalityCounts = useMemo(() => {
@@ -508,9 +535,11 @@ function ImoveisContent() {
     return base;
   }, [allBuildings, baseFilter, activeLocation, debouncedBounds, isMobile, mobileView]);
 
-  const geocodeAndFly = useCallback(async (query: string) => {
+  const geocodeAndFly = useCallback(async (query: string, cityOverride?: string) => {
     if (!query.trim()) return;
     setShowSuggestions(false);
+
+    const cidade = cityOverride ?? searchCity;
 
     // Commita a localização → filtra cards imediatamente
     setActiveLocation(query.trim());
@@ -518,11 +547,18 @@ function ImoveisContent() {
 
     // GA4 — evento de busca de empreendimentos
     const qNorm = normStr(query);
-    const resultados = allBuildings.filter(b => normStr(`${b.neighborhood} ${b.city} ${b.name}`).includes(qNorm)).length;
-    import('@/lib/gtag').then(m => m.trackBusca({ termo: query, resultados }));
+    const cidadeNorm = normStr(cidade);
+    const resultados = allBuildings.filter(b => normStr(b.city || '') === cidadeNorm && normStr(`${b.neighborhood} ${b.name}`).includes(qNorm)).length;
+    import('@/lib/gtag').then(m => m.trackBusca({ termo: `${query} (${cidade})`, resultados }));
 
-    // 1. Tenta usar coordenadas de um imóvel do catálogo no mesmo bairro (instantâneo)
-    const catalogMatch = allBuildings.find(b => b.lat && b.lng && normStr(b.neighborhood + ' ' + b.city).includes(qNorm));
+    // 1. Tenta usar coordenadas de um imóvel do catálogo no mesmo bairro E cidade
+    // (instantâneo) — restringe por cidade pra não "voar" pro bairro de mesmo
+    // nome em outra cidade (ex: Centro de SP vs. Centro de Porto Alegre).
+    const catalogMatch = allBuildings.find(b =>
+      b.lat && b.lng &&
+      normStr(b.city || '') === cidadeNorm &&
+      normStr(b.neighborhood || '').includes(qNorm),
+    );
     if (catalogMatch) {
       mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 13);
       return;
@@ -531,14 +567,14 @@ function ImoveisContent() {
     // 2. Fallback: Nominatim (para bairros sem imóveis no catálogo)
     setGeocoding(true);
     try {
-      const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', São Paulo, Brasil')}&format=json&limit=3&countrycodes=br&accept-language=pt-BR`);
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query + ', ' + cidade + ', Brasil')}&format=json&limit=3&countrycodes=br&accept-language=pt-BR`);
       const data = await r.json();
       if (data.length > 0) {
         mapRef.current?.flyTo(parseFloat(data[0].lat), parseFloat(data[0].lon), 13);
       }
     } catch { /* silencioso */ }
     finally { setGeocoding(false); }
-  }, [allBuildings]);
+  }, [allBuildings, searchCity]);
 
   // Commit de busca a partir do modal mobile
   const commitMobileSearch = useCallback((name: string) => {
@@ -696,7 +732,7 @@ function ImoveisContent() {
                   }
                   if (e.key === 'Escape') { setShowMobileSearch(false); setMobileSearchInput(''); }
                 }}
-                placeholder="Bairro ou cidade..."
+                placeholder="Bairro..."
                 style={{
                   flex: 1, height: '46px', border: 'none', outline: 'none',
                   background: 'transparent',
@@ -713,11 +749,36 @@ function ImoveisContent() {
             </div>
           </div>
 
+          {/* Passo 1: escolher a cidade — os bairros abaixo são sempre da cidade
+              selecionada aqui, pra nunca misturar bairros de mesmo nome em
+              cidades diferentes (ex: Centro de SP vs. Centro de Porto Alegre) */}
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: '#6b7280', flexShrink: 0 }}>Cidade</span>
+            <select
+              value={searchCity}
+              onChange={e => {
+                setSearchCity(e.target.value);
+                setMobileSearchInput(''); setSearch(''); setActiveLocation('');
+              }}
+              style={{
+                flex: 1, height: '38px', borderRadius: '8px', border: '1.5px solid #e5e7eb',
+                background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '14px',
+                fontWeight: '600', padding: '0 8px',
+              }}
+            >
+              {CIDADES_BUSCA.map(grupo => (
+                <optgroup key={grupo.grupo} label={grupo.grupo}>
+                  {grupo.cidades.map(c => <option key={c} value={c}>{c}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
           {/* Lista de sugestões */}
           <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
             {!mobileSearchInput && (
               <div style={{ padding: '14px 16px 6px', fontSize: '11px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                Bairros com imóveis
+                Bairros com imóveis em {searchCity}
               </div>
             )}
             {mobileSuggestions.map(nb => (
@@ -877,15 +938,35 @@ function ImoveisContent() {
               </span>
             </button>
           ) : (
-            /* Desktop: input com autocomplete inline */
+            /* Desktop: seletor de cidade + input com autocomplete inline */
             <>
               <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid rgba(255,255,255,.2)' }}>
+                <select
+                  value={searchCity}
+                  onChange={e => {
+                    const cidade = e.target.value;
+                    setSearchCity(cidade);
+                    setSearch(''); setActiveLocation(''); setShowSuggestions(false);
+                  }}
+                  title="Escolha a cidade antes de buscar o bairro"
+                  style={{
+                    height: '34px', border: 'none', outline: 'none', borderRight: '1px solid rgba(255,255,255,.2)',
+                    background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '12px',
+                    fontWeight: '700', padding: '0 6px', maxWidth: '108px', cursor: 'pointer',
+                  }}
+                >
+                  {CIDADES_BUSCA.map(grupo => (
+                    <optgroup key={grupo.grupo} label={grupo.grupo}>
+                      {grupo.cidades.map(c => <option key={c} value={c}>{c}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
                   <input
                     type="text" value={search}
                     onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
-                    placeholder="Bairro ou cidade"
+                    placeholder="Bairro"
                     onKeyDown={e => {
                       if (e.key === 'Enter') { inputRef.current?.blur(); geocodeAndFly(search); }
                       if (e.key === 'Escape') { setShowSuggestions(false); inputRef.current?.blur(); }
@@ -893,7 +974,7 @@ function ImoveisContent() {
                     onFocus={e => { e.currentTarget.style.background = 'rgba(255,255,255,.15)'; setShowSuggestions(true); }}
                     onBlur={e => { e.currentTarget.style.background = 'rgba(255,255,255,.08)'; }}
                     ref={inputRef}
-                    style={{ width: '190px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '13px' }}
+                    style={{ width: '150px', paddingLeft: '28px', paddingRight: search ? '24px' : '6px', height: '34px', border: 'none', outline: 'none', background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '13px' }}
                   />
                 </div>
                 {search && (
@@ -1092,7 +1173,7 @@ function ImoveisContent() {
               <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text)' }}>
                 {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis`}
                 <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
-                  {activeLocation ? `em ${activeLocation}` : 'em São Paulo'}
+                  {activeLocation ? `em ${activeLocation}, ${searchCity}` : 'em São Paulo'}
                 </span>
               </span>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
