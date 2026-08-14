@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kvGetLeads, kvAddLead, type LeadSimulacao, type LeadCenarioProposta, type LeadAtribuicao, type LeadConversao } from '@/lib/leads-kv';
+import { kvGetLeads, kvAddLead, type LeadSimulacao, type LeadCenarioProposta, type LeadAtribuicao, type LeadConversao, type LeadContato } from '@/lib/leads-kv';
 import { sessionToken } from '../admin-auth/route';
 
 const COOKIE_NAME = 'admin_leads_session';
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { imovelId, imovelName, bairro, cidade, preco, oruloUrl, simulacao, cenarioProposta, favoritosCount, favoritosIds, atribuicao, conversao } = body ?? {};
+    const { imovelId, imovelName, bairro, cidade, preco, oruloUrl, simulacao, cenarioProposta, favoritosCount, favoritosIds, atribuicao, conversao, contato } = body ?? {};
 
     if (!imovelId || !imovelName) {
       return NextResponse.json({ error: 'Dados incompletos.' }, { status: 400 });
@@ -93,6 +93,19 @@ export async function POST(req: NextRequest) {
           }
         : null;
 
+    // Contato do formulário (fora do estado de SP) — nome e whatsapp são
+    // obrigatórios pro registro fazer sentido; email é opcional.
+    const contatoValido: LeadContato | null =
+      contato && typeof contato === 'object' &&
+      typeof contato.nome === 'string' && contato.nome.trim() &&
+      typeof contato.whatsapp === 'string' && contato.whatsapp.replace(/\D/g, '').length >= 10
+        ? {
+            nome:     String(contato.nome).trim().slice(0, 120),
+            email:    contato.email ? String(contato.email).trim().slice(0, 160) : '',
+            whatsapp: String(contato.whatsapp).replace(/\D/g, '').slice(0, 13),
+          }
+        : null;
+
     const lead = await kvAddLead({
       imovelId:   String(imovelId),
       imovelName: String(imovelName),
@@ -106,6 +119,7 @@ export async function POST(req: NextRequest) {
       favoritosIds:    favoritosIdsValidos,
       atribuicao:      atribuicaoValida,
       conversao:       conversaoValida,
+      contato:         contatoValido,
     });
 
     if (!lead) {

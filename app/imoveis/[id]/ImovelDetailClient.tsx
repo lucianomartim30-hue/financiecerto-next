@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, type FaixaMCMV } from '@/lib/calculos';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
@@ -11,7 +11,7 @@ import FavoritoButton from '@/components/FavoritoButton';
 import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
 import { getPrimeiraOrigem, buildConversao } from '@/lib/atribuicao';
 import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
-import { ofereceAgendarVisita } from '@/lib/atende-presencial';
+import { ofereceAgendarVisita, precisaFormularioContato } from '@/lib/atende-presencial';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -665,6 +665,110 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Formulário de interesse — substitui o WhatsApp fora do estado de SP (ver
+// precisaFormularioContato). Sem clique de WhatsApp, o único jeito de capturar
+// o contato é pedir aqui; o registro fica em /admin/leads pro corretor decidir
+// depois se vale repassar pra incorporadora local ou atender.
+// ─────────────────────────────────────────────────────────────────────────────
+function fmtTelefone(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 2)  return d;
+  if (d.length <= 6)  return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+function LeadFormInteresse({ imovel, posicao, dark }: { imovel: ImovelDetalhe; posicao: 'topo' | 'sidebar'; dark?: boolean }) {
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+  const [erro, setErro] = useState('');
+
+  async function enviar() {
+    const digits = whatsapp.replace(/\D/g, '');
+    if (nome.trim().length < 2 || digits.length < 10) {
+      setErro('Preencha nome e WhatsApp (com DDD).');
+      return;
+    }
+    if (email.trim() && !/\S+@\S+\.\S+/.test(email.trim())) {
+      setErro('E-mail inválido.');
+      return;
+    }
+    setErro('');
+    setEnviando(true);
+    try {
+      const favoritosCount = getFavoritosCount();
+      const favoritosIds = getFavoritoIds();
+      const atribuicao = getPrimeiraOrigem();
+      const conversao = buildConversao({ imovelId: imovel.id, action: `formulario_${posicao}` });
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imovelId: imovel.id, imovelName: imovel.name,
+          bairro: imovel.neighborhood, cidade: imovel.city,
+          preco: imovel.min_price, oruloUrl: imovel.sharing_url,
+          favoritosCount, favoritosIds, atribuicao, conversao,
+          contato: { nome: nome.trim(), email: email.trim(), whatsapp: digits },
+        }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.ok) {
+        setEnviado(true);
+        const { trackLeadCriado } = await import('@/lib/gtag');
+        trackLeadCriado({ imovelId: imovel.id, imovel: imovel.name, origem: atribuicao?.first_source });
+      } else {
+        setErro('Não foi possível enviar. Tente novamente.');
+      }
+    } catch {
+      setErro('Não foi possível enviar. Tente novamente.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  if (enviado) {
+    return (
+      <div style={{
+        background: dark ? 'rgba(34,197,94,.15)' : '#E1F5EE',
+        border: `1px solid ${dark ? 'rgba(34,197,94,.4)' : '#A7F3D0'}`,
+        borderRadius: '12px', padding: '14px 16px', textAlign: 'center',
+      }}>
+        <p style={{ fontSize: '13px', fontWeight: '700', color: dark ? '#4ADE80' : '#085041' }}>
+          ✅ Recebemos seus dados! Em breve entraremos em contato.
+        </p>
+      </div>
+    );
+  }
+
+  const corTexto      = dark ? '#fff' : 'var(--text)';
+  const corTextoFraca = dark ? 'rgba(255,255,255,.6)' : 'var(--text-faint)';
+  const bgInput        = dark ? 'rgba(255,255,255,.08)' : 'var(--bg)';
+  const borderInput     = dark ? '1.5px solid rgba(255,255,255,.2)' : '1.5px solid var(--border)';
+  const inputStyle: CSSProperties = {
+    padding: '10px 12px', borderRadius: '10px', border: borderInput,
+    background: bgInput, color: corTexto, fontSize: '13px', fontFamily: 'inherit',
+    outline: 'none', boxSizing: 'border-box', width: '100%',
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: posicao === 'topo' ? '280px' : '100%' }}>
+      <input type="text" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome" style={inputStyle} />
+      <input type="text" inputMode="tel" value={whatsapp} onChange={e => setWhatsapp(fmtTelefone(e.target.value))} placeholder="WhatsApp com DDD" style={inputStyle} />
+      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail (opcional)" style={inputStyle} />
+      {erro && <p style={{ fontSize: '11px', color: dark ? '#fca5a5' : '#dc2626', margin: 0 }}>{erro}</p>}
+      <button onClick={enviar} disabled={enviando}
+        style={{ background: '#25D366', color: '#fff', border: 'none', borderRadius: '10px', padding: '11px', fontSize: '13px', fontWeight: '700', cursor: enviando ? 'default' : 'pointer', opacity: enviando ? 0.7 : 1 }}>
+        {enviando ? 'Enviando...' : '📩 Quero receber informações'}
+      </button>
+      <p style={{ fontSize: '10px', color: corTextoFraca, textAlign: 'center', margin: 0 }}>Sem custo — retornamos por WhatsApp ou e-mail.</p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Bloco Financeiro — card lateral sticky (diferencial FinancieCerto)
 // ─────────────────────────────────────────────────────────────────────────────
 function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: ImovelDetalhe; valorOverride?: number; tipologiaLabel?: string }) {
@@ -738,6 +842,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
 
   const urlImovel = typeof window !== 'undefined' ? window.location.href : '';
   const atendeVisita = ofereceAgendarVisita(imovel.city, imovel.min_price);
+  const foraDoEstadoSP = precisaFormularioContato(imovel.state);
   const waMsg = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovel}`);
   const waMsgVisita = encodeURIComponent(`Olá! Gostaria de agendar uma visita ao imóvel *${imovel.name}* que vi no FinancieCerto.\n${urlImovel}`);
 
@@ -992,27 +1097,38 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
           </>
         )}
 
-        {/* CTA WhatsApp — "Agendar visita" some ADEMAIS de "Falar com consultor" em SP/Grande SP com preço já publicado */}
-        {atendeVisita && (
-          <a href={`https://wa.me/5511933661403?text=${waMsgVisita}`} target="_blank" rel="noopener noreferrer"
-            onClick={() => {
-              import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'sidebar-visita', pagina: '/imoveis/[id]' }));
-              registrarLead(imovel, 'sidebar');
-            }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
-            <span>📅</span> Agendar visita
-          </a>
+        {/* CTA de contato — fora do estado de SP vira formulário (o corretor não
+            atende presencialmente nem fecha sozinho fora de SP); dentro de SP
+            mantém WhatsApp, com "Agendar visita" ADEMAIS de "Falar com consultor"
+            em SP/Grande SP com preço já publicado. */}
+        {foraDoEstadoSP ? (
+          <div style={{ marginTop: '10px' }}>
+            <LeadFormInteresse imovel={imovel} posicao="sidebar" />
+          </div>
+        ) : (
+          <>
+            {atendeVisita && (
+              <a href={`https://wa.me/5511933661403?text=${waMsgVisita}`} target="_blank" rel="noopener noreferrer"
+                onClick={() => {
+                  import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'sidebar-visita', pagina: '/imoveis/[id]' }));
+                  registrarLead(imovel, 'sidebar');
+                }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
+                <span>📅</span> Agendar visita
+              </a>
+            )}
+            <a href={`https://wa.me/5511933661403?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
+              onClick={() => {
+                import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'sidebar', pagina: '/imoveis/[id]' }));
+                registrarLead(imovel, 'sidebar');
+              }}
+              style={atendeVisita
+                ? { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: 'transparent', color: 'var(--text-muted)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '11px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '8px' }
+                : { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
+              <span>💬</span> Falar com consultor
+            </a>
+          </>
         )}
-        <a href={`https://wa.me/5511933661403?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
-          onClick={() => {
-            import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'sidebar', pagina: '/imoveis/[id]' }));
-            registrarLead(imovel, 'sidebar');
-          }}
-          style={atendeVisita
-            ? { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: 'transparent', color: 'var(--text-muted)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '11px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '8px' }
-            : { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
-          <span>💬</span> Falar com consultor
-        </a>
       </div>
     </div>
   );
@@ -1612,6 +1728,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
 
   const urlImovelTopo = typeof window !== 'undefined' ? window.location.href : '';
   const atendeVisitaTopo = ofereceAgendarVisita(imovel.city, imovel.min_price);
+  const foraDoEstadoSPTopo = precisaFormularioContato(imovel.state);
   const waMsgTopo = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovelTopo}`);
   const waMsgTopoVisita = encodeURIComponent(`Olá! Gostaria de agendar uma visita ao imóvel *${imovel.name}* que vi no FinancieCerto.\n${urlImovelTopo}`);
 
@@ -1725,30 +1842,36 @@ export default function ImovelDetailClient({ id }: { id: string }) {
           <div>
             <p style={{ fontSize: '15px', fontWeight: '800', color: '#fff', marginBottom: '2px' }}>Interessado neste imóvel?</p>
             <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.75)' }}>
-              {atendeVisitaTopo ? 'Agende uma visita ou fale com um consultor pelo WhatsApp' : 'Fale agora com um consultor pelo WhatsApp'}
+              {foraDoEstadoSPTopo ? 'Deixe seus dados que entramos em contato' : atendeVisitaTopo ? 'Agende uma visita ou fale com um consultor pelo WhatsApp' : 'Fale agora com um consultor pelo WhatsApp'}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '10px', flexShrink: 0, flexWrap: 'wrap' }}>
-            {atendeVisitaTopo && (
-              <a href={`https://wa.me/5511933661403?text=${waMsgTopoVisita}`} target="_blank" rel="noopener noreferrer"
-                onClick={() => {
-                  import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'topo-visita', pagina: '/imoveis/[id]' }));
-                  registrarLead(imovel, 'topo');
-                }}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                <span>📅</span> Agendar visita
-              </a>
+            {foraDoEstadoSPTopo ? (
+              <LeadFormInteresse imovel={imovel} posicao="topo" dark />
+            ) : (
+              <>
+                {atendeVisitaTopo && (
+                  <a href={`https://wa.me/5511933661403?text=${waMsgTopoVisita}`} target="_blank" rel="noopener noreferrer"
+                    onClick={() => {
+                      import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'topo-visita', pagina: '/imoveis/[id]' }));
+                      registrarLead(imovel, 'topo');
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    <span>📅</span> Agendar visita
+                  </a>
+                )}
+                <a href={`https://wa.me/5511933661403?text=${waMsgTopo}`} target="_blank" rel="noopener noreferrer"
+                  onClick={() => {
+                    import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'topo', pagina: '/imoveis/[id]' }));
+                    registrarLead(imovel, 'topo');
+                  }}
+                  style={atendeVisitaTopo
+                    ? { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,.4)', borderRadius: '12px', padding: '11px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }
+                    : { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  <span>💬</span> Falar com consultor
+                </a>
+              </>
             )}
-            <a href={`https://wa.me/5511933661403?text=${waMsgTopo}`} target="_blank" rel="noopener noreferrer"
-              onClick={() => {
-                import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'topo', pagina: '/imoveis/[id]' }));
-                registrarLead(imovel, 'topo');
-              }}
-              style={atendeVisitaTopo
-                ? { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,.4)', borderRadius: '12px', padding: '11px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }
-                : { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-              <span>💬</span> Falar com consultor
-            </a>
           </div>
         </div>
       </div>

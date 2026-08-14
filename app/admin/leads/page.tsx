@@ -141,7 +141,7 @@ export default function AdminLeadsPage() {
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text)', margin: 0 }}>Leads — FinancieCerto</h1>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            {leads.length} lead{leads.length !== 1 ? 's' : ''} registrado{leads.length !== 1 ? 's' : ''} automaticamente pelos cliques de WhatsApp
+            {leads.length} lead{leads.length !== 1 ? 's' : ''} registrado{leads.length !== 1 ? 's' : ''} automaticamente (clique no WhatsApp ou formulário de contato)
           </p>
         </div>
         <button onClick={carregar} style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text-muted)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
@@ -204,6 +204,19 @@ export default function AdminLeadsPage() {
                 )}
               </div>
             </div>
+
+            {lead.contato && (
+              <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(37,99,235,.06)', border: '1.5px solid rgba(37,99,235,.25)', borderRadius: '10px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text)' }}>👤 {lead.contato.nome}</span>
+                {lead.contato.whatsapp && (
+                  <a href={`https://wa.me/55${lead.contato.whatsapp}`} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '12px', fontWeight: '700', color: '#16a34a', textDecoration: 'none' }}>
+                    📱 {lead.contato.whatsapp} →
+                  </a>
+                )}
+                {lead.contato.email && <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>✉️ {lead.contato.email}</span>}
+              </div>
+            )}
 
             {(lead.simulacao || lead.cenarioProposta || typeof lead.favoritosCount === 'number' || lead.atribuicao || lead.conversao) && (
               <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>

@@ -53,6 +53,18 @@ export interface LeadConversao {
   conversion_action: string;
 }
 
+/**
+ * Dados de contato preenchidos no formulário — usado só fora do estado de SP,
+ * onde não existe clique de WhatsApp (o corretor não atende presencialmente
+ * nem fecha sozinho fora de SP, então o número dele não fica exposto; o
+ * contato vira um registro que ele decide depois se vale repassar/atender).
+ */
+export interface LeadContato {
+  nome: string;
+  email: string;
+  whatsapp: string;
+}
+
 export interface Lead {
   id: string;
   imovelId: string;
@@ -72,6 +84,9 @@ export interface Lead {
   favoritosIds?: string[];
   atribuicao?: LeadAtribuicao | null;
   conversao?: LeadConversao | null;
+  // Só presente em leads vindos do formulário (fora do estado de SP) — leads de
+  // clique de WhatsApp não têm esse dado (a conversa acontece direto no WhatsApp).
+  contato?: LeadContato | null;
 }
 
 const KV_LEADS_KEY = 'leads:list';
@@ -109,6 +124,7 @@ export async function kvAddLead(
     favoritosIds?: string[];
     atribuicao?: LeadAtribuicao | null;
     conversao?: LeadConversao | null;
+    contato?: LeadContato | null;
   },
 ): Promise<Lead | null> {
   const kv = await getKv();
