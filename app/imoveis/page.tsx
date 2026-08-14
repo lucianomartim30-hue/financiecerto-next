@@ -580,6 +580,15 @@ function ImoveisContent() {
 
   // Descrição amigável da busca atual — usada no modal "Salvar esta busca" (Fase 3)
   const [showSalvarBusca, setShowSalvarBusca] = useState(false);
+  const [showAlertaHint, setShowAlertaHint] = useState(false);
+  const clicarAlerta = useCallback(() => {
+    if (hasFilters) {
+      setShowSalvarBusca(true);
+    } else {
+      setShowAlertaHint(true);
+      setTimeout(() => setShowAlertaHint(false), 3500);
+    }
+  }, [hasFilters]);
   const descricaoFiltrosAtual = [
     activeLocation || null,
     filterBedrooms ? `${filterBedrooms}+ quartos` : null,
@@ -1032,23 +1041,35 @@ function ImoveisContent() {
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
               {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis em SP`}
             </span>
-            <button
-              onClick={() => { if (hasFilters) setShowSalvarBusca(true); }}
-              title={hasFilters ? 'Ser avisado quando entrar imóvel parecido' : 'Aplique um filtro (bairro, preço, quartos...) para ativar um alerta'}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '800',
-                color: hasFilters ? '#fff' : 'var(--text-faint)',
-                background: hasFilters ? 'linear-gradient(135deg, var(--primary), var(--accent))' : 'var(--bg)',
-                border: hasFilters ? 'none' : '1px dashed var(--border)',
-                borderRadius: '20px', padding: '6px 12px',
-                cursor: hasFilters ? 'pointer' : 'default',
-                opacity: hasFilters ? 1 : 0.75,
-                whiteSpace: 'nowrap', flexShrink: 0,
-                boxShadow: hasFilters ? '0 2px 8px rgba(37,99,235,.35)' : 'none',
-              }}
-            >
-              🔔 Ativar alerta
-            </button>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={clicarAlerta}
+                title={hasFilters ? 'Ser avisado quando entrar imóvel parecido' : 'Aplique um filtro (bairro, preço, quartos...) para ativar um alerta'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '800',
+                  color: hasFilters ? '#fff' : 'var(--text-faint)',
+                  background: hasFilters ? 'linear-gradient(135deg, var(--primary), var(--accent))' : 'var(--bg)',
+                  border: hasFilters ? 'none' : '1px dashed var(--border)',
+                  borderRadius: '20px', padding: '6px 12px',
+                  cursor: 'pointer',
+                  opacity: hasFilters ? 1 : 0.75,
+                  whiteSpace: 'nowrap',
+                  boxShadow: hasFilters ? '0 2px 8px rgba(37,99,235,.35)' : 'none',
+                }}
+              >
+                🔔 Ativar alerta
+              </button>
+              {showAlertaHint && (
+                <div style={{
+                  position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 20,
+                  background: '#1f2937', color: '#fff', fontSize: '12px', fontWeight: '600',
+                  padding: '8px 12px', borderRadius: '8px', width: '220px', lineHeight: 1.4,
+                  boxShadow: '0 4px 12px rgba(0,0,0,.25)',
+                }}>
+                  Escolha um bairro, região ou outro filtro (preço, quartos...) para poder ativar o alerta.
+                </div>
+              )}
+            </div>
           </div>
           {renderCards(2)}
         </div>
@@ -1075,23 +1096,35 @@ function ImoveisContent() {
                 </span>
               </span>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <button
-                  onClick={() => { if (hasFilters) setShowSalvarBusca(true); }}
-                  title={hasFilters ? 'Ser avisado quando entrar imóvel parecido' : 'Aplique um filtro (bairro, preço, quartos...) para ativar um alerta'}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '800',
-                    color: hasFilters ? '#fff' : 'var(--text-faint)',
-                    background: hasFilters ? 'linear-gradient(135deg, var(--primary), var(--accent))' : 'var(--bg)',
-                    border: hasFilters ? 'none' : '1px dashed var(--border)',
-                    borderRadius: '20px', padding: '7px 13px',
-                    cursor: hasFilters ? 'pointer' : 'default',
-                    opacity: hasFilters ? 1 : 0.75,
-                    whiteSpace: 'nowrap',
-                    boxShadow: hasFilters ? '0 2px 8px rgba(37,99,235,.35)' : 'none',
-                  }}
-                >
-                  🔔 Ativar alerta
-                </button>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={clicarAlerta}
+                    title={hasFilters ? 'Ser avisado quando entrar imóvel parecido' : 'Aplique um filtro (bairro, preço, quartos...) para ativar um alerta'}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '800',
+                      color: hasFilters ? '#fff' : 'var(--text-faint)',
+                      background: hasFilters ? 'linear-gradient(135deg, var(--primary), var(--accent))' : 'var(--bg)',
+                      border: hasFilters ? 'none' : '1px dashed var(--border)',
+                      borderRadius: '20px', padding: '7px 13px',
+                      cursor: 'pointer',
+                      opacity: hasFilters ? 1 : 0.75,
+                      whiteSpace: 'nowrap',
+                      boxShadow: hasFilters ? '0 2px 8px rgba(37,99,235,.35)' : 'none',
+                    }}
+                  >
+                    🔔 Ativar alerta
+                  </button>
+                  {showAlertaHint && (
+                    <div style={{
+                      position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 20,
+                      background: '#1f2937', color: '#fff', fontSize: '12px', fontWeight: '600',
+                      padding: '8px 12px', borderRadius: '8px', width: '220px', lineHeight: 1.4,
+                      boxShadow: '0 4px 12px rgba(0,0,0,.25)',
+                    }}>
+                      Escolha um bairro, região ou outro filtro (preço, quartos...) para poder ativar o alerta.
+                    </div>
+                  )}
+                </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {[{ c: '#2563eb', l: 'Na Planta' }, { c: '#d97706', l: 'Em Obras' }, { c: '#16a34a', l: 'Pronto' }].map(({ c, l }) => (
                     <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
