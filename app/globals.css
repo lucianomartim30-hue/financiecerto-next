@@ -294,6 +294,16 @@ button, input, select, textarea { font-family: inherit; }
   .hamburger-btn { display: flex !important; }
 }
 
+/* ── Página de imóvel responsive — sem isso a página nunca adaptava pro mobile:
+   .detail-grid ficava com a coluna fixa de 360px espremendo o conteúdo, e o
+   bloco financeiro pensado pro mobile (.financeiro-mobile) nunca aparecia
+   porque nada nunca desligava o display:none inline dele. */
+@media (max-width: 768px) {
+  .detail-grid       { grid-template-columns: 1fr !important; }
+  .financeiro-desktop { display: none  !important; }
+  .financeiro-mobile  { display: block !important; }
+}
+
 /* ── Mobile responsive — Simuladores e Homepage ───────────────────────────── */
 @media (max-width: 540px) {
   /* BRL input: font grande demais em tela pequena */

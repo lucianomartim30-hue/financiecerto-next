@@ -2,7 +2,7 @@ import Link from 'next/link';
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { website, organization, breadcrumb, SITE_CONFIG } from '@/lib/schema';
 import { HomeEngagement } from './HomeEngagement';
-import { getImoveisDestaque } from '@/lib/imoveis-destaque';
+import { getImoveisDestaque, getImoveisDestaqueLesteNorte, type ImovelDestaque } from '@/lib/imoveis-destaque';
 import { formatBRL } from '@/lib/calculos';
 import { getStatusCfg } from '@/lib/status';
 
@@ -99,8 +99,74 @@ const FEATURES = [
   },
 ];
 
+// ── Vitrine de imóveis em destaque — reaproveitada pra Zona Sul/Oeste/Centro
+// (foco principal) e Zona Leste/Norte (segunda vitrine) ───────────────────────
+function DestaqueSection({
+  label, titulo, subtitulo, imoveis, links, bordered,
+}: {
+  label: string; titulo: string; subtitulo: string;
+  imoveis: ImovelDestaque[];
+  links: { href: string; texto: string }[];
+  bordered?: boolean;
+}) {
+  if (imoveis.length === 0) return null;
+  return (
+    <section style={{ padding: '80px 24px', background: '#ffffff', borderBottom: bordered ? '1px solid var(--border)' : undefined }}>
+      <div className="container">
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <p className="section-label">{label}</p>
+          <h2 style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: '800', marginBottom: '12px', letterSpacing: '-0.5px' }}>
+            {titulo}
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '500px', margin: '0 auto' }}>
+            {subtitulo}
+          </p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+          {imoveis.map(im => {
+            const cfg = getStatusCfg(im.status_norm || '');
+            return (
+              <Link key={im.id} href={`/imoveis/${im.id}`} className="card card-hover" style={{ overflow: 'hidden', textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ position: 'relative', width: '100%', paddingTop: '62%', background: '#0f2744' }}>
+                  {im.photo && (
+                    <img src={im.photo} alt={im.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  )}
+                  <span style={{ position: 'absolute', top: '7px', left: '7px', background: cfg.cor, color: '#fff', fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                    {cfg.label}
+                  </span>
+                </div>
+                <div style={{ padding: '16px' }}>
+                  <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {im.name}
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '10px' }}>
+                    📍 {im.neighborhood}, São Paulo
+                  </p>
+                  {im.min_price && (
+                    <p style={{ fontSize: '16px', fontWeight: '900', color: 'var(--primary)' }}>
+                      {formatBRL(im.min_price)}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+        <div style={{ textAlign: 'center', marginTop: '36px' }}>
+          {links.map(l => (
+            <Link key={l.href} href={l.href} className="btn-outline" style={{ marginRight: '12px', marginBottom: '8px' }}>{l.texto} →</Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default async function Home() {
-  const destaques = await getImoveisDestaque(12);
+  const [destaques, destaquesLesteNorte] = await Promise.all([
+    getImoveisDestaque(12),
+    getImoveisDestaqueLesteNorte(12),
+  ]);
   const schemas = [
     website,
     organization,
@@ -229,58 +295,33 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ── Imóveis em destaque (Zona Sul/Oeste) ──────────────────────────────── */}
-      {destaques.length > 0 && (
-        <section style={{ padding: '80px 24px', background: '#ffffff', borderBottom: '1px solid var(--border)' }}>
-          <div className="container">
-            <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-              <p className="section-label">Selecionados pra você</p>
-              <h2 style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: '800', marginBottom: '12px', letterSpacing: '-0.5px' }}>
-                Imóveis em destaque na Zona Sul, Oeste e Centro
-              </h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '500px', margin: '0 auto' }}>
-                Empreendimentos de São Paulo já com simulação de financiamento pronta.
-              </p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
-              {destaques.map(im => {
-                const cfg = getStatusCfg(im.status_norm || '');
-                return (
-                  <Link key={im.id} href={`/imoveis/${im.id}`} className="card card-hover" style={{ overflow: 'hidden', textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ position: 'relative', width: '100%', paddingTop: '62%', background: '#0f2744' }}>
-                      {im.photo && (
-                        <img src={im.photo} alt={im.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                      )}
-                      <span style={{ position: 'absolute', top: '7px', left: '7px', background: cfg.cor, color: '#fff', fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                        {cfg.label}
-                      </span>
-                    </div>
-                    <div style={{ padding: '16px' }}>
-                      <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {im.name}
-                      </p>
-                      <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '10px' }}>
-                        📍 {im.neighborhood}, São Paulo
-                      </p>
-                      {im.min_price && (
-                        <p style={{ fontSize: '16px', fontWeight: '900', color: 'var(--primary)' }}>
-                          {formatBRL(im.min_price)}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-            <div style={{ textAlign: 'center', marginTop: '36px' }}>
-              <Link href="/regiao/zona-sul-sp" className="btn-outline" style={{ marginRight: '12px', marginBottom: '8px' }}>Ver mais na Zona Sul →</Link>
-              <Link href="/regiao/zona-oeste-sp" className="btn-outline" style={{ marginRight: '12px', marginBottom: '8px' }}>Ver mais na Zona Oeste →</Link>
-              <Link href="/regiao/centro-sp" className="btn-outline" style={{ marginRight: '12px', marginBottom: '8px' }}>Ver mais no Centro →</Link>
-              <Link href="/imoveis/minha-casa-minha-vida" className="btn-outline" style={{ marginBottom: '8px' }}>Ver imóveis MCMV →</Link>
-            </div>
-          </div>
-        </section>
-      )}
+      {/* ── Imóveis em destaque (Zona Sul/Oeste/Centro) ───────────────────────── */}
+      <DestaqueSection
+        label="Selecionados pra você"
+        titulo="Imóveis em destaque na Zona Sul, Oeste e Centro"
+        subtitulo="Empreendimentos de São Paulo já com simulação de financiamento pronta."
+        imoveis={destaques}
+        bordered
+        links={[
+          { href: '/regiao/zona-sul-sp', texto: 'Ver mais na Zona Sul' },
+          { href: '/regiao/zona-oeste-sp', texto: 'Ver mais na Zona Oeste' },
+          { href: '/regiao/centro-sp', texto: 'Ver mais no Centro' },
+          { href: '/imoveis/minha-casa-minha-vida', texto: 'Ver imóveis MCMV' },
+        ]}
+      />
+
+      {/* ── Imóveis em destaque (Zona Leste/Norte) ────────────────────────────── */}
+      <DestaqueSection
+        label="Mais opções em SP"
+        titulo="Imóveis em destaque na Zona Leste e Norte"
+        subtitulo="Empreendimentos de São Paulo já com simulação de financiamento pronta."
+        imoveis={destaquesLesteNorte}
+        bordered
+        links={[
+          { href: '/regiao/zona-leste-sp', texto: 'Ver mais na Zona Leste' },
+          { href: '/regiao/zona-norte-sp', texto: 'Ver mais na Zona Norte' },
+        ]}
+      />
 
       {/* ── Como funciona ───────────────────────────────────────────────────── */}
       <section style={{

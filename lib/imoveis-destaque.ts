@@ -34,14 +34,24 @@ export const ZONA_SUL_OESTE = new Set(
   ].map(normalize),
 );
 
-export async function getImoveisDestaque(limit = 6): Promise<ImovelDestaque[]> {
+// Segunda vitrine da home — Zona Leste e Norte, separada da anterior pra não
+// diluir o foco principal (Sul/Oeste/Centro) nem a lógica de prioridade do
+// sitemap, que usa ZONA_SUL_OESTE especificamente.
+export const ZONA_LESTE_NORTE = new Set(
+  [
+    ...(REGIONS.find(r => r.slug === 'zona-leste-sp')?.neighborhoods ?? []),
+    ...(REGIONS.find(r => r.slug === 'zona-norte-sp')?.neighborhoods ?? []),
+  ].map(normalize),
+);
+
+async function getImoveisDestaqueDeZonas(zonas: Set<string>, limit: number): Promise<ImovelDestaque[]> {
   try {
     const catalog = await kvGetCatalog();
     if (!catalog || catalog.length === 0) return [];
 
     let picks = catalog.filter(b =>
       normalize(b.city || '') === 'sao paulo' &&
-      ZONA_SUL_OESTE.has(normalize(b.neighborhood || '')) &&
+      zonas.has(normalize(b.neighborhood || '')) &&
       b.finality_norm !== 'comercial' &&
       // A Orulo às vezes marca unidade não-residencial (ex: "- NR" no nome)
       // como finality "Residencial" por erro de cadastro — confia primeiro
@@ -79,4 +89,12 @@ export async function getImoveisDestaque(limit = 6): Promise<ImovelDestaque[]> {
   } catch {
     return [];
   }
+}
+
+export async function getImoveisDestaque(limit = 6): Promise<ImovelDestaque[]> {
+  return getImoveisDestaqueDeZonas(ZONA_SUL_OESTE, limit);
+}
+
+export async function getImoveisDestaqueLesteNorte(limit = 6): Promise<ImovelDestaque[]> {
+  return getImoveisDestaqueDeZonas(ZONA_LESTE_NORTE, limit);
 }

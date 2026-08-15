@@ -425,17 +425,14 @@ function ImoveisContent() {
       if (!haystack.includes(q)) return false;
     }
     // ── Padrão por região (geo por IP) — só quando a pessoa não buscou nada ────
+    // NÃO restringe por cidade aqui quando a geo falha/ainda não respondeu —
+    // baseFilter alimenta tanto os pins do mapa quanto a lista, e o mapa
+    // precisa continuar mostrando qualquer cidade liberada pra onde a pessoa
+    // pan/zoom (ver visibleBuildings mais abaixo pro fallback de SP, que só
+    // se aplica à lista mobile sem mapa visível — não ao mapa em si).
     else if (geoAtivo && geoCities) {
       const cidade = normStr(b.city || '');
       if (!geoCities.some(c => normStr(c) === cidade)) return false;
-    }
-    // ── Sem geo (IP não detectado/bloqueado) e sem busca — cai pra São Paulo,
-    // que é o que o cabeçalho da página já promete ("imóveis em SP"). Sem isso,
-    // a lista mobile (que não filtra por bounds do mapa) mostrava o catálogo
-    // nacional inteiro na ordem crua do catálogo — podia abrir só com imóveis
-    // de outra cidade/estado na primeira tela, contradizendo o texto "em SP".
-    else if (!geoAtivo) {
-      if (normStr(b.city || '') !== normStr('São Paulo')) return false;
     }
     if (filterMin      && (b.min_price    ?? 0)  < filterMin)     return false;
     if (filterMax      && (b.min_price    ?? 0)  > filterMax)     return false;
@@ -529,7 +526,15 @@ function ImoveisContent() {
     const base = allBuildings.filter(baseFilter);
 
     if (activeLocation) return base; // bairro já filtra tudo
-    if (isMobile && mobileView !== 'map') return base; // lista mobile sem mapa visível
+    if (isMobile && mobileView !== 'map') {
+      // Lista mobile sem mapa visível: não filtra por bounds. Mas sem geo
+      // ativo (IP não detectado/bloqueado — comum), cai pra São Paulo, que é
+      // o que o cabeçalho já promete ("imóveis em São Paulo") — só aqui,
+      // não em baseFilter, pra não atrapalhar quem pan/zoom o mapa pra
+      // outras cidades liberadas (SC, PR, RS, RJ).
+      if (!geoAtivo) return base.filter(b => normStr(b.city || '') === normStr('São Paulo'));
+      return base;
+    }
 
     if (debouncedBounds) {
       const inView = base.filter(b =>
@@ -541,7 +546,7 @@ function ImoveisContent() {
     }
 
     return base;
-  }, [allBuildings, baseFilter, activeLocation, debouncedBounds, isMobile, mobileView]);
+  }, [allBuildings, baseFilter, activeLocation, debouncedBounds, isMobile, mobileView, geoAtivo]);
 
   const geocodeAndFly = useCallback(async (query: string, cityOverride?: string) => {
     if (!query.trim()) return;
