@@ -2000,7 +2000,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
       {/* ── Responsive styles ──────────────────────────────────────────── */}
       <style>{`
         @media (max-width: 860px) {
-          .detail-grid { grid-template-columns: 1fr !important; }
+          .detail-grid { grid-template-columns: minmax(0,1fr) !important; }
           .financeiro-desktop { display: none !important; }
           .financeiro-mobile { display: block !important; }
           .price-desktop { display: none !important; }
