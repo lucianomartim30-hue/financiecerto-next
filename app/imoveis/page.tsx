@@ -1180,7 +1180,12 @@ function ImoveisContent() {
           {/* Cabeçalho da lista */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
-              {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis${geoAtivo && geoLabel ? ` em ${geoLabel}` : ' em São Paulo'}`}
+              {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis${
+                activeLocation ? ` em ${activeLocation}` :
+                cidadeSemBairro ? ` em ${searchCity}` :
+                geoAtivo && geoLabel ? ` em ${geoLabel}` :
+                ' em São Paulo'
+              }`}
             </span>
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
@@ -1233,7 +1238,7 @@ function ImoveisContent() {
               <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text)' }}>
                 {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis`}
                 <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
-                  {activeLocation ? `em ${activeLocation}, ${searchCity}` : 'em São Paulo'}
+                  {activeLocation ? `em ${activeLocation}, ${searchCity}` : cidadeSemBairro ? `em ${searchCity}` : geoAtivo && geoLabel ? `em ${geoLabel}` : 'em São Paulo'}
                 </span>
               </span>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
