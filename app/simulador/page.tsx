@@ -251,6 +251,84 @@ function ComparativoBancosSBPE({ financiado, prazoMeses }: { financiado: number;
   );
 }
 
+// ─── Receber resultado por e-mail — nunca exigido, só quando a pessoa pede ──
+interface ResumoParaEmail {
+  modalidade: string;
+  valorImovel: number;
+  valorFinanciado: number;
+  parcelaPrice: number;
+  parcelaSAC: number;
+  taxaAnual: number;
+  prazoAnos: number;
+  comprometimento: number;
+}
+function ReceberResultadoEmail({ resumo }: { resumo: ResumoParaEmail }) {
+  const [aberto, setAberto] = useState(false);
+  const [email, setEmail] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+  const [erro, setErro] = useState('');
+
+  async function enviar() {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setErro('Informe um e-mail válido.'); return; }
+    setErro('');
+    setEnviando(true);
+    try {
+      const res = await fetch('/api/conta/enviar-resultado', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), resumo }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { setErro(data?.error || 'Não foi possível enviar.'); return; }
+      setEnviado(true);
+    } catch {
+      setErro('Erro de conexão. Tente novamente.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  if (enviado) {
+    return (
+      <div style={{ padding: '14px 16px', background: '#E1F5EE', border: '1px solid #A7F3D0', borderRadius: 14, marginBottom: 16, textAlign: 'center' }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: '#085041' }}>✅ Enviado pro seu e-mail! Confira também um link pra acessar sua conta quando quiser.</p>
+      </div>
+    );
+  }
+
+  if (!aberto) {
+    return (
+      <button onClick={() => setAberto(true)}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '13px 0', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg-card)', color: 'var(--text)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 12 }}>
+        📧 Receber esse resultado por e-mail
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ padding: '14px 16px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 14, marginBottom: 16 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>📧 Pra qual e-mail enviamos?</p>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') enviar(); }}
+          placeholder="seuemail@exemplo.com"
+          autoFocus
+          style={{ flex: 1, padding: '11px 12px', border: '1.5px solid var(--border)', borderRadius: 10, fontSize: 13, outline: 'none', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box' }}
+        />
+        <button onClick={enviar} disabled={enviando || !email}
+          style={{ flexShrink: 0, padding: '11px 16px', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: enviando ? 'default' : 'pointer', opacity: enviando ? 0.7 : 1, fontFamily: 'inherit' }}>
+          {enviando ? 'Enviando…' : 'Enviar'}
+        </button>
+      </div>
+      {erro && <p style={{ fontSize: 12, color: '#dc2626', marginTop: 8 }}>{erro}</p>}
+    </div>
+  );
+}
+
 // ─── Painel explicativo SFH / SFI ────────────────────────────────────────────
 function ExplicacaoSFI() {
   return (
@@ -489,7 +567,7 @@ function SimuladorInner() {
       </div>
       <BtnPrimario label="Começar — leva 2 minutos" onClick={avancar} />
       <p style={{ fontSize: 12, color: 'var(--text-faint)', textAlign: 'center', marginTop: 14 }}>
-        Regras SFH/MCMV vigentes · jul/2026 · TR {TR_MENSAL}%/mês
+        🔓 Grátis e sem cadastro · Regras SFH/MCMV vigentes · jul/2026 · TR {TR_MENSAL}%/mês
       </p>
     </Etapa>
   );
@@ -1256,6 +1334,17 @@ function SimuladorInner() {
 
         {/* Busca inteligente de imóveis com filtro por quartos, vagas e bairro */}
         <BuscaImoveisInteligente valorImovel={sim.valorImovel} naPlanta={sim.naPlanta} faixaLabel={modalLabel} />
+
+        <ReceberResultadoEmail resumo={{
+          modalidade: modalLabel,
+          valorImovel: sim.valorImovel,
+          valorFinanciado: sim.valorFinanciado,
+          parcelaPrice: sim.parcelaPrimeiro,
+          parcelaSAC: sim.parcelaSACPrimeiro,
+          taxaAnual: sim.taxaAnual,
+          prazoAnos: Math.round(sim.prazoMeses / 12),
+          comprometimento: sim.comprometimento,
+        }} />
 
         <button onClick={() => { setEtapa(0); setE(E0); setPerfil(null); setSim(null); }}
           style={{ marginTop: 16, width: '100%', padding: '15px 0', borderRadius: 12, border: '1.5px solid var(--primary)', background: 'transparent', color: 'var(--primary)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>

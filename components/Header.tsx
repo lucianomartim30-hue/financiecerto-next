@@ -232,6 +232,26 @@ export default function Header() {
 
           {/* ── CTA + Hamburger ────────────────────────────────────────────── */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            {/* Conta — login sem senha, nunca exigido pra navegar/simular */}
+            <Link
+              href="/conta"
+              title="Minha conta"
+              onClick={() => import('@/lib/gtag').then(m => m.trackNavClick({ destino: '/conta', texto: 'Conta', origem: 'header' }))}
+              className="header-cta"
+              style={{
+                width: '40px', height: '40px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '10px',
+                fontSize: '20px',
+                color: pathname === '/conta' ? 'var(--primary)' : 'var(--text-muted)',
+                background: pathname === '/conta' ? 'var(--primary-light)' : 'transparent',
+                textDecoration: 'none',
+                transition: 'all 0.15s',
+                flexShrink: 0,
+              }}
+            >
+              👤
+            </Link>
             {/* Favoritos — ícone discreto, não é uma seção de conteúdo */}
             <Link
               href="/favoritos"
@@ -413,6 +433,25 @@ export default function Header() {
               </Link>
             );
           })}
+
+          <Link
+            href="/conta"
+            onClick={() => {
+              setMenuOpen(false);
+              import('@/lib/gtag').then(m => m.trackNavClick({ destino: '/conta', texto: 'Conta', origem: 'header' }));
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '13px 20px',
+              background: pathname === '/conta' ? 'var(--primary-light)' : 'transparent',
+              color: pathname === '/conta' ? 'var(--primary)' : 'var(--text)',
+              fontWeight: pathname === '/conta' ? '700' : '600',
+              fontSize: '15px', textDecoration: 'none',
+            }}
+          >
+            <span style={{ fontSize: '18px', width: '24px', textAlign: 'center' }}>👤</span>
+            Minha conta
+          </Link>
 
           <Link
             href="/favoritos"
