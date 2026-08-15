@@ -317,6 +317,10 @@ function ImoveisContent() {
   // Modal de busca full-screen (mobile)
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [mobileSearchInput, setMobileSearchInput] = useState('');
+  // Dropdown de cidade customizado (não usa <select> nativo) — o seletor
+  // nativo com <optgroup> renderiza em branco em vários navegadores Android,
+  // escondendo Santa Catarina/Paraná/RS/RJ atrás de um popup vazio.
+  const [cidadeMobileAberta, setCidadeMobileAberta] = useState(false);
   const deferredMobileInput = useDeferredValue(mobileSearchInput);
 
   // Detectar mobile
@@ -765,26 +769,59 @@ function ImoveisContent() {
           {/* Passo 1: escolher a cidade — os bairros abaixo são sempre da cidade
               selecionada aqui, pra nunca misturar bairros de mesmo nome em
               cidades diferentes (ex: Centro de SP vs. Centro de Porto Alegre) */}
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ padding: '10px 14px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
             <span style={{ fontSize: '12px', fontWeight: '700', color: '#6b7280', flexShrink: 0 }}>Cidade</span>
-            <select
-              value={searchCity}
-              onChange={e => {
-                setSearchCity(e.target.value);
-                setMobileSearchInput(''); setSearch(''); setActiveLocation('');
-              }}
+            <button
+              onClick={() => setCidadeMobileAberta(v => !v)}
               style={{
                 flex: 1, height: '38px', borderRadius: '8px', border: '1.5px solid #e5e7eb',
                 background: '#f9fafb', color: '#111827', fontFamily: 'inherit', fontSize: '14px',
-                fontWeight: '600', padding: '0 8px',
+                fontWeight: '600', padding: '0 10px', textAlign: 'left', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}
             >
-              {CIDADES_BUSCA.map(grupo => (
-                <optgroup key={grupo.grupo} label={grupo.grupo}>
-                  {grupo.cidades.map(c => <option key={c} value={c}>{c}</option>)}
-                </optgroup>
-              ))}
-            </select>
+              {searchCity}
+              <span style={{ fontSize: '10px', color: '#6b7280', transform: cidadeMobileAberta ? 'rotate(180deg)' : 'none' }}>▾</span>
+            </button>
+
+            {cidadeMobileAberta && (
+              <>
+                <div onClick={() => setCidadeMobileAberta(false)} style={{ position: 'fixed', inset: 0, zIndex: 10000 }} />
+                <div style={{
+                  position: 'absolute', top: '100%', left: '14px', right: '14px', marginTop: '4px',
+                  background: '#fff', border: '1px solid #e5e7eb', borderRadius: '12px',
+                  boxShadow: '0 8px 32px rgba(0,0,0,.18)', zIndex: 10001,
+                  maxHeight: '55vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+                }}>
+                  {CIDADES_BUSCA.map(grupo => (
+                    <div key={grupo.grupo}>
+                      <div style={{ padding: '10px 14px 4px', fontSize: '10px', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                        {grupo.grupo}
+                      </div>
+                      {grupo.cidades.map(c => (
+                        <button
+                          key={c}
+                          onClick={() => {
+                            setSearchCity(c);
+                            setCidadeMobileAberta(false);
+                            setMobileSearchInput(''); setSearch(''); setActiveLocation('');
+                          }}
+                          style={{
+                            display: 'block', width: '100%', padding: '10px 14px',
+                            background: c === searchCity ? '#eff6ff' : 'transparent',
+                            color: c === searchCity ? 'var(--primary)' : '#111827',
+                            fontWeight: c === searchCity ? '700' : '500',
+                            border: 'none', fontSize: '14px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+                          }}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Lista de sugestões */}
