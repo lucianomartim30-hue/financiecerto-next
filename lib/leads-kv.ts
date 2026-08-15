@@ -87,6 +87,9 @@ export interface Lead {
   // Só presente em leads vindos do formulário (fora do estado de SP) — leads de
   // clique de WhatsApp não têm esse dado (a conversa acontece direto no WhatsApp).
   contato?: LeadContato | null;
+  // Cookie fc_vid do navegador (ver middleware.ts) — permite reconhecer o mesmo
+  // visitante em contatos/visitas futuras sem exigir login (ver visitantes-kv.ts).
+  visitorId?: string | null;
 }
 
 const KV_LEADS_KEY = 'leads:list';
@@ -125,6 +128,7 @@ export async function kvAddLead(
     atribuicao?: LeadAtribuicao | null;
     conversao?: LeadConversao | null;
     contato?: LeadContato | null;
+    visitorId?: string | null;
   },
 ): Promise<Lead | null> {
   const kv = await getKv();

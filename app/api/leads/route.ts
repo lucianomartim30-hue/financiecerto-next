@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { kvGetLeads, kvAddLead, type LeadSimulacao, type LeadCenarioProposta, type LeadAtribuicao, type LeadConversao, type LeadContato } from '@/lib/leads-kv';
+import { kvGetVisitante, kvIdentificarVisitante } from '@/lib/visitantes-kv';
 import { sessionToken } from '../admin-auth/route';
 
 const COOKIE_NAME = 'admin_leads_session';
@@ -22,7 +23,29 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
   }
   const leads = await kvGetLeads();
-  return NextResponse.json({ leads });
+
+  // Enriquece cada lead com o histórico do visitante (fc_vid) — permite o
+  // painel mostrar "visitante recorrente" e quais outros imóveis ele viu,
+  // mesmo que a pessoa nunca tenha feito login.
+  const cacheVisitantes = new Map<string, Awaited<ReturnType<typeof kvGetVisitante>>>();
+  const leadsEnriquecidos = await Promise.all(leads.map(async lead => {
+    if (!lead.visitorId) return lead;
+    if (!cacheVisitantes.has(lead.visitorId)) {
+      cacheVisitantes.set(lead.visitorId, await kvGetVisitante(lead.visitorId));
+    }
+    const visitante = cacheVisitantes.get(lead.visitorId);
+    if (!visitante) return lead;
+    return {
+      ...lead,
+      visitante: {
+        totalVisitas: visitante.totalVisitas,
+        primeiraVisita: visitante.primeiraVisita,
+        imoveisVistos: visitante.imoveisVistos,
+      },
+    };
+  }));
+
+  return NextResponse.json({ leads: leadsEnriquecidos });
 }
 
 export async function POST(req: NextRequest) {
@@ -106,6 +129,8 @@ export async function POST(req: NextRequest) {
           }
         : null;
 
+    const visitorId = req.cookies.get('fc_vid')?.value || null;
+
     const lead = await kvAddLead({
       imovelId:   String(imovelId),
       imovelName: String(imovelName),
@@ -120,11 +145,19 @@ export async function POST(req: NextRequest) {
       atribuicao:      atribuicaoValida,
       conversao:       conversaoValida,
       contato:         contatoValido,
+      visitorId,
     });
 
     if (!lead) {
       // KV indisponível — não quebra a experiência do usuário no site
       return NextResponse.json({ ok: false }, { status: 200 });
+    }
+
+    // Marca o visitante como "conhecido" — a partir de agora, as próximas
+    // páginas de imóvel que ele abrir (mesmo sem novo contato) ficam
+    // registradas no histórico dele (ver /api/visita e kvRegistrarVisita).
+    if (visitorId) {
+      await kvIdentificarVisitante(visitorId, lead.imovelId, contatoValido);
     }
 
     return NextResponse.json({ ok: true, lead });

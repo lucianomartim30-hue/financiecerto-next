@@ -18,6 +18,29 @@ const PRODUCTION_HOST = 'www.financiecerto.com.br';
 //     → redireciona sem-www → com-www (canonical único)
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Visitor ID ───────────────────────────────────────────────────────────────
+// Cookie anônimo (fc_vid) que identifica o navegador entre visitas, sem exigir
+// login — mesma lógica que portais como o ImovelWeb usam. Sozinho não revela
+// quem é a pessoa; só passa a ter valor quando ela se identifica uma vez (clique
+// de WhatsApp ou formulário de contato em /imoveis/[id]), momento em que o lead
+// grava esse ID junto (ver app/api/leads/route.ts) — daí em diante, as próximas
+// visitas com o mesmo cookie são reconhecidas como o mesmo lead.
+const VISITOR_COOKIE = 'fc_vid';
+const VISITOR_MAX_AGE = 60 * 60 * 24 * 730; // 2 anos
+
+function ensureVisitorCookie(request: NextRequest, res: NextResponse): NextResponse {
+  if (!request.cookies.get(VISITOR_COOKIE)) {
+    res.cookies.set(VISITOR_COOKIE, crypto.randomUUID(), {
+      maxAge: VISITOR_MAX_AGE,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+    });
+  }
+  return res;
+}
+
 export function middleware(request: NextRequest) {
   const host   = (request.headers.get('host') ?? '').toLowerCase();
   const isVercel  = host.endsWith('.vercel.app');
@@ -36,7 +59,7 @@ export function middleware(request: NextRequest) {
   if (isVercel && isPreview) {
     const res = NextResponse.next();
     res.headers.set('X-Robots-Tag', 'noindex, nofollow');
-    return res;
+    return ensureVisitorCookie(request, res);
   }
 
   // ── 3. financiecerto.com.br (sem www) → redireciona para www ────────────────
@@ -48,7 +71,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url, { status: 301 });
   }
 
-  return NextResponse.next();
+  return ensureVisitorCookie(request, NextResponse.next());
 }
 
 export const config = {

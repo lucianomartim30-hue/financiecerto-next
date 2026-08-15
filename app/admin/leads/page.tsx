@@ -1,7 +1,14 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import type { Lead, LeadStatus } from '@/lib/leads-kv';
+import type { Lead as LeadBase, LeadStatus } from '@/lib/leads-kv';
+
+// GET /api/leads enriquece cada lead com o histórico do visitante (fc_vid) —
+// ver kvGetVisitante em lib/visitantes-kv.ts — quando o navegador já se
+// identificou antes (mesmo sem login).
+type Lead = LeadBase & {
+  visitante?: { totalVisitas: number; primeiraVisita: string; imoveisVistos: string[] };
+};
 
 const STATUS_CFG: Record<LeadStatus, { label: string; cor: string; bg: string }> = {
   novo:        { label: 'Novo',             cor: '#2563eb', bg: 'rgba(37,99,235,.12)' },
@@ -204,6 +211,24 @@ export default function AdminLeadsPage() {
                 )}
               </div>
             </div>
+
+            {lead.visitante && lead.visitante.totalVisitas > 1 && (
+              <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(217,119,6,.08)', border: '1.5px solid rgba(217,119,6,.3)', borderRadius: '10px' }}>
+                <p style={{ fontSize: '12px', fontWeight: '800', color: '#B45309', marginBottom: lead.visitante.imoveisVistos.length > 1 ? '6px' : 0 }}>
+                  🔁 Visitante recorrente — {lead.visitante.totalVisitas}ª visita desde {formatData(lead.visitante.primeiraVisita)}
+                </p>
+                {lead.visitante.imoveisVistos.length > 1 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {lead.visitante.imoveisVistos.filter(imId => imId !== lead.imovelId).map(imId => (
+                      <a key={imId} href={`/imoveis/${imId}`} target="_blank" rel="noopener noreferrer"
+                        style={{ fontSize: '11px', fontWeight: '600', color: '#B45309', background: 'rgba(217,119,6,.1)', border: '1px solid rgba(217,119,6,.25)', borderRadius: '6px', padding: '3px 8px', textDecoration: 'none' }}>
+                        👀 {catalogo[imId]?.name || imId} →
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {lead.contato && (
               <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(37,99,235,.06)', border: '1.5px solid rgba(37,99,235,.25)', borderRadius: '10px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>

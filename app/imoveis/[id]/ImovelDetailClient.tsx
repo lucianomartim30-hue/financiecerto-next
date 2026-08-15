@@ -1679,6 +1679,13 @@ export default function ImovelDetailClient({ id }: { id: string }) {
         if (data.max_price != null && !temPrecoReal({ min_price: data.max_price })) data.max_price = null;
         setImovel(data);
         import('@/lib/vistos-recentemente').then(m => m.registrarVisto(data.id));
+        // Reconhecimento de visitante sem login (fc_vid) — só grava algo se
+        // esse navegador já se identificou antes num lead; fire-and-forget.
+        fetch('/api/visita', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imovelId: data.id }),
+        }).catch(() => { /* ignore */ });
         // Salva contexto completo para João consultor
         try {
           const ctx = {
