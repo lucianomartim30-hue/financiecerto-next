@@ -1847,7 +1847,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
               {foraDoEstadoSPTopo ? 'Deixe seus dados que entramos em contato' : atendeVisitaTopo ? 'Agende uma visita ou fale com um consultor pelo WhatsApp' : 'Fale agora com um consultor pelo WhatsApp'}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '10px', flexShrink: 0, flexWrap: 'wrap' }}>
+          <div className="cta-topo-btns" style={{ display: 'flex', gap: '10px', flexShrink: 0, flexWrap: 'wrap' }}>
             {foraDoEstadoSPTopo ? (
               <LeadFormInteresse imovel={imovel} posicao="topo" dark />
             ) : (
@@ -2004,6 +2004,8 @@ export default function ImovelDetailClient({ id }: { id: string }) {
           .financeiro-desktop { display: none !important; }
           .financeiro-mobile { display: block !important; }
           .price-desktop { display: none !important; }
+          .cta-topo-btns { width: 100% !important; }
+          .cta-topo-btns > a { flex: 1 1 100% !important; white-space: normal !important; }
         }
         .detail-grid > div:last-child { scrollbar-width: thin; }
       `}</style>
