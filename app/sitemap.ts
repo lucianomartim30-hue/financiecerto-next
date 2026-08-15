@@ -12,6 +12,7 @@ import { getArtigos } from '@/lib/artigos';
 import { REGIONS } from '@/lib/regions';
 import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 import { filterBreveLancamento } from '@/lib/filtro-breve-lancamento';
+import { filterLotesForaSP } from '@/lib/filtro-lotes-fora-sp';
 import { ZONA_SUL_OESTE, normalize } from '@/lib/imoveis-destaque';
 
 const BASE = 'https://www.financiecerto.com.br';
@@ -76,6 +77,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // listagem pública (/api/orulo), só que o sitemap usava o catálogo bruto e
     // por isso indexava exatamente esse tipo de página fina como soft-404.
     if (catalog) catalog = filterBreveLancamento(catalog);
+    // Fora do estado de SP, não indexa loteamentos/terrenos — só empreendimentos
+    // de verdade (ver lib/filtro-lotes-fora-sp.ts).
+    if (catalog) catalog = filterLotesForaSP(catalog);
     if (catalog && catalog.length > 0) {
       // Páginas individuais de imóvel — prioridade maior pra Zona Sul/Oeste de SP
       // (foco comercial do corretor): sinaliza pro Google que esses imóveis

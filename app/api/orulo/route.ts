@@ -29,6 +29,7 @@ import {
 } from '@/lib/orulo-api';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { filterBreveLancamento } from '@/lib/filtro-breve-lancamento';
+import { filterLotesForaSP } from '@/lib/filtro-lotes-fora-sp';
 import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
 import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 
@@ -222,6 +223,10 @@ export async function GET(req: NextRequest) {
       // Filtra Breve Lançamento: só exibe se tiver delivery_date nos próximos 2 meses.
       // Empreendimentos já lançados (com min_price > 0) sempre aparecem.
       all = filterBreveLancamento(all);
+
+      // Fora do estado de SP, remove loteamentos/terrenos — só empreendimentos
+      // de verdade (ver lib/filtro-lotes-fora-sp.ts).
+      all = filterLotesForaSP(all);
 
       // Filtra por cidade específica se informada
       if (city) {

@@ -8,6 +8,7 @@
 
 import { kvGetCatalog } from './orulo-kv';
 import { filterBreveLancamento, temPrecoReal } from './filtro-breve-lancamento';
+import { filterLotesForaSP } from './filtro-lotes-fora-sp';
 import { REGIONS } from './regions';
 import { inferFinalityFromName } from './orulo-api';
 
@@ -49,7 +50,7 @@ export async function getImoveisDestaque(limit = 6): Promise<ImovelDestaque[]> {
       inferFinalityFromName(b.name, b.developer) !== 'comercial' &&
       !!b.photo,
     );
-    picks = filterBreveLancamento(picks).filter(temPrecoReal);
+    picks = filterLotesForaSP(filterBreveLancamento(picks)).filter(temPrecoReal);
     picks.sort((a, b) => (a.min_price ?? 0) - (b.min_price ?? 0));
 
     // Amostragem espalhada pela faixa de preço (não só os mais caros nem só
