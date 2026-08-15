@@ -396,6 +396,29 @@ function SimuladorInner() {
     document.title = 'Simulador de Financiamento | FinancieCerto';
   }, []);
 
+  // Toda simulação concluída fica salva automaticamente — não só quando a
+  // pessoa pede pra receber por e-mail (ver "Minhas simulações" em /conta).
+  const ultimoSimSalvo = useRef<ResultadoSimulacao | null>(null);
+  useEffect(() => {
+    if (!sim || sim === ultimoSimSalvo.current) return;
+    ultimoSimSalvo.current = sim;
+    const modalidade = sim.isMCMV ? (sim.faixa ? `${sim.faixa.label} MCMV` : 'MCMV') : sim.isSFI ? 'SFI' : 'SBPE (SFH)';
+    fetch('/api/simulacoes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        modalidade,
+        valorImovel:      sim.valorImovel,
+        valorFinanciado:  sim.valorFinanciado,
+        parcelaPrice:     sim.parcelaPrimeiro,
+        parcelaSAC:       sim.parcelaSACPrimeiro,
+        taxaAnual:        sim.taxaAnual,
+        prazoAnos:        Math.round(sim.prazoMeses / 12),
+        comprometimento:  sim.comprometimento,
+      }),
+    }).catch(() => { /* ignore */ });
+  }, [sim]);
+
   // Imóvel veio com status não identificado (ver lib/status.ts) — o cálculo
   // abaixo assume "pronto" como fallback seguro, mas o usuário precisa saber
   // que isso não foi confirmado, já que muda o resultado (não há fluxo de obra).

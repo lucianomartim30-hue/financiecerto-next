@@ -30,6 +30,14 @@ function writeAll(items: FavoritoItem[]): void {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(items));
     window.dispatchEvent(new CustomEvent(EVENT));
+    // Espelha no servidor — permite ver os mesmos favoritos em qualquer
+    // aparelho depois de logar (ver lib/favoritos-kv.ts). Nunca bloqueia a
+    // ação local: se falhar, os favoritos continuam funcionando por aqui.
+    fetch('/api/favoritos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: items.map(i => i.id) }),
+    }).catch(() => { /* ignore */ });
   } catch { /* storage indisponível (modo privado etc.) — falha silenciosa */ }
 }
 

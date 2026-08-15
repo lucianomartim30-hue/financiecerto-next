@@ -1,14 +1,13 @@
 /**
  * POST /api/conta/enviar-resultado — envia o resultado de uma simulação por
- * e-mail. Se a pessoa ainda não tem sessão, o mesmo e-mail já vem com um link
- * de acesso (2 em 1: recebe o resultado agora e, se quiser, também consegue
- * ver depois em /conta). Nunca é exigido pra simular — só existe quando a
- * pessoa explicitamente pede pra receber o resultado.
+ * e-mail (usado tanto pelo botão no simulador quanto pelo "reenviar" em
+ * /conta, pra simulações já salvas). A simulação em si já foi salva
+ * automaticamente (ver /api/simulacoes) — isso aqui só entrega uma cópia
+ * imediata por e-mail. Nunca é exigido pra simular.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { criarLinkAcesso, getEmailDaSessao } from '@/lib/conta-kv';
 
 const rateMap = new Map<string, { count: number; resetAt: number }>();
 function checkRate(ip: string) {
@@ -60,13 +59,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Serviço de e-mail não configurado.' }, { status: 500 });
   }
 
-  const jaLogado = !!(await getEmailDaSessao(req.cookies.get('fc_conta')?.value));
-  let linkAcesso = '';
-  if (!jaLogado) {
-    const token = await criarLinkAcesso(email.toLowerCase());
-    if (token) linkAcesso = `${req.nextUrl.origin}/api/conta/verificar?token=${token}`;
-  }
-
   const resend = new Resend(RESEND_API_KEY);
 
   const html = `<!DOCTYPE html>
@@ -89,11 +81,10 @@ export async function POST(req: NextRequest) {
         <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;border-bottom:1px solid #e5e7eb;">Prazo</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#111827;border-bottom:1px solid #e5e7eb;">${r.prazoAnos || 0} anos</td></tr>
         <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">Parcela SAC (1ª)</td><td style="padding:8px 0;text-align:right;font-weight:700;color:#111827;">${fmtBRL(r.parcelaSAC || 0)}</td></tr>
       </table>
-      ${linkAcesso ? `
       <div style="text-align:center;margin:28px 0 8px;padding-top:20px;border-top:1px solid #e5e7eb;">
-        <p style="font-size:13px;color:#374151;margin:0 0 14px;">Quer ver isso de novo depois, ou ativar alertas de imóveis? Acesse sua conta — sem senha, é só clicar:</p>
-        <a href="${linkAcesso}" style="display:inline-block;background:#2563eb;color:#fff;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;text-decoration:none;">Acessar minha conta →</a>
-      </div>` : ''}
+        <p style="font-size:13px;color:#374151;margin:0 0 14px;">Essa e outras simulações ficam salvas na sua conta — acesse quando quiser com este mesmo e-mail:</p>
+        <a href="https://www.financiecerto.com.br/conta" style="display:inline-block;background:#2563eb;color:#fff;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;text-decoration:none;">Acessar minha conta →</a>
+      </div>
       <p style="font-size:11px;color:#9ca3af;margin-top:20px;">Simulação educativa — não constitui proposta de crédito. Valores exatos confirmados em cada instituição financeira.</p>
     </div>
   </div>
@@ -110,7 +101,7 @@ export async function POST(req: NextRequest) {
       console.error('Resend error:', error);
       return NextResponse.json({ error: 'Erro ao enviar e-mail.' }, { status: 500 });
     }
-    return NextResponse.json({ ok: true, novaConta: !!linkAcesso });
+    return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error('Erro conta/enviar-resultado:', msg);
