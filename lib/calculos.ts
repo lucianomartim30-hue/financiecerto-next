@@ -765,6 +765,25 @@ export function formatBRL(valor: number): string {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 }
 
+/**
+ * Linha de preço padrão dos cards de imóvel em todo o site — sempre com a
+ * metragem da planta junto do preço ("Planta de 45m² a 78m², A partir de
+ * R$ 450.000"), não só o preço sozinho. Sem área conhecida, cai pro preço
+ * sozinho (ou "Consulte o preço" se nem isso tiver).
+ */
+export function formatPlantaPreco(
+  areaMin: number | null | undefined,
+  areaMax: number | null | undefined,
+  minPrice: number | null | undefined,
+): string {
+  const precoTxt = minPrice ? `A partir de ${formatBRL(minPrice)}` : 'Consulte o preço';
+  if (!areaMin) return precoTxt;
+  const areaTxt = areaMax && areaMax !== areaMin
+    ? `Planta de ${areaMin}m² a ${areaMax}m²`
+    : `Planta de ${areaMin}m²`;
+  return `${areaTxt}, ${precoTxt}`;
+}
+
 export function parseBRL(str: string): number {
   return Number(str.replace(/\D/g, ''));
 }

@@ -12,7 +12,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { formatBRL } from '@/lib/calculos';
+import { formatBRL, formatPlantaPreco } from '@/lib/calculos';
 import { lookupSPCoords, haversineKm } from '@/lib/sp-neighborhoods';
 
 interface ImovelCard {
@@ -26,6 +26,7 @@ interface ImovelCard {
   bedrooms_min: number | null;
   bedrooms_max: number | null;
   area_min: number | null;
+  area_max: number | null;
   vagas_min: number | null;
   photo: string | null;
   status: string;
@@ -88,15 +89,8 @@ function CardImovel({ im }: { im: ImovelCard }) {
               🛏 {im.bedrooms_min}{im.bedrooms_max && im.bedrooms_max !== im.bedrooms_min ? `–${im.bedrooms_max}` : ''} qts
             </span>
           )}
-          {im.area_min !== null && (
-            <span style={{ fontSize: 10, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 7px', fontWeight: 600, color: 'var(--text-muted)' }}>
-              ▦ {im.area_min}m²
-            </span>
-          )}
         </div>
-        {im.min_price && (
-          <p style={{ fontSize: 13, fontWeight: 900, color: 'var(--primary)' }}>{formatBRL(im.min_price)}</p>
-        )}
+        <p style={{ fontSize: 13, fontWeight: 900, color: 'var(--primary)' }}>{formatPlantaPreco(im.area_min, im.area_max, im.min_price)}</p>
       </div>
     </Link>
   );

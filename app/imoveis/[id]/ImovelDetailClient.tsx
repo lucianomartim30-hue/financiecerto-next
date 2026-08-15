@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { formatBRL, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, type FaixaMCMV } from '@/lib/calculos';
+import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, type FaixaMCMV } from '@/lib/calculos';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { getStatusCfg, isNaPlanta } from '@/lib/status';
 import { buildSimuladorLink } from '@/lib/simulador-link';
@@ -83,6 +83,7 @@ interface RelatedImovel {
   bedrooms_min: number | null;
   bedrooms_max: number | null;
   area_min: number | null;
+  area_max: number | null;
   photo: string | null;
   status: string;
   status_norm?: string;
@@ -1470,7 +1471,7 @@ function SecaoVistosRecentemente({ currentId }: { currentId: string }) {
               </div>
               <div style={{ padding: '10px' }}>
                 <p style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text)', marginBottom: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{im.name}</p>
-                {im.min_price && <p style={{ fontSize: '12px', fontWeight: '900', color: 'var(--primary)' }}>{formatBRL(im.min_price)}</p>}
+                <p style={{ fontSize: '11px', fontWeight: '900', color: 'var(--primary)' }}>{formatPlantaPreco(im.area_min, im.area_max, im.min_price)}</p>
               </div>
             </Link>
           );
@@ -1613,16 +1614,10 @@ function SecaoRelacionados({
                   {im.bedrooms_min !== null && (
                     <SpecChip icon="🛏" label={`${im.bedrooms_min}${im.bedrooms_min !== im.bedrooms_max && im.bedrooms_max ? `–${im.bedrooms_max}` : ''} qts`} />
                   )}
-                  {im.area_min !== null && <SpecChip icon="▦" label={`${im.area_min}m²`} />}
                 </div>
-                {im.min_price && (
-                  <p style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)' }}>
-                    {formatBRL(im.min_price)}
-                    {im.max_price && im.max_price !== im.min_price && (
-                      <span style={{ fontWeight: '400', color: 'var(--text-faint)', fontSize: '11px' }}> – {formatBRL(im.max_price)}</span>
-                    )}
-                  </p>
-                )}
+                <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)' }}>
+                  {formatPlantaPreco(im.area_min, im.area_max, im.min_price)}
+                </p>
               </div>
             </Link>
           );

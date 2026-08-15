@@ -3,7 +3,7 @@ import SchemaMarkup from '@/components/SchemaMarkup';
 import { website, organization, breadcrumb, SITE_CONFIG } from '@/lib/schema';
 import { HomeEngagement } from './HomeEngagement';
 import { getImoveisDestaque, getImoveisDestaqueLesteNorte, type ImovelDestaque } from '@/lib/imoveis-destaque';
-import { formatBRL } from '@/lib/calculos';
+import { formatPlantaPreco } from '@/lib/calculos';
 import { getStatusCfg } from '@/lib/status';
 
 // Sem isso a home fica presa no snapshot do catálogo do último deploy —
@@ -142,11 +142,9 @@ function DestaqueSection({
                   <p style={{ fontSize: '12px', color: 'var(--text-faint)', marginBottom: '10px' }}>
                     📍 {im.neighborhood}, São Paulo
                   </p>
-                  {im.min_price && (
-                    <p style={{ fontSize: '16px', fontWeight: '900', color: 'var(--primary)' }}>
-                      {formatBRL(im.min_price)}
-                    </p>
-                  )}
+                  <p style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)' }}>
+                    {formatPlantaPreco(im.area_min, im.area_max, im.min_price)}
+                  </p>
                 </div>
               </Link>
             );

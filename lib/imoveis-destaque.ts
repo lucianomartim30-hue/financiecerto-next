@@ -18,6 +18,8 @@ export interface ImovelDestaque {
   neighborhood: string;
   min_price: number | null;
   max_price: number | null;
+  area_min: number | null;
+  area_max: number | null;
   photo: string | null;
   status_norm: string;
 }
@@ -83,6 +85,8 @@ async function getImoveisDestaqueDeZonas(zonas: Set<string>, limit: number): Pro
       neighborhood: b.neighborhood,
       min_price: b.min_price,
       max_price: b.max_price,
+      area_min: b.area_min,
+      area_max: b.area_max,
       photo: b.photo,
       status_norm: b.status_norm,
     }));
