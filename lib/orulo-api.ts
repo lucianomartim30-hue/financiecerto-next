@@ -212,6 +212,7 @@ export function normalizeBuilding(b: Record<string, unknown>) {
       return inferFinalityFromName(name, developer);
     })(),
     updated_at:    (b.updated_at as string) || null,
+    stock:         (b.stock as number) ?? null,   // unidades disponíveis (total do empreendimento)
     property_types,
     typology_ranges,
   };

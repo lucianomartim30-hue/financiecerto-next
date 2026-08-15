@@ -54,6 +54,15 @@ const FEATURES = [
     textColor: 'var(--primary)',
   },
   {
+    icon: '🏠',
+    title: 'Imóveis Minha Casa Minha Vida',
+    desc: 'Mais de 150 mil unidades dentro do teto do MCMV, da Faixa 1 à Faixa 4.',
+    color: '#dcfce7',
+    textColor: '#16a34a',
+    href: '/imoveis/minha-casa-minha-vida',
+    badge: 'Novo',
+  },
+  {
     icon: '🏗️',
     title: 'Simulador na Planta',
     desc: 'Reproduz o fluxo real da construtora: ato, mensais, reforços e evolução de obra.',
@@ -266,7 +275,8 @@ export default async function Home() {
             <div style={{ textAlign: 'center', marginTop: '36px' }}>
               <Link href="/regiao/zona-sul-sp" className="btn-outline" style={{ marginRight: '12px', marginBottom: '8px' }}>Ver mais na Zona Sul →</Link>
               <Link href="/regiao/zona-oeste-sp" className="btn-outline" style={{ marginRight: '12px', marginBottom: '8px' }}>Ver mais na Zona Oeste →</Link>
-              <Link href="/regiao/centro-sp" className="btn-outline" style={{ marginBottom: '8px' }}>Ver mais no Centro →</Link>
+              <Link href="/regiao/centro-sp" className="btn-outline" style={{ marginRight: '12px', marginBottom: '8px' }}>Ver mais no Centro →</Link>
+              <Link href="/imoveis/minha-casa-minha-vida" className="btn-outline" style={{ marginBottom: '8px' }}>Ver imóveis MCMV →</Link>
             </div>
           </div>
         </section>
@@ -334,29 +344,45 @@ export default async function Home() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-            {FEATURES.map((f, i) => (
-              <div key={i} className="card card-hover" style={{ padding: '24px' }}>
-                <div style={{
-                  width: '48px', height: '48px',
-                  background: f.color,
-                  borderRadius: '12px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '22px',
-                  marginBottom: '16px',
-                  overflow: 'hidden',
-                }}>
-                  {f.title === 'Consultor João'
-                    ? <img src="/avatar-joao.png" alt="João" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : f.icon}
+            {FEATURES.map((f, i) => {
+              const inner = (
+                <>
+                  {f.badge && (
+                    <span style={{ position: 'absolute', top: '16px', right: '16px', background: f.textColor, color: '#fff', fontSize: '10px', fontWeight: '800', padding: '3px 9px', borderRadius: '99px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                      {f.badge}
+                    </span>
+                  )}
+                  <div style={{
+                    width: '48px', height: '48px',
+                    background: f.color,
+                    borderRadius: '12px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '22px',
+                    marginBottom: '16px',
+                    overflow: 'hidden',
+                  }}>
+                    {f.title === 'Consultor João'
+                      ? <img src="/avatar-joao.png" alt="João" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : f.icon}
+                  </div>
+                  <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--text)' }}>
+                    {f.title}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.65' }}>
+                    {f.desc}
+                  </p>
+                </>
+              );
+              return f.href ? (
+                <Link key={i} href={f.href} className="card card-hover" style={{ padding: '24px', textDecoration: 'none', color: 'inherit', display: 'block', position: 'relative' }}>
+                  {inner}
+                </Link>
+              ) : (
+                <div key={i} className="card card-hover" style={{ padding: '24px', position: 'relative' }}>
+                  {inner}
                 </div>
-                <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--text)' }}>
-                  {f.title}
-                </h3>
-                <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.65' }}>
-                  {f.desc}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

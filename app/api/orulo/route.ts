@@ -197,6 +197,7 @@ export async function GET(req: NextRequest) {
     const bedroomsMax  = searchParams.get('bedrooms_max');
     const statusReq    = searchParams.get('status');
     const q            = searchParams.get('q');
+    const residencial  = searchParams.get('residencial') === '1';
 
     // ── Mock ────────────────────────────────────────────────────────────────
     if (process.env.USE_MOCK === 'true') {
@@ -227,6 +228,11 @@ export async function GET(req: NextRequest) {
       // Fora do estado de SP, remove loteamentos/terrenos — só empreendimentos
       // de verdade (ver lib/filtro-lotes-fora-sp.ts).
       all = filterLotesForaSP(all);
+
+      // Opt-in: só residencial (ex: página do Minha Casa Minha Vida, que não
+      // se aplica a imóvel comercial). Não filtra por padrão pra não mudar o
+      // comportamento de quem já usa a rota sem esse parâmetro.
+      if (residencial) all = all.filter(b => b.finality_norm !== 'comercial');
 
       // Filtra por cidade específica se informada
       if (city) {
