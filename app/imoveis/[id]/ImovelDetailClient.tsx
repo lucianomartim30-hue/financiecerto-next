@@ -495,23 +495,30 @@ function HeroGallery({ photos, name }: { photos: string[]; name: string }) {
             onClick={(e) => { e.stopPropagation(); setLightboxLoading(false); setLightbox(l => l !== null ? nextValid(l, -1) : null); }}
           >‹</button>
 
-          {/* Foto em tamanho natural — key força remount ao navegar para novo índice */}
-          {lightboxLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'rgba(255,255,255,.7)' }}>
-              <div style={{ width: '36px', height: '36px', border: '3px solid rgba(255,255,255,.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-              <span style={{ fontSize: '13px' }}>Carregando foto...</span>
-              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            </div>
-          ) : (
-            <img
-              key={lightbox}
-              src={lightboxUrlOverrides.get(lightbox) ?? photos[lightbox]}
-              alt={`${name} — foto ${lightbox + 1}`}
-              onError={() => lightboxOnError(lightbox)}
-              onLoad={() => setLightboxLoading(false)}
-              style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
-            />
-          )}
+          {/* Foto em tamanho natural — key força remount ao navegar para novo índice.
+              Container com tamanho fixo (90vw × 90vh) reserva o espaço mesmo antes
+              da imagem carregar — sem isso o <img> (só com maxWidth/maxHeight, sem
+              width/height) colapsava pra 0×0 até o download terminar, e a tela
+              "pulava" de tamanho a cada troca de foto (pior em foto lenta/variante
+              com fallback, mais perceptível no mobile). */}
+          <div style={{ width: '90vw', height: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {lightboxLoading ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'rgba(255,255,255,.7)' }}>
+                <div style={{ width: '36px', height: '36px', border: '3px solid rgba(255,255,255,.25)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <span style={{ fontSize: '13px' }}>Carregando foto...</span>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            ) : (
+              <img
+                key={lightbox}
+                src={lightboxUrlOverrides.get(lightbox) ?? photos[lightbox]}
+                alt={`${name} — foto ${lightbox + 1}`}
+                onError={() => lightboxOnError(lightbox)}
+                onLoad={() => setLightboxLoading(false)}
+                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '8px' }}
+              />
+            )}
+          </div>
 
           <button
             onClick={(e) => { e.stopPropagation(); setLightboxLoading(false); setLightbox(l => l !== null ? nextValid(l, 1) : null); }}

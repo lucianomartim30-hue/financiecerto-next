@@ -429,6 +429,14 @@ function ImoveisContent() {
       const cidade = normStr(b.city || '');
       if (!geoCities.some(c => normStr(c) === cidade)) return false;
     }
+    // ── Sem geo (IP não detectado/bloqueado) e sem busca — cai pra São Paulo,
+    // que é o que o cabeçalho da página já promete ("imóveis em SP"). Sem isso,
+    // a lista mobile (que não filtra por bounds do mapa) mostrava o catálogo
+    // nacional inteiro na ordem crua do catálogo — podia abrir só com imóveis
+    // de outra cidade/estado na primeira tela, contradizendo o texto "em SP".
+    else if (!geoAtivo) {
+      if (normStr(b.city || '') !== normStr('São Paulo')) return false;
+    }
     if (filterMin      && (b.min_price    ?? 0)  < filterMin)     return false;
     if (filterMax      && (b.min_price    ?? 0)  > filterMax)     return false;
     if (filterBedrooms && (b.bedrooms_max ?? 99) < filterBedrooms) return false;
@@ -1120,7 +1128,7 @@ function ImoveisContent() {
           {/* Cabeçalho da lista */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
-              {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis em SP`}
+              {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis${geoAtivo && geoLabel ? ` em ${geoLabel}` : ' em São Paulo'}`}
             </span>
             <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
