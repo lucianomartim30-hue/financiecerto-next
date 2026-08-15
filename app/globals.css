@@ -57,6 +57,14 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
 
+/* Trava de segurança contra scroll horizontal no mobile — em celular real
+   (fora de um resize de devtools/browser de testes) algum elemento pontual
+   podia ficar alguns pixels mais largo que a viewport (grid com auto-fill
+   arredondando, imagem sem max-width, etc.) e a página inteira "abria maior
+   que a tela", parecendo versão desktop encolhida. Isso corta qualquer
+   estouro horizontal na raiz em vez de cada componente ter que acertar sozinho. */
+html, body { max-width: 100%; overflow-x: hidden; }
+
 body {
   background-color: var(--bg);
   color: var(--text);
@@ -66,6 +74,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+img { max-width: 100%; }
 
 h1, h2, h3, h4, h5, h6 { font-weight: 700; line-height: 1.25; color: var(--text); }
 a { color: var(--primary); text-decoration: none; }
