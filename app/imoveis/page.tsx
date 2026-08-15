@@ -57,25 +57,20 @@ const SP_BAIRROS: string[] = [
   'São Mateus','Vila Jacuí','Iguatemi','Jardim Anália Franco',
 ];
 
-// ─── Cidades onde o portal atua, agrupadas por região — alimenta o seletor de
-// cidade da busca. A pessoa escolhe a cidade primeiro; só depois os bairros
-// daquela cidade (com imóveis) aparecem — evita a ambiguidade de bairros com
-// o mesmo nome em cidades diferentes (ex: "Centro" existe em várias).
-const CIDADES_BUSCA: { grupo: string; cidades: string[] }[] = [
-  { grupo: 'São Paulo (capital)', cidades: ['São Paulo'] },
-  {
-    grupo: 'Grande São Paulo', cidades: [
-      'Guarulhos','Osasco','Santo André','São Bernardo do Campo','São Caetano do Sul',
-      'Diadema','Mauá','Carapicuíba','Cotia','Embu das Artes','Barueri','Taboão da Serra',
-      'Poá','Ribeirão Pires','Suzano','Ferraz de Vasconcelos','Santana de Parnaíba',
-      'Itaquaquecetuba','Mogi das Cruzes','Jandira','Itapevi','Vargem Grande Paulista',
-    ],
-  },
-  { grupo: 'Região de Campinas', cidades: ['Campinas','Hortolândia','Americana','Paulínia','Valinhos',"Santa Bárbara D'Oeste"] },
-  { grupo: 'Santa Catarina', cidades: ['Florianópolis','Itajaí','Bombinhas','Itapema','Balneário Camboriú','Porto Belo'] },
-  { grupo: 'Paraná', cidades: ['Curitiba'] },
-  { grupo: 'Rio Grande do Sul', cidades: ['Porto Alegre','Capão da Canoa'] },
-  { grupo: 'Rio de Janeiro', cidades: ['Rio de Janeiro'] },
+// ─── Cidades onde o portal atua — alimenta o seletor de cidade da busca.
+// Lista simples (sem agrupar por estado/região): a pessoa escolhe a cidade
+// primeiro; só depois os bairros daquela cidade (com imóveis) aparecem —
+// evita a ambiguidade de bairros com o mesmo nome em cidades diferentes
+// (ex: "Centro" existe em várias). São Paulo fica sempre em primeiro por ser
+// o mercado principal; o resto em ordem alfabética.
+const CIDADES_BUSCA: string[] = [
+  'São Paulo',
+  'Americana','Balneário Camboriú','Barueri','Bombinhas','Campinas','Capão da Canoa',
+  'Carapicuíba','Cotia','Curitiba','Diadema','Embu das Artes','Ferraz de Vasconcelos','Florianópolis',
+  'Guarulhos','Hortolândia','Itajaí','Itapema','Itapevi','Itaquaquecetuba','Jandira','Mauá',
+  'Mogi das Cruzes','Osasco','Paulínia','Poá','Porto Alegre','Porto Belo','Ribeirão Pires',
+  'Rio de Janeiro',"Santa Bárbara D'Oeste",'Santana de Parnaíba','Santo André','São Bernardo do Campo',
+  'São Caetano do Sul','Suzano','Taboão da Serra','Valinhos','Vargem Grande Paulista',
 ];
 
 // Normaliza string para comparação: minúsculo, sem acentos
@@ -261,6 +256,12 @@ function ImoveisContent() {
   // "todas"), pra que o bairro digitado/selecionado só possa casar com imóveis
   // dessa cidade. Ver CIDADES_BUSCA acima.
   const [searchCity, setSearchCity] = useState(searchParams.get('city') || 'São Paulo');
+  // Marca que a pessoa escolheu uma cidade pra navegar (sem precisar também
+  // escolher um bairro específico) — sem isso, trocar de cidade no seletor não
+  // filtrava nada sozinho, obrigando um segundo passo (escolher bairro) que a
+  // maioria dos portais não exige. Some quando um bairro é buscado (activeLocation
+  // assume o filtro mais específico) ou quando a cidade é limpa.
+  const [cidadeSemBairro, setCidadeSemBairro] = useState(false);
 
   // ── Padrão por região (geo por IP, sem pedir permissão do navegador) ───────
   // Só entra em jogo em uma visita "fria" — sem nenhum filtro/busca já na URL —
@@ -428,6 +429,11 @@ function ImoveisContent() {
       const haystack = normStr(`${b.neighborhood} ${b.name}`);
       if (!haystack.includes(q)) return false;
     }
+    // Cidade escolhida no seletor, sem bairro específico ainda — filtra por
+    // cidade sozinha, igual à maioria dos portais (ver cidadeSemBairro acima).
+    else if (cidadeSemBairro) {
+      if (normStr(b.city || '') !== normStr(searchCity)) return false;
+    }
     // ── Padrão por região (geo por IP) — só quando a pessoa não buscou nada ────
     // NÃO restringe por cidade aqui quando a geo falha/ainda não respondeu —
     // baseFilter alimenta tanto os pins do mapa quanto a lista, e o mapa
@@ -530,6 +536,7 @@ function ImoveisContent() {
     const base = allBuildings.filter(baseFilter);
 
     if (activeLocation) return base; // bairro já filtra tudo
+    if (cidadeSemBairro) return base; // cidade escolhida no seletor já filtra tudo
     if (isMobile && mobileView !== 'map') {
       // Lista mobile sem mapa visível: não filtra por bounds. Mas sem geo
       // ativo (IP não detectado/bloqueado — comum), cai pra São Paulo, que é
@@ -550,7 +557,7 @@ function ImoveisContent() {
     }
 
     return base;
-  }, [allBuildings, baseFilter, activeLocation, debouncedBounds, isMobile, mobileView, geoAtivo]);
+  }, [allBuildings, baseFilter, activeLocation, cidadeSemBairro, debouncedBounds, isMobile, mobileView, geoAtivo]);
 
   const geocodeAndFly = useCallback(async (query: string, cityOverride?: string) => {
     if (!query.trim()) return;
@@ -611,6 +618,7 @@ function ImoveisContent() {
 
   const clearAll = useCallback(() => {
     setActiveLocation(''); setSearch('');
+    setCidadeSemBairro(false); setSearchCity('São Paulo');
     setFilterStatus(''); setFilterFinality(''); setFilterTipologia(''); setFilterMin(0); setFilterMax(0);
     setFilterBedrooms(0); setFilterVagas(0); setFilterBaths(0);
     setFilterAreaMin(0); setFilterAreaMax(0);
@@ -793,31 +801,27 @@ function ImoveisContent() {
                   boxShadow: '0 8px 32px rgba(0,0,0,.18)', zIndex: 10001,
                   maxHeight: '55vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch',
                 }}>
-                  {CIDADES_BUSCA.map(grupo => (
-                    <div key={grupo.grupo}>
-                      <div style={{ padding: '10px 14px 4px', fontSize: '10px', fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                        {grupo.grupo}
-                      </div>
-                      {grupo.cidades.map(c => (
-                        <button
-                          key={c}
-                          onClick={() => {
-                            setSearchCity(c);
-                            setCidadeMobileAberta(false);
-                            setMobileSearchInput(''); setSearch(''); setActiveLocation('');
-                          }}
-                          style={{
-                            display: 'block', width: '100%', padding: '10px 14px',
-                            background: c === searchCity ? '#eff6ff' : 'transparent',
-                            color: c === searchCity ? 'var(--primary)' : '#111827',
-                            fontWeight: c === searchCity ? '700' : '500',
-                            border: 'none', fontSize: '14px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
-                          }}
-                        >
-                          {c}
-                        </button>
-                      ))}
-                    </div>
+                  {CIDADES_BUSCA.map(c => (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        setSearchCity(c);
+                        setCidadeSemBairro(true);
+                        setCidadeMobileAberta(false);
+                        setMobileSearchInput(''); setSearch(''); setActiveLocation('');
+                        setShowMobileSearch(false); // já filtra pela cidade — vai direto pro resultado
+                        setDisplayCount(12);
+                      }}
+                      style={{
+                        display: 'block', width: '100%', padding: '10px 14px',
+                        background: c === searchCity ? '#eff6ff' : 'transparent',
+                        color: c === searchCity ? 'var(--primary)' : '#111827',
+                        fontWeight: c === searchCity ? '700' : '500',
+                        border: 'none', fontSize: '14px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      {c}
+                    </button>
                   ))}
                 </div>
               </>
@@ -996,7 +1000,9 @@ function ImoveisContent() {
                   onChange={e => {
                     const cidade = e.target.value;
                     setSearchCity(cidade);
+                    setCidadeSemBairro(true);
                     setSearch(''); setActiveLocation(''); setShowSuggestions(false);
+                    setDisplayCount(12);
                   }}
                   title="Escolha a cidade antes de buscar o bairro"
                   style={{
@@ -1005,11 +1011,7 @@ function ImoveisContent() {
                     fontWeight: '700', padding: '0 6px', maxWidth: '108px', cursor: 'pointer',
                   }}
                 >
-                  {CIDADES_BUSCA.map(grupo => (
-                    <optgroup key={grupo.grupo} label={grupo.grupo}>
-                      {grupo.cidades.map(c => <option key={c} value={c}>{c}</option>)}
-                    </optgroup>
-                  ))}
+                  {CIDADES_BUSCA.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
@@ -1069,8 +1071,16 @@ function ImoveisContent() {
           </button>
         )}
 
+        {/* Chip de cidade escolhida (sem bairro específico) */}
+        {!activeLocation && cidadeSemBairro && (
+          <button onClick={() => { setCidadeSemBairro(false); setSearchCity('São Paulo'); }}
+            style={{ height: '36px', padding: '0 10px', borderRadius: '18px', border: '1.5px solid #60a5fa', background: 'rgba(96,165,250,.15)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            📍 {searchCity} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
+          </button>
+        )}
+
         {/* Chip de região automática (geo por IP) — some ao buscar outra localização ou ao ser fechado */}
-        {!activeLocation && geoAtivo && geoLabel && (
+        {!activeLocation && !cidadeSemBairro && geoAtivo && geoLabel && (
           <button
             onClick={() => { setGeoAtivo(false); try { localStorage.setItem('fc_geo_dismissed', '1'); } catch { /* ignore */ } }}
             title="Ver imóveis de todas as cidades"
