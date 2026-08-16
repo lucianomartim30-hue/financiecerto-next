@@ -20,6 +20,15 @@ const SEED: Record<string, string[]> = {
   '72556': ['2555893', '2498756', '2555894'], // Line Praça da Árvore — "VENDEU LEVOU"/"COMISSÃO"/"FEIRÃO CAIXA"
 };
 
+/**
+ * Versão síncrona do SEED, sem KV — usada por lib/orulo-api.ts pra também
+ * evitar usar um banner como foto de capa do card (default_image), já que
+ * normalizeBuilding roda no processo síncrono de sincronização do catálogo.
+ */
+export function isSeedBanner(buildingId: string, photoId: string): boolean {
+  return (SEED[buildingId] ?? []).includes(photoId);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getKv(): Promise<any | null> {
   const hasConfig = !!(process.env.KV_REST_API_URL || process.env.KV_URL);

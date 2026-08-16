@@ -6,7 +6,15 @@
 
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { normalizeStatus } from '@/lib/status';
+import { isSeedBanner } from '@/lib/fotos-ocultas-kv';
 export { normalizeStatus };
+
+// Extrai o id numérico da foto a partir da URL do CDN da Orulo — mesmo
+// formato usado em app/api/orulo/[id]/route.ts.
+function extrairIdDaUrl(url: string): string | null {
+  const m = url.match(/\/(\d+)\.[a-z]+$/i);
+  return m ? m[1] : null;
+}
 
 export const ORULO_BASE = 'https://www.orulo.com.br';
 export const SITE_BASE  = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.financiecerto.com.br';
@@ -183,7 +191,18 @@ export function normalizeBuilding(b: Record<string, unknown>) {
     lat,
     lng,
     delivery_date: (b.delivery_date   as string) ?? (b.expected_delivery as string) ?? (b.completion_date as string) ?? null,
-    photo:         img['520x280'] || img['840x560'] || img['200x140'] || null,
+    photo:         (() => {
+      const url = img['520x280'] || img['840x560'] || img['200x140'] || null;
+      // A Orulo às vezes tem a default_image apontando pra um banner de
+      // marketing pra corretor/imobiliária em vez de uma foto real do
+      // empreendimento — nesses casos já confirmados, não usa como capa do
+      // card (ver lib/fotos-ocultas-kv.ts).
+      if (url) {
+        const photoId = extrairIdDaUrl(url);
+        if (photoId && isSeedBanner(String(b.id), photoId)) return null;
+      }
+      return url;
+    })(),
     sharing_url:   (b.sharing_url as string) || null,
     orulo_url:     (b.sharing_url as string) || `${ORULO_BASE}/buildings/${b.id}`,
     status:        (b.stage  as string) || (b.status as string) || '',
