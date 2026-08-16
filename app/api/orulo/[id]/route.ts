@@ -341,7 +341,12 @@ export async function GET(
       amenities,
       typologies,
       sharing_url: (b.orulo_url as string) || (b.sharing_url as string) || null,
-      _debug_raw_images: req.nextUrl.searchParams.get('debug') === '1' ? imagesRaw : undefined,
+      _debug_raw_images: req.nextUrl.searchParams.get('debug') === '1'
+        ? imagesRaw.map(img => {
+            const imgId = (img.id ?? img['image_id']) as string | number | undefined;
+            return { ...img, _inMap: imgId ? imageUrlMap.has(String(imgId)) : false, _mapUrl: imgId ? imageUrlMap.get(String(imgId)) : undefined };
+          })
+        : undefined,
     });
 
   } catch (err) {
