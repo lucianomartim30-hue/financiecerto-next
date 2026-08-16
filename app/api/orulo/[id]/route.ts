@@ -256,15 +256,19 @@ export async function GET(
     // proporção da imagem distinguem com segurança um banner de uma foto
     // real (ex: fachada de prédio alto também é retrato).
     const ocultas = await kvGetFotosOcultas(id);
-    // /admin/fotos precisa ver as fotos ocultas também, pra poder reexibi-las —
-    // só o painel autenticado recebe a lista completa com os ids de cada foto.
-    const admin = isAdmin(req);
-    const photosVisiveis = (admin || ocultas.size === 0)
+    // A galeria pública (campo `photos`) filtra sempre, pra QUALQUER visitante —
+    // inclusive o próprio corretor navegando normalmente pelo site logado no
+    // painel admin em outra aba (o cookie de sessão vai junto em toda
+    // requisição do mesmo navegador, então isso não pode depender de admin).
+    // O painel /admin/fotos usa exclusivamente o campo `admin_fotos` abaixo
+    // pra ver e reexibir as ocultas — nunca o `photos`.
+    const photosVisiveis = ocultas.size === 0
       ? photos
       : photos.filter(url => {
           const imgId = extrairIdDaUrl(url);
           return !imgId || !ocultas.has(imgId);
         });
+    const admin = isAdmin(req);
 
     // ── Plantas baixas ─────────────────────────────────────────────────────────
     // floor_plans[] tem a mesma estrutura: { id, description, type, associations }
