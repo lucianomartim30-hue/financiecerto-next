@@ -341,6 +341,7 @@ export async function GET(
       amenities,
       typologies,
       sharing_url: (b.orulo_url as string) || (b.sharing_url as string) || null,
+      _debug_raw_images: req.nextUrl.searchParams.get('debug') === '1' ? imagesRaw : undefined,
     });
 
   } catch (err) {
