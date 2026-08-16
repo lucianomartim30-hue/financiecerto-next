@@ -11,6 +11,15 @@
 
 const KV_KEY = 'fotos-ocultas:map'; // { [buildingId]: string[] de ids de foto }
 
+// Casos já confirmados manualmente (banners de marketing pra corretor
+// misturados no álbum público) — aplicados sempre, mesmo antes de qualquer
+// curadoria feita em /admin/fotos. Novos casos continuam sendo resolvidos
+// pelo painel; isso aqui é só pra não depender de alguém logar pra corrigir
+// um caso já identificado e confirmado.
+const SEED: Record<string, string[]> = {
+  '72556': ['2555893', '2498756', '2555894'], // Line Praça da Árvore — "VENDEU LEVOU"/"COMISSÃO"/"FEIRÃO CAIXA"
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getKv(): Promise<any | null> {
   const hasConfig = !!(process.env.KV_REST_API_URL || process.env.KV_URL);
@@ -36,7 +45,7 @@ async function getMapa(): Promise<Record<string, string[]>> {
 
 export async function kvGetFotosOcultas(buildingId: string): Promise<Set<string>> {
   const mapa = await getMapa();
-  return new Set(mapa[buildingId] ?? []);
+  return new Set([...(SEED[buildingId] ?? []), ...(mapa[buildingId] ?? [])]);
 }
 
 export async function kvGetTodasFotosOcultas(): Promise<Record<string, string[]>> {
