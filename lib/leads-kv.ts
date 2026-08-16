@@ -171,3 +171,19 @@ export async function kvUpdateLead(
     return null;
   }
 }
+
+/** Remove um lead — usado pra limpar registro de teste/duplicado, nunca por engano em massa. */
+export async function kvDeleteLead(id: string): Promise<boolean> {
+  const kv = await getKv();
+  if (!kv) return false;
+  try {
+    const leads = await kvGetLeads();
+    const restantes = leads.filter(l => l.id !== id);
+    if (restantes.length === leads.length) return false; // não achou
+    await kv.set(KV_LEADS_KEY, restantes);
+    return true;
+  } catch (e) {
+    console.error('[leads-kv] deleteLead', e);
+    return false;
+  }
+}

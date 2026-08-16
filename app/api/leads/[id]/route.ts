@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { kvUpdateLead, type LeadStatus } from '@/lib/leads-kv';
+import { kvUpdateLead, kvDeleteLead, type LeadStatus } from '@/lib/leads-kv';
 import { sessionToken } from '../../admin-auth/route';
 
 const COOKIE_NAME = 'admin_leads_session';
@@ -43,4 +43,20 @@ export async function PATCH(
     return NextResponse.json({ error: 'Lead não encontrado.' }, { status: 404 });
   }
   return NextResponse.json({ ok: true, lead });
+}
+
+/** DELETE /api/leads/[id] — remove um lead (ex: registro de teste). Irreversível. */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!isAuthed(req)) {
+    return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+  }
+  const { id } = await params;
+  const ok = await kvDeleteLead(id);
+  if (!ok) {
+    return NextResponse.json({ error: 'Lead não encontrado.' }, { status: 404 });
+  }
+  return NextResponse.json({ ok: true });
 }

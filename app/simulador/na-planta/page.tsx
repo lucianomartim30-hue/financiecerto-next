@@ -82,6 +82,9 @@ function CTAConsultorCenario({
   const nomeLead = imovelName || `Simulação na planta — ${formatBRL(valor)}`;
 
   async function registrarLeadCenario() {
+    // O link continua clicável depois do 1º envio (só mostra uma confirmação
+    // por baixo) — sem essa trava, clicar de novo cria um lead duplicado.
+    if (enviado) return;
     const url = typeof window !== 'undefined' ? window.location.href : '';
     const atribuicao = getPrimeiraOrigem();
     const conversao = buildConversao({ imovelId: imovelId || null, action: 'cenario_na_planta' });
@@ -89,6 +92,10 @@ function CTAConsultorCenario({
       const res = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // Em mobile, o clique abre o app do WhatsApp e a aba de origem pode
+        // ser suspensa antes do fetch normal terminar — keepalive garante
+        // que o navegador entrega a requisição mesmo assim.
+        keepalive: true,
         body: JSON.stringify({
           imovelId: idLead,
           imovelName: nomeLead,

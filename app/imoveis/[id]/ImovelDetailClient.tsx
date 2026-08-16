@@ -94,16 +94,35 @@ interface RelatedImovel {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+// Evita registrar o mesmo clique duas vezes (duplo toque acidental no
+// mobile, duplo clique) — chave por imóvel+CTA exato, válida só durante essa
+// visualização da página (reseta ao recarregar). Um clique num CTA
+// DIFERENTE do mesmo imóvel (ex: "Agendar visita" depois de "Falar com
+// consultor") continua contando — são ações distintas, não duplicidade.
+const leadsJaRegistrados = new Set<string>();
+
 /**
  * Registra automaticamente um lead no painel /admin/leads quando alguém clica
- * em "Falar com consultor". Nunca deve travar/atrapalhar o clique real do
- * WhatsApp (que abre em nova aba via href, independente desta chamada) —
- * por isso ignora qualquer erro silenciosamente. Só dispara `lead_created`
- * no GA4 depois que o backend confirma a gravação (evita inflar "leads" com
- * simples cliques que não viraram registro real).
+ * em "Falar com consultor"/"Agendar visita". Nunca deve travar/atrapalhar o
+ * clique real do WhatsApp (que abre em nova aba via href, independente desta
+ * chamada) — por isso ignora qualquer erro silenciosamente. Só dispara
+ * `lead_created` no GA4 depois que o backend confirma a gravação (evita
+ * inflar "leads" com simples cliques que não viraram registro real).
+ *
+ * `keepalive: true` é essencial aqui: em mobile, o clique costuma abrir o
+ * app nativo do WhatsApp (deep link do wa.me), e o navegador pode suspender
+ * a aba de origem antes do fetch normal terminar — sem keepalive, esse
+ * registro se perdia silenciosamente mesmo com o clique real acontecendo.
  */
-async function registrarLead(imovel: ImovelDetalhe | null, posicao: 'topo' | 'sidebar'): Promise<void> {
+async function registrarLead(
+  imovel: ImovelDetalhe | null,
+  posicao: 'topo' | 'sidebar' | 'topo-visita' | 'sidebar-visita',
+): Promise<void> {
   if (!imovel) return;
+
+  const chave = `${imovel.id}:${posicao}`;
+  if (leadsJaRegistrados.has(chave)) return;
+  leadsJaRegistrados.add(chave);
 
   // Contexto financeiro (Fase 4) — só existe se o visitante já rodou uma
   // simulação no card ao lado antes de clicar no WhatsApp. Vem de
@@ -124,6 +143,7 @@ async function registrarLead(imovel: ImovelDetalhe | null, posicao: 'topo' | 'si
     const res = await fetch('/api/leads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
       body: JSON.stringify({
         imovelId:   imovel.id,
         imovelName: imovel.name,
@@ -145,7 +165,11 @@ async function registrarLead(imovel: ImovelDetalhe | null, posicao: 'topo' | 'si
         trackLeadCriado({ imovelId: imovel.id, imovel: imovel.name, origem: atribuicao?.first_source });
       }
     }
-  } catch { /* fire-and-forget — falha de rede não deve incomodar o usuário */ }
+  } catch {
+    // Falha real de rede — libera a chave pra permitir tentar de novo
+    // num próximo clique, já que esse registro genuinamente não foi salvo.
+    leadsJaRegistrados.delete(chave);
+  }
 }
 
 /**
@@ -1119,7 +1143,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
               <a href={`https://wa.me/5511933661403?text=${waMsgVisita}`} target="_blank" rel="noopener noreferrer"
                 onClick={() => {
                   import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'sidebar-visita', pagina: '/imoveis/[id]' }));
-                  registrarLead(imovel, 'sidebar');
+                  registrarLead(imovel, 'sidebar-visita');
                 }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
                 <span>📅</span> Agendar visita
@@ -1679,6 +1703,10 @@ export default function ImovelDetailClient({ id }: { id: string }) {
         if (data.max_price != null && !temPrecoReal({ min_price: data.max_price })) data.max_price = null;
         setImovel(data);
         import('@/lib/vistos-recentemente').then(m => m.registrarVisto(data.id));
+        // view_item também precisa disparar aqui, não só no clique de um card
+        // em página de listagem — sem isso, quem chega direto (Google, IA,
+        // link compartilhado) nunca contava como "viu o imóvel" no funil.
+        import('@/lib/gtag').then(m => m.trackImovelView({ imovel: data.name, bairro: data.neighborhood, preco: data.min_price ?? undefined }));
         // Reconhecimento de visitante sem login (fc_vid) — só grava algo se
         // esse navegador já se identificou antes num lead; fire-and-forget.
         fetch('/api/visita', {
@@ -1863,7 +1891,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
                   <a href={`https://wa.me/5511933661403?text=${waMsgTopoVisita}`} target="_blank" rel="noopener noreferrer"
                     onClick={() => {
                       import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'topo-visita', pagina: '/imoveis/[id]' }));
-                      registrarLead(imovel, 'topo');
+                      registrarLead(imovel, 'topo-visita');
                     }}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                     <span>📅</span> Agendar visita

@@ -132,6 +132,12 @@ export default function AdminLeadsPage() {
     });
   }
 
+  async function apagarLead(id: string, nome: string) {
+    if (!confirm(`Apagar o lead "${nome}"? Essa ação não pode ser desfeita.`)) return;
+    setLeads(prev => prev.filter(l => l.id !== id)); // otimista
+    await fetch(`/api/leads/${id}`, { method: 'DELETE' });
+  }
+
   if (authed === null) {
     return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Carregando…</div>;
   }
@@ -311,6 +317,15 @@ export default function AdminLeadsPage() {
                 onBlur={e => { if (e.target.value !== lead.nota) salvarNota(lead.id, e.target.value); }}
                 style={{ flex: 1, minWidth: '220px', padding: '6px 10px', borderRadius: '8px', border: '1.5px solid var(--border)', fontSize: '12px', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', outline: 'none' }}
               />
+
+              <button
+                type="button"
+                onClick={() => apagarLead(lead.id, lead.imovelName)}
+                title="Apagar lead"
+                style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', border: '1.5px solid rgba(220,38,38,.3)', background: 'rgba(220,38,38,.06)', color: '#dc2626', fontFamily: 'inherit', outline: 'none' }}
+              >
+                🗑 Apagar
+              </button>
             </div>
           </div>
         ))}
