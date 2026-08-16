@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kvGetCatalog } from '@/lib/orulo-kv';
+import { kvGetFotosOcultas } from '@/lib/fotos-ocultas-kv';
+import { sessionToken } from '../../admin-auth/route';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
+const ADMIN_COOKIE = 'admin_leads_session';
+
+function isAdmin(req: NextRequest): boolean {
+  const configured = process.env.ADMIN_LEADS_PASSWORD;
+  if (!configured) return false;
+  return req.cookies.get(ADMIN_COOKIE)?.value === sessionToken(configured);
+}
+
+// Extrai o id numérico da foto a partir da URL do CDN da Orulo (usado pra
+// cruzar com a lista de fotos ocultas curada manualmente — ver fotos-ocultas-kv.ts).
+function extrairIdDaUrl(url: string): string | null {
+  const m = url.match(/\/(\d+)\.[a-z]+$/i);
+  return m ? m[1] : null;
+}
 
 /**
  * Fallback quando a Orulo já removeu o imóvel da lista ativa (vendido,
@@ -234,6 +250,22 @@ export async function GET(
       if (url && !photos.includes(url)) photos.push(url);
     }
 
+    // Remove fotos marcadas manualmente como material de marketing pra
+    // corretor/imobiliária (ver /admin/fotos) — não dá pra detectar isso
+    // automaticamente: nem o campo type/description da Orulo nem a
+    // proporção da imagem distinguem com segurança um banner de uma foto
+    // real (ex: fachada de prédio alto também é retrato).
+    const ocultas = await kvGetFotosOcultas(id);
+    // /admin/fotos precisa ver as fotos ocultas também, pra poder reexibi-las —
+    // só o painel autenticado recebe a lista completa com os ids de cada foto.
+    const admin = isAdmin(req);
+    const photosVisiveis = (admin || ocultas.size === 0)
+      ? photos
+      : photos.filter(url => {
+          const imgId = extrairIdDaUrl(url);
+          return !imgId || !ocultas.has(imgId);
+        });
+
     // ── Plantas baixas ─────────────────────────────────────────────────────────
     // floor_plans[] tem a mesma estrutura: { id, description, type, associations }
     const floorPlansRaw = (b.floor_plans ?? b.blueprints ?? b.plants ?? []) as Record<string, unknown>[];
@@ -336,16 +368,15 @@ export async function GET(
       virtual_tour:     (b.virtual_tour     as string) || null,
       finality:         (b.finality         as string) || null,   // Residencial / Comercial
       description: (b.description as string) || '',
-      photos,
+      photos: photosVisiveis,
       blueprints,
       amenities,
       typologies,
       sharing_url: (b.orulo_url as string) || (b.sharing_url as string) || null,
-      _debug_raw_images: req.nextUrl.searchParams.get('debug') === '1'
-        ? imagesRaw.map(img => {
-            const imgId = (img.id ?? img['image_id']) as string | number | undefined;
-            return { ...img, _inMap: imgId ? imageUrlMap.has(String(imgId)) : false, _mapUrl: imgId ? imageUrlMap.get(String(imgId)) : undefined };
-          })
+      // Só presente pro painel /admin/fotos — permite mostrar/reexibir fotos
+      // ocultas, que o cliente comum nunca recebe no array `photos` acima.
+      admin_fotos: admin
+        ? photos.map(url => ({ url, id: extrairIdDaUrl(url), oculta: !!extrairIdDaUrl(url) && ocultas.has(extrairIdDaUrl(url) as string) }))
         : undefined,
     });
 
