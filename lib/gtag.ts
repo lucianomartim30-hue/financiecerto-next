@@ -54,7 +54,7 @@ export function trackWhatsappClick(params?: {
  * Só dispara depois da confirmação — é o evento de conversão real para o GA4,
  * distinto do clique (`trackWhatsappClick`), que só mede intenção.
  */
-export function trackLeadCriado(params?: { imovelId?: string; imovel?: string; origem?: string }) {
+export function trackLeadCriado(params?: { imovelId?: string; imovel?: string; origem?: string; comSimulacao?: boolean }) {
   gtagEvent({
     action:   'lead_created',
     category: 'engagement',
@@ -62,6 +62,10 @@ export function trackLeadCriado(params?: { imovelId?: string; imovel?: string; o
     imovelId: params?.imovelId,
     imovel:   params?.imovel,
     origem:   params?.origem,
+    // Simulação é qualificação opcional, nunca pré-requisito — este parâmetro
+    // só existe pra segmentar o relatório (lead com vs sem contexto financeiro),
+    // não pra medir "conclusão de funil".
+    comSimulacao: params?.comSimulacao,
   });
 }
 

@@ -162,7 +162,7 @@ async function registrarLead(
       const data = await res.json().catch(() => null);
       if (data?.ok) {
         const { trackLeadCriado } = await import('@/lib/gtag');
-        trackLeadCriado({ imovelId: imovel.id, imovel: imovel.name, origem: atribuicao?.first_source });
+        trackLeadCriado({ imovelId: imovel.id, imovel: imovel.name, origem: atribuicao?.first_source, comSimulacao: !!simulacao });
       }
     }
   } catch {
@@ -731,6 +731,15 @@ function LeadFormInteresse({ imovel, posicao, dark }: { imovel: ImovelDetalhe; p
     setErro('');
     setEnviando(true);
     try {
+      // Mesmo fora de SP (sem WhatsApp), quem já simulou antes de preencher o
+      // formulário deve levar o contexto financeiro — simulação é qualificação
+      // opcional, mas quando existe, sempre agrega ao lead.
+      let simulacao = null;
+      try {
+        const raw = sessionStorage.getItem('fc_last_simulacao');
+        if (raw) simulacao = JSON.parse(raw);
+      } catch { /* ignore */ }
+
       const favoritosCount = getFavoritosCount();
       const favoritosIds = getFavoritoIds();
       const atribuicao = getPrimeiraOrigem();
@@ -742,7 +751,7 @@ function LeadFormInteresse({ imovel, posicao, dark }: { imovel: ImovelDetalhe; p
           imovelId: imovel.id, imovelName: imovel.name,
           bairro: imovel.neighborhood, cidade: imovel.city,
           preco: imovel.min_price, oruloUrl: imovel.sharing_url,
-          favoritosCount, favoritosIds, atribuicao, conversao,
+          simulacao, favoritosCount, favoritosIds, atribuicao, conversao,
           contato: { nome: nome.trim(), email: email.trim(), whatsapp: digits },
         }),
       });
@@ -750,7 +759,7 @@ function LeadFormInteresse({ imovel, posicao, dark }: { imovel: ImovelDetalhe; p
       if (res.ok && data?.ok) {
         setEnviado(true);
         const { trackLeadCriado } = await import('@/lib/gtag');
-        trackLeadCriado({ imovelId: imovel.id, imovel: imovel.name, origem: atribuicao?.first_source });
+        trackLeadCriado({ imovelId: imovel.id, imovel: imovel.name, origem: atribuicao?.first_source, comSimulacao: !!simulacao });
       } else {
         setErro('Não foi possível enviar. Tente novamente.');
       }

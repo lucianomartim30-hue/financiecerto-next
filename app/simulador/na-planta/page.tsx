@@ -115,7 +115,7 @@ function CTAConsultorCenario({
         const data = await res.json().catch(() => null);
         if (data?.ok) {
           const { trackLeadCriado } = await import('@/lib/gtag');
-          trackLeadCriado({ imovelId: idLead, imovel: nomeLead, origem: atribuicao?.first_source });
+          trackLeadCriado({ imovelId: idLead, imovel: nomeLead, origem: atribuicao?.first_source, comSimulacao: true });
         }
       }
     } catch { /* fire-and-forget */ }
@@ -146,6 +146,68 @@ function CTAConsultorCenario({
         💬 Quero avançar com este cenário
       </a>
       {enviado && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '10px' }}>Cenário enviado — o consultor já recebe seus dados.</p>}
+    </div>
+  );
+}
+
+/**
+ * CTA leve e sempre visível — falar com o consultor SEM precisar terminar a
+ * simulação. Simulação é qualificação opcional, nunca pré-requisito: antes
+ * desta seção, quem caía aqui vindo de um imóvel só via o WhatsApp depois de
+ * preencher o formulário inteiro do cenário (CTAConsultorCenario, abaixo).
+ */
+function CTAFalarDireto({ imovelId, imovelName }: { imovelId: string; imovelName?: string }) {
+  const [enviado, setEnviado] = useState(false);
+  const nomeLead = imovelName || imovelId;
+
+  async function registrar() {
+    if (enviado) return;
+    setEnviado(true);
+    const atribuicao = getPrimeiraOrigem();
+    const conversao = buildConversao({ imovelId, action: 'consultor_na_planta_direto' });
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          imovelId, imovelName: nomeLead,
+          bairro: '', cidade: '', preco: null, oruloUrl: null,
+          favoritosCount: getFavoritosCount(),
+          favoritosIds: getFavoritoIds(),
+          atribuicao, conversao,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data?.ok) {
+          const { trackLeadCriado } = await import('@/lib/gtag');
+          trackLeadCriado({ imovelId, imovel: nomeLead, origem: atribuicao?.first_source, comSimulacao: false });
+        }
+      }
+    } catch { /* fire-and-forget */ }
+  }
+
+  function onClickWhatsapp() {
+    import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId, imovel: nomeLead, status: 'na planta', posicao: 'outras', pagina: '/simulador/na-planta' }));
+    registrar();
+  }
+
+  const msg = encodeURIComponent(
+    `Olá! Estou vendo o imóvel *${nomeLead}* no simulador na planta do FinancieCerto e gostaria de falar com um consultor.`
+  );
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.15)', borderRadius: '14px', padding: '12px 18px', marginTop: '20px' }}>
+      <span style={{ fontSize: '13px', color: 'rgba(255,255,255,.75)' }}>Prefere não simular agora?</span>
+      <a
+        href={`https://wa.me/5511933661403?text=${msg}`}
+        target="_blank" rel="noopener noreferrer"
+        onClick={onClickWhatsapp}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#25D366', color: '#fff', borderRadius: '10px', padding: '9px 16px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}
+      >
+        💬 Falar com consultor
+      </a>
     </div>
   );
 }
@@ -547,6 +609,7 @@ function NaPlantaContent() {
               {maxFinMcmv > 0 && <span style={{ fontSize: '13px', color: 'rgba(255,255,255,.7)' }}><strong style={{ color: '#fff' }}>Fin. aprovado:</strong> {formatBRL(maxFinMcmv)}</span>}
             </div>
           )}
+          {imovelIdUrl && <CTAFalarDireto imovelId={imovelIdUrl} imovelName={imovelNameUrl} />}
         </div>
       </section>
 
