@@ -559,6 +559,13 @@ function ImoveisContent() {
     return base;
   }, [allBuildings, baseFilter, activeLocation, cidadeSemBairro, debouncedBounds, isMobile, mobileView, geoAtivo]);
 
+  // Número exibido no cabeçalho ("X imóveis") — quem chega sem buscar nada
+  // não pode ver um número pequeno e achar que o catálogo é curto, mesmo que
+  // os cards abaixo continuem priorizando a região dele (geo por IP). Só
+  // quando a pessoa efetivamente busca um bairro ou escolhe uma cidade é que
+  // o número passa a refletir o resultado real da busca.
+  const headlineCount = (activeLocation || cidadeSemBairro) ? visibleBuildings.length : allBuildings.length;
+
   const geocodeAndFly = useCallback(async (query: string, cityOverride?: string) => {
     if (!query.trim()) return;
     setShowSuggestions(false);
@@ -1180,11 +1187,10 @@ function ImoveisContent() {
           {/* Cabeçalho da lista */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
-              {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis${
+              {loading ? 'Carregando...' : `${headlineCount.toLocaleString('pt-BR')} imóveis${
                 activeLocation ? ` em ${activeLocation}` :
                 cidadeSemBairro ? ` em ${searchCity}` :
-                geoAtivo && geoLabel ? ` em ${geoLabel}` :
-                ' em São Paulo'
+                ''
               }`}
             </span>
             <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -1236,10 +1242,12 @@ function ImoveisContent() {
             {/* Header do painel */}
             <div style={{ padding: '10px 16px', borderBottom: '1px solid #e5e7eb', background: '#fff', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text)' }}>
-                {loading ? 'Carregando...' : `${visibleBuildings.length.toLocaleString('pt-BR')} imóveis`}
-                <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
-                  {activeLocation ? `em ${activeLocation}, ${searchCity}` : cidadeSemBairro ? `em ${searchCity}` : geoAtivo && geoLabel ? `em ${geoLabel}` : 'em São Paulo'}
-                </span>
+                {loading ? 'Carregando...' : `${headlineCount.toLocaleString('pt-BR')} imóveis`}
+                {(activeLocation || cidadeSemBairro) && (
+                  <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
+                    {activeLocation ? `em ${activeLocation}, ${searchCity}` : `em ${searchCity}`}
+                  </span>
+                )}
               </span>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <div style={{ position: 'relative' }}>
