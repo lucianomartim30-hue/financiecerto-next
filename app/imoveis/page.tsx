@@ -320,6 +320,11 @@ function ImoveisContent() {
   // nativo com <optgroup> renderiza em branco em vários navegadores Android,
   // escondendo Santa Catarina/Paraná/RS/RJ atrás de um popup vazio.
   const [cidadeMobileAberta, setCidadeMobileAberta] = useState(false);
+  // Mesmo problema também acontecia no seletor inline (desktop/tablet): era
+  // um <select> nativo estilizado (cor/fundo customizados), que é justamente
+  // o gatilho do bug de picker em branco no Android — não depende só do
+  // <optgroup>. Reaproveita o mesmo padrão de dropdown custom acima.
+  const [cidadeDesktopAberta, setCidadeDesktopAberta] = useState(false);
   const deferredMobileInput = useDeferredValue(mobileSearchInput);
 
   // Detectar mobile
@@ -993,24 +998,54 @@ function ImoveisContent() {
             /* Desktop: seletor de cidade + input com autocomplete inline */
             <>
               <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid rgba(255,255,255,.2)' }}>
-                <select
-                  value={searchCity}
-                  onChange={e => {
-                    const cidade = e.target.value;
-                    setSearchCity(cidade);
-                    setCidadeSemBairro(true);
-                    setSearch(''); setActiveLocation(''); setShowSuggestions(false);
-                    setDisplayCount(12);
-                  }}
-                  title="Escolha a cidade antes de buscar o bairro"
-                  style={{
-                    height: '34px', border: 'none', outline: 'none', borderRight: '1px solid rgba(255,255,255,.2)',
-                    background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '12px',
-                    fontWeight: '700', padding: '0 6px', maxWidth: '108px', cursor: 'pointer',
-                  }}
-                >
-                  {CIDADES_BUSCA.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setCidadeDesktopAberta(v => !v)}
+                    title="Escolha a cidade antes de buscar o bairro"
+                    style={{
+                      height: '34px', border: 'none', outline: 'none', borderRight: '1px solid rgba(255,255,255,.2)',
+                      background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '12px',
+                      fontWeight: '700', padding: '0 6px', maxWidth: '108px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{searchCity}</span>
+                    <span style={{ fontSize: '9px', flexShrink: 0, transform: cidadeDesktopAberta ? 'rotate(180deg)' : 'none' }}>▾</span>
+                  </button>
+                  {cidadeDesktopAberta && (
+                    <>
+                      <div onClick={() => setCidadeDesktopAberta(false)} style={{ position: 'fixed', inset: 0, zIndex: 9001 }} />
+                      <div style={{
+                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, minWidth: '180px',
+                        background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,.18)', zIndex: 9002,
+                        maxHeight: '320px', overflowY: 'auto',
+                      }}>
+                        {CIDADES_BUSCA.map(c => (
+                          <button
+                            key={c}
+                            onClick={() => {
+                              setSearchCity(c);
+                              setCidadeSemBairro(true);
+                              setSearch(''); setActiveLocation(''); setShowSuggestions(false);
+                              setDisplayCount(12);
+                              setCidadeDesktopAberta(false);
+                            }}
+                            style={{
+                              display: 'block', width: '100%', padding: '9px 12px',
+                              background: c === searchCity ? '#eff6ff' : 'transparent',
+                              color: c === searchCity ? 'var(--primary)' : '#111827',
+                              fontWeight: c === searchCity ? '700' : '500',
+                              border: 'none', fontSize: '13px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+                            }}
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
                   <input
