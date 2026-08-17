@@ -67,6 +67,7 @@ function CardImovel({ im }: { im: ImovelCard }) {
   return (
     <Link
       href={`/imoveis/${im.id}`}
+      onClick={() => import('@/lib/gtag').then(m => m.trackImovelView({ imovel: im.name, bairro: im.neighborhood, preco: im.min_price ?? undefined }))}
       style={{
         display: 'block', background: 'var(--bg-card)',
         border: '1px solid var(--border)', borderRadius: 14,

@@ -69,7 +69,10 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      onClick={() => router.push(`/imoveis/${b.id}`)}
+      onClick={() => {
+        import('@/lib/gtag').then(m => m.trackImovelView({ imovel: b.name, bairro: b.neighborhood || b.city || undefined, preco: b.min_price ?? undefined }));
+        router.push(`/imoveis/${b.id}`);
+      }}
       style={{
         background: 'var(--bg-card)', borderRadius: '14px',
         border: `1.5px solid ${hover ? 'var(--primary)' : 'var(--border)'}`,
@@ -165,7 +168,10 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
           </Link>
           <Link
             href={`/imoveis/${b.id}`}
-            onClick={e => e.stopPropagation()}
+            onClick={e => {
+              e.stopPropagation();
+              import('@/lib/gtag').then(m => m.trackImovelView({ imovel: b.name, bairro: b.neighborhood || b.city || undefined, preco: b.min_price ?? undefined }));
+            }}
             style={{ flex: 1, background: 'var(--bg)', border: '1.5px solid var(--border)',
               color: 'var(--text-muted)', padding: '8px 10px', borderRadius: '8px',
               fontSize: '11px', fontWeight: '600', textAlign: 'center',

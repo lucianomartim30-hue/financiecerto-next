@@ -154,7 +154,9 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
   const quartosMax     = faixaTipologia?.bedrooms_max ?? im.bedrooms_max;
   const areaExibida    = faixaTipologia?.area_min     ?? im.area_min;
   return (
-    <Link href={`/imoveis/${im.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+    <Link href={`/imoveis/${im.id}`} style={{ textDecoration: 'none', display: 'block' }}
+      onClick={() => { import('@/lib/gtag').then(m => m.trackImovelView({ imovel: im.name, bairro: im.neighborhood, preco: precoExibido ?? undefined })); }}
+    >
       <div style={{
         background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px',
         overflow: 'hidden', cursor: 'pointer', display: 'flex', flexDirection: 'column',
