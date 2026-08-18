@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kvGetCatalog } from '@/lib/orulo-kv';
 import { kvGetFotosOcultas } from '@/lib/fotos-ocultas-kv';
+import { getPlantasManuais } from '@/lib/plantas-manuais';
 import { sessionToken } from '../../admin-auth/route';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
@@ -285,6 +286,17 @@ export async function GET(
       };
     }).filter(bp => bp.url);
 
+    // Curadoria manual (ver lib/plantas-manuais.ts) — preenche quando a
+    // Orulo não tem planta cadastrada pro imóvel, mas o corretor tem a
+    // imagem em mãos. Entra na lista geral e some junto se algum dia a
+    // Orulo passar a ter a planta própria (não sobrescreve o que já existe).
+    const plantasManuais = getPlantasManuais(id);
+    for (const pm of plantasManuais) {
+      if (!blueprints.some(bp => bp.url === pm.url)) {
+        blueprints.push({ name: pm.name, url: pm.url });
+      }
+    }
+
     // ── Amenidades / Diferenciais ──────────────────────────────────────────────
     // A API retorna features como array de strings simples
     const amenities: string[] = [];
@@ -316,10 +328,18 @@ export async function GET(
         price:        price ? `R$ ${price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : 'Consultar',
         stock:        (t.stock ?? null) as number | null,   // unidades disponíveis
         total_units:  (t.total_units ?? null) as number | null,
-        photo:        null,
-        blueprint:    null,
+        photo:        null as string | null,
+        blueprint:    null as string | null,
       };
     });
+
+    // Preenche o botão "Ver planta" de cada tipologia sem blueprint com a
+    // primeira planta manual cadastrada pro imóvel (ver lib/plantas-manuais.ts).
+    if (plantasManuais.length > 0) {
+      for (const t of typologies) {
+        if (!t.blueprint) t.blueprint = plantasManuais[0].url;
+      }
+    }
 
     // ── Vagas (fallback a partir das tipologias se nível do empreendimento for null) ──
     const vagasBldgMin = (b.min_parking as number) ?? (b.min_parking_spots as number) ?? (b.min_garages as number) ?? null;
