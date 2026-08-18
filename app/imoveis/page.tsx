@@ -63,6 +63,52 @@ const SP_BAIRROS: string[] = [
 // evita a ambiguidade de bairros com o mesmo nome em cidades diferentes
 // (ex: "Centro" existe em várias). São Paulo fica sempre em primeiro por ser
 // o mercado principal; o resto em ordem alfabética.
+// UF e coordenadas aproximadas (centro da cidade) — alimenta a sigla exibida
+// no seletor e o flyTo do mapa quando a pessoa escolhe uma cidade (sem isso,
+// o mapa ficava parado no centro de São Paulo e os pins da cidade escolhida
+// ficavam fora da área visível).
+const CIDADE_INFO: Record<string, { uf: string; lat: number; lng: number }> = {
+  'São Paulo':                { uf: 'SP', lat: -23.5505, lng: -46.6333 },
+  'Americana':                { uf: 'SP', lat: -22.7375, lng: -47.3308 },
+  'Balneário Camboriú':       { uf: 'SC', lat: -26.9906, lng: -48.6349 },
+  'Barueri':                  { uf: 'SP', lat: -23.5106, lng: -46.8761 },
+  'Bombinhas':                { uf: 'SC', lat: -27.1447, lng: -48.4844 },
+  'Campinas':                 { uf: 'SP', lat: -22.9099, lng: -47.0626 },
+  'Capão da Canoa':           { uf: 'RS', lat: -29.7458, lng: -50.0111 },
+  'Carapicuíba':              { uf: 'SP', lat: -23.5225, lng: -46.8356 },
+  'Cotia':                    { uf: 'SP', lat: -23.6031, lng: -46.9189 },
+  'Curitiba':                 { uf: 'PR', lat: -25.4284, lng: -49.2733 },
+  'Diadema':                  { uf: 'SP', lat: -23.6858, lng: -46.6228 },
+  'Embu das Artes':           { uf: 'SP', lat: -23.6486, lng: -46.8525 },
+  'Ferraz de Vasconcelos':    { uf: 'SP', lat: -23.5406, lng: -46.3689 },
+  'Florianópolis':            { uf: 'SC', lat: -27.5954, lng: -48.5480 },
+  'Guarulhos':                { uf: 'SP', lat: -23.4628, lng: -46.5333 },
+  'Hortolândia':              { uf: 'SP', lat: -22.8583, lng: -47.2200 },
+  'Itajaí':                   { uf: 'SC', lat: -26.9078, lng: -48.6614 },
+  'Itapema':                  { uf: 'SC', lat: -27.0894, lng: -48.6111 },
+  'Itapevi':                  { uf: 'SP', lat: -23.5489, lng: -46.9339 },
+  'Itaquaquecetuba':          { uf: 'SP', lat: -23.4864, lng: -46.3486 },
+  'Jandira':                  { uf: 'SP', lat: -23.5272, lng: -46.9017 },
+  'Mauá':                     { uf: 'SP', lat: -23.6678, lng: -46.4614 },
+  'Mogi das Cruzes':          { uf: 'SP', lat: -23.5228, lng: -46.1883 },
+  'Osasco':                   { uf: 'SP', lat: -23.5325, lng: -46.7917 },
+  'Paulínia':                 { uf: 'SP', lat: -22.7614, lng: -47.1544 },
+  'Poá':                      { uf: 'SP', lat: -23.5325, lng: -46.3450 },
+  'Porto Alegre':             { uf: 'RS', lat: -30.0346, lng: -51.2177 },
+  'Porto Belo':               { uf: 'SC', lat: -27.1578, lng: -48.5486 },
+  'Ribeirão Pires':           { uf: 'SP', lat: -23.7114, lng: -46.4131 },
+  'Rio de Janeiro':           { uf: 'RJ', lat: -22.9068, lng: -43.1729 },
+  "Santa Bárbara D'Oeste":    { uf: 'SP', lat: -22.7550, lng: -47.4142 },
+  'Santana de Parnaíba':      { uf: 'SP', lat: -23.4444, lng: -46.9186 },
+  'Santo André':              { uf: 'SP', lat: -23.6639, lng: -46.5383 },
+  'São Bernardo do Campo':    { uf: 'SP', lat: -23.6944, lng: -46.5654 },
+  'São Caetano do Sul':       { uf: 'SP', lat: -23.6229, lng: -46.5547 },
+  'Suzano':                   { uf: 'SP', lat: -23.5425, lng: -46.3108 },
+  'Taboão da Serra':          { uf: 'SP', lat: -23.6086, lng: -46.7522 },
+  'Valinhos':                 { uf: 'SP', lat: -22.9711, lng: -46.9958 },
+  'Vargem Grande Paulista':   { uf: 'SP', lat: -23.6003, lng: -47.0225 },
+};
+
 const CIDADES_BUSCA: string[] = [
   'São Paulo',
   'Americana','Balneário Camboriú','Barueri','Bombinhas','Campinas','Capão da Canoa',
@@ -585,6 +631,20 @@ function ImoveisContent() {
   // o número passa a refletir o resultado real da busca.
   const headlineCount = (activeLocation || cidadeSemBairro) ? visibleBuildings.length : allBuildings.length;
 
+  // Escolher uma cidade no seletor só trocava o filtro — o mapa continuava
+  // centrado em São Paulo, então os pins da cidade escolhida ficavam fora da
+  // área visível ("sumiam"). Agora também voa até o centro da cidade.
+  const selecionarCidade = useCallback((c: string) => {
+    setSearchCity(c);
+    setCidadeSemBairro(true);
+    setSearch(''); setActiveLocation(''); setShowSuggestions(false);
+    setDisplayCount(12);
+    setOpenDropdown(null);
+    setCidadeMobileAberta(false);
+    const info = CIDADE_INFO[c];
+    if (info) mapRef.current?.flyTo(info.lat, info.lng, 11);
+  }, []);
+
   const geocodeAndFly = useCallback(async (query: string, cityOverride?: string) => {
     if (!query.trim()) return;
     setShowSuggestions(false);
@@ -783,7 +843,7 @@ function ImoveisContent() {
                   }
                   if (e.key === 'Escape') { setShowMobileSearch(false); setMobileSearchInput(''); }
                 }}
-                placeholder="Bairro..."
+                placeholder={`Bairro em ${searchCity}...`}
                 style={{
                   flex: 1, height: '46px', border: 'none', outline: 'none',
                   background: 'transparent',
@@ -831,22 +891,20 @@ function ImoveisContent() {
                     <button
                       key={c}
                       onClick={() => {
-                        setSearchCity(c);
-                        setCidadeSemBairro(true);
-                        setCidadeMobileAberta(false);
-                        setMobileSearchInput(''); setSearch(''); setActiveLocation('');
+                        selecionarCidade(c);
+                        setMobileSearchInput('');
                         setShowMobileSearch(false); // já filtra pela cidade — vai direto pro resultado
-                        setDisplayCount(12);
                       }}
                       style={{
-                        display: 'block', width: '100%', padding: '10px 14px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px',
                         background: c === searchCity ? '#eff6ff' : 'transparent',
                         color: c === searchCity ? 'var(--primary)' : '#111827',
                         fontWeight: c === searchCity ? '700' : '500',
                         border: 'none', fontSize: '14px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
                       }}
                     >
-                      {c}
+                      <span>{c}</span>
+                      {CIDADE_INFO[c] && <span style={{ fontSize: '11px', color: c === searchCity ? 'var(--primary)' : '#9ca3af', fontWeight: '700' }}>{CIDADE_INFO[c].uf}</span>}
                     </button>
                   ))}
                 </div>
@@ -911,17 +969,12 @@ function ImoveisContent() {
           {cidadesComEstoque.map(c => (
             <button
               key={c}
-              onClick={() => {
-                setSearchCity(c);
-                setCidadeSemBairro(true);
-                setSearch(''); setActiveLocation(''); setShowSuggestions(false);
-                setDisplayCount(12);
-                setOpenDropdown(null);
-              }}
+              onClick={() => selecionarCidade(c)}
               style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: c === searchCity ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: c === searchCity ? '700' : '400', color: c === searchCity ? 'var(--primary)' : '#374151', textAlign: 'left' }}
             >
               {c === searchCity && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
-              {c}
+              <span style={{ flex: 1 }}>{c}</span>
+              {CIDADE_INFO[c] && <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '700' }}>{CIDADE_INFO[c].uf}</span>}
             </button>
           ))}
         </div>
@@ -1063,7 +1116,7 @@ function ImoveisContent() {
                   <input
                     type="text" value={search}
                     onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
-                    placeholder="Bairro"
+                    placeholder={`Bairro em ${searchCity}`}
                     onKeyDown={e => {
                       if (e.key === 'Enter') { inputRef.current?.blur(); geocodeAndFly(search); }
                       if (e.key === 'Escape') { setShowSuggestions(false); inputRef.current?.blur(); }
