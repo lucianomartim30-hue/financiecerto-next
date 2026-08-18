@@ -325,8 +325,11 @@ function ImoveisContent() {
   // Mesmo problema também acontecia no seletor inline (desktop/tablet): era
   // um <select> nativo estilizado (cor/fundo customizados), que é justamente
   // o gatilho do bug de picker em branco no Android — não depende só do
-  // <optgroup>. Reaproveita o mesmo padrão de dropdown custom acima.
-  const [cidadeDesktopAberta, setCidadeDesktopAberta] = useState(false);
+  // <optgroup>. O dropdown desktop usa o mesmo mecanismo de openDropdown/
+  // dropdownPos dos outros filtros (Estágio, Tipo...) — position:fixed
+  // calculado via getBoundingClientRect, não absolute dentro da filter-bar
+  // (que tem overflow:auto e altura fixa, e cortava/escondia um dropdown
+  // absolute posicionado dentro dela).
   const deferredMobileInput = useDeferredValue(mobileSearchInput);
 
   // Detectar mobile
@@ -900,6 +903,30 @@ function ImoveisContent() {
         <div onClick={() => setOpenDropdown(null)} style={{ position: 'fixed', inset: 0, zIndex: 9000 }} />
       )}
 
+      {/* ── Dropdown Cidade (desktop) ─────────────────────────────────────────
+          position:fixed (não absolute) — a filter-bar tem overflow:auto e
+          altura fixa, que cortava um dropdown absolute posicionado dentro dela. */}
+      {openDropdown === 'cidade' && (
+        <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '190px', maxHeight: '360px', overflowY: 'auto' }}>
+          {cidadesComEstoque.map(c => (
+            <button
+              key={c}
+              onClick={() => {
+                setSearchCity(c);
+                setCidadeSemBairro(true);
+                setSearch(''); setActiveLocation(''); setShowSuggestions(false);
+                setDisplayCount(12);
+                setOpenDropdown(null);
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: c === searchCity ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: c === searchCity ? '700' : '400', color: c === searchCity ? 'var(--primary)' : '#374151', textAlign: 'left' }}
+            >
+              {c === searchCity && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Dropdown Estágio ────────────────────────────────────────────────── */}
       {openDropdown === 'status' && (
         <div style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 9001, minWidth: '210px' }}>
@@ -1018,54 +1045,19 @@ function ImoveisContent() {
             /* Desktop: seletor de cidade + input com autocomplete inline */
             <>
               <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid rgba(255,255,255,.2)' }}>
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={() => setCidadeDesktopAberta(v => !v)}
-                    title="Escolha a cidade antes de buscar o bairro"
-                    style={{
-                      height: '34px', border: 'none', outline: 'none', borderRight: '1px solid rgba(255,255,255,.2)',
-                      background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '12px',
-                      fontWeight: '700', padding: '0 6px', maxWidth: '108px', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '4px',
-                    }}
-                  >
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{searchCity}</span>
-                    <span style={{ fontSize: '9px', flexShrink: 0, transform: cidadeDesktopAberta ? 'rotate(180deg)' : 'none' }}>▾</span>
-                  </button>
-                  {cidadeDesktopAberta && (
-                    <>
-                      <div onClick={() => setCidadeDesktopAberta(false)} style={{ position: 'fixed', inset: 0, zIndex: 9001 }} />
-                      <div style={{
-                        position: 'absolute', top: 'calc(100% + 4px)', left: 0, minWidth: '180px',
-                        background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,.18)', zIndex: 9002,
-                        maxHeight: '320px', overflowY: 'auto',
-                      }}>
-                        {cidadesComEstoque.map(c => (
-                          <button
-                            key={c}
-                            onClick={() => {
-                              setSearchCity(c);
-                              setCidadeSemBairro(true);
-                              setSearch(''); setActiveLocation(''); setShowSuggestions(false);
-                              setDisplayCount(12);
-                              setCidadeDesktopAberta(false);
-                            }}
-                            style={{
-                              display: 'block', width: '100%', padding: '9px 12px',
-                              background: c === searchCity ? '#eff6ff' : 'transparent',
-                              color: c === searchCity ? 'var(--primary)' : '#111827',
-                              fontWeight: c === searchCity ? '700' : '500',
-                              border: 'none', fontSize: '13px', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
-                            }}
-                          >
-                            {c}
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
+                <button
+                  onClick={e => openDrop('cidade', e)}
+                  title="Escolha a cidade antes de buscar o bairro"
+                  style={{
+                    height: '34px', border: 'none', outline: 'none', borderRight: '1px solid rgba(255,255,255,.2)',
+                    background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '12px',
+                    fontWeight: '700', padding: '0 6px', maxWidth: '108px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '4px',
+                  }}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{searchCity}</span>
+                  <span style={{ fontSize: '9px', flexShrink: 0, transform: openDropdown === 'cidade' ? 'rotate(180deg)' : 'none' }}>▾</span>
+                </button>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
                   <input
