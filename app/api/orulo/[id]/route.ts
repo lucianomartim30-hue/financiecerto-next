@@ -325,7 +325,10 @@ export async function GET(
         // Arredondado em reais inteiros — o resto do site nunca mostra centavos
         // (card financeiro, cards de listagem etc.), então exibir aqui os centavos
         // crus da Orulo criava dois valores visualmente diferentes pro mesmo preço.
-        price:        price ? `R$ ${price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : 'Consultar',
+        // price sentinela (0.1, 1.05...) da Orulo pra "sem tabela publicada
+        // ainda" arredondava pra "R$ 0" — mesma classe de bug do min_price
+        // do card (ver lib/calculos.ts formatPlantaPreco).
+        price:        price && price >= 100 ? `R$ ${price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : 'Consultar',
         stock:        (t.stock ?? null) as number | null,   // unidades disponíveis
         total_units:  (t.total_units ?? null) as number | null,
         photo:        null as string | null,
