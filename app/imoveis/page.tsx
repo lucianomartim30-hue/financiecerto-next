@@ -126,6 +126,15 @@ function normStr(s: string): string {
     .replace(/[^\w\s]/g, '');
 }
 
+// O campo `street` do catálogo nunca inclui o tipo de logradouro ("Cesar
+// Vallejo", nunca "Rua Cesar Vallejo") — mas é assim que as pessoas digitam
+// na prática. Sem isso, buscar "Rua Augusta" não achava nada mesmo com
+// "Augusta" existindo, porque a frase inteira precisava bater. Aplicado só
+// na comparação (query normalizada), nunca no texto exibido/digitado.
+function stripTipoLogradouro(qNorm: string): string {
+  return qNorm.replace(/^(rua|r|avenida|av|alameda|al|travessa|tv|praca|pca|largo|estrada|rodovia|via)\s+/, '').trim();
+}
+
 interface Imovel {
   id: string; name: string; developer: string;
   min_price: number | null; max_price: number | null;
@@ -441,7 +450,7 @@ function ImoveisContent() {
 
   const filteredSuggestions = useMemo(() => {
     if (!deferredSearch.trim()) return [] as { name: string; hasCatalog: boolean; type: 'bairro' | 'rua' }[];
-    const q = normStr(deferredSearch);
+    const q = stripTipoLogradouro(normStr(deferredSearch));
     return allLocationSuggestions
       .filter(n => normStr(n.name).includes(q))
       .sort((a, b) => {
@@ -460,7 +469,7 @@ function ImoveisContent() {
   // (ruas só aparecem depois de digitar — lista completa de ruas é grande
   // demais pra fazer sentido como sugestão "vazia").
   const mobileSuggestions = useMemo(() => {
-    const q = normStr(deferredMobileInput);
+    const q = stripTipoLogradouro(normStr(deferredMobileInput));
     const base = q
       ? allLocationSuggestions.filter(n => normStr(n.name).includes(q))
       : allNeighborhoods.filter(n => n.hasCatalog);
@@ -509,7 +518,7 @@ function ImoveisContent() {
     // errado no mapa/lista.
     if (activeLocation) {
       if (normStr(b.city || '') !== normStr(searchCity)) return false;
-      const q = normStr(activeLocation);
+      const q = stripTipoLogradouro(normStr(activeLocation));
       const haystack = normStr(`${b.neighborhood} ${b.name} ${b.street || ''}`);
       if (!haystack.includes(q)) return false;
     }
@@ -675,7 +684,7 @@ function ImoveisContent() {
     setDisplayCount(12);
 
     // GA4 — evento de busca de empreendimentos
-    const qNorm = normStr(query);
+    const qNorm = stripTipoLogradouro(normStr(query));
     const cidadeNorm = normStr(cidade);
     const resultados = allBuildings.filter(b => normStr(b.city || '') === cidadeNorm && normStr(`${b.neighborhood} ${b.name} ${b.street || ''}`).includes(qNorm)).length;
     import('@/lib/gtag').then(m => m.trackBusca({ termo: `${query} (${cidade})`, resultados }));
