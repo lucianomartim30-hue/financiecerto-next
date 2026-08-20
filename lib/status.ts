@@ -48,6 +48,12 @@ export interface StatusCfg {
 const STATUS_CFG: Record<string, StatusCfg> = {
   'na planta':      { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
   'planta':         { cor: '#2563eb', bg: 'rgba(37,99,235,.15)',  label: 'Na Planta' },
+  // Mesmo estágio da Orulo que 'na planta' (stage="Lançamento"), mas sem
+  // tabela de preço publicada ainda (min_price sentinela, ver
+  // lib/filtro-breve-lancamento.ts) — badge própria pra não passar a
+  // impressão de que o preço mostrado é real quando na verdade é só um
+  // placeholder.
+  'breve lançamento': { cor: '#0891b2', bg: 'rgba(8,145,178,.15)', label: 'Breve Lançamento' },
   'pre-lançamento': { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Pré-Lançamento' },
   'lançamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
   'lancamento':     { cor: '#7c3aed', bg: 'rgba(124,58,237,.15)', label: 'Lançamento' },
@@ -61,8 +67,21 @@ const STATUS_CFG: Record<string, StatusCfg> = {
 
 const FALLBACK_CFG: StatusCfg = { cor: '#475569', bg: 'rgba(71,85,105,.18)', label: '' };
 
-/** Cor/fundo/label para exibir um status (aceita bruto ou já normalizado). */
-export function getStatusCfg(status: string): StatusCfg {
+/** Preço abaixo disso é sentinela de "sem tabela publicada" da Orulo, não um preço real. */
+const PRECO_MINIMO_REAL = 100;
+
+/**
+ * Cor/fundo/label para exibir um status (aceita bruto ou já normalizado).
+ * `minPrice`, quando informado, distingue "Breve Lançamento" (na planta sem
+ * preço real ainda) do "Na Planta" comum — a Orulo não tem um campo próprio
+ * pra isso, o preço sentinela é o único sinal disponível.
+ */
+export function getStatusCfg(status: string, minPrice?: number | null): StatusCfg {
+  // minPrice === undefined → chamador não opinou (ex: chip de filtro
+  // genérico) — mantém o comportamento normal, sem a distinção.
+  if (minPrice !== undefined && normalizeStatus(status) === 'na planta' && !(minPrice && minPrice >= PRECO_MINIMO_REAL)) {
+    return STATUS_CFG['breve lançamento'];
+  }
   const k = (status || '').toLowerCase().trim();
   if (STATUS_CFG[k]) return STATUS_CFG[k];
   const n = normalizeStatus(status);

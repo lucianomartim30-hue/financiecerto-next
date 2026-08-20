@@ -49,7 +49,7 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
   const router = useRouter();
 
   const preco      = b.min_price ? `A partir de ${formatBRL(b.min_price)}` : 'Preço sob consulta';
-  const statusCfg  = getStatusCfg(b.status || '');
+  const statusCfg  = getStatusCfg(b.status || '', b.min_price);
   const link       = b.sharing_url || b.orulo_url || '#';
 
   function faixa(min: number | null, max: number | null, unit: string) {

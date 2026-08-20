@@ -233,8 +233,8 @@ function faixaRange(min: number | null, max: number | null, unit: string) {
   return `${min} ${unit}`;
 }
 
-function getStatus(s: string) {
-  return getStatusCfg(s);
+function getStatus(s: string, minPrice?: number | null) {
+  return getStatusCfg(s, minPrice);
 }
 
 function calcEstimate(valorImovel: number, isComercial = false): {
@@ -1337,7 +1337,7 @@ function SecaoCaracteristicas({ imovel }: { imovel: ImovelDetalhe }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function SecaoEmpreendimento({ imovel }: { imovel: ImovelDetalhe }) {
   const metaItems = [
-    imovel.status        ? { icon: '📊', label: 'Estágio',             value: getStatus(imovel.status).label } : null,
+    imovel.status        ? { icon: '📊', label: 'Estágio',             value: getStatus(imovel.status, imovel.min_price).label } : null,
     imovel.finality      ? { icon: '🏠', label: 'Finalidade',          value: imovel.finality               } : null,
     imovel.total_units   ? { icon: '🏢', label: 'Total de unidades',   value: String(imovel.total_units)    } : null,
     (imovel.stock !== null && imovel.stock !== undefined)
@@ -1487,7 +1487,7 @@ function SecaoVistosRecentemente({ currentId }: { currentId: string }) {
       <SectionHeader title="Você viu recentemente" />
       <div style={{ display: 'flex', gap: '14px', overflowX: 'auto', paddingBottom: '4px', scrollbarWidth: 'thin' }}>
         {vistos.map(im => {
-          const sc = getStatus(im.status || '');
+          const sc = getStatus(im.status || '', im.min_price);
           return (
             <Link key={im.id} href={`/imoveis/${im.id}`}
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden', textDecoration: 'none', display: 'block', flex: '0 0 180px' }}>
@@ -1610,7 +1610,7 @@ function SecaoRelacionados({
       />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
         {relacionados.map(im => {
-          const sc = getStatus(im.status || '');
+          const sc = getStatus(im.status || '', im.min_price);
           const isMesmoBairro = (im.neighborhood || '').toLowerCase() === neighborhood.toLowerCase();
           return (
             <Link key={im.id} href={`/imoveis/${im.id}`}
@@ -1778,7 +1778,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
   const waMsgTopo = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovelTopo}`);
   const waMsgTopoVisita = encodeURIComponent(`Olá! Gostaria de agendar uma visita ao imóvel *${imovel.name}* que vi no FinancieCerto.\n${urlImovelTopo}`);
 
-  const statusCfg = getStatus(imovel.status || '');
+  const statusCfg = getStatus(imovel.status || '', imovel.min_price);
   // Chips de resumo rápido no header — apenas specs da unidade
   const specs = [
     faixaRange(imovel.area_min, imovel.area_max, 'm²')             && { icon: '▦',  label: faixaRange(imovel.area_min, imovel.area_max, 'm²')! },

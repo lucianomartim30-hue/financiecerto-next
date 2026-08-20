@@ -187,8 +187,8 @@ function getEffectiveFinality(b: Imovel): string {
   return ''; // vazio → tratado como residencial no filtro
 }
 
-function getStatus(s: string) {
-  const cfg = getStatusCfg(s);
+function getStatus(s: string, minPrice?: number | null) {
+  const cfg = getStatusCfg(s, minPrice);
   return { cor: cfg.cor, label: cfg.label || 'Outros' };
 }
 function fmtRange(min: number | null, max: number | null, unit: string) {
@@ -199,7 +199,7 @@ function fmtRange(min: number | null, max: number | null, unit: string) {
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: string }) {
-  const sc = getStatus(im.status_norm || im.status || '');
+  const sc = getStatus(im.status_norm || im.status || '', im.min_price);
   // Quando há filtro de tipologia ativo, mostra a faixa específica daquele tipo de
   // unidade (ex.: Cobertura Horizontal) em vez da faixa do prédio inteiro — senão o
   // card mostra o apartamento padrão mais barato do prédio, não a unidade filtrada.
