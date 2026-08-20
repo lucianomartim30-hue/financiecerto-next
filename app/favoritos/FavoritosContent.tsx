@@ -93,7 +93,7 @@ export default function FavoritosContent() {
                   <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                     <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text)', lineHeight: '1.35', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{im.name}</p>
                     <p style={{ fontSize: '10px', color: 'var(--text-faint)' }}>📍 {im.neighborhood || im.city}</p>
-                    <p style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{im.min_price ? formatBRL(im.min_price) : 'Consultar'}</p>
+                    <p style={{ fontSize: '14px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{im.min_price && im.min_price >= 100 ? formatBRL(im.min_price) : 'Consultar'}</p>
                     {fmtRange(im.bedrooms_min, im.bedrooms_max, 'qts') && (
                       <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px', width: 'fit-content' }}>
                         🛏 {fmtRange(im.bedrooms_min, im.bedrooms_max, 'qts')}

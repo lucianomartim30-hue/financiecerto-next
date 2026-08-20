@@ -776,7 +776,10 @@ export function formatPlantaPreco(
   areaMax: number | null | undefined,
   minPrice: number | null | undefined,
 ): string {
-  const precoTxt = minPrice ? `A partir de ${formatBRL(minPrice)}` : 'Consulte o preço';
+  // A Orulo usa valores como 0.1/1.05 como sentinela de "sem tabela
+  // publicada ainda" (Breve Lançamento) — truthy, mas não é preço real.
+  // Sem esse limiar, esses casos mostravam "A partir de R$ 1".
+  const precoTxt = minPrice && minPrice >= 100 ? `A partir de ${formatBRL(minPrice)}` : 'Consulte o preço';
   if (!areaMin) return precoTxt;
   const areaTxt = areaMax && areaMax !== areaMin
     ? `Planta de ${areaMin}m² a ${areaMax}m²`

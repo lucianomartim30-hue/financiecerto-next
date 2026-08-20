@@ -236,7 +236,7 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
           <p style={{ fontSize: '10px', color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             📍 {[im.neighborhood || im.city, im.street].filter(Boolean).join(' · ')}
           </p>
-          <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{precoExibido ? formatBRL(precoExibido) : 'Consultar'}</p>
+          <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{precoExibido && precoExibido >= 100 ? formatBRL(precoExibido) : 'Consultar'}</p>
           <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '2px' }}>
             {tipologiaAtiva && <span style={{ fontSize: '9px', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '5px', padding: '1px 4px', fontWeight: 700 }}>{tipologiaAtiva}</span>}
             {fmtRange(quartosMin, quartosMax, 'qts') && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>🛏 {fmtRange(quartosMin, quartosMax, 'qts')}</span>}
@@ -587,7 +587,7 @@ function ImoveisContent() {
   // Sem localização: no mobile limitamos a 50 pins para evitar travamento (criar 300 elementos
   // DOM de uma vez congela o thread principal no mobile).
   const mapPins = useMemo(() => {
-    const toPin = (b: Imovel) => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status });
+    const toPin = (b: Imovel) => ({ id: b.id, lat: b.lat!, lng: b.lng!, name: b.name, price: b.min_price && b.min_price >= 100 ? formatBRL(b.min_price) : 'Consultar', neighborhood: b.neighborhood, status: b.status_norm || b.status });
     const filtered = allBuildings.filter(b => b.lat && b.lng).filter(baseFilter);
 
     // Com localização buscada → mostra todos os pins do bairro (normalmente poucos)
