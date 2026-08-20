@@ -287,7 +287,7 @@ function Dashboard({ email, onSair }: { email: string; onSair: () => void }) {
                     <div style={{ minWidth: 0 }}>
                       <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b?.name || id}</p>
                       <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '2px' }}>
-                        {b ? [b.neighborhood, b.city].filter(Boolean).join(' · ') : ''}{b?.min_price ? ` · ${formatBRL(b.min_price)}` : ''}
+                        {b ? [b.neighborhood, b.city].filter(Boolean).join(' · ') : ''}{b?.min_price && b.min_price >= 100 ? ` · ${formatBRL(b.min_price)}` : ''}
                       </p>
                     </div>
                   </a>

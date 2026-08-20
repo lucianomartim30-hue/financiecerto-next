@@ -132,8 +132,14 @@ function applyFilters(
     const lq = q.toLowerCase();
     all = all.filter(b => [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase().includes(lq));
   }
-  if (minPrice)    all = all.filter(b => (b.min_price ?? 0) >= Number(minPrice));
-  if (maxPrice)    all = all.filter(b => (b.min_price ?? 0) <= Number(maxPrice));
+  // min_price sentinela (0.1, 1.05...) da Orulo — "sem tabela publicada" —
+  // passava em QUALQUER filtro de faixa de preço (0.1 <= qualquer teto),
+  // inclusive nos tetos do MCMV (/imoveis/minha-casa-minha-vida): um
+  // Breve Lançamento sem preço real aparecia como se coubesse em qualquer
+  // faixa, mesmo sem confirmação nenhuma. Preço desconhecido nunca casa
+  // com filtro de preço, seja mínimo ou máximo.
+  if (minPrice)    all = all.filter(b => (b.min_price ?? 0) >= 100 && (b.min_price ?? 0) >= Number(minPrice));
+  if (maxPrice)    all = all.filter(b => (b.min_price ?? 0) >= 100 && (b.min_price ?? 0) <= Number(maxPrice));
   if (bedroomsMin) all = all.filter(b => (b.bedrooms_max ?? 99) >= Number(bedroomsMin));
   if (bedroomsMax && bedroomsMax !== '99')
                    all = all.filter(b => (b.bedrooms_min ?? 0) <= Number(bedroomsMax));

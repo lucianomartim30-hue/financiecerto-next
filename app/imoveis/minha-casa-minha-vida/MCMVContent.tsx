@@ -47,8 +47,8 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
   const [hover, setHover] = useState(false);
   const router = useRouter();
 
-  const preco      = b.min_price ? `A partir de ${formatBRL(b.min_price)}` : 'Preço sob consulta';
-  const statusCfg  = getStatusCfg(b.status || '');
+  const preco      = b.min_price && b.min_price >= 100 ? `A partir de ${formatBRL(b.min_price)}` : 'Preço sob consulta';
+  const statusCfg  = getStatusCfg(b.status || '', b.min_price);
 
   function faixa(min: number | null, max: number | null, unit: string) {
     if (!min) return null;
