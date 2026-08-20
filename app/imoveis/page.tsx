@@ -419,13 +419,30 @@ function ImoveisContent() {
     return [...merged.keys()].map(k => ({
       name: catalogByNorm.get(k) || SP_BAIRROS.find(nb => normStr(nb) === k) || k,
       hasCatalog: merged.get(k) ?? false,
+      type: 'bairro' as const,
     })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }, [allBuildings, searchCity]);
 
+  // Ruas/avenidas do catálogo — permite buscar empreendimento por endereço
+  // ("Rua Cesar Vallejo") além de por bairro. Sem lista curada (como
+  // SP_BAIRROS): só existe o que já tem imóvel cadastrado, então
+  // hasCatalog é sempre true aqui.
+  const allStreets = useMemo(() => {
+    const seen = new Map<string, string>(); // normStr → nome canônico
+    allBuildings
+      .filter(b => normStr(b.city || '') === normStr(searchCity) && b.street)
+      .forEach(b => { const k = normStr(b.street!); if (!seen.has(k)) seen.set(k, b.street!); });
+    return [...seen.values()]
+      .map(name => ({ name, hasCatalog: true, type: 'rua' as const }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [allBuildings, searchCity]);
+
+  const allLocationSuggestions = useMemo(() => [...allNeighborhoods, ...allStreets], [allNeighborhoods, allStreets]);
+
   const filteredSuggestions = useMemo(() => {
-    if (!deferredSearch.trim()) return [] as { name: string; hasCatalog: boolean }[];
+    if (!deferredSearch.trim()) return [] as { name: string; hasCatalog: boolean; type: 'bairro' | 'rua' }[];
     const q = normStr(deferredSearch);
-    return allNeighborhoods
+    return allLocationSuggestions
       .filter(n => normStr(n.name).includes(q))
       .sort((a, b) => {
         // Bairros com imóveis no catálogo primeiro
@@ -437,13 +454,15 @@ function ImoveisContent() {
         return a.name.localeCompare(b.name, 'pt-BR');
       })
       .slice(0, 10);
-  }, [deferredSearch, allNeighborhoods]);
+  }, [deferredSearch, allLocationSuggestions]);
 
   // Sugestões para o modal mobile — quando vazio mostra bairros com imóveis
+  // (ruas só aparecem depois de digitar — lista completa de ruas é grande
+  // demais pra fazer sentido como sugestão "vazia").
   const mobileSuggestions = useMemo(() => {
     const q = normStr(deferredMobileInput);
     const base = q
-      ? allNeighborhoods.filter(n => normStr(n.name).includes(q))
+      ? allLocationSuggestions.filter(n => normStr(n.name).includes(q))
       : allNeighborhoods.filter(n => n.hasCatalog);
     return base
       .sort((a, b) => {
@@ -456,7 +475,7 @@ function ImoveisContent() {
         return a.name.localeCompare(b.name, 'pt-BR');
       })
       .slice(0, 25);
-  }, [deferredMobileInput, allNeighborhoods]);
+  }, [deferredMobileInput, allLocationSuggestions, allNeighborhoods]);
 
   useEffect(() => {
     setLoading(true);
@@ -491,7 +510,7 @@ function ImoveisContent() {
     if (activeLocation) {
       if (normStr(b.city || '') !== normStr(searchCity)) return false;
       const q = normStr(activeLocation);
-      const haystack = normStr(`${b.neighborhood} ${b.name}`);
+      const haystack = normStr(`${b.neighborhood} ${b.name} ${b.street || ''}`);
       if (!haystack.includes(q)) return false;
     }
     // Cidade escolhida no seletor, sem bairro específico ainda — filtra por
@@ -658,16 +677,16 @@ function ImoveisContent() {
     // GA4 — evento de busca de empreendimentos
     const qNorm = normStr(query);
     const cidadeNorm = normStr(cidade);
-    const resultados = allBuildings.filter(b => normStr(b.city || '') === cidadeNorm && normStr(`${b.neighborhood} ${b.name}`).includes(qNorm)).length;
+    const resultados = allBuildings.filter(b => normStr(b.city || '') === cidadeNorm && normStr(`${b.neighborhood} ${b.name} ${b.street || ''}`).includes(qNorm)).length;
     import('@/lib/gtag').then(m => m.trackBusca({ termo: `${query} (${cidade})`, resultados }));
 
-    // 1. Tenta usar coordenadas de um imóvel do catálogo no mesmo bairro E cidade
-    // (instantâneo) — restringe por cidade pra não "voar" pro bairro de mesmo
-    // nome em outra cidade (ex: Centro de SP vs. Centro de Porto Alegre).
+    // 1. Tenta usar coordenadas de um imóvel do catálogo no mesmo bairro/rua E
+    // cidade (instantâneo) — restringe por cidade pra não "voar" pro bairro de
+    // mesmo nome em outra cidade (ex: Centro de SP vs. Centro de Porto Alegre).
     const catalogMatch = allBuildings.find(b =>
       b.lat && b.lng &&
       normStr(b.city || '') === cidadeNorm &&
-      normStr(b.neighborhood || '').includes(qNorm),
+      normStr(`${b.neighborhood || ''} ${b.street || ''}`).includes(qNorm),
     );
     if (catalogMatch) {
       mapRef.current?.flyTo(catalogMatch.lat!, catalogMatch.lng!, 13);
@@ -843,7 +862,7 @@ function ImoveisContent() {
                   }
                   if (e.key === 'Escape') { setShowMobileSearch(false); setMobileSearchInput(''); }
                 }}
-                placeholder={`Bairro em ${searchCity}...`}
+                placeholder={`Bairro ou rua em ${searchCity}...`}
                 style={{
                   flex: 1, height: '46px', border: 'none', outline: 'none',
                   background: 'transparent',
@@ -921,7 +940,7 @@ function ImoveisContent() {
             )}
             {mobileSuggestions.map(nb => (
               <button
-                key={nb.name}
+                key={`${nb.type}-${nb.name}`}
                 onClick={() => commitMobileSearch(nb.name)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
@@ -933,18 +952,16 @@ function ImoveisContent() {
               >
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '50%',
-                  background: '#eff6ff', display: 'flex', alignItems: 'center',
+                  background: nb.type === 'rua' ? '#f0fdf4' : '#eff6ff', display: 'flex', alignItems: 'center',
                   justifyContent: 'center', fontSize: '16px', flexShrink: 0,
-                }}>📍</div>
+                }}>{nb.type === 'rua' ? '🛣️' : '📍'}</div>
                 <span style={{ flex: 1, fontSize: '15px', color: '#111827', fontWeight: '500' }}>
                   {nb.name}
                 </span>
-                {nb.hasCatalog && (
-                  <span style={{
-                    fontSize: '10px', background: '#eff6ff', color: '#2563eb',
-                    borderRadius: '5px', padding: '3px 7px', fontWeight: '700', flexShrink: 0,
-                  }}>imóveis</span>
-                )}
+                <span style={{
+                  fontSize: '10px', background: nb.type === 'rua' ? '#f0fdf4' : '#eff6ff', color: nb.type === 'rua' ? '#16a34a' : '#2563eb',
+                  borderRadius: '5px', padding: '3px 7px', fontWeight: '700', flexShrink: 0,
+                }}>{nb.type === 'rua' ? 'rua' : 'bairro'}</span>
               </button>
             ))}
             {mobileSearchInput && mobileSuggestions.length === 0 && (
@@ -1116,7 +1133,7 @@ function ImoveisContent() {
                   <input
                     type="text" value={search}
                     onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
-                    placeholder={`Bairro em ${searchCity}`}
+                    placeholder={`Bairro/rua em ${searchCity}`}
                     onKeyDown={e => {
                       if (e.key === 'Enter') { inputRef.current?.blur(); geocodeAndFly(search); }
                       if (e.key === 'Escape') { setShowSuggestions(false); inputRef.current?.blur(); }
@@ -1146,13 +1163,13 @@ function ImoveisContent() {
                 <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,.12)', zIndex: 9002, minWidth: '190px', overflow: 'hidden' }}>
                   {filteredSuggestions.map(nb => (
                     <button
-                      key={nb.name}
+                      key={`${nb.type}-${nb.name}`}
                       onClick={() => { setSearch(nb.name); setShowSuggestions(false); inputRef.current?.blur(); geocodeAndFly(nb.name); }}
                       style={{ display: 'flex', alignItems: 'center', gap: '7px', width: '100%', padding: '11px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '14px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
                     >
-                      <span style={{ fontSize: '13px', opacity: 0.5 }}>📍</span>
+                      <span style={{ fontSize: '13px', opacity: 0.5 }}>{nb.type === 'rua' ? '🛣️' : '📍'}</span>
                       <span style={{ flex: 1 }}>{nb.name}</span>
-                      {nb.hasCatalog && <span style={{ fontSize: '10px', background: '#eff6ff', color: '#2563eb', borderRadius: '4px', padding: '2px 6px', fontWeight: '700', flexShrink: 0 }}>imóveis</span>}
+                      <span style={{ fontSize: '10px', background: nb.type === 'rua' ? '#f0fdf4' : '#eff6ff', color: nb.type === 'rua' ? '#16a34a' : '#2563eb', borderRadius: '4px', padding: '2px 6px', fontWeight: '700', flexShrink: 0 }}>{nb.type === 'rua' ? 'rua' : 'bairro'}</span>
                     </button>
                   ))}
                 </div>
