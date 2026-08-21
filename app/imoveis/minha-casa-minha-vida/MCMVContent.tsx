@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, useDeferredValue } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatBRL } from '@/lib/calculos';
 import { getStatusCfg } from '@/lib/status';
+import { CIDADES_BUSCA, SP_BAIRROS, normStr, stripTipoLogradouro } from '@/lib/localizacao';
 import type { MCMVFaixaStat } from '@/lib/mcmv-catalog';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -19,7 +20,7 @@ interface Imovel {
   vagas_min: number | null; vagas_max: number | null;
   neighborhood: string; city: string; state: string;
   photo: string | null; orulo_url: string | null; sharing_url: string | null;
-  status: string; address_full: string; street: string; number: string;
+  status: string; status_norm: string; address_full: string; street: string; number: string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -211,18 +212,26 @@ export default function MCMVContent({
   const [faixaKey, setFaixaKey] = useState<'faixa12' | 'faixa3' | 'faixa4'>(faixaValida as 'faixa12' | 'faixa3' | 'faixa4');
   const faixaAtual = stats.find(s => s.key === faixaKey) ?? stats[stats.length - 1];
 
+  // ── Busca por cidade/bairro/rua — mesmo mecanismo do portal geral (/imoveis),
+  // pra nunca misturar bairros com o mesmo nome de cidades diferentes (ver
+  // lib/localizacao.ts). Sem cidade escolhida, mostra todas as regiões atendidas.
+  const [searchCity, setSearchCity] = useState(searchParams.cidade || '');
+  const [activeLocation, setActiveLocation] = useState(searchParams.local || '');
+  const [searchInput, setSearchInput] = useState(searchParams.local || '');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [cidadeAberta, setCidadeAberta] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const deferredSearch = useDeferredValue(searchInput);
+
   const [quartos,      setQuartos]      = useState(searchParams.quartos || 'todos');
   const [statusFilter, setStatusFilter] = useState(searchParams.status  || 'todos');
   const [sortBy,        setSortBy]      = useState<'relevancia' | 'menor-preco' | 'maior-preco'>('relevancia');
   const [showAdvanced,  setShowAdvanced] = useState(false);
 
-  const [imoveis,     setImoveis]     = useState<Imovel[]>([]);
+  const [allImoveis,  setAllImoveis]  = useState<Imovel[]>([]);
   const [loading,     setLoading]     = useState(true);
-  const [total,       setTotal]       = useState(0);
-  const [pages,       setPages]       = useState(1);
-  const [page,        setPage]        = useState(1);
   const [erro,        setErro]        = useState('');
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [displayCount, setDisplayCount] = useState(24);
 
   function setUrlParam(key: string, value: string) {
     const url = new URL(window.location.href);
@@ -231,50 +240,152 @@ export default function MCMVContent({
     router.replace(url.pathname + url.search, { scroll: false });
   }
 
-  const buscar = useCallback(async (p = 1, append = false) => {
+  // Fecha o dropdown de cidade e as sugestões ao clicar fora
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!searchRef.current || !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+        setCidadeAberta(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Busca o catálogo inteiro da faixa selecionada de uma vez (igual ao portal
+  // geral) — o filtro por cidade/bairro/rua/quartos/estágio roda no cliente,
+  // sem round-trip, pra resposta instantânea ao digitar/selecionar.
+  const buscar = useCallback(async () => {
     if (!faixaAtual) return;
-    if (p === 1) setLoading(true); else setLoadingMore(true);
+    setLoading(true);
     setErro('');
     try {
       const params = new URLSearchParams({
         residencial: '1',
         max_price:   String(faixaAtual.teto),
-        page:        String(p),
+        all:         '1',
       });
-      if (quartos !== 'todos') {
-        if (quartos === '4+') {
-          params.set('bedrooms_min', '4'); params.set('bedrooms_max', '99');
-        } else {
-          params.set('bedrooms_min', quartos); params.set('bedrooms_max', quartos);
-        }
-      }
-      if (statusFilter !== 'todos') params.set('status', statusFilter);
-
       const res  = await fetch(`/api/orulo?${params}`);
       if (!res.ok) throw new Error('Erro');
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-
-      setTotal(data.total || 0);
-      setPages(data.pages || 1);
-      setPage(p);
-      setImoveis(prev => append ? [...prev, ...(data.buildings || [])] : (data.buildings || []));
+      setAllImoveis(data.buildings || []);
     } catch {
       setErro('Não foi possível carregar os imóveis. Tente novamente.');
     } finally {
-      setLoading(false); setLoadingMore(false);
+      setLoading(false);
     }
-  }, [faixaAtual, quartos, statusFilter]);
+  }, [faixaAtual]);
 
-  useEffect(() => { buscar(1); }, [buscar]);
+  useEffect(() => { buscar(); }, [buscar]);
+  useEffect(() => { setDisplayCount(24); }, [searchCity, activeLocation, quartos, statusFilter, faixaKey]);
 
-  const imoveisSorted = [...imoveis].sort((a, b) => {
+  // Cidades com estoque nesta faixa — mesma fonte (CIDADES_BUSCA) do portal geral
+  const cidadesComEstoque = useMemo(() => {
+    if (allImoveis.length === 0) return [];
+    const comEstoque = new Set(allImoveis.map(i => i.city).filter(Boolean));
+    const ordenadas = CIDADES_BUSCA.filter(c => comEstoque.has(c));
+    // Cidades com estoque mas fora da lista curada entram no fim, ordem alfabética
+    const extras = [...comEstoque].filter(c => !CIDADES_BUSCA.includes(c)).sort();
+    return [...ordenadas, ...extras];
+  }, [allImoveis]);
+
+  // Bairros/ruas — restrito à cidade escolhida (evita "Centro" de SP colidir
+  // com "Centro" de Porto Alegre); sem cidade escolhida, busca em tudo.
+  const allNeighborhoods = useMemo(() => {
+    const escopo = searchCity ? allImoveis.filter(b => normStr(b.city || '') === normStr(searchCity)) : allImoveis;
+    const fromCatalog = escopo.map(b => b.neighborhood).filter(Boolean);
+    const merged = new Map<string, boolean>();
+    if (normStr(searchCity) === normStr('São Paulo')) {
+      SP_BAIRROS.forEach(nb => merged.set(normStr(nb), false));
+    }
+    fromCatalog.forEach(nb => merged.set(normStr(nb), true));
+    const catalogByNorm = new Map(fromCatalog.map(nb => [normStr(nb), nb]));
+    return [...merged.keys()].map(k => ({
+      name: catalogByNorm.get(k) || SP_BAIRROS.find(nb => normStr(nb) === k) || k,
+      hasCatalog: merged.get(k) ?? false,
+      type: 'bairro' as const,
+    })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [allImoveis, searchCity]);
+
+  const allStreets = useMemo(() => {
+    const escopo = searchCity ? allImoveis.filter(b => normStr(b.city || '') === normStr(searchCity)) : allImoveis;
+    const seen = new Map<string, string>();
+    escopo.filter(b => b.street).forEach(b => { const k = normStr(b.street!); if (!seen.has(k)) seen.set(k, b.street!); });
+    return [...seen.values()].map(name => ({ name, hasCatalog: true, type: 'rua' as const }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [allImoveis, searchCity]);
+
+  const allLocationSuggestions = useMemo(() => [...allNeighborhoods, ...allStreets], [allNeighborhoods, allStreets]);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!deferredSearch.trim()) return [] as { name: string; hasCatalog: boolean; type: 'bairro' | 'rua' }[];
+    const q = stripTipoLogradouro(normStr(deferredSearch));
+    return allLocationSuggestions
+      .filter(n => normStr(n.name).includes(q))
+      .sort((a, b) => {
+        if (a.hasCatalog !== b.hasCatalog) return a.hasCatalog ? -1 : 1;
+        const aStarts = normStr(a.name).startsWith(q) ? 0 : 1;
+        const bStarts = normStr(b.name).startsWith(q) ? 0 : 1;
+        if (aStarts !== bStarts) return aStarts - bStarts;
+        return a.name.localeCompare(b.name, 'pt-BR');
+      })
+      .slice(0, 10);
+  }, [deferredSearch, allLocationSuggestions]);
+
+  function selecionarCidade(c: string) {
+    setSearchCity(c);
+    setUrlParam('cidade', c);
+    setCidadeAberta(false);
+    // Bairro buscado antes pode não existir na nova cidade — limpa pra não confundir
+    setActiveLocation('');
+    setSearchInput('');
+    setUrlParam('local', '');
+  }
+
+  function selecionarLocal(nome: string) {
+    setActiveLocation(nome);
+    setSearchInput(nome);
+    setUrlParam('local', nome);
+    setShowSuggestions(false);
+  }
+
+  function limparLocal() {
+    setActiveLocation('');
+    setSearchInput('');
+    setUrlParam('local', '');
+  }
+
+  const filteredImoveis = useMemo(() => {
+    let list = allImoveis;
+    if (searchCity) list = list.filter(b => normStr(b.city || '') === normStr(searchCity));
+    if (activeLocation) {
+      const q = stripTipoLogradouro(normStr(activeLocation));
+      list = list.filter(b => normStr(`${b.neighborhood} ${b.name} ${b.street || ''}`).includes(q));
+    }
+    if (quartos !== 'todos') {
+      if (quartos === '4+') list = list.filter(b => (b.bedrooms_max ?? 0) >= 4);
+      else {
+        const n = Number(quartos);
+        list = list.filter(b => (b.bedrooms_min ?? 0) <= n && (b.bedrooms_max ?? 99) >= n);
+      }
+    }
+    if (statusFilter !== 'todos') list = list.filter(b => b.status_norm === statusFilter);
+    return list;
+  }, [allImoveis, searchCity, activeLocation, quartos, statusFilter]);
+
+  const imoveisSorted = useMemo(() => [...filteredImoveis].sort((a, b) => {
     if (sortBy === 'menor-preco') return (a.min_price ?? 0) - (b.min_price ?? 0);
     if (sortBy === 'maior-preco') return (b.min_price ?? 0) - (a.min_price ?? 0);
     return 0;
-  });
+  }), [filteredImoveis, sortBy]);
 
-  const cidadesComImoveis = [...new Set(imoveis.map(i => i.city).filter(Boolean))].sort();
+  const imoveisVisiveis = imoveisSorted.slice(0, displayCount);
+  const temMais = imoveisSorted.length > displayCount;
+
+  const cidadesComImoveisAtuais = useMemo(() =>
+    [...new Set(filteredImoveis.map(i => i.city).filter(Boolean))].sort()
+  , [filteredImoveis]);
 
   const quartosPills = [
     { key: 'todos', label: 'Todos' },
@@ -284,11 +395,10 @@ export default function MCMVContent({
     { key: '4+',    label: '4+ quartos' },
   ];
   const statusPills = [
-    { key: 'todos',       label: 'Qualquer estágio' },
-    { key: 'na planta',   label: 'Na Planta' },
-    { key: 'lançamento',  label: 'Lançamento' },
-    { key: 'em obras',    label: 'Em Obras' },
-    { key: 'pronto',      label: 'Pronto' },
+    { key: 'todos',     label: 'Qualquer estágio' },
+    { key: 'na planta', label: 'Na Planta' },
+    { key: 'em obras',  label: 'Em Obras' },
+    { key: 'pronto',    label: 'Pronto' },
   ];
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -319,10 +429,11 @@ export default function MCMVContent({
                 PROGRAMA HABITACIONAL FEDERAL
               </p>
               <h1 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: '800', color: '#fff', lineHeight: 1.15, marginBottom: '14px' }}>
-                Imóveis Minha Casa Minha Vida
+                Imóveis Minha Casa Minha Vida{searchCity ? ` em ${searchCity}` : ''}
               </h1>
               <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.55)', lineHeight: 1.6, marginBottom: '10px' }}>
-                Empreendimentos com preço dentro do teto de alguma faixa do MCMV, das Faixas 1 a 4.
+                Empreendimentos com preço dentro do teto de alguma faixa do MCMV, das Faixas 1 a 4
+                {searchCity ? '' : ', em todas as cidades atendidas pelo FinancieCerto'}.
               </p>
               <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.4)', lineHeight: 1.6 }}>
                 A elegibilidade também depende da sua renda — o preço estar dentro do teto não garante aprovação.{' '}
@@ -373,8 +484,65 @@ export default function MCMVContent({
         padding: '12px 24px', position: 'sticky', top: 0, zIndex: 10,
         boxShadow: '0 2px 12px rgba(0,0,0,.07)',
       }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column' }} ref={searchRef}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+
+            {/* ── Buscador: cidade + bairro/rua (mesmo padrão do portal geral) ── */}
+            <div style={{ position: 'relative' }}>
+              <button onClick={() => setCidadeAberta(v => !v)} style={{
+                background: searchCity ? 'var(--primary-light)' : 'var(--bg)',
+                color:      searchCity ? 'var(--primary)'       : 'var(--text-muted)',
+                border:     `1.5px solid ${searchCity ? 'var(--primary)' : 'var(--border)'}`,
+                borderRadius: '10px', padding: '8px 14px', fontSize: '13px',
+                fontWeight: '600', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap',
+              }}>
+                <span>📍</span> {searchCity || 'Todas as cidades'}
+                <span style={{ fontSize: '10px', transform: cidadeAberta ? 'rotate(180deg)' : 'none', transition: 'transform .2s', display: 'inline-block' }}>▼</span>
+              </button>
+              {cidadeAberta && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 20, minWidth: '220px', maxHeight: '360px', overflowY: 'auto' }}>
+                  <button onClick={() => selecionarCidade('')} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '10px 14px', background: !searchCity ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: !searchCity ? '700' : '400', color: !searchCity ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
+                    Todas as cidades
+                  </button>
+                  {cidadesComEstoque.map(c => (
+                    <button key={c} onClick={() => selecionarCidade(c)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%', padding: '10px 14px', background: c === searchCity ? 'var(--primary-light)' : 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '14px', fontWeight: c === searchCity ? '700' : '400', color: c === searchCity ? 'var(--primary)' : '#374151', textAlign: 'left' }}>
+                      {c}
+                      {c === searchCity && <span style={{ color: 'var(--primary)', fontSize: '12px' }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px' }}>
+              <input
+                value={searchInput}
+                onChange={e => { setSearchInput(e.target.value); setShowSuggestions(true); if (!e.target.value) limparLocal(); }}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={e => { if (e.key === 'Enter' && searchInput.trim()) selecionarLocal(searchInput.trim()); }}
+                placeholder={searchCity ? `Bairro ou rua em ${searchCity}...` : 'Bairro ou rua...'}
+                style={{
+                  width: '100%', padding: '8px 34px 8px 12px', border: '1.5px solid var(--border)',
+                  borderRadius: '10px', fontSize: '13px', background: 'var(--bg)', color: 'var(--text)',
+                  fontFamily: 'inherit', outline: 'none',
+                }}
+              />
+              {activeLocation && (
+                <button onClick={limparLocal} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', color: 'var(--text-faint)', cursor: 'pointer', fontSize: '13px', padding: '4px' }}>✕</button>
+              )}
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: '14px', boxShadow: '0 8px 32px rgba(0,0,0,.15)', padding: '6px', zIndex: 20, maxHeight: '320px', overflowY: 'auto' }}>
+                  {filteredSuggestions.map(s => (
+                    <button key={`${s.type}-${s.name}`} onClick={() => selecionarLocal(s.name)} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '9px 12px', background: 'transparent', border: 'none', borderRadius: '9px', cursor: 'pointer', fontSize: '13px', color: '#374151', textAlign: 'left' }}>
+                      <span style={{ fontSize: '11px' }}>{s.type === 'rua' ? '🛣️' : '📍'}</span> {s.name}
+                      {!s.hasCatalog && <span style={{ fontSize: '10px', color: 'var(--text-faint)' }}>(sem imóveis ainda)</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button onClick={() => setShowAdvanced(v => !v)} style={{
               background:   showAdvanced ? 'var(--primary-light)' : 'var(--bg)',
               color:        showAdvanced ? 'var(--primary)'       : 'var(--text-muted)',
@@ -446,7 +614,9 @@ export default function MCMVContent({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '8px' }}>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
               {imoveisSorted.length > 0
-                ? <><strong style={{ color: 'var(--text)' }}>{imoveisSorted.length}</strong> de <strong style={{ color: 'var(--text)' }}>{total}</strong> imóveis até <strong style={{ color: 'var(--text)' }}>{formatBRL(faixaAtual?.teto ?? 0)}</strong></>
+                ? <><strong style={{ color: 'var(--text)' }}>{imoveisVisiveis.length}</strong> de <strong style={{ color: 'var(--text)' }}>{imoveisSorted.length}</strong> imóveis
+                    {searchCity ? <> em <strong style={{ color: 'var(--text)' }}>{searchCity}</strong></> : null}
+                    {' '}até <strong style={{ color: 'var(--text)' }}>{formatBRL(faixaAtual?.teto ?? 0)}</strong></>
                 : `Nenhum imóvel encontrado com esses filtros`}
             </p>
           </div>
@@ -458,9 +628,9 @@ export default function MCMVContent({
           </div>
         )}
 
-        {!loading && imoveisSorted.length > 0 && (
+        {!loading && imoveisVisiveis.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-            {imoveisSorted.map(b => <CardImovel key={b.id} imovel={b} />)}
+            {imoveisVisiveis.map(b => <CardImovel key={b.id} imovel={b} />)}
           </div>
         )}
 
@@ -471,10 +641,10 @@ export default function MCMVContent({
               Nenhum imóvel com esses filtros
             </h2>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '24px' }}>
-              Tente uma faixa mais ampla ou remova alguns filtros.
+              Tente uma faixa mais ampla, outra cidade ou remova alguns filtros.
             </p>
-            {(quartos !== 'todos' || statusFilter !== 'todos') && (
-              <button onClick={() => { setQuartos('todos'); setStatusFilter('todos'); }}
+            {(quartos !== 'todos' || statusFilter !== 'todos' || searchCity || activeLocation) && (
+              <button onClick={() => { setQuartos('todos'); setStatusFilter('todos'); setSearchCity(''); limparLocal(); setUrlParam('quartos', 'todos'); setUrlParam('status', 'todos'); setUrlParam('cidade', ''); }}
                 style={{ padding: '12px 24px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '12px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: 'var(--text-muted)' }}>
                 Limpar filtros
               </button>
@@ -482,33 +652,33 @@ export default function MCMVContent({
           </div>
         )}
 
-        {!loading && pages > page && imoveisSorted.length > 0 && (
+        {!loading && temMais && (
           <div style={{ textAlign: 'center', marginTop: '40px' }}>
-            <button onClick={() => buscar(page + 1, true)} disabled={loadingMore} style={{
+            <button onClick={() => setDisplayCount(c => c + 24)} style={{
               background: 'transparent', color: 'var(--primary)',
               border: '1.5px solid var(--primary)', borderRadius: '12px',
               padding: '12px 32px', fontSize: '14px', fontWeight: '700',
-              cursor: loadingMore ? 'default' : 'pointer', opacity: loadingMore ? 0.6 : 1,
+              cursor: 'pointer',
             }}>
-              {loadingMore ? 'Carregando...' : 'Ver mais imóveis →'}
+              Ver mais imóveis →
             </button>
           </div>
         )}
 
-        {!loading && cidadesComImoveis.length > 0 && (
+        {!loading && !searchCity && cidadesComImoveisAtuais.length > 0 && (
           <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid var(--border)' }}>
             <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '12px' }}>
               Cidades com imóveis nesta faixa
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {cidadesComImoveis.map(c => (
-                <span key={c} style={{
+              {cidadesComImoveisAtuais.map(c => (
+                <button key={c} onClick={() => selecionarCidade(c)} style={{
                   padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: '600',
                   background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  color: 'var(--text-muted)',
+                  color: 'var(--text-muted)', cursor: 'pointer',
                 }}>
                   {c}
-                </span>
+                </button>
               ))}
             </div>
           </div>

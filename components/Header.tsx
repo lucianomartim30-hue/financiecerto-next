@@ -9,6 +9,7 @@ import { getFavoritosCount, onFavoritosChange } from '@/lib/favoritos';
 const NAV_SIMPLE = [
   { href: '/',          label: 'Início',    icon: '🏠' },
   { href: '/imoveis',   label: 'Imóveis',   icon: '🏘️' },
+  { href: '/imoveis/minha-casa-minha-vida', label: 'MCMV', icon: '🏛️' },
   { href: '/aprenda',   label: 'Aprenda',   icon: '📚' },
   { href: '/sobre',     label: 'Sobre nós', icon: 'ℹ️' },
   { href: '/contato',   label: 'Contato',   icon: '✉️' },
@@ -206,7 +207,10 @@ export default function Header() {
 
             {/* Links simples */}
             {NAV_SIMPLE.map((link) => {
-              const active = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+              // "Imóveis" (/imoveis) é prefixo de "MCMV" (/imoveis/minha-casa-minha-vida)
+              // — sem essa checagem, os dois acendiam juntos na página do MCMV.
+              const maisEspecifico = NAV_SIMPLE.some(o => o.href !== link.href && o.href.startsWith(link.href) && pathname.startsWith(o.href));
+              const active = !maisEspecifico && (pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href)));
               return (
                 <Link
                   key={link.href}
