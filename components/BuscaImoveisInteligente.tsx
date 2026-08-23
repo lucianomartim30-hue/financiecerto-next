@@ -4,16 +4,19 @@
  * Bloco "Encontre o imóvel certo" — inserido nos simuladores após o resultado.
  *
  * Lógica:
- *  1. Usuário informa quartos, vagas e bairro desejado
+ *  1. Usuário escolhe a cidade e informa quartos, vagas e bairro desejado
  *  2. Busca imóveis com preço ±20% do valor simulado no bairro pedido
- *  3. Se não achar no bairro → busca em toda SP, ordena por distância e
- *     mostra mensagem explicando a realidade do mercado + alternativas próximas
+ *  3. Se não achar no bairro → busca na cidade inteira; em São Paulo, ordena
+ *     por distância real (única cidade com coordenadas de bairro — ver
+ *     lib/sp-neighborhoods); nas demais, ordena por quantidade de imóveis.
+ *     Mostra mensagem explicando a realidade do mercado + alternativas.
  */
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { formatBRL, formatPlantaPreco } from '@/lib/calculos';
 import { lookupSPCoords, haversineKm } from '@/lib/sp-neighborhoods';
+import { CIDADES_BUSCA } from '@/lib/localizacao';
 
 interface ImovelCard {
   id: string;
@@ -106,11 +109,17 @@ export default function BuscaImoveisInteligente({
   /** Faixa/modalidade já calculada pelo simulador (ex.: "Faixa 2 MCMV", "SBPE (SFH)") — mostrada como contexto, sem alterar a busca. */
   faixaLabel?: string;
 }) {
+  const [cidade,  setCidade]  = useState('São Paulo');
   const [quartos, setQuartos] = useState<number | null>(null);
   const [vagas,   setVagas]   = useState<number | null>(null);
   const [bairro,  setBairro]  = useState('');
   const [loading, setLoading] = useState(false);
   const [buscado, setBuscado] = useState(false);
+
+  // Coordenadas de bairro só existem pra São Paulo (lib/sp-neighborhoods) — em
+  // outras cidades, a expansão de busca (Busca 2) ainda funciona, mas sem
+  // ordenar/rotular por distância (ver comDistancia abaixo).
+  const temCoordenadas = cidade === 'São Paulo';
 
   const [resultados,   setResultados]   = useState<ImovelCard[]>([]);
   const [alternativas, setAlternativas] = useState<Alternativa[]>([]);
@@ -135,13 +144,15 @@ export default function BuscaImoveisInteligente({
 
     try {
       // ── Busca 1: com bairro se informado ──────────────────────────────
-      // Restrita a São Paulo — os bairros sugeridos, as coordenadas de
-      // distância (lookupSPCoords) e o texto da UI ("toda SP") são todos
-      // específicos da capital. Sem essa restrição, um bairro digitado
-      // (ex: "Centro") podia casar com o mesmo nome em outro estado.
+      // BUG histórico: nenhuma das duas buscas tinha filtro de cidade —
+      // um bairro digitado (ex: "Centro") podia casar com o mesmo nome em
+      // outro estado, e a busca ampliada (Busca 2) varria o catálogo
+      // nacional inteiro. Um perfil buscado em bairro de São Paulo podia
+      // devolver imóvel do Rio Grande do Sul sem nenhuma relação com a
+      // busca original. Agora as duas ficam restritas à cidade escolhida.
       const p1 = new URLSearchParams({
         all: '1',
-        city: 'São Paulo',
+        city: cidade,
         min_price: String(valorMin),
         max_price: String(valorMax),
         bedrooms_min: String(quartos),
@@ -160,14 +171,10 @@ export default function BuscaImoveisInteligente({
         return;
       }
 
-      // ── Busca 2: sem filtro de bairro → busca em toda SP ─────────────
-      // BUG histórico: faltava o filtro de cidade aqui, então essa busca
-      // "ampliada" varria o catálogo nacional inteiro — um perfil buscado
-      // em bairro de São Paulo podia devolver imóvel de outro estado (ex:
-      // Rio Grande do Sul), sem nenhuma relação com a busca original.
+      // ── Busca 2: sem filtro de bairro → busca na cidade inteira ──────
       const p2 = new URLSearchParams({
         all: '1',
-        city: 'São Paulo',
+        city: cidade,
         min_price: String(valorMin),
         max_price: String(valorMax),
         bedrooms_min: String(quartos),
@@ -180,28 +187,18 @@ export default function BuscaImoveisInteligente({
 
       if (!r2.length) { setSemResultado(true); setBuscado(true); return; }
 
-      // Calcula distância de cada imóvel até o bairro desejado
-      const origem = lookupSPCoords(bairro.trim(), 'São Paulo');
-
-      const comDist = r2.map(im => {
-        const dest = (im.lat && im.lng)
-          ? { lat: im.lat, lng: im.lng }
-          : lookupSPCoords(im.neighborhood, im.city || 'São Paulo');
-        const distKm = origem && dest
-          ? haversineKm(origem.lat, origem.lng, dest.lat, dest.lng)
-          : 999;
-        return { ...im, _distKm: distKm };
-      }).sort((a, b) => a._distKm - b._distKm);
+      // Coordenadas de bairro só existem pra São Paulo — em outras cidades,
+      // não há como calcular distância real, então pula direto pro
+      // agrupamento por bairro (ordenado por quantidade, sem "~Xkm").
+      const origem = temCoordenadas ? lookupSPCoords(bairro.trim(), cidade) : null;
 
       // Agrupa por bairro para mostrar alternativas organizadas
       const mapaNeighborhood = new Map<string, Alternativa>();
-      for (const im of comDist) {
+      for (const im of r2) {
         const key = im.neighborhood;
         if (!mapaNeighborhood.has(key)) {
-          const dest = lookupSPCoords(im.neighborhood, im.city || 'São Paulo');
-          const distKm = origem && dest
-            ? haversineKm(origem.lat, origem.lng, dest.lat, dest.lng)
-            : 999;
+          const dest = origem ? ((im.lat && im.lng) ? { lat: im.lat, lng: im.lng } : lookupSPCoords(im.neighborhood, cidade)) : null;
+          const distKm = origem && dest ? haversineKm(origem.lat, origem.lng, dest.lat, dest.lng) : -1;
           mapaNeighborhood.set(key, { neighborhood: key, count: 0, distKm, imoveis: [] });
         }
         const entry = mapaNeighborhood.get(key)!;
@@ -209,8 +206,9 @@ export default function BuscaImoveisInteligente({
         if (entry.imoveis.length < 2) entry.imoveis.push(im);
       }
 
+      // Com distância real: mais próximos primeiro. Sem (fora de SP): mais imóveis primeiro.
       const alts = [...mapaNeighborhood.values()]
-        .sort((a, b) => a.distKm - b.distKm)
+        .sort((a, b) => origem ? a.distKm - b.distKm : b.count - a.count)
         .slice(0, 5);
 
       setAlternativas(alts);
@@ -248,6 +246,26 @@ export default function BuscaImoveisInteligente({
       </div>
 
       <div style={{ padding: '20px' }}>
+        {/* Cidade */}
+        <div style={{ marginBottom: 18 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+            Cidade
+          </p>
+          <select
+            value={cidade}
+            onChange={e => { setCidade(e.target.value); setBairro(''); }}
+            style={{
+              width: '100%', padding: '10px 14px',
+              border: '1.5px solid var(--border)', borderRadius: 10,
+              fontSize: 14, fontFamily: 'inherit', outline: 'none',
+              background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box',
+              cursor: 'pointer',
+            }}
+          >
+            {CIDADES_BUSCA.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
         {/* Quartos */}
         <div style={{ marginBottom: 18 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>
@@ -277,7 +295,7 @@ export default function BuscaImoveisInteligente({
             type="text"
             value={bairro}
             onChange={e => setBairro(e.target.value)}
-            placeholder="Ex: Vila Mariana, Moema, Tatuapé..."
+            placeholder={temCoordenadas ? 'Ex: Vila Mariana, Moema, Tatuapé...' : `Bairro em ${cidade}...`}
             style={{
               width: '100%', padding: '10px 14px',
               border: '1.5px solid var(--border)', borderRadius: 10,
@@ -342,7 +360,7 @@ export default function BuscaImoveisInteligente({
                     <div key={alt.neighborhood} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,.7)', borderRadius: 8, padding: '6px 12px' }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#1E293B' }}>📍 {alt.neighborhood}</span>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, color: '#64748B' }}>{alt.distKm < 100 ? `~${alt.distKm.toFixed(0)}km de ${bairroDesejado}` : 'São Paulo'}</span>
+                        <span style={{ fontSize: 11, color: '#64748B' }}>{alt.distKm >= 0 ? `~${alt.distKm.toFixed(0)}km de ${bairroDesejado}` : cidade}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-light)', padding: '2px 8px', borderRadius: 99 }}>
                           {alt.count} imóv.
                         </span>
@@ -360,7 +378,7 @@ export default function BuscaImoveisInteligente({
                   {resultados.map(im => <CardImovel key={im.id} im={im} />)}
                 </div>
                 <Link
-                  href={`/imoveis?min=${valorMin}&max=${valorMax}&bedrooms_min=${quartos}&bedrooms_max=${quartos ?? ''}${bairroDesejado && encontrouNoBairro ? `&neighborhood=${encodeURIComponent(bairroDesejado)}` : ''}${naPlanta ? '&status=na planta' : ''}`}
+                  href={`/imoveis?city=${encodeURIComponent(cidade)}&min=${valorMin}&max=${valorMax}&bedrooms_min=${quartos}&bedrooms_max=${quartos ?? ''}${bairroDesejado && encontrouNoBairro ? `&neighborhood=${encodeURIComponent(bairroDesejado)}` : ''}${naPlanta ? '&status=na planta' : ''}`}
                   style={{
                     display: 'block', padding: '12px', borderRadius: 10,
                     background: 'var(--primary-light)', color: 'var(--primary)',
