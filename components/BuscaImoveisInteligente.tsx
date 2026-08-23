@@ -135,8 +135,13 @@ export default function BuscaImoveisInteligente({
 
     try {
       // ── Busca 1: com bairro se informado ──────────────────────────────
+      // Restrita a São Paulo — os bairros sugeridos, as coordenadas de
+      // distância (lookupSPCoords) e o texto da UI ("toda SP") são todos
+      // específicos da capital. Sem essa restrição, um bairro digitado
+      // (ex: "Centro") podia casar com o mesmo nome em outro estado.
       const p1 = new URLSearchParams({
         all: '1',
+        city: 'São Paulo',
         min_price: String(valorMin),
         max_price: String(valorMax),
         bedrooms_min: String(quartos),
@@ -156,8 +161,13 @@ export default function BuscaImoveisInteligente({
       }
 
       // ── Busca 2: sem filtro de bairro → busca em toda SP ─────────────
+      // BUG histórico: faltava o filtro de cidade aqui, então essa busca
+      // "ampliada" varria o catálogo nacional inteiro — um perfil buscado
+      // em bairro de São Paulo podia devolver imóvel de outro estado (ex:
+      // Rio Grande do Sul), sem nenhuma relação com a busca original.
       const p2 = new URLSearchParams({
         all: '1',
+        city: 'São Paulo',
         min_price: String(valorMin),
         max_price: String(valorMax),
         bedrooms_min: String(quartos),

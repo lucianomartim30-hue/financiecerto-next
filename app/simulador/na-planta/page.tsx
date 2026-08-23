@@ -569,6 +569,40 @@ function NaPlantaContent() {
     });
   }, [valido, valor, renda, estagio, tipoImovel, isMCMV, valorAFinanciar, necessidadeFinanciamento, capacidadeEstimada, diferencaRecursos, taxa, fgtsUsado, subsidioEstimado, qtdMensais, parcelaFin, seguros.total, entradaMinima, recursosExternos, totalContribuicao, totalConstrutora, precisaPagarConstrutora, siopiInicial, ato]);
 
+  // Toda simulação concluída fica salva automaticamente (ver "Minhas simulações"
+  // em /conta) — igual ao simulador principal (ver app/simulador/page.tsx). Esse
+  // salvamento nunca existia aqui: quem simulava um imóvel na planta não via a
+  // simulação em "minha área". Como este formulário recalcula a cada tecla (não
+  // é um wizard por etapas), o envio é debounçado — só grava quando os valores
+  // param de mudar por um instante, pra não gerar uma gravação por caractere digitado.
+  const ultimoNaPlantaSalvo = useRef<string>('');
+  useEffect(() => {
+    if (!valido) return;
+    const modalidade = isMCMV ? (faixaEfetiva ? `${faixaEfetiva.label} MCMV` : 'MCMV') : 'SBPE (SFH)';
+    const parcela = Math.round(parcelaFin + seguros.total);
+    const payload = {
+      modalidade,
+      valorImovel:      valor,
+      valorFinanciado:  valorAFinanciar,
+      parcelaPrice:     parcela,
+      parcelaSAC:       0,
+      taxaAnual:        taxa,
+      prazoAnos:        35,
+      comprometimento:  renda > 0 ? (parcela / renda) * 100 : 0,
+    };
+    const assinatura = JSON.stringify(payload);
+    if (assinatura === ultimoNaPlantaSalvo.current) return;
+    const timer = setTimeout(() => {
+      ultimoNaPlantaSalvo.current = assinatura;
+      fetch('/api/simulacoes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).catch(() => { /* ignore */ });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [valido, isMCMV, faixaEfetiva, valor, valorAFinanciar, parcelaFin, seguros.total, taxa, renda]);
+
   // ── Configuração dos estágios ─────────────────────────────────────────────────
   const estagioConfig: Record<Estagio, { label: string; desc: string; color: string; aviso?: string }> = {
     lancamento: { label: 'Na planta', desc: 'Obra não iniciada', color: '#2563eb' },
