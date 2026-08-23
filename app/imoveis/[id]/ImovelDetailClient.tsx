@@ -1528,9 +1528,10 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 function SecaoRelacionados({
-  neighborhood, currentId, minPrice, bedroomsMin, bedroomsMax, lat, lng,
+  neighborhood, city, currentId, minPrice, bedroomsMin, bedroomsMax, lat, lng,
 }: {
   neighborhood: string;
+  city: string;
   currentId: string;
   minPrice: number | null;
   bedroomsMin: number | null;
@@ -1544,12 +1545,20 @@ function SecaoRelacionados({
   useEffect(() => {
     if (!neighborhood) return;
 
-    // Ponto de referência: coordenadas do imóvel atual ou centróide do bairro
+    // Ponto de referência: coordenadas do imóvel atual ou centróide do bairro.
+    // strict:true — sem coordenada real de bairro/cidade, prefere "sem
+    // distância calculável" a presumir silenciosamente o centro de São Paulo
+    // (isso fazia bairros sem coordenada cadastrada, ou cidades fora de SP,
+    // aparecerem com distância ~0 e passar no filtro de "5km de raio" abaixo).
     const originCoords = (lat && lng)
       ? { lat, lng }
-      : lookupSPCoords(neighborhood, 'São Paulo');
+      : lookupSPCoords(neighborhood, city, { strict: true });
 
+    // Restrito à mesma cidade do imóvel atual — sem isso, a busca varria o
+    // catálogo nacional inteiro e podia sugerir "imóvel similar" de outro
+    // estado como se fosse vizinho.
     const params = new URLSearchParams({ all: '1' });
+    if (city) params.set('city', city);
 
     // Faixa de preço ±20%
     if (minPrice) {
@@ -1572,7 +1581,7 @@ function SecaoRelacionados({
             // Coordenadas do imóvel candidato: usa as próprias ou centróide do bairro
             const candidateCoords = (im.lat && im.lng)
               ? { lat: im.lat, lng: im.lng }
-              : lookupSPCoords(im.neighborhood, 'São Paulo');
+              : lookupSPCoords(im.neighborhood, city, { strict: true });
 
             const distKm = (originCoords && candidateCoords)
               ? haversineKm(originCoords.lat, originCoords.lng, candidateCoords.lat, candidateCoords.lng)
@@ -1590,7 +1599,7 @@ function SecaoRelacionados({
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [neighborhood, currentId, minPrice, bedroomsMin, bedroomsMax, lat, lng]);
+  }, [neighborhood, city, currentId, minPrice, bedroomsMin, bedroomsMax, lat, lng]);
 
   if (loading) return null;
   if (!relacionados.length) return null;
@@ -1980,6 +1989,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             <SecaoLocalizacao imovel={imovel} />
             <SecaoRelacionados
               neighborhood={imovel.neighborhood}
+              city={imovel.city}
               currentId={imovel.id}
               minPrice={imovel.min_price}
               bedroomsMin={imovel.bedrooms_min}

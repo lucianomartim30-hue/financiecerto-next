@@ -190,14 +190,14 @@ export default function BuscaImoveisInteligente({
       // Coordenadas de bairro só existem pra São Paulo — em outras cidades,
       // não há como calcular distância real, então pula direto pro
       // agrupamento por bairro (ordenado por quantidade, sem "~Xkm").
-      const origem = temCoordenadas ? lookupSPCoords(bairro.trim(), cidade) : null;
+      const origem = temCoordenadas ? lookupSPCoords(bairro.trim(), cidade, { strict: true }) : null;
 
       // Agrupa por bairro para mostrar alternativas organizadas
       const mapaNeighborhood = new Map<string, Alternativa>();
       for (const im of r2) {
         const key = im.neighborhood;
         if (!mapaNeighborhood.has(key)) {
-          const dest = origem ? ((im.lat && im.lng) ? { lat: im.lat, lng: im.lng } : lookupSPCoords(im.neighborhood, cidade)) : null;
+          const dest = origem ? ((im.lat && im.lng) ? { lat: im.lat, lng: im.lng } : lookupSPCoords(im.neighborhood, cidade, { strict: true })) : null;
           const distKm = origem && dest ? haversineKm(origem.lat, origem.lng, dest.lat, dest.lng) : -1;
           mapaNeighborhood.set(key, { neighborhood: key, count: 0, distKm, imoveis: [] });
         }
