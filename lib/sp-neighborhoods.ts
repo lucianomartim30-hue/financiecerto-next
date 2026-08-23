@@ -180,11 +180,14 @@ export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: numb
  * Retorna as coordenadas de centróide para um bairro/município.
  * Tenta o bairro primeiro, depois a cidade como fallback.
  *
- * `strict: true` desliga o fallback final pro centróide de São Paulo — usar
- * sempre que o resultado alimenta um CÁLCULO DE DISTÂNCIA (bairro mais
+ * `strict: true` exige um match de BAIRRO de verdade — desliga tanto o
+ * fallback pra cidade quanto o fallback final pro centróide de São Paulo.
+ * Usar sempre que o resultado alimenta um CÁLCULO DE DISTÂNCIA (bairro mais
  * próximo, "imóveis similares" por raio de km etc.): sem `strict`, um bairro
  * fora da tabela (ex.: Itaquera, zona leste — não cadastrado) silenciosamente
- * virava "está no centro de SP", fazendo bairros centrais reais (Liberdade,
+ * virava "está no centro de SP" — e como o fallback de cidade também usa
+ * 'São Paulo', TODO bairro desconhecido de uma busca em SP colapsava pro
+ * mesmo ponto central, fazendo bairros centrais reais (Liberdade,
  * Perdizes...) aparecerem como "~1km de distância" quando na verdade ficam a
  * ~15-20km. Sem `strict` (padrão), mantém o comportamento antigo — usado só
  * pra garantir que todo imóvel ganhe *algum* pin no mapa geral.
@@ -196,9 +199,9 @@ export function lookupSPCoords(
 ): { lat: number; lng: number } | null {
   const n = normalizeKey(neighborhood);
   if (n && COORDS[n]) return COORDS[n];
+  if (opts?.strict) return null;
   const c = normalizeKey(city);
   if (c && COORDS[c]) return COORDS[c];
-  if (opts?.strict) return null;
   // Fallback final: centróide de São Paulo para garantir que todo imóvel apareça no mapa
   return COORDS['sao paulo'];
 }
