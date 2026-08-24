@@ -179,22 +179,25 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
         ))}
 
         {/* CTA Simulador — título/contexto sobrescrevíveis por artigo (ver ctaSimuladorTitulo/
-            ctaSimuladorContexto em lib/artigos.ts); nem todo artigo é sobre simular financiamento. */}
-        <div style={{
-          background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', borderRadius: 16,
-          padding: '28px 24px', textAlign: 'center', margin: '8px 0 40px',
-        }}>
-          <p style={{ fontSize: 19, fontWeight: 700, color: '#fff', margin: '0 0 6px' }}>
-            {artigo.ctaSimuladorTitulo ?? 'Quer ver os seus números?'}
-          </p>
-          <p style={{ fontSize: 15, color: 'rgba(255,255,255,.75)', margin: '0 0 18px' }}>
-            {artigo.ctaSimuladorContexto ?? 'Simule com a sua renda e o seu imóvel — gratuito, em menos de 2 minutos.'}
-          </p>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <CtaSimuladorLink slug={artigo.slug} href={artigo.ctaSimulador.href} texto={artigo.ctaSimulador.texto} />
-            {!artigo.ctaSemBotaoImoveis && <CtaImoveisLink slug={artigo.slug} texto="Ver imóveis em SP" variant="outline" />}
+            ctaSimuladorContexto em lib/artigos.ts); nem todo artigo é sobre simular financiamento.
+            ctaSimuladorOculto esconde o bloco inteiro pra artigos puramente educacionais. */}
+        {!artigo.ctaSimuladorOculto && (
+          <div style={{
+            background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', borderRadius: 16,
+            padding: '28px 24px', textAlign: 'center', margin: '8px 0 40px',
+          }}>
+            <p style={{ fontSize: 19, fontWeight: 700, color: '#fff', margin: '0 0 6px' }}>
+              {artigo.ctaSimuladorTitulo ?? 'Quer ver os seus números?'}
+            </p>
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,.75)', margin: '0 0 18px' }}>
+              {artigo.ctaSimuladorContexto ?? 'Simule com a sua renda e o seu imóvel — gratuito, em menos de 2 minutos.'}
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <CtaSimuladorLink slug={artigo.slug} href={artigo.ctaSimulador.href} texto={artigo.ctaSimulador.texto} />
+              {!artigo.ctaSemBotaoImoveis && <CtaImoveisLink slug={artigo.slug} texto="Ver imóveis em SP" variant="outline" />}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* CTA João */}
         <div style={{

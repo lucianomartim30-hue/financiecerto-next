@@ -46,6 +46,9 @@ export interface Artigo {
    * financiamento). Usar em artigos onde o CTA principal não é simular. */
   ctaSimuladorTitulo?: string;
   ctaSimuladorContexto?: string;
+  /** Esconde o 1º bloco de CTA inteiro (título+contexto+botão) — usar quando o
+   * artigo é puramente educacional, sem ação de conversão específica a oferecer. */
+  ctaSimuladorOculto?: boolean;
   /** Esconde o botão secundário "Ver imóveis em SP" do 1º bloco de CTA — usar quando
    * o artigo não trata de compra/financiamento direto de imóvel do catálogo. */
   ctaSemBotaoImoveis?: boolean;
@@ -1276,9 +1279,12 @@ export const ARTIGOS: Artigo[] = [
       'Nunca afirmar que SCP é garantidamente mais barata, sempre valoriza, garante apartamento, garante lucro, é sem risco ou é melhor que comprar na planta — tudo depende do contrato específico da operação.',
       'FinancieCerto não presta parecer jurídico sobre SCP — conteúdo é educacional; sempre recomendar análise jurídica/contábil individual antes de decidir.',
     ],
-    ctaSimulador: { texto: 'Falar com um consultor sobre uma oportunidade de SCP', href: '/contato' },
-    ctaSimuladorTitulo: 'Está avaliando uma oportunidade de SCP?',
-    ctaSimuladorContexto: 'Entenda exatamente o que você estaria contratando antes de decidir — fale com um consultor.',
+    // Página puramente educacional — sem CTA de "fale com um consultor sobre SCP"
+    // (o site não sabe quais empreendimentos usam SCP; essa informação é apurada
+    // manualmente junto à construtora, não vem do catálogo) nem associação
+    // automática com o catálogo geral de imóveis.
+    ctaSimulador: { texto: '', href: '/contato' },
+    ctaSimuladorOculto: true,
     ctaSemBotaoImoveis: true,
     ctaFinalImoveisOculto: true,
     relacionados: ['credito-associativo-como-funciona-comprar-na-planta', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
