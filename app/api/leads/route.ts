@@ -28,6 +28,9 @@ async function notificarLeadFormulario(lead: { imovelId: string; imovelName: str
   const resend = new Resend(RESEND_API_KEY);
   const { nome, email, whatsapp } = lead.contato;
   const local = [lead.bairro, lead.cidade].filter(Boolean).join(' · ');
+  const urlImovel = lead.imovelId && lead.imovelId !== 'simulacao-na-planta'
+    ? `https://www.financiecerto.com.br/imoveis/${lead.imovelId}`
+    : '';
 
   const htmlAdmin = wrap(`
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;">
@@ -41,6 +44,7 @@ async function notificarLeadFormulario(lead: { imovelId: string; imovelName: str
           ${email ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">E-mail</td><td style="padding:8px 0;font-weight:700;color:#2563eb;"><a href="mailto:${esc(email)}">${esc(email)}</a></td></tr>` : ''}
           <tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">Imóvel</td><td style="padding:8px 0;font-weight:700;color:#111827;">${esc(lead.imovelName)}</td></tr>
           ${local ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">Local</td><td style="padding:8px 0;">${esc(local)}</td></tr>` : ''}
+          ${urlImovel ? `<tr><td style="padding:8px 0;color:#6b7280;font-size:13px;">Link</td><td style="padding:8px 0;font-weight:700;"><a href="${urlImovel}" style="color:#2563eb;">${urlImovel} →</a></td></tr>` : ''}
         </table>
         <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;" />
         <p style="font-size:11px;color:#9ca3af;">Fora do estado de SP — sem clique de WhatsApp, esse formulário é o único jeito de saber que essa pessoa pediu contato. Veja também em /admin/leads.</p>

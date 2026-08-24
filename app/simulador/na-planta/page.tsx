@@ -128,8 +128,14 @@ function CTAConsultorCenario({
     registrarLeadCenario();
   }
 
+  // Só existe página real de imóvel quando há um imovelId de catálogo de
+  // verdade — simulação avulsa (idLead === 'simulacao-na-planta') não tem
+  // link nenhum pra oferecer.
+  const urlImovel = typeof window !== 'undefined' && imovelId
+    ? `${window.location.origin}/imoveis/${imovelId}`
+    : '';
   const msg = encodeURIComponent(
-    `Olá! Montei um cenário de pagamento no simulador na planta do FinancieCerto para um imóvel de ${formatBRL(valor)} (${modalidade}${faixa ? ` ${faixa}` : ''}) e gostaria de conversar com um consultor sobre esta proposta.`
+    `Olá! Montei um cenário de pagamento no simulador na planta do FinancieCerto para um imóvel de ${formatBRL(valor)} (${modalidade}${faixa ? ` ${faixa}` : ''}) e gostaria de conversar com um consultor sobre esta proposta.${urlImovel ? `\n${urlImovel}` : ''}`
   );
 
   return (
@@ -194,8 +200,11 @@ function CTAFalarDireto({ imovelId, imovelName }: { imovelId: string; imovelName
     registrar();
   }
 
+  const urlImovel = typeof window !== 'undefined'
+    ? `${window.location.origin}/imoveis/${imovelId}`
+    : '';
   const msg = encodeURIComponent(
-    `Olá! Estou vendo o imóvel *${nomeLead}* no simulador na planta do FinancieCerto e gostaria de falar com um consultor.`
+    `Olá! Estou vendo o imóvel *${nomeLead}* no simulador na planta do FinancieCerto e gostaria de falar com um consultor.\n${urlImovel}`
   );
 
   return (
