@@ -23,6 +23,26 @@ node scripts/update-tr.js             # fetch & write TR data from BCB
 
 ---
 
+### PERMANENT RULE — Consultor João knowledge check
+
+Before concluding **any** implementation that changes site content, product behavior, calculation rules, financing modalities, simulators, or user-facing functionality, ask:
+
+> **Esta alteração muda alguma informação que o Consultor João deveria conhecer ou alguma resposta que ele deveria dar?**
+
+If **yes**, update João's knowledge/prompt/rules accordingly (see architecture below) before considering the task done. If **no**, say so explicitly and state why. Include a `Impacto no Consultor João: SIM/NÃO` line (with what was updated, or why nothing was needed) in the final summary of any relevant change.
+
+**João must never contradict published site content**, and must never invent features, conditions, or information the site doesn't actually have.
+
+**How João's knowledge is architected** (`app/api/chat/route.ts`):
+1. **Baseline/static** — `SYSTEM_BASE`: a fixed system prompt with a hand-written "ESTRUTURA DO SITE" section (describes `/`, `/simulador`, `/simulador/na-planta`, `/imoveis`, `/guia`, `/glossario` in prose) and "COMO ORIENTAR PARA O SITE" (when to recommend which page). This is sent on **every** request regardless of what page the user is on. It is **hand-maintained** — adding a page/feature here means writing a paragraph by hand, not auto-generated from any data file.
+2. **Contextual/dynamic** — `buildContextBlock()`: reads `ctx.page` (the page the user is currently on, reported by the client) and injects extra context. For `/aprenda/[slug]` specifically, it calls `fatosArtigoParaContexto(slug)`, which pulls `fatosChaveParaJoao` **directly from `lib/artigos.ts`** — so any article's contextual knowledge is automatically correct and in sync the moment the article is added, with zero code change, **but only while the user is actually on that article's page**.
+
+**Known gap (pre-existing, not fixed by this rule alone):** the `/aprenda` hub itself is not mentioned in the static "ESTRUTURA DO SITE"/"COMO ORIENTAR" sections at all — none of the `/aprenda` articles (SCP included) are part of João's baseline knowledge. A user asking about a topic covered in `/aprenda` from any *other* page (home, an imóvel page, etc.) gets no grounded answer from João, only users already reading that specific article do. Fixing this for one article without fixing it for the hub generally would be inconsistent — treat as a hub-level decision, not per-article.
+
+**Do not copy full article bodies into `SYSTEM_BASE`** — that duplicates `lib/artigos.ts`, desyncs over time, and bloats/costs more per request. If baseline awareness of `/aprenda` is added, keep it to a short reference paragraph (what the hub is, that it covers modality/legal/tax topics like SCP, MCMV, financing to non-residents, etc.) plus explicit anti-hallucination guardrails for anything requiring precision (e.g., SCP: never infer that a specific catalog listing uses SCP — that data doesn't come from Orulo and is confirmed manually per building; if asked, say availability depends on the building and must be confirmed with the construtora).
+
+---
+
 ### `lib/calculos.ts` — single source of truth for all financial logic
 
 All financial constants, formulas and data live here. **Never hardcode financial values in page files** — always import from this module.

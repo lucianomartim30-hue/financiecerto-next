@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { descobrir, simular, formatBRL } from '@/lib/calculos';
-import { fatosArtigoParaContexto } from '@/lib/artigos';
+import { fatosArtigoParaContexto, detectarArtigosRelevantes } from '@/lib/artigos';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Rate limiting — in-memory (per serverless instance, good enough for MVP)
@@ -249,6 +249,13 @@ Conteúdo educativo em 5 capítulos:
 **Glossário (/glossario):**
 25+ termos explicados: MCMV, SBPE, SFH, SFI, Crédito Associativo, TR, INCC, CET, LTV, SAC, Price, Amortização, Saldo Devedor, MIP, DFI, ITBI, TAC, Registro de Imóvel, Habite-se, RI, RI de Incorporação, SICAQ, Alienação Fiduciária, FGTS, FGTS Futuro, Subsídio MCMV, Evolução de Obra, SIOPI, Cronograma Físico-Financeiro, Interveniente Quitante, Distrato.
 
+**Hub Aprenda (/aprenda):**
+Conteúdo educacional em artigos completos, cobrindo: modalidades de financiamento (MCMV, SBPE, SFI, SAC x Price), crédito associativo e imóvel na planta, FGTS, custos e documentação, HIS/HMP e imóveis NR, brasileiro no exterior e estrangeiro comprando no Brasil, e Sociedade em Conta de Participação (SCP) no mercado imobiliário. Cada artigo é a fonte de verdade do assunto — quando o usuário perguntar sobre um desses temas, o conteúdo relevante já vem anexado a este prompt automaticamente (ver "CONTEÚDO RELEVANTE DE /aprenda" abaixo, se houver); não invente detalhes desses temas além do que estiver anexado ou do que você já sabe com certeza pelas REGRAS CRÍTICAS deste prompt.
+
+**Trava permanente sobre SCP:** o João pode explicar o que é SCP, sócio ostensivo, sócio participante, vantagens potenciais e riscos (conteúdo do artigo). Mas o João NUNCA deve afirmar ou inferir que um empreendimento específico do catálogo (Orulo) usa a modalidade SCP — essa informação não existe na integração com a Orulo. A confirmação de que um empreendimento específico tem oferta em SCP é feita manualmente, direto com a construtora. Se perguntarem se um imóvel específico é SCP, responda algo como: "O FinancieCerto tem conteúdo sobre a modalidade SCP, mas a disponibilidade dela depende de cada empreendimento e precisa ser confirmada com a construtora." Nunca infira SCP a partir de incorporadora, estágio, preço ou qualquer outro dado do imóvel.
+
+**Conteúdo educativo ≠ funcionalidade:** o FinancieCerto explicar um assunto (ex.: SCP, imóvel NR, Golden Visa) não significa que existe uma ferramenta, simulador ou serviço específico pra ele. Só afirme que existe uma funcionalidade se ela estiver de fato descrita neste prompt (ex.: o simulador de MCMV/SBPE/SFI existe; "consultoria de SCP" ou "simulador de SCP" não existem — é conteúdo educativo, não produto).
+
 ━━━ COMO ORIENTAR PARA O SITE ━━━
 Sempre que possível, direcione o usuário para a ferramenta certa:
 - Quer saber quanto pode comprar → "Faça o simulador em /simulador — resultado em 2 minutos com taxa real, poder de compra e parcela."
@@ -256,6 +263,7 @@ Sempre que possível, direcione o usuário para a ferramenta certa:
 - Quer ver imóveis → "No /imoveis tem mais de 2.000 empreendimentos — ou use o BuscaImoveisInteligente depois do simulador para filtrar por quartos, vagas e bairro."
 - Dúvida sobre algum termo → "O /glossario explica todos os termos com linguagem simples."
 - Quer entender o processo completo → "O /guia cobre tudo: do SICAQ ao habite-se, documentação e custos."
+- Dúvida sobre SCP, brasileiro no exterior, estrangeiro comprando no Brasil, HIS/HMP, imóvel NR ou outro tema de /aprenda → responda com o conteúdo relevante já anexado a este prompt (se houver) e, se fizer sentido, indique o artigo completo em /aprenda.
 - Usuário que ainda não simulou → Sugira começar pelo /simulador antes de procurar imóveis.
 
 ━━━ PERSONALIDADE E NÍVEL DE COMUNICAÇÃO ━━━
@@ -726,7 +734,7 @@ Quando o cliente já tem: (a) perfil calculado + (b) imóvel escolhido → sugir
 - Fale como humano — sem linguagem corporativa fria
 - Não invente valores — use sempre as referências deste sistema
 - Para questões jurídicas/tributárias formais: oriente e diga que para decisões legais deve consultar especialista
-- Links úteis: /simulador · /simulador/na-planta · /imoveis · /guia · /glossario · /contato
+- Links úteis: /simulador · /simulador/na-planta · /imoveis · /guia · /glossario · /aprenda · /contato
 - As informações são educativas, base 2026 — não constituem consultoria financeira formal
 `.trim();
 
@@ -901,6 +909,33 @@ function buildContextBlock(ctx: Record<string, unknown> | null | undefined): str
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Conteúdo de /aprenda relevante à pergunta — funciona em QUALQUER página, não
+// só na do próprio artigo. Detecção por palavra-chave (lib/artigos.ts,
+// detectarArtigosRelevantes) — determinístico, sem chamada extra de IA, sem
+// latência/custo adicional. Só injeta o(s) artigo(s) batidos pela mensagem
+// atual, nunca os 12 de uma vez — mantém o prompt curto e evita confundir o
+// modelo com conteúdo não pedido.
+// ──────────────────────────────────────────────────────────────────────────────
+function buildArtigosRelevantesBlock(mensagem: string, ctx: Record<string, unknown> | null | undefined): string {
+  const paginaAtual = (ctx?.page as string | undefined) ?? '';
+  // Se a página atual já é /aprenda/{slug}, buildContextBlock já injetou os
+  // fatos desse artigo (modo 'lendo') — não duplica aqui.
+  const slugJaCoberto = paginaAtual.startsWith('/aprenda/')
+    ? paginaAtual.replace('/aprenda/', '').split('/')[0]
+    : undefined;
+
+  const slugs = detectarArtigosRelevantes(mensagem, slugJaCoberto);
+  if (slugs.length === 0) return '';
+
+  const blocos = slugs
+    .map(slug => fatosArtigoParaContexto(slug, 'relacionado'))
+    .filter((b): b is string => !!b);
+  if (blocos.length === 0) return '';
+
+  return '\n\n━━━ CONTEÚDO RELEVANTE DE /aprenda (detectado pela pergunta) ━━━\n' + blocos.join('\n\n');
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // POST /api/chat
 // ──────────────────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
@@ -964,6 +999,7 @@ export async function POST(req: NextRequest) {
   const systemPrompt =
     SYSTEM_BASE +
     buildContextBlock(context) +
+    buildArtigosRelevantesBlock(message, context) +
     (simBloco
       ? `\n\n━━━ INSTRUÇÃO ESPECIAL PARA ESTA MENSAGEM ━━━\nOs valores abaixo foram calculados pelo sistema usando as fórmulas oficiais do FinancieCerto. Apresente-os de forma natural e consultiva — como um corretor que "acabou de calcular". NÃO refaça nenhum cálculo. NÃO altere nenhum número. Se o usuário pedir esclarecimentos, explique o que os números significam na prática.\n${simBloco}`
       : '');

@@ -30,6 +30,11 @@ export interface FAQItem {
 export interface Artigo {
   slug: string;
   keyword: string;            // palavra-chave principal (a busca alvo)
+  /** Frases curtas que, se aparecerem numa pergunta ao João em QUALQUER página
+   * (não só na página deste artigo), indicam que esse conteúdo é relevante —
+   * usado por app/api/chat/route.ts pra decidir qual artigo injetar no contexto,
+   * sem precisar mandar todos os artigos em toda requisição. Ver detectarArtigosRelevantes(). */
+  triggers?: string[];
   titulo: string;            // H1 visível
   tituloSEO: string;         // <title> da aba/Google
   metaDescription: string;
@@ -65,6 +70,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'juros-evolucao-obra',
     keyword: 'juros de evolução de obra',
+    triggers: ['juros de evolução de obra', 'juros evolutivos', 'quanto pago durante a obra', 'prestação 0'],
     titulo: 'Juros de Evolução de Obra: o que é e quanto você paga durante a obra',
     tituloSEO: 'Juros de Evolução de Obra: Quanto Você Paga Durante a Obra (MCMV 2026)',
     metaDescription:
@@ -169,6 +175,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'mcmv-sbpe-sfi-qual-modalidade-escolher',
     keyword: 'MCMV, SBPE ou SFI qual escolher',
+    triggers: ['mcmv sbpe sfi', 'mcmv ou sbpe', 'diferença entre mcmv e sbpe', 'qual modalidade de financiamento', 'qual financiamento escolher'],
     titulo: 'MCMV, SBPE ou SFI: Qual Modalidade de Financiamento Escolher',
     tituloSEO: 'MCMV, SBPE ou SFI: Qual Financiamento Imobiliário Escolher (2026)',
     metaDescription:
@@ -282,6 +289,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'sac-ou-price-qual-sistema-amortizacao-escolher',
     keyword: 'SAC ou Price qual escolher',
+    triggers: ['sac ou price', 'sistema de amortização', 'diferença entre sac e price'],
     titulo: 'SAC ou Price: Qual Sistema de Amortização Escolher',
     tituloSEO: 'SAC ou Price: Qual Sistema de Amortização Escolher (2026)',
     metaDescription:
@@ -360,6 +368,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'credito-associativo-como-funciona-comprar-na-planta',
     keyword: 'crédito associativo como funciona',
+    triggers: ['crédito associativo', 'como funciona financiar na planta', 'financiar imóvel na planta mcmv'],
     titulo: 'Crédito Associativo: Como Funciona Financiar um Imóvel na Planta',
     tituloSEO: 'Crédito Associativo: Como Funciona Financiar na Planta (2026)',
     metaDescription:
@@ -462,6 +471,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'custos-comprar-imovel-financiado-itbi-cartorio-taxas',
     keyword: 'custos para comprar imóvel financiado',
+    triggers: ['itbi', 'custos para comprar imóvel', 'quanto custa o cartório', 'taxas de financiamento imobiliário'],
     titulo: 'Quanto Custa Comprar um Imóvel Financiado: ITBI, Cartório e Taxas',
     tituloSEO: 'Quanto Custa Comprar Imóvel Financiado: ITBI e Cartório (2026)',
     metaDescription:
@@ -564,6 +574,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'documentos-financiar-imovel-clt-autonomo-mei',
     keyword: 'documentos para financiar imóvel',
+    triggers: ['documentos para financiar', 'documentação clt', 'documentação autônomo', 'documentação mei financiamento'],
     titulo: 'Documentos para Financiar Imóvel: CLT, Autônomo e MEI',
     tituloSEO: 'Documentos para Financiar Imóvel: CLT, Autônomo e MEI (2026)',
     metaDescription:
@@ -651,6 +662,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'como-usar-fgts-no-financiamento',
     keyword: 'como usar FGTS no financiamento',
+    triggers: ['usar o fgts', 'fgts no financiamento', 'fgts futuro'],
     titulo: 'Como Usar o FGTS no Financiamento Imobiliário',
     tituloSEO: 'Como Usar o FGTS no Financiamento Imobiliário (2026)',
     metaDescription:
@@ -745,6 +757,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'his-hmp-o-que-sao-quem-pode-comprar',
     keyword: 'HIS e HMP o que são',
+    triggers: ['o que é his', 'o que é hmp', 'his hmp'],
     titulo: 'HIS e HMP: O Que São, Quem Pode Comprar e Regras de Revenda e Aluguel',
     tituloSEO: 'HIS e HMP: Quem Pode Comprar e Regras de Revenda/Aluguel (2026)',
     metaDescription:
@@ -856,6 +869,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'imoveis-nr-nao-residencial-o-que-e-quem-pode-comprar',
     keyword: 'imóvel NR o que é',
+    triggers: ['imóvel nr', 'o que é não residencial', 'sala comercial financiar'],
     titulo: 'Imóveis NR (Não Residencial): O Que São e Quem Pode Comprar',
     tituloSEO: 'Imóveis NR (Não Residencial): O Que São e Como Funcionam (2026)',
     metaDescription:
@@ -947,6 +961,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'brasileiro-no-exterior-financiar-imovel',
     keyword: 'financiar imóvel no Brasil morando no exterior',
+    triggers: ['brasileiro no exterior', 'brasileiro morando fora', 'morando nos eua financiar imóvel', 'morando no exterior comprar imóvel', 'renda no exterior financiamento'],
     titulo: 'Brasileiro no Exterior Pode Financiar Imóvel no Brasil? Guia Completo',
     tituloSEO: 'Financiar Imóvel no Brasil Morando no Exterior: Guia 2026',
     metaDescription:
@@ -1035,6 +1050,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'estrangeiro-comprar-imovel-brasil-golden-visa',
     keyword: 'estrangeiro comprar imóvel no Brasil',
+    triggers: ['estrangeiro comprar imóvel', 'golden visa', 'visto de investidor imobiliário', 'estrangeiro financiar imóvel no brasil'],
     titulo: 'Estrangeiro Pode Comprar Imóvel no Brasil? CPF, Financiamento e Golden Visa',
     tituloSEO: 'Estrangeiro Comprar Imóvel no Brasil: Guia Completo 2026 (Golden Visa)',
     metaDescription:
@@ -1123,6 +1139,7 @@ export const ARTIGOS: Artigo[] = [
   {
     slug: 'scp-sociedade-conta-participacao-imobiliaria',
     keyword: 'SCP imobiliária',
+    triggers: ['scp', 'sociedade em conta de participação', 'sócio ostensivo', 'sócio participante', 'imóvel por scp', 'investir por scp', 'esse empreendimento usa scp'],
     titulo: 'Sociedade em Conta de Participação (SCP) no mercado imobiliário',
     tituloSEO: 'SCP no Mercado Imobiliário: Como Funciona, Vantagens e Riscos',
     metaDescription:
@@ -1302,13 +1319,74 @@ export function getArtigos(): Artigo[] {
   return [...ARTIGOS].sort((a, b) => (a.atualizado < b.atualizado ? 1 : -1));
 }
 
-/** Texto plano (sem markup) dos fatos-chave — injetado no contexto do João. */
-export function fatosArtigoParaContexto(slug: string): string | null {
+/**
+ * Texto plano (sem markup) dos fatos-chave — injetado no contexto do João.
+ * `modo: 'lendo'` (padrão) — o usuário está na própria página do artigo.
+ * `modo: 'relacionado'` — a pergunta bateu com um trigger deste artigo em
+ * OUTRA página (ver detectarArtigosRelevantes) — o usuário não está lendo o
+ * artigo, então a frase de abertura não pode afirmar que ele está.
+ */
+export function fatosArtigoParaContexto(slug: string, modo: 'lendo' | 'relacionado' = 'lendo'): string | null {
   const artigo = getArtigo(slug);
   if (!artigo) return null;
+  const abertura = modo === 'lendo'
+    ? `O usuário está lendo o artigo "${artigo.titulo}" (sobre: ${artigo.keyword}).`
+    : `A pergunta do usuário parece relacionada ao conteúdo do artigo "${artigo.titulo}" (/aprenda/${artigo.slug}), sobre: ${artigo.keyword}. Ele NÃO está necessariamente lendo essa página agora.`;
   return [
-    `O usuário está lendo o artigo "${artigo.titulo}" (sobre: ${artigo.keyword}).`,
-    'Fatos-chave deste artigo (use para responder dúvidas dele):',
+    abertura,
+    'Fatos-chave deste conteúdo (use para responder; se fizer sentido, sugira o artigo completo):',
     ...artigo.fatosChaveParaJoao.map(f => `- ${f}`),
   ].join('\n');
+}
+
+// Normaliza pra comparação: minúsculo, sem acento.
+function normalizarTexto(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+// Palavras de conexão que não carregam significado pra efeito de match —
+// sem isso, "MCMV, SBPE e SFI" não batia com o trigger "mcmv sbpe sfi" (o "e"
+// no meio quebrava o match por substring contígua), nem "estrangeiro PODE
+// comprar imóvel" batia com "estrangeiro comprar imóvel".
+const STOPWORDS = new Set([
+  'de','da','do','das','dos','e','o','a','os','as','um','uma','uns','umas',
+  'no','na','nos','nas','que','pra','para','por','pelo','pela','com','sem',
+  'pode','posso','podem','é','ser','sobre','ou','se','no','em','ao','aos',
+]);
+
+function palavrasSignificativas(frase: string): string[] {
+  return normalizarTexto(frase)
+    .split(/[^a-z0-9]+/)
+    .filter(w => w.length > 1 && !STOPWORDS.has(w));
+}
+
+/**
+ * Detecta, por palavra-chave (determinístico — sem chamada extra de IA, sem
+ * custo/latência adicional), quais artigos de /aprenda são relevantes pra uma
+ * mensagem do usuário, mesmo fora da página do artigo — ex.: pergunta "o que é
+ * SCP?" feita na home. Usado por app/api/chat/route.ts pra injetar só o
+ * conteúdo relevante no contexto do João, em vez de mandar os 12 artigos em
+ * toda requisição.
+ *
+ * Um trigger bate quando TODAS as suas palavras significativas aparecem na
+ * mensagem (em qualquer ordem, com qualquer coisa entre elas) — não exige
+ * substring contígua, pra tolerar "MCMV, SBPE e SFI" batendo com o trigger
+ * "mcmv sbpe sfi", por exemplo.
+ *
+ * `excluirSlug` evita reinjetar um artigo já coberto pelo contexto de página
+ * (ver buildContextBlock em route.ts). Limitado a 2 matches pra não inflar o prompt.
+ */
+export function detectarArtigosRelevantes(mensagem: string, excluirSlug?: string): string[] {
+  const msgPalavras = new Set(normalizarTexto(mensagem).split(/[^a-z0-9]+/).filter(Boolean));
+  const encontrados: string[] = [];
+  for (const artigo of ARTIGOS) {
+    if (artigo.slug === excluirSlug) continue;
+    const bate = (artigo.triggers ?? []).some(t => {
+      const palavras = palavrasSignificativas(t);
+      return palavras.length > 0 && palavras.every(p => msgPalavras.has(p));
+    });
+    if (bate) encontrados.push(artigo.slug);
+    if (encontrados.length >= 2) break;
+  }
+  return encontrados;
 }
