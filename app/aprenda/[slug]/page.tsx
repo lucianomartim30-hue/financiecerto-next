@@ -178,20 +178,21 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
           </section>
         ))}
 
-        {/* CTA Simulador */}
+        {/* CTA Simulador — título/contexto sobrescrevíveis por artigo (ver ctaSimuladorTitulo/
+            ctaSimuladorContexto em lib/artigos.ts); nem todo artigo é sobre simular financiamento. */}
         <div style={{
           background: 'linear-gradient(135deg, #1e3a5f, #2563eb)', borderRadius: 16,
           padding: '28px 24px', textAlign: 'center', margin: '8px 0 40px',
         }}>
           <p style={{ fontSize: 19, fontWeight: 700, color: '#fff', margin: '0 0 6px' }}>
-            Quer ver os seus números?
+            {artigo.ctaSimuladorTitulo ?? 'Quer ver os seus números?'}
           </p>
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,.75)', margin: '0 0 18px' }}>
-            Simule com a sua renda e o seu imóvel — gratuito, em menos de 2 minutos.
+            {artigo.ctaSimuladorContexto ?? 'Simule com a sua renda e o seu imóvel — gratuito, em menos de 2 minutos.'}
           </p>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             <CtaSimuladorLink slug={artigo.slug} href={artigo.ctaSimulador.href} texto={artigo.ctaSimulador.texto} />
-            <CtaImoveisLink slug={artigo.slug} texto="Ver imóveis em SP" variant="outline" />
+            {!artigo.ctaSemBotaoImoveis && <CtaImoveisLink slug={artigo.slug} texto="Ver imóveis em SP" variant="outline" />}
           </div>
         </div>
 
@@ -226,19 +227,22 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
           </section>
         )}
 
-        {/* CTA final — reforça conversão antes de oferecer mais conteúdo pra ler */}
-        <div style={{
-          background: 'linear-gradient(135deg, #0f172a, #1e3a5f)', borderRadius: 16,
-          padding: '28px 24px', textAlign: 'center', margin: '8px 0 40px',
-        }}>
-          <p style={{ fontSize: 19, fontWeight: 700, color: '#fff', margin: '0 0 6px' }}>
-            Pronto pra ver os imóveis?
-          </p>
-          <p style={{ fontSize: 15, color: 'rgba(255,255,255,.75)', margin: '0 0 18px' }}>
-            Mais de mil empreendimentos em São Paulo, já filtrados pela sua capacidade de financiamento.
-          </p>
-          <CtaImoveisLink slug={artigo.slug} texto="Ver imóveis compatíveis em São Paulo" />
-        </div>
+        {/* CTA final — omitido quando ctaFinalImoveisOculto=true (artigos onde
+            associar o catálogo geral de imóveis não faz sentido, ex.: SCP). */}
+        {!artigo.ctaFinalImoveisOculto && (
+          <div style={{
+            background: 'linear-gradient(135deg, #0f172a, #1e3a5f)', borderRadius: 16,
+            padding: '28px 24px', textAlign: 'center', margin: '8px 0 40px',
+          }}>
+            <p style={{ fontSize: 19, fontWeight: 700, color: '#fff', margin: '0 0 6px' }}>
+              Pronto pra ver os imóveis?
+            </p>
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,.75)', margin: '0 0 18px' }}>
+              Mais de mil empreendimentos em São Paulo, já filtrados pela sua capacidade de financiamento.
+            </p>
+            <CtaImoveisLink slug={artigo.slug} texto="Ver imóveis compatíveis em São Paulo" />
+          </div>
+        )}
 
         {/* Relacionados */}
         {relacionados.length > 0 && (

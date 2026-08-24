@@ -41,6 +41,17 @@ export interface Artigo {
   faq: FAQItem[];
   fatosChaveParaJoao: string[];           // injetados no contexto do João
   ctaSimulador: { texto: string; href: string };
+  /** Sobrescreve o título/texto de apoio do 1º bloco de CTA (default: "Quer ver os
+   * seus números?" / "Simule com a sua renda..." — só faz sentido pra artigos sobre
+   * financiamento). Usar em artigos onde o CTA principal não é simular. */
+  ctaSimuladorTitulo?: string;
+  ctaSimuladorContexto?: string;
+  /** Esconde o botão secundário "Ver imóveis em SP" do 1º bloco de CTA — usar quando
+   * o artigo não trata de compra/financiamento direto de imóvel do catálogo. */
+  ctaSemBotaoImoveis?: boolean;
+  /** Esconde o bloco final "Pronto pra ver os imóveis?" inteiro — mesmo motivo acima;
+   * evita associar automaticamente o catálogo geral a um assunto que não é sobre isso. */
+  ctaFinalImoveisOculto?: boolean;
   relacionados: string[];    // slugs de artigos relacionados
 }
 
@@ -1105,6 +1116,172 @@ export const ARTIGOS: Artigo[] = [
     ],
     ctaSimulador: { texto: 'Simular financiamento', href: '/simulador' },
     relacionados: ['brasileiro-no-exterior-financiar-imovel', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
+  },
+  {
+    slug: 'scp-sociedade-conta-participacao-imobiliaria',
+    keyword: 'SCP imobiliária',
+    titulo: 'Sociedade em Conta de Participação (SCP) no mercado imobiliário',
+    tituloSEO: 'SCP no Mercado Imobiliário: Como Funciona, Vantagens e Riscos',
+    metaDescription:
+      'SCP imobiliária explicada: o que é, sócio ostensivo e participante, diferença para comprar na planta, vantagens reais e riscos — com base no Código Civil e na CVM.',
+    resumo:
+      'Encontrou uma oportunidade estruturada como Sociedade em Conta de Participação (SCP) num empreendimento imobiliário e não tem certeza do que estaria contratando? Este guia explica o que é uma SCP, quem responde por quê, quando ela se aproxima — e quando se distancia — de comprar um imóvel, e os riscos que valem análise antes de decidir. Sem julgar SCP como boa ou ruim: o objetivo é você entender exatamente o que está diante de você.',
+    publicado: '2026-08-24',
+    atualizado: '2026-08-24',
+    leituraMin: 12,
+    secoes: [
+      {
+        titulo: 'O que é uma Sociedade em Conta de Participação?',
+        blocos: [
+          { tipo: 'p', texto: 'A Sociedade em Conta de Participação (SCP) é um tipo societário previsto nos **artigos 991 a 996 do Código Civil** (Lei 10.406/2002). Diferente de uma empresa comum, ela **não tem personalidade jurídica própria** — mesmo que o contrato seja registrado em cartório, isso não transforma a SCP numa "empresa" que existe perante todo mundo.' },
+          { tipo: 'destaque', texto: '**Art. 991 do Código Civil:** "a atividade constitutiva do objeto social é exercida unicamente pelo sócio ostensivo, em seu nome individual e sob sua própria e exclusiva responsabilidade, participando os demais dos resultados correspondentes."' },
+          { tipo: 'p', texto: 'Na prática, isso significa que a SCP existe como um **acordo entre sócios** para dividir os resultados de um negócio — não como uma pessoa jurídica visível ao mercado. Sua constituição não exige formalidade alguma (art. 992) e pode até ser provada por qualquer meio de direito, embora, na prática, contratos bem estruturados sejam sempre a base de operações sérias.' },
+        ],
+      },
+      {
+        titulo: 'Quem são o sócio ostensivo e o sócio participante?',
+        blocos: [
+          { tipo: 'lista', itens: [
+            '**Sócio ostensivo** — quem efetivamente conduz o negócio, contrata em seu próprio nome e responde perante fornecedores, bancos, órgãos públicos e qualquer terceiro. No mercado imobiliário, costuma ser a incorporadora ou uma empresa do grupo dela.',
+            '**Sócio participante** — quem entra com capital e tem direito de participar dos resultados combinados em contrato, mas **não aparece perante terceiros**. A relação dele é só com o sócio ostensivo, nos termos do que foi contratado.',
+          ] },
+          { tipo: 'p', texto: 'Essa divisão de papéis é o núcleo do instituto: o contrato social produz efeito **somente entre os sócios** (art. 993). Se você é sócio participante, você não tem uma relação jurídica direta com o empreendimento, com o terreno ou com quem compra as unidades — sua relação é com o sócio ostensivo, dentro do que o contrato prevê.' },
+        ],
+      },
+      {
+        titulo: 'Como uma SCP pode aparecer no mercado imobiliário?',
+        blocos: [
+          { tipo: 'p', texto: 'É comum incorporadoras usarem uma SCP para reunir capital de investidores numa fase anterior à comercialização convencional do empreendimento — por exemplo, para viabilizar a compra do terreno ou o início da obra antes do lançamento aberto ao público em geral. O sócio ostensivo (a incorporadora) segue conduzindo tudo; os sócios participantes entram com recursos e recebem participação nos resultados combinados.' },
+          { tipo: 'p', texto: 'Existe uma diferença relevante entre uma SCP legítima — lastreada em terreno real, incorporadora com histórico verificável e contrato claro — e o que o próprio mercado chama de **"SCP financeira disfarçada"**: uma estrutura que usa o formato jurídico da SCP só para captar dinheiro do público prometendo retorno fixo, sem lastro real verificável. A seção sobre a CVM, mais abaixo, explica quando esse segundo caso pode configurar uma irregularidade.' },
+        ],
+      },
+      {
+        titulo: 'Participar de uma SCP significa comprar um apartamento?',
+        blocos: [
+          { tipo: 'destaque', texto: '**Não, não automaticamente.** Participar de uma SCP não é, por si só, o mesmo que ser proprietário de um imóvel — essa é a regra fundamental para entender qualquer oferta desse tipo.' },
+          { tipo: 'p', texto: 'Como você viu acima, quem exerce a atividade e responde perante terceiros é o sócio ostensivo (art. 991). O sócio participante tem um **direito contratual de participação nos resultados** — que pode ser em dinheiro, numa fração de valor do empreendimento, ou, em alguns modelos, na promessa de receber uma unidade específica. Mas isso **depende inteiramente do que o contrato daquela operação estabelece**, não é uma consequência automática de "estar numa SCP".' },
+          { tipo: 'p', texto: 'Se uma oferta específica prevê que o investidor vai receber uma unidade no futuro, esse direito nasce da estrutura contratual daquela operação em particular — normalmente combinada com outros instrumentos, como uma promessa de compra e venda ou a incorporação formal do empreendimento — e não da SCP como instituto genérico. Antes de assumir que "SCP = vou virar dono do apartamento", leia o contrato e confirme exatamente o que ele garante.' },
+        ],
+      },
+      {
+        titulo: 'SCP × compra tradicional × imóvel na planta',
+        blocos: [
+          { tipo: 'tabela',
+            cabecalho: ['', 'Compra tradicional', 'Imóvel na planta (incorporação)', 'SCP — sócio participante'],
+            linhas: [
+              ['O que você tem', 'Propriedade registrada em matrícula', 'Direito à unidade via contrato de incorporação (Lei 4.591/1964)', 'Participação contratual nos resultados — não necessariamente uma unidade específica'],
+              ['Existe personalidade jurídica na estrutura?', 'Não se aplica', 'Não se aplica', 'Não — sociedade não personificada (art. 993 do CC)'],
+              ['Quem responde perante terceiros', 'Você mesmo, como proprietário', 'A incorporadora', 'Só o sócio ostensivo (art. 991 do CC)'],
+              ['Sua relação de direito é com...', 'O imóvel diretamente', 'A incorporadora, via contrato de incorporação', 'O sócio ostensivo, nos limites do contrato social'],
+            ],
+          },
+          { tipo: 'p', texto: 'Você pode inclusive encontrar uma operação que combina SCP **e** incorporação (ex.: a SCP financia a fase inicial, e depois o empreendimento segue para incorporação formal com matrícula própria) — por isso é importante ler o contrato específico em vez de presumir qual estrutura se aplica ao seu caso.' },
+        ],
+      },
+      {
+        titulo: 'Quais podem ser as vantagens para o investidor?',
+        blocos: [
+          { tipo: 'p', texto: 'Existem razões legítimas para um investidor se interessar por uma operação estruturada dessa forma — mas toda vantagem aqui é **potencial**, nunca garantida, e depende do contrato específico:' },
+          { tipo: 'lista', itens: [
+            '**Acesso a uma fase anterior do projeto** — antes da comercialização aberta ao público.',
+            '**Condições econômicas de entrada diferentes** das praticadas depois do lançamento formal.',
+            '**Participação nos resultados econômicos** do empreendimento, conforme definido em contrato.',
+            '**Exposição à valorização do projeto** ao longo do tempo, também sujeita ao que o contrato prevê.',
+          ] },
+          { tipo: 'destaque', texto: 'Nenhuma dessas vantagens é automática. Não é correto afirmar, de forma genérica, que "SCP é mais barata", "SCP sempre valoriza", "SCP garante apartamento", "SCP garante lucro", "SCP é investimento seguro" ou "SCP é melhor do que comprar na planta" — tudo depende da operação concreta.' },
+        ],
+      },
+      {
+        titulo: 'Quais são os principais riscos?',
+        blocos: [
+          { tipo: 'lista', itens: [
+            '**Risco do empreendimento** — atraso, inviabilidade técnica ou financeira, distrato.',
+            '**Risco do sócio ostensivo** — é ele quem responde perante terceiros; se ele quebrar, a sociedade se dissolve e o saldo do participante vira **crédito quirografário** (art. 994, §2º), ou seja, sem preferência de pagamento diante de outros credores.',
+            '**Risco contratual** — seus direitos são só os que o contrato prevê, nada além disso.',
+            '**Liquidez baixa** — o capital costuma ficar comprometido por todo o ciclo do empreendimento, sem saída fácil antes do previsto.',
+            '**Dificuldade de saída antecipada** — o Código Civil já trata a entrada de novo sócio como algo que depende do consentimento dos demais (art. 995), o que dá uma boa ideia de como transferências de posição também costumam depender de anuência contratual.',
+            '**Ausência de garantia de valorização** — como qualquer investimento vinculado a um empreendimento real.',
+            '**Ausência automática de propriedade imobiliária** — reforço direto do que a seção anterior já explicou.',
+            '**Risco regulatório** — se a oferta foi feita ao público prometendo retorno, sem o devido registro, ver seção sobre a CVM abaixo.',
+            '**Tributação** — a SCP tem CNPJ e apuração próprios; entenda como isso se reflete pra você antes de assinar.',
+            '**Necessidade de análise jurídica e contábil específica** — cada operação de SCP é diferente da outra.',
+          ] },
+        ],
+      },
+      {
+        titulo: 'Quando uma oferta de SCP pode envolver regras da CVM?',
+        blocos: [
+          { tipo: 'p', texto: 'SCP ser uma estrutura jurídica legítima **não significa** que toda oferta de participação possa ser livremente comercializada ao público como investimento. A **Lei 6.385/1976**, no art. 2º, inciso IX, classifica como valor mobiliário "quaisquer outros títulos ou **contratos de investimento coletivo**, que gerem direito de participação, de parceria ou de remuneração [...] cujos rendimentos advêm do esforço do empreendedor ou de terceiros" — quando ofertados publicamente.' },
+          { tipo: 'destaque', texto: 'Em termos simples: se alguém oferece publicamente uma participação em SCP prometendo retorno financeiro que depende do esforço da incorporadora (o sócio ostensivo), isso pode se enquadrar como oferta pública de valor mobiliário — sujeita ao regime da **Resolução CVM nº 160/2022** (que unificou e substituiu as antigas regras de ofertas públicas), exigindo registro prévio ou enquadramento numa hipótese de dispensa.' },
+          { tipo: 'p', texto: 'A própria CVM já alertou publicamente sobre ofertas de investimento em empreendimentos imobiliários via SCP ou frações ideais, divulgadas por TV, rádio, jornal ou corretores, sem o devido registro. Isso não quer dizer que toda SCP imobiliária seja irregular — quer dizer que **a forma como a oferta é divulgada e comercializada** é o que determina se ela precisa de registro na CVM, não o instituto da SCP isoladamente.' },
+          { tipo: 'p', texto: 'Se você recebeu uma proposta de SCP com promessa de retorno, divulgada de forma ampla ao público, vale perguntar diretamente à incorporadora se a oferta está registrada na CVM ou enquadrada numa dispensa — e, na dúvida, buscar orientação jurídica antes de assinar qualquer coisa.' },
+        ],
+      },
+      {
+        titulo: 'O que analisar antes de entrar em uma SCP imobiliária?',
+        blocos: [
+          { tipo: 'p', texto: 'Checklist educacional — nem todo item se aplica a toda operação, mas vale confirmar o que for pertinente antes de decidir:' },
+          { tipo: 'lista', itens: [
+            'Quem é o sócio ostensivo e qual o histórico dele no mercado.',
+            'Qual é exatamente o objeto da SCP.',
+            'Qual empreendimento está envolvido — e se ele existe de fato (terreno, licenças).',
+            'Qual é o destino real dos recursos captados.',
+            'Como funciona a participação nos resultados — percentual, prazo, condições.',
+            'Qual é o prazo previsto da operação.',
+            'Quais são as regras de saída antecipada, se existirem.',
+            'Quais são os riscos específicos dessa operação (não só os genéricos deste artigo).',
+            'Quais garantias existem — e quais **não** existem.',
+            'Se há documentação verificável do empreendimento.',
+            'Qual a situação da incorporação formal, quando aplicável ao caso.',
+            'Quais são as responsabilidades de cada parte, por escrito.',
+            'Como funciona a tributação dessa operação específica para você.',
+            'Se você já buscou análise jurídica e contábil profissional antes de assinar.',
+          ] },
+        ],
+      },
+      {
+        titulo: 'Fontes oficiais e aviso importante',
+        blocos: [
+          { tipo: 'lista', itens: [
+            'Código Civil — Lei 10.406/2002, arts. 991 a 996 (definição de SCP, sócio ostensivo/participante, patrimônio especial, efeitos da falência).',
+            'Lei 6.385/1976, art. 2º, inciso IX (definição de contrato de investimento coletivo como valor mobiliário).',
+            'Resolução CVM nº 160/2022 (regime atual de ofertas públicas de valores mobiliários no Brasil).',
+            'Instrução Normativa RFB nº 1.470/2014 (obrigatoriedade de CNPJ da SCP e responsabilidade tributária do sócio ostensivo).',
+            'Comunicado da CVM sobre ofertas irregulares de investimento em empreendimentos imobiliários (gov.br/cvm).',
+          ] },
+          { tipo: 'destaque', texto: 'Este conteúdo tem **caráter educacional** e não substitui análise jurídica e contábil individualizada da operação específica que você está avaliando. O FinancieCerto não presta parecer jurídico nem recomenda ou desaconselha operações de SCP — recomendamos consultar um advogado e um contador antes de qualquer decisão.' },
+        ],
+      },
+    ],
+    faq: [
+      { pergunta: 'Participar de uma SCP é o mesmo que comprar um imóvel na planta?',
+        resposta: 'Não. Na compra na planta você tem um contrato de incorporação com direito a uma unidade específica. Numa SCP, o sócio participante tem um direito contratual de participação nos resultados, que só vira uma unidade específica se o contrato daquela operação prever exatamente isso.' },
+      { pergunta: 'Quem responde se o empreendimento não sair do papel?',
+        resposta: 'Perante terceiros (fornecedores, bancos, órgãos públicos), quem responde é o sócio ostensivo — o participante não aparece nessa relação. Entre os sócios, as consequências dependem do que o contrato social prevê.' },
+      { pergunta: 'Dá para sair de uma SCP antes do fim do empreendimento?',
+        resposta: 'Depende do contrato. O Código Civil já trata a entrada de novo sócio como algo que exige consentimento dos demais (art. 995), o que costuma refletir baixa liquidez também para quem quer sair antes do previsto — confirme as regras de saída antes de entrar.' },
+      { pergunta: 'Toda oferta de SCP precisa de registro na CVM?',
+        resposta: 'Não toda — mas quando a oferta é feita publicamente prometendo remuneração a partir do esforço do sócio ostensivo, ela pode se enquadrar como contrato de investimento coletivo (Lei 6.385/1976) e precisar de registro conforme a Resolução CVM nº 160/2022, salvo hipótese de dispensa.' },
+      { pergunta: 'Como funciona o imposto de uma SCP?',
+        resposta: 'A SCP precisa de CNPJ próprio desde a Instrução Normativa RFB nº 1.470/2014. O sócio ostensivo é responsável por apurar e recolher o IRPJ e a CSLL da SCP, seguindo as regras aplicáveis a pessoas jurídicas em geral.' },
+      { pergunta: 'O FinancieCerto recomenda ou participa de operações de SCP?',
+        resposta: 'Não. Este conteúdo é educacional — explica como o instituto funciona a partir de fontes oficiais. Não avaliamos, recomendamos nem desaconselhamos operações específicas: isso exige análise jurídica e contábil individual da operação que você está avaliando.' },
+    ],
+    fatosChaveParaJoao: [
+      'SCP (Sociedade em Conta de Participação, Código Civil arts. 991-996) não tem personalidade jurídica própria — só o sócio ostensivo responde perante terceiros; o sócio participante só tem relação contratual com o ostensivo.',
+      'Participar de uma SCP NÃO é automaticamente ser proprietário de um imóvel — o direito do participante é contratual (participação nos resultados); só vira direito a uma unidade se o contrato específico da operação previr isso.',
+      'Falência do sócio ostensivo dissolve a SCP; o saldo do sócio participante vira crédito quirografário (art. 994, §2º do CC), sem preferência de pagamento.',
+      'SCP precisa de CNPJ próprio desde a IN RFB 1.470/2014; o sócio ostensivo apura e recolhe o IRPJ/CSLL.',
+      'Oferta pública de participação em SCP prometendo remuneração pode se enquadrar como contrato de investimento coletivo (Lei 6.385/1976, art. 2º, IX) e exigir registro na CVM conforme a Resolução CVM 160/2022.',
+      'Nunca afirmar que SCP é garantidamente mais barata, sempre valoriza, garante apartamento, garante lucro, é sem risco ou é melhor que comprar na planta — tudo depende do contrato específico da operação.',
+      'FinancieCerto não presta parecer jurídico sobre SCP — conteúdo é educacional; sempre recomendar análise jurídica/contábil individual antes de decidir.',
+    ],
+    ctaSimulador: { texto: 'Falar com um consultor sobre uma oportunidade de SCP', href: '/contato' },
+    ctaSimuladorTitulo: 'Está avaliando uma oportunidade de SCP?',
+    ctaSimuladorContexto: 'Entenda exatamente o que você estaria contratando antes de decidir — fale com um consultor.',
+    ctaSemBotaoImoveis: true,
+    ctaFinalImoveisOculto: true,
+    relacionados: ['credito-associativo-como-funciona-comprar-na-planta', 'mcmv-sbpe-sfi-qual-modalidade-escolher'],
   },
 ];
 
