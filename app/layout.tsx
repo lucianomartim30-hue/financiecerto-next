@@ -20,6 +20,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.financiecerto.com.br"),
   title: "FinancieCerto — Plataforma Inteligente de Descoberta Imobiliária",
   description: "Simule seu financiamento e encontre o imóvel certo — do econômico ao médio e alto padrão. Descubra sua faixa, taxa real e os imóveis compatíveis com sua renda. MCMV, SBPE, SFI e FGTS.",
   keywords: "financiamento imobiliário, imóveis São Paulo, MCMV, SBPE, SFI, alto padrão, médio padrão, simulador de financiamento, FGTS, Caixa Econômica",
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "FinancieCerto — Plataforma Inteligente de Descoberta Imobiliária",
     description: "Descubra o imóvel certo para sua realidade financeira.",
-    url: "https://financiecerto.com.br",
+    url: "https://www.financiecerto.com.br",
     siteName: "FinancieCerto",
     locale: "pt_BR",
     type: "website",

@@ -12,6 +12,7 @@ import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
 import { HisHmpHint } from '@/components/HisHmpHint';
 import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
 import { getPrimeiraOrigem, buildConversao } from '@/lib/atribuicao';
+import { FAQ_NA_PLANTA } from './faq-data';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -308,6 +309,43 @@ function NumStep({ n, cor }: { n: number | string; cor?: string }) {
   );
 }
 
+// Links complementares por pergunta (índice no array FAQ_NA_PLANTA) — mantidos
+// fora do texto compartilhado com o Schema, que precisa ficar em texto puro.
+const FAQ_LINKS: Record<number, { href: string; texto: string }> = {
+  3: { href: '/aprenda/credito-associativo-como-funciona-comprar-na-planta', texto: 'Entenda o crédito associativo em detalhe →' },
+  4: { href: '/imoveis', texto: 'Ver imóveis compatíveis com o seu perfil →' },
+};
+
+function SecaoFAQ() {
+  return (
+    <div style={{ marginTop: '16px' }}>
+      <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text)', margin: '0 0 4px' }}>
+        Perguntas sobre simular um imóvel na planta
+      </h2>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '0 0 16px' }}>
+        As dúvidas mais comuns antes de simular a compra de um apartamento na planta.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {FAQ_NA_PLANTA.map((faq, i) => (
+          <details key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px 16px' }}>
+            <summary style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', cursor: 'pointer', listStyle: 'none' }}>
+              {faq.name}
+            </summary>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.65, marginTop: '10px', marginBottom: FAQ_LINKS[i] ? '8px' : 0 }}>
+              {faq.answer}
+            </p>
+            {FAQ_LINKS[i] && (
+              <Link href={FAQ_LINKS[i].href} style={{ fontSize: '13px', fontWeight: '700', color: 'var(--primary)', textDecoration: 'none' }}>
+                {FAQ_LINKS[i].texto}
+              </Link>
+            )}
+          </details>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Main component
 // ──────────────────────────────────────────────────────────────────────────────
@@ -334,9 +372,10 @@ function NaPlantaContent() {
   // VALIDAÇÃO: Comercial não é elegível a MCMV/FGTS/subsídio (benefícios exclusivos de habitação)
   const isComercial = tipoImovel === 'comercial';
 
-  // Título próprio (analytics) — sem isso, herda o título da home e some nos relatórios do GA
+  // Título já vem do metadata do layout.tsx (SSR) — mantém document.title em
+  // sincronia só por garantia em relatórios de GA que leem esse valor no client.
   useEffect(() => {
-    document.title = 'Simulador Imóvel na Planta | FinancieCerto';
+    document.title = 'Simulador de Imóvel na Planta | FinancieCerto';
   }, []);
 
   // Estágio — vindo da página do imóvel (status real do empreendimento), se houver
@@ -630,11 +669,17 @@ function NaPlantaContent() {
             <span style={{ fontSize: '14px' }}>🏗️</span>
             <span style={{ fontSize: '11px', fontWeight: '700', color: '#fb923c', letterSpacing: '0.8px', textTransform: 'uppercase' }}>Imóvel na planta</span>
           </div>
-          <h1 style={{ fontSize: 'clamp(24px, 5vw, 38px)', fontWeight: '800', color: '#fff', lineHeight: 1.2, marginBottom: '14px' }}>
-            Simule o fluxo real<br />da construtora
+          <h1 style={{ fontSize: 'clamp(24px, 5vw, 38px)', fontWeight: '800', color: '#fff', lineHeight: 1.2, marginBottom: '10px' }}>
+            Simule a compra do seu<br />imóvel na planta
           </h1>
+          <p style={{ fontSize: '14px', fontWeight: '700', color: '#93c5fd', marginBottom: '14px', letterSpacing: '0.2px' }}>
+            Simule o fluxo real da construtora
+          </p>
           <p style={{ fontSize: '15px', color: 'rgba(255,255,255,.55)', lineHeight: 1.7 }}>
             Ato · sinais · mensais · anuais · chaves · juros evolutivos MCMV · crédito associativo
+          </p>
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.45)', lineHeight: 1.7, marginTop: '14px' }}>
+            Simulador gratuito: informe a renda e o valor do imóvel na planta e descubra sua entrada, as parcelas até a entrega das chaves e se seu perfil se enquadra no MCMV ou no SBPE.
           </p>
           {rendaUrl > 0 && (
             <div style={{ display: 'inline-flex', gap: '16px', marginTop: '24px', background: 'rgba(255,255,255,.08)', borderRadius: '12px', padding: '12px 20px', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -736,9 +781,9 @@ function NaPlantaContent() {
         {/* ── CARD 2: Recursos para o financiamento (FGTS + subsídio) ──── */}
         {temDados && estagio !== 'pronto' && (
           <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border)', padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px' }}>
-            <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>
+            <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', margin: '0 0 6px' }}>
               💰 Recursos para o financiamento
-            </p>
+            </h2>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '18px', lineHeight: 1.6 }}>
               O FGTS é tratado separadamente dos pagamentos diretos à incorporadora. Sua utilização dependerá da modalidade da operação, do momento da compra e das regras aplicáveis.
             </p>
@@ -778,9 +823,9 @@ function NaPlantaContent() {
         {/* ── CARD 3: Entrada planejada (modelo top-down) ──────────────── */}
         {temDados && estagio !== 'pronto' && (
           <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border)', padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px' }}>
-            <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>
+            <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', margin: '0 0 6px' }}>
               Quanto você pretende usar de entrada/recursos próprios?
-            </p>
+            </h2>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.6 }}>
               {entradaMinima > 0
                 ? `Sugestão pelo seu perfil: ${formatBRL(entradaMinima)}. Você decide o valor — a seguir a gente ajuda a distribuir.`
@@ -820,9 +865,9 @@ function NaPlantaContent() {
         {temDados && estagio !== 'pronto' && (
           <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border)', padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px' }}>
 
-            <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>
+            <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text)', margin: '0 0 6px' }}>
               Fluxo de pagamento à construtora
-            </p>
+            </h2>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: 1.6 }}>
               {precisaPagarConstrutora
                 ? `Entrada mínima estimada: ${formatBRL(entradaMinima)}${recursosExternos > 0 ? ` · FGTS${temSubsidio ? ` (${formatBRL(fgtsUsado)}) + subsídio (${formatBRL(subsidioEstimado)})` : ''}: ${formatBRL(recursosExternos)}` : ''} · falta cobrir via construtora: ${formatBRL(faltaParaConstrutora)}`
@@ -858,7 +903,7 @@ function NaPlantaContent() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                   <NumStep n={1} />
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Ato — pagamento na assinatura</p>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', margin: 0 }}>Ato — pagamento na assinatura</h3>
                     <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Valor pago à construtora na assinatura do contrato</p>
                   </div>
                 </div>
@@ -880,7 +925,7 @@ function NaPlantaContent() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                   <NumStep n={2} />
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Sinais / iniciais (opcional)</p>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', margin: 0 }}>Sinais / iniciais (opcional)</h3>
                     <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Parcelas de entrada nos primeiros meses após o ato</p>
                   </div>
                 </div>
@@ -898,7 +943,7 @@ function NaPlantaContent() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                   <NumStep n={3} />
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Parcela mensal durante a obra</p>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', margin: 0 }}>Parcela mensal durante a obra</h3>
                     <p style={{ fontSize: '11px', color: ok30 ? 'var(--text-faint)' : '#dc2626' }}>
                       {ok30
                         ? `Não pode ultrapassar 30% da renda (limite: ${formatBRL(limite30)}/mês)`
@@ -940,7 +985,7 @@ function NaPlantaContent() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                   <NumStep n={4} />
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Reforços anuais — opcional</p>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', margin: 0 }}>Reforços anuais — opcional</h3>
                     <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Normalmente em dezembro, conforme tabela da construtora</p>
                   </div>
                 </div>
@@ -958,7 +1003,7 @@ function NaPlantaContent() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                   <NumStep n={5} />
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)' }}>Parcela nas chaves — opcional</p>
+                    <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text)', margin: 0 }}>Parcela nas chaves — opcional</h3>
                     <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Pagamento maior na entrega das chaves</p>
                   </div>
                 </div>
@@ -1081,7 +1126,7 @@ function NaPlantaContent() {
         {/* ── CARD 3: Fluxo de pagamento timeline ──────────────────────── */}
         {valido && (
           <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border)', padding: '28px', boxShadow: '0 4px 24px rgba(0,0,0,.06)', marginBottom: '16px' }}>
-            <p style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', marginBottom: '24px' }}>Linha do tempo</p>
+            <h2 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', margin: '0 0 24px' }}>Linha do tempo</h2>
 
             {/* Na assinatura */}
             <BlocoFluxo emoji="📋" titulo="Na assinatura" cor="#44403c">
@@ -1224,6 +1269,9 @@ function NaPlantaContent() {
         {/* ── Busca inteligente de imóveis ─────────────────────────────── */}
         {valido && isMCMV && faixaEfetiva && faixaEfetiva.numero <= 2 && <HisHmpHint />}
         {valido && <BuscaImoveisInteligente valorImovel={valor} naPlanta={true} />}
+
+        {/* ── FAQ — sempre visível, independe de ter preenchido o simulador ── */}
+        <SecaoFAQ />
 
       </div>
 

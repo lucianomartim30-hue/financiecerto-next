@@ -161,12 +161,18 @@ export default async function ImovelPage({
             '@type': 'Offer',
             price: b.min_price,
             priceCurrency: 'BRL',
-            availability: 'https://schema.org/InStock',
+            // Reflete o estoque real — sem isso, um empreendimento sem unidades
+            // disponíveis (que a própria página já mostra como esgotado) declarava
+            // "InStock" pro Google de qualquer forma, um dado estruturado
+            // inconsistente com o conteúdo visível da página.
+            availability: b.stock === 0 ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock',
           },
         }),
         address: {
           '@type': 'PostalAddress',
-          streetAddress: b.neighborhood,
+          // streetAddress só entra quando há logradouro real — sem isso, o bairro
+          // era usado como se fosse o endereço (uso errado do campo).
+          ...(b.street && { streetAddress: b.street }),
           addressLocality: b.city,
           addressRegion: b.state,
           addressCountry: 'BR',
