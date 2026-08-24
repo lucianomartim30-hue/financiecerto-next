@@ -58,6 +58,11 @@ async function fallbackFromCache(id: string) {
       status: cached.status,
       delivery_date: cached.delivery_date,
       launch_date: null,
+      // Ciclo de vida SEO calculado pelo sync (ver lib/orulo-kv.ts) — o client
+      // usa isso pra mostrar o aviso certo quando o imóvel não está mais
+      // disponível, em vez de simplesmente falhar.
+      seo_status: cached.seo_status ?? 'active',
+      first_missing_at: cached.first_missing_at ?? null,
       total_units: null,
       stock: null,
       number_of_floors: null,

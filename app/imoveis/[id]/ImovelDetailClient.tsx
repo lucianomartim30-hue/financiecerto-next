@@ -70,6 +70,8 @@ interface ImovelDetalhe {
   amenities: string[];
   typologies: Tipologia[];
   sharing_url: string | null;
+  /** Ciclo de vida SEO calculado pelo sync — ver lib/orulo-kv.ts. Ausente em respostas ao vivo da Orulo (sempre "active" nesse caso). */
+  seo_status?: 'active' | 'out_of_stock' | 'suspected_missing' | 'removed_confirmed';
 }
 interface RelatedImovel {
   id: string;
@@ -1832,6 +1834,32 @@ export default function ImovelDetailClient({ id }: { id: string }) {
 
       {/* ── Info bar abaixo da galeria ──────────────────────────────────── */}
       <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 24px 0' }}>
+
+        {/* Confirmado fora do catálogo há 30+ dias — aviso forte, distinto de
+            "sem unidades no momento". Página continua indexável (200), só não
+            afirma mais nenhuma disponibilidade. */}
+        {imovel.seo_status === 'removed_confirmed' && (
+          <div style={{ background: '#fff7ed', border: '1.5px solid #fed7aa', borderRadius: '14px', padding: '16px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: '800', color: '#9a3412', marginBottom: '2px' }}>⚠️ Este empreendimento não está mais disponível em nosso catálogo</p>
+              <p style={{ fontSize: '12px', color: '#7c2d12' }}>As informações abaixo são históricas — o projeto pode ter sido vendido por completo, concluído ou descontinuado pela incorporadora.</p>
+            </div>
+            <a href="#relacionados" style={{ fontSize: '13px', fontWeight: '700', color: '#9a3412', textDecoration: 'underline', whiteSpace: 'nowrap', flexShrink: 0 }}>Ver empreendimentos semelhantes →</a>
+          </div>
+        )}
+
+        {/* Ainda ativo na Orulo, mas sem unidades no momento — mensagem mais
+            visível que o badge pequeno (que continua existindo mais abaixo). */}
+        {imovel.seo_status !== 'removed_confirmed' && imovel.stock === 0 && (
+          <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '14px', padding: '16px 20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <p style={{ fontSize: '14px', fontWeight: '800', color: '#991b1b', marginBottom: '2px' }}>❌ Este empreendimento não possui unidades disponíveis atualmente</p>
+              <p style={{ fontSize: '12px', color: '#7f1d1d' }}>As informações abaixo continuam disponíveis para consulta.</p>
+            </div>
+            <a href="#relacionados" style={{ fontSize: '13px', fontWeight: '700', color: '#991b1b', textDecoration: 'underline', whiteSpace: 'nowrap', flexShrink: 0 }}>Ver empreendimentos semelhantes →</a>
+          </div>
+        )}
+
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '8px' }}>
           <div style={{ flex: '1 1 auto' }}>
             {/* Status + bairro */}

@@ -15,6 +15,25 @@
 
 import type { NormalizedBuilding, OruloIdEntry } from './orulo-api';
 
+// ── Ciclo de vida SEO de cada imóvel no catálogo ────────────────────────────
+// Calculado pelo sync (app/api/orulo/sync/route.ts), nunca por uma requisição
+// de página — ver comentário detalhado lá. Persistido junto com o resto do
+// registro do imóvel (mesmo array salvo por kvSetCatalog), sem chave nova.
+//
+//  active             → confirmado na lista de ativos da Orulo no último sync, com estoque
+//  out_of_stock       → confirmado ativo, mas sem unidades disponíveis (stock=0)
+//  suspected_missing  → ausente da lista de ativos há menos de 30 dias corridos
+//  removed_confirmed  → ausente da lista de ativos por 30+ dias em syncs sucessivos
+export type SeoStatus = 'active' | 'out_of_stock' | 'suspected_missing' | 'removed_confirmed';
+
+export type CatalogEntry = NormalizedBuilding & {
+  seo_status?: SeoStatus;
+  /** ISO date da primeira vez que o imóvel não apareceu na lista de ativos da Orulo. null quando confirmado ativo. */
+  first_missing_at?: string | null;
+  /** ISO date da última vez que o imóvel foi confirmado ativo (visto na lista de ativos). */
+  last_confirmed_at?: string;
+};
+
 // ── Chaves KV ─────────────────────────────────────────────────────────────────
 export const KV_CATALOG_KEY        = 'orulo:catalog';        // chave legada (fallback de leitura)
 export const KV_CATALOG_COUNT_KEY  = 'orulo:catalog:count';  // número de chunks
@@ -77,12 +96,12 @@ async function kvDel(key: string): Promise<void> {
 
 // ── Catálogo completo (armazenamento em chunks) ───────────────────────────────
 
-export async function kvSetCatalog(buildings: NormalizedBuilding[]): Promise<void> {
+export async function kvSetCatalog(buildings: CatalogEntry[]): Promise<void> {
   const kv = await getKv();
   if (!kv) return;
 
   // Dividir em chunks
-  const chunks: NormalizedBuilding[][] = [];
+  const chunks: CatalogEntry[][] = [];
   for (let i = 0; i < buildings.length; i += CHUNK_SIZE) {
     chunks.push(buildings.slice(i, i + CHUNK_SIZE));
   }
@@ -109,13 +128,13 @@ export async function kvSetCatalog(buildings: NormalizedBuilding[]): Promise<voi
   console.log(`[kv] catalog saved: ${buildings.length} buildings in ${chunks.length} chunks`);
 }
 
-export async function kvGetCatalog(): Promise<NormalizedBuilding[] | null> {
+export async function kvGetCatalog(): Promise<CatalogEntry[] | null> {
   const count = await kvGet<number>(KV_CATALOG_COUNT_KEY);
 
   // Novo formato: chunks
   if (count && count > 0) {
     const chunkPromises = Array.from({ length: count }, (_, i) =>
-      kvGet<NormalizedBuilding[]>(kvChunkKey(i)),
+      kvGet<CatalogEntry[]>(kvChunkKey(i)),
     );
     const chunks = await Promise.all(chunkPromises);
 
@@ -125,11 +144,11 @@ export async function kvGetCatalog(): Promise<NormalizedBuilding[] | null> {
       return null;
     }
 
-    return chunks.flat() as NormalizedBuilding[];
+    return chunks.flat() as CatalogEntry[];
   }
 
   // Fallback legado: chave única 'orulo:catalog'
-  return kvGet<NormalizedBuilding[]>(KV_CATALOG_KEY);
+  return kvGet<CatalogEntry[]>(KV_CATALOG_KEY);
 }
 
 // ── Lista de IDs ativos ───────────────────────────────────────────────────────
@@ -181,7 +200,7 @@ export async function kvResetSync(): Promise<void> {
 
 // ── Operações individuais (usadas pelo webhook) ───────────────────────────────
 
-export async function kvUpsertBuilding(building: NormalizedBuilding): Promise<void> {
+export async function kvUpsertBuilding(building: CatalogEntry): Promise<void> {
   const catalog = (await kvGetCatalog()) ?? [];
   const idx = catalog.findIndex(b => b.id === building.id);
   if (idx >= 0) catalog[idx] = building;

@@ -226,6 +226,13 @@ export async function GET(req: NextRequest) {
       // Filtra por Grande SP por padrão (somente municípios da RMSP)
       all = all.filter(b => CIDADES_LIBERADAS.has((b.city || '').toLowerCase().trim()));
 
+      // Imóveis com ausência ainda não confirmada (suspected_missing) ou já
+      // confirmada há 30+ dias (removed_confirmed) somem das listagens/busca —
+      // continuam acessíveis direto por /imoveis/[id] (histórico preservado),
+      // só não aparecem mais como se estivessem disponíveis pra quem navega.
+      // seo_status ausente (registro anterior a este campo) conta como ativo.
+      all = all.filter(b => b.seo_status !== 'suspected_missing' && b.seo_status !== 'removed_confirmed');
+
       // Breve Lançamento (sem preço publicado ainda) não é mais excluído do
       // catálogo/listagens — aparece com badge própria (ver lib/status.ts).
       // O sitemap.ts continua aplicando filterBreveLancamento por conta

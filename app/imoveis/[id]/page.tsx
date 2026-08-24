@@ -13,7 +13,7 @@
 import type { Metadata } from 'next';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
-import { kvGetCatalog } from '@/lib/orulo-kv';
+import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
 import { getToken, fetchBuildingDetail } from '@/lib/orulo-api';
 import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
 import ImovelDetailClient from './ImovelDetailClient';
@@ -26,10 +26,11 @@ function fmtBRL(v: number | null | undefined): string {
 }
 
 // React cache() — deduplica a busca entre generateMetadata e a página no mesmo request.
-// Checa o KV primeiro (rápido); se o imóvel não estiver mais no catálogo (saiu de
-// venda, filtrado, etc.), confirma ao vivo na Orulo antes de decidir que não existe —
-// evita 404 falso para imóvel que só não foi sincronizado ainda.
-const getBuildingData = cache(async (id: string) => {
+// Checa o KV primeiro (rápido — já inclui o ciclo de vida SEO calculado pelo
+// sync, ver lib/orulo-kv.ts). Só cai pro fallback ao vivo quando o id nunca
+// esteve no catálogo (imóvel genuinamente novo, sync ainda não pegou) — não é
+// consultado a cada acesso, só nesse caso raro de cache miss total.
+const getBuildingData = cache(async (id: string): Promise<CatalogEntry | null> => {
   try {
     const catalog = await kvGetCatalog();
     const cached = catalog?.find(b => b.id === id);
@@ -156,7 +157,10 @@ export default async function ImovelPage({
           .join(', '),
         url: `${BASE}/imoveis/${id}`,
         image: b.photo ?? undefined,
-        ...(temPrecoReal(b) && {
+        // Sem oferta nenhuma pra imóvel confirmado fora do catálogo da Orulo há
+        // 30+ dias (ver lib/orulo-kv.ts) — nenhuma disponibilidade real pra
+        // declarar, nem OutOfStock (que ainda implica "volta depois").
+        ...(temPrecoReal(b) && b.seo_status !== 'removed_confirmed' && {
           offers: {
             '@type': 'Offer',
             price: b.min_price,

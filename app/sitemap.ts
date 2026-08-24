@@ -72,6 +72,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Google imóveis e bairros de cidades que não aparecem em nenhuma busca do
     // site — páginas fantasma, indexadas como soft-404 (ex: bairro de Goiânia).
     let catalog = rawCatalog?.filter(b => CIDADES_LIBERADAS.has((b.city || '').toLowerCase().trim()));
+    // Imóveis com ausência suspeita ou confirmada (ver lib/orulo-kv.ts) saem do
+    // sitemap — a página continua acessível pra quem já tem o link/ranqueamento
+    // (histórico preservado), só não é mais oferecida pro Google como conteúdo
+    // atual pra descobrir. seo_status ausente conta como ativo.
+    catalog = catalog?.filter(b => b.seo_status !== 'suspected_missing' && b.seo_status !== 'removed_confirmed');
     // Empreendimentos "Breve Lançamento" sem tabela de preço publicada (a Orulo
     // usa min_price=0.1 como sentinela) e sem entrega prevista nos próximos 2
     // meses viram páginas sem conteúdo real — mesmo filtro já aplicado na

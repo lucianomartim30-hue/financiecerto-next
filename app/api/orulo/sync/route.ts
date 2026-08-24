@@ -29,7 +29,13 @@ import {
   fetchBuildingsBatch,
   SITE_BASE,
 } from '@/lib/orulo-api';
-import { kvGetCatalog, kvSetCatalog, kvSetMeta } from '@/lib/orulo-kv';
+import { kvGetCatalog, kvSetCatalog, kvSetMeta, type CatalogEntry, type SeoStatus } from '@/lib/orulo-kv';
+
+// Dias de ausência confirmada (em syncs sucessivos) antes de considerar um
+// imóvel definitivamente removido da Orulo. Enquanto abaixo disso, fica
+// "suspected_missing" — continua na página normalmente, sem nenhum aviso ao
+// usuário, só uma suspeita interna que ainda pode se reverter no próximo sync.
+const RECONFIRM_DAYS = 30;
 
 // Vercel Pro suporta até 300s. Com 2000 imóveis × 20 paralelos + 300ms delay: ~120-180s por run.
 export const maxDuration = 300;
@@ -87,8 +93,13 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // ── Passo 4: remover os que saíram da lista ativa ─────────────────────────
-    const retained = existing.filter(b => activeIdSet.has(b.id));
+    // ── Passo 4: manter todos os existentes ───────────────────────────────────
+    // Antes, um imóvel que saísse da lista de ativos era removido do catálogo
+    // na mesma execução — isso é o que causava soft-404 (a página achava o
+    // imóvel um instante, sumia no seguinte, sem aviso nenhum ao usuário nem
+    // ao Google). A remoção definitiva agora passa pelo ciclo de vida do
+    // Passo 6.5, com confirmação em syncs sucessivos ao longo de 30 dias.
+    const retained = existing;
 
     // ── Passo 5: buscar detalhes em paralelo ──────────────────────────────────
     const fetched: Awaited<ReturnType<typeof fetchBuildingsBatch>> = [];
@@ -112,10 +123,36 @@ export async function GET(req: NextRequest) {
 
     // ── Passo 6: merge ────────────────────────────────────────────────────────
     const fetchedMap = new Map(fetched.map(b => [b.id, b]));
-    const merged     = retained.map(b => fetchedMap.get(b.id) ?? b);
+    const merged: CatalogEntry[] = retained.map(b => fetchedMap.get(b.id) ?? b);
     for (const b of fetched) {
       if (!existingMap.has(b.id)) merged.push(b);
     }
+
+    // ── Passo 6.5: ciclo de vida SEO ──────────────────────────────────────────
+    // activeIdSet só existe se fetchAllActiveIds (passo 1) respondeu com
+    // sucesso — se a Orulo falhar, deu timeout, 429 ou 5xx, a função já
+    // lançou antes de chegar aqui (catch geral lá embaixo, sem tocar no KV) ou
+    // retornou 502 sem salvar nada (totalActive === 0, linhas acima). Ou seja,
+    // chegar neste ponto já significa "a Orulo respondeu com uma lista de
+    // ativos válida" — erro de rede/timeout/429/5xx nunca vira evidência de
+    // remoção porque simplesmente nunca chega a rodar este cálculo.
+    const nowIso = new Date().toISOString();
+    let novasSuspeitas = 0, confirmadasRemovidas = 0, recuperadas = 0;
+    const withLifecycle: CatalogEntry[] = merged.map(b => {
+      const aindaAtiva = activeIdSet.has(b.id);
+      if (aindaAtiva) {
+        if (b.seo_status === 'suspected_missing' || b.seo_status === 'removed_confirmed') recuperadas++;
+        const status: SeoStatus = b.stock === 0 ? 'out_of_stock' : 'active';
+        return { ...b, seo_status: status, first_missing_at: null, last_confirmed_at: nowIso };
+      }
+      const firstMissingAt = b.first_missing_at ?? nowIso;
+      const diasAusente    = (Date.now() - new Date(firstMissingAt).getTime()) / 86_400_000;
+      const jaEraConfirmada = b.seo_status === 'removed_confirmed';
+      const status: SeoStatus = diasAusente >= RECONFIRM_DAYS ? 'removed_confirmed' : 'suspected_missing';
+      if (status === 'suspected_missing' && !b.first_missing_at) novasSuspeitas++;
+      if (status === 'removed_confirmed' && !jaEraConfirmada) confirmadasRemovidas++;
+      return { ...b, seo_status: status, first_missing_at: firstMissingAt };
+    });
 
     // ── Passo 7: salvar ───────────────────────────────────────────────────────
     // Rate-limit da Orulo: ~400 req por janela. Se buscamos menos do que
@@ -125,10 +162,10 @@ export async function GET(req: NextRequest) {
     const isComplete  = !timedOut && allFetched;
     const rateLimited = !timedOut && !allFetched && fetchedCount < toFetch.length;
 
-    await kvSetCatalog(merged);
+    await kvSetCatalog(withLifecycle);
     await kvSetMeta({
       total_ids:     totalActive,
-      synced_count:  merged.length,
+      synced_count:  withLifecycle.length,
       is_complete:   isComplete,
       started_at:    new Date().toISOString(),
       last_chunk_at: new Date().toISOString(),
@@ -144,30 +181,39 @@ export async function GET(req: NextRequest) {
       nextUrl.searchParams.set('chained', '1');
       nextUrl.searchParams.delete('full');
       fetch(nextUrl.toString(), { signal: AbortSignal.timeout(2000) }).catch(() => {});
-      console.log(`[sync] encadeando próxima execução: ${merged.length}/${totalActive} imóveis`);
+      console.log(`[sync] encadeando próxima execução: ${withLifecycle.length}/${totalActive} imóveis`);
     }
 
     if (rateLimited) {
-      console.warn(`[sync] rate-limit detectado: ${fetchedCount}/${toFetch.length} buscados em ${elapsed}ms. Catálogo: ${merged.length}/${totalActive}. Auto-sync irá completar.`);
+      console.warn(`[sync] rate-limit detectado: ${fetchedCount}/${toFetch.length} buscados em ${elapsed}ms. Catálogo: ${withLifecycle.length}/${totalActive}. Auto-sync irá completar.`);
     }
 
+    const totalRemovedConfirmed = withLifecycle.filter(b => b.seo_status === 'removed_confirmed').length;
+    const totalSuspectedMissing = withLifecycle.filter(b => b.seo_status === 'suspected_missing').length;
+
     return NextResponse.json({
-      status:          timedOut ? 'partial' : isComplete ? 'complete' : 'partial',
-      catalog_size:    merged.length,
-      total_active:    totalActive,
-      fetched_details: fetchedCount,
-      retained:        retained.length,
-      removed:         existing.length - retained.length,
-      to_fetch_total:  toFetch.length,
-      elapsed_ms:      elapsed,
-      site_base:       SITE_BASE,
-      chained:         isChained,
-      rate_limited:    rateLimited,
+      status:               timedOut ? 'partial' : isComplete ? 'complete' : 'partial',
+      catalog_size:         withLifecycle.length,
+      total_active:         totalActive,
+      fetched_details:      fetchedCount,
+      to_fetch_total:       toFetch.length,
+      elapsed_ms:           elapsed,
+      site_base:            SITE_BASE,
+      chained:              isChained,
+      rate_limited:         rateLimited,
+      // Ciclo de vida SEO desta execução — ver Passo 6.5.
+      lifecycle: {
+        novas_suspeitas:        novasSuspeitas,        // ficaram "suspected_missing" agora pela 1ª vez
+        confirmadas_removidas:  confirmadasRemovidas,  // cruzaram os 30 dias nesta execução
+        recuperadas:            recuperadas,           // voltaram a aparecer como ativas
+        total_suspected_missing: totalSuspectedMissing,
+        total_removed_confirmed: totalRemovedConfirmed,
+      },
       note: timedOut
         ? `Parcial (timeout): ${fetchedCount}/${toFetch.length}. Encadeando próxima execução.`
         : isComplete
-          ? `Catálogo completo: ${merged.length} imóveis.`
-          : `Parcial (rate-limit Orulo): ${fetchedCount}/${toFetch.length} buscados. Catálogo: ${merged.length}/${totalActive}. Auto-sync irá completar nos próximos acessos ao portal.`,
+          ? `Catálogo completo: ${withLifecycle.length} imóveis.`
+          : `Parcial (rate-limit Orulo): ${fetchedCount}/${toFetch.length} buscados. Catálogo: ${withLifecycle.length}/${totalActive}. Auto-sync irá completar nos próximos acessos ao portal.`,
     });
 
   } catch (err) {
