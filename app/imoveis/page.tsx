@@ -451,6 +451,38 @@ function ImoveisContent() {
   // Reseta paginação quando o mapa é movido (novos cards aparecem do início)
   useEffect(() => { if (!activeLocation) setDisplayCount(12); }, [debouncedBounds, activeLocation]);
 
+  // Filtros que não são de localização/busca (preço, quartos, estágio,
+  // tipo, tipologia...) — extraído do baseFilter pra poder ser reaplicado
+  // no cálculo de contagem por cidade do seletor Imóvel/Empresa (sem isso,
+  // o número em cada chip de cidade não bate com o que realmente aparece
+  // depois de escolhida, se algum outro filtro já estiver ativo).
+  const passesOutrosFiltros = useCallback((b: Imovel) => {
+    if (filterMin      && (b.min_price    ?? 0)  < filterMin)     return false;
+    if (filterMax      && (b.min_price    ?? 0)  > filterMax)     return false;
+    if (filterBedrooms && (b.bedrooms_max ?? 99) < filterBedrooms) return false;
+    if (filterVagas    && (b.vagas_max    ?? 99) < filterVagas)   return false;
+    if (filterBaths    && (b.bathrooms_max ?? 99) < filterBaths)  return false;
+    if (filterAreaMin  && (b.area_max     ?? 0)  < filterAreaMin) return false;
+    if (filterAreaMax  && (b.area_min     ?? 0)  > filterAreaMax) return false;
+    if (filterStatus   && b.status_norm !== filterStatus)         return false;
+    {
+      const fn = getEffectiveFinality(b);
+      const effectiveFn = fn === '' ? 'residencial' : fn;
+      if (filterFinality === 'todos') {
+        // Escolha explícita de ver tudo — não filtra por finalidade.
+      } else if (filterFinality) {
+        if (effectiveFn !== filterFinality) return false;
+      } else if (effectiveFn === 'comercial') {
+        // Sem filtro de tipo escolhido: portal mostra só residencial por
+        // padrão — comercial só aparece se a pessoa escolher isso explicitamente
+        // no filtro "Tipo".
+        return false;
+      }
+    }
+    if (filterTipologia && !(b.property_types || []).includes(filterTipologia)) return false;
+    return true;
+  }, [filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
+
   const baseFilter = useCallback((b: Imovel) => {
     // ── Filtro de localização (bairro digitado/selecionado pelo usuário) ───────
     // Sempre restrito à cidade escolhida em searchCity — sem isso, um bairro
@@ -486,31 +518,8 @@ function ImoveisContent() {
       const cidade = normStr(b.city || '');
       if (!geoCities.some(c => normStr(c) === cidade)) return false;
     }
-    if (filterMin      && (b.min_price    ?? 0)  < filterMin)     return false;
-    if (filterMax      && (b.min_price    ?? 0)  > filterMax)     return false;
-    if (filterBedrooms && (b.bedrooms_max ?? 99) < filterBedrooms) return false;
-    if (filterVagas    && (b.vagas_max    ?? 99) < filterVagas)   return false;
-    if (filterBaths    && (b.bathrooms_max ?? 99) < filterBaths)  return false;
-    if (filterAreaMin  && (b.area_max     ?? 0)  < filterAreaMin) return false;
-    if (filterAreaMax  && (b.area_min     ?? 0)  > filterAreaMax) return false;
-    if (filterStatus   && b.status_norm !== filterStatus)         return false;
-    {
-      const fn = getEffectiveFinality(b);
-      const effectiveFn = fn === '' ? 'residencial' : fn;
-      if (filterFinality === 'todos') {
-        // Escolha explícita de ver tudo — não filtra por finalidade.
-      } else if (filterFinality) {
-        if (effectiveFn !== filterFinality) return false;
-      } else if (effectiveFn === 'comercial') {
-        // Sem filtro de tipo escolhido: portal mostra só residencial por
-        // padrão — comercial só aparece se a pessoa escolher isso explicitamente
-        // no filtro "Tipo".
-        return false;
-      }
-    }
-    if (filterTipologia && !(b.property_types || []).includes(filterTipologia)) return false;
-    return true;
-  }, [activeLocation, searchCity, searchMode, cidadeResultado, geoAtivo, geoCities, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
+    return passesOutrosFiltros(b);
+  }, [activeLocation, searchCity, searchMode, cidadeResultado, geoAtivo, geoCities, passesOutrosFiltros]);
 
   // Conta quantos imóveis existem para cada tipo de finalidade no catálogo
   const finalityCounts = useMemo(() => {
@@ -635,7 +644,7 @@ function ImoveisContent() {
       setCidadeResultado(null); // nova busca — qualquer escolha de cidade anterior não vale mais
       const qNorm = normStr(query);
       const campo = (b: Imovel) => searchMode === 'imovel' ? b.name : (b.developer || '');
-      const matches = allBuildings.filter(b => normStr(campo(b)).includes(qNorm));
+      const matches = allBuildings.filter(b => normStr(campo(b)).includes(qNorm) && passesOutrosFiltros(b));
       const comCoord = matches.filter(b => b.lat && b.lng);
       import('@/lib/gtag').then(m => m.trackBusca({ termo: `${query} (${searchMode})`, resultados: matches.length }));
       // Sem restrição de cidade, os resultados podem estar espalhados pelo
@@ -686,7 +695,7 @@ function ImoveisContent() {
       }
     } catch { /* silencioso */ }
     finally { setGeocoding(false); }
-  }, [allBuildings, searchCity, searchMode]);
+  }, [allBuildings, searchCity, searchMode, passesOutrosFiltros]);
 
   // Cidades presentes no resultado atual de Imóvel/Empresa — alimenta o
   // seletor de região (só aparece quando há mais de uma cidade e a pessoa
@@ -697,21 +706,21 @@ function ImoveisContent() {
     const campo = (b: Imovel) => searchMode === 'imovel' ? b.name : (b.developer || '');
     const counts = new Map<string, number>();
     allBuildings.forEach(b => {
-      if (b.city && normStr(campo(b)).includes(qNorm)) {
+      if (b.city && normStr(campo(b)).includes(qNorm) && passesOutrosFiltros(b)) {
         counts.set(b.city, (counts.get(b.city) || 0) + 1);
       }
     });
     return [...counts.entries()].map(([city, count]) => ({ city, count })).sort((a, b) => b.count - a.count);
-  }, [activeLocation, searchMode, allBuildings]);
+  }, [activeLocation, searchMode, allBuildings, passesOutrosFiltros]);
 
   const escolherCidadeResultado = useCallback((city: string) => {
     setCidadeResultado(city);
     setDisplayCount(12);
     const qNorm = normStr(activeLocation);
     const campo = (b: Imovel) => searchMode === 'imovel' ? b.name : (b.developer || '');
-    const matches = allBuildings.filter(b => b.lat && b.lng && normStr(campo(b)).includes(qNorm) && normStr(b.city || '') === normStr(city));
+    const matches = allBuildings.filter(b => b.lat && b.lng && normStr(campo(b)).includes(qNorm) && normStr(b.city || '') === normStr(city) && passesOutrosFiltros(b));
     if (matches.length > 0) mapRef.current?.fitBounds(matches.map(b => ({ lat: b.lat!, lng: b.lng! })));
-  }, [activeLocation, searchMode, allBuildings]);
+  }, [activeLocation, searchMode, allBuildings, passesOutrosFiltros]);
 
   // Commit de busca a partir do modal mobile
   const commitMobileSearch = useCallback((name: string) => {
