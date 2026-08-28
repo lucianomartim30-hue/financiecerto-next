@@ -76,6 +76,21 @@ function fmtRange(min: number | null, max: number | null, unit: string) {
   return `${min} ${unit}`;
 }
 
+// Aparência das sugestões de busca (bairro/rua/imóvel/empresa) — compartilhada
+// entre o autocomplete desktop e a lista de sugestões do modal mobile.
+const SUGESTAO_ICONE: Record<'bairro' | 'rua' | 'imovel' | 'empresa', string> = {
+  bairro: '📍', rua: '🛣️', imovel: '🏢', empresa: '🏗',
+};
+const SUGESTAO_LABEL: Record<'bairro' | 'rua' | 'imovel' | 'empresa', string> = {
+  bairro: 'bairro', rua: 'rua', imovel: 'imóvel', empresa: 'construtora',
+};
+const SUGESTAO_COR: Record<'bairro' | 'rua' | 'imovel' | 'empresa', { bg: string; fg: string }> = {
+  bairro:  { bg: '#eff6ff', fg: '#2563eb' },
+  rua:     { bg: '#f0fdf4', fg: '#16a34a' },
+  imovel:  { bg: '#fdf4ff', fg: '#a21caf' },
+  empresa: { bg: '#fff7ed', fg: '#c2410c' },
+};
+
 // ─── Card ─────────────────────────────────────────────────────────────────────
 function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: string }) {
   const sc = getStatus(im.status_norm || im.status || '', im.min_price);
@@ -185,6 +200,12 @@ function ImoveisContent() {
   // "q" é o campo de busca livre da própria página; "neighborhood" é o param que os links
   // vindos do simulador usam para pré-aplicar o bairro escolhido — os dois caem no mesmo filtro.
   const [activeLocation, setActiveLocation] = useState(searchParams.get('q') || searchParams.get('neighborhood') || '');
+
+  // Modo de busca — Local (bairro/rua, padrão) vs Imóvel (nome do
+  // empreendimento) vs Empresa (nome da construtora/incorporadora). Os dois
+  // últimos não restringem por cidade: quem busca "Helbor" pode não saber em
+  // qual cidade o empreendimento fica, então busca no catálogo inteiro.
+  const [searchMode, setSearchMode] = useState<'local' | 'imovel' | 'empresa'>('local');
 
   // Cidade escolhida para a busca por bairro — sempre um valor concreto (nunca
   // "todas"), pra que o bairro digitado/selecionado só possa casar com imóveis
@@ -327,8 +348,33 @@ function ImoveisContent() {
 
   const allLocationSuggestions = useMemo(() => [...allNeighborhoods, ...allStreets], [allNeighborhoods, allStreets]);
 
-  const filteredSuggestions = useMemo(() => {
-    if (!deferredSearch.trim()) return [] as { name: string; hasCatalog: boolean; type: 'bairro' | 'rua' }[];
+  // Nomes de empreendimento e de construtora/incorporadora — sem restrição de
+  // cidade (ver comentário do searchMode acima).
+  const allBuildingNames = useMemo(() => {
+    const seen = new Map<string, string>();
+    allBuildings.forEach(b => { if (b.name) { const k = normStr(b.name); if (!seen.has(k)) seen.set(k, b.name); } });
+    return [...seen.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [allBuildings]);
+  const allDevelopers = useMemo(() => {
+    const seen = new Map<string, string>();
+    allBuildings.forEach(b => { if (b.developer) { const k = normStr(b.developer); if (!seen.has(k)) seen.set(k, b.developer); } });
+    return [...seen.values()].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }, [allBuildings]);
+
+  type Sugestao = { name: string; hasCatalog: boolean; type: 'bairro' | 'rua' | 'imovel' | 'empresa' };
+
+  const filteredSuggestions = useMemo((): Sugestao[] => {
+    if (!deferredSearch.trim()) return [];
+    if (searchMode === 'imovel') {
+      const q = normStr(deferredSearch);
+      return allBuildingNames.filter(n => normStr(n).includes(q)).slice(0, 10)
+        .map(name => ({ name, hasCatalog: true, type: 'imovel' as const }));
+    }
+    if (searchMode === 'empresa') {
+      const q = normStr(deferredSearch);
+      return allDevelopers.filter(n => normStr(n).includes(q)).slice(0, 10)
+        .map(name => ({ name, hasCatalog: true, type: 'empresa' as const }));
+    }
     const q = stripTipoLogradouro(normStr(deferredSearch));
     return allLocationSuggestions
       .filter(n => normStr(n.name).includes(q))
@@ -342,12 +388,22 @@ function ImoveisContent() {
         return a.name.localeCompare(b.name, 'pt-BR');
       })
       .slice(0, 10);
-  }, [deferredSearch, allLocationSuggestions]);
+  }, [deferredSearch, allLocationSuggestions, searchMode, allBuildingNames, allDevelopers]);
 
   // Sugestões para o modal mobile — quando vazio mostra bairros com imóveis
   // (ruas só aparecem depois de digitar — lista completa de ruas é grande
   // demais pra fazer sentido como sugestão "vazia").
-  const mobileSuggestions = useMemo(() => {
+  const mobileSuggestions = useMemo((): Sugestao[] => {
+    if (searchMode === 'imovel') {
+      const q = normStr(deferredMobileInput);
+      const base = q ? allBuildingNames.filter(n => normStr(n).includes(q)) : allBuildingNames;
+      return base.slice(0, 25).map(name => ({ name, hasCatalog: true, type: 'imovel' as const }));
+    }
+    if (searchMode === 'empresa') {
+      const q = normStr(deferredMobileInput);
+      const base = q ? allDevelopers.filter(n => normStr(n).includes(q)) : allDevelopers;
+      return base.slice(0, 25).map(name => ({ name, hasCatalog: true, type: 'empresa' as const }));
+    }
     const q = stripTipoLogradouro(normStr(deferredMobileInput));
     const base = q
       ? allLocationSuggestions.filter(n => normStr(n.name).includes(q))
@@ -363,7 +419,7 @@ function ImoveisContent() {
         return a.name.localeCompare(b.name, 'pt-BR');
       })
       .slice(0, 25);
-  }, [deferredMobileInput, allLocationSuggestions, allNeighborhoods]);
+  }, [deferredMobileInput, allLocationSuggestions, allNeighborhoods, searchMode, allBuildingNames, allDevelopers]);
 
   useEffect(() => {
     setLoading(true);
@@ -395,7 +451,13 @@ function ImoveisContent() {
     // buscado em São Paulo (ex: "Centro") podia casar com o mesmo nome de
     // bairro em outra cidade (ex: Centro de Porto Alegre) e mostrar o lugar
     // errado no mapa/lista.
-    if (activeLocation) {
+    if (activeLocation && searchMode === 'imovel') {
+      if (!normStr(b.name || '').includes(normStr(activeLocation))) return false;
+    }
+    else if (activeLocation && searchMode === 'empresa') {
+      if (!normStr(b.developer || '').includes(normStr(activeLocation))) return false;
+    }
+    else if (activeLocation) {
       if (normStr(b.city || '') !== normStr(searchCity)) return false;
       const q = stripTipoLogradouro(normStr(activeLocation));
       const haystack = normStr(`${b.neighborhood} ${b.name} ${b.street || ''}`);
@@ -440,7 +502,7 @@ function ImoveisContent() {
     }
     if (filterTipologia && !(b.property_types || []).includes(filterTipologia)) return false;
     return true;
-  }, [activeLocation, searchCity, geoAtivo, geoCities, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
+  }, [activeLocation, searchCity, searchMode, geoAtivo, geoCities, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
 
   // Conta quantos imóveis existem para cada tipo de finalidade no catálogo
   const finalityCounts = useMemo(() => {
@@ -556,6 +618,21 @@ function ImoveisContent() {
     if (!query.trim()) return;
     setShowSuggestions(false);
 
+    // Busca por nome de empreendimento ou de construtora — sem restrição de
+    // cidade, e sem fallback de geocodificação (Nominatim geocodifica
+    // endereço, não nome de prédio/empresa).
+    if (searchMode === 'imovel' || searchMode === 'empresa') {
+      setActiveLocation(query.trim());
+      setDisplayCount(12);
+      const qNorm = normStr(query);
+      const campo = (b: Imovel) => searchMode === 'imovel' ? b.name : (b.developer || '');
+      const resultados = allBuildings.filter(b => normStr(campo(b)).includes(qNorm)).length;
+      import('@/lib/gtag').then(m => m.trackBusca({ termo: `${query} (${searchMode})`, resultados }));
+      const match = allBuildings.find(b => b.lat && b.lng && normStr(campo(b)).includes(qNorm));
+      if (match) mapRef.current?.flyTo(match.lat!, match.lng!, 13);
+      return;
+    }
+
     const cidade = cityOverride ?? searchCity;
 
     // Commita a localização → filtra cards imediatamente
@@ -591,7 +668,7 @@ function ImoveisContent() {
       }
     } catch { /* silencioso */ }
     finally { setGeocoding(false); }
-  }, [allBuildings, searchCity]);
+  }, [allBuildings, searchCity, searchMode]);
 
   // Commit de busca a partir do modal mobile
   const commitMobileSearch = useCallback((name: string) => {
@@ -610,7 +687,7 @@ function ImoveisContent() {
   }, [minInput, maxInput, areaMinInput, areaMaxInput]);
 
   const clearAll = useCallback(() => {
-    setActiveLocation(''); setSearch('');
+    setActiveLocation(''); setSearch(''); setSearchMode('local');
     setCidadeSemBairro(false); setSearchCity('São Paulo');
     setFilterStatus(''); setFilterFinality(''); setFilterTipologia(''); setFilterMin(0); setFilterMax(0);
     setFilterBedrooms(0); setFilterVagas(0); setFilterBaths(0);
@@ -732,7 +809,7 @@ function ImoveisContent() {
               background: '#f3f4f6', borderRadius: '10px',
               border: '1.5px solid #e5e7eb',
             }}>
-              <span style={{ padding: '0 10px', fontSize: '15px', flexShrink: 0 }}>📍</span>
+              <span style={{ padding: '0 10px', fontSize: '15px', flexShrink: 0 }}>{searchMode === 'imovel' ? '🏢' : searchMode === 'empresa' ? '🏗' : '📍'}</span>
               <input
                 ref={mobileInputRef}
                 autoFocus
@@ -750,7 +827,11 @@ function ImoveisContent() {
                   }
                   if (e.key === 'Escape') { setShowMobileSearch(false); setMobileSearchInput(''); }
                 }}
-                placeholder={`Bairro ou rua em ${searchCity}...`}
+                placeholder={
+                  searchMode === 'imovel' ? 'Nome do empreendimento...' :
+                  searchMode === 'empresa' ? 'Nome da construtora...' :
+                  `Bairro ou rua em ${searchCity}...`
+                }
                 style={{
                   flex: 1, height: '46px', border: 'none', outline: 'none',
                   background: 'transparent',
@@ -767,10 +848,33 @@ function ImoveisContent() {
             </div>
           </div>
 
+          {/* Modo de busca: Local / Imóvel / Empresa */}
+          <div style={{ display: 'flex', gap: '6px', padding: '10px 14px', borderBottom: '1px solid #e5e7eb' }}>
+            {([
+              { id: 'local' as const,   label: '📍 Local' },
+              { id: 'imovel' as const,  label: '🏢 Imóvel' },
+              { id: 'empresa' as const, label: '🏗 Empresa' },
+            ]).map(({ id, label }) => (
+              <button key={id}
+                onClick={() => { setSearchMode(id); setMobileSearchInput(''); }}
+                style={{
+                  flex: 1, height: '34px', borderRadius: '8px',
+                  border: `1.5px solid ${searchMode === id ? 'var(--primary)' : '#e5e7eb'}`,
+                  background: searchMode === id ? 'var(--primary-light)' : '#f9fafb',
+                  color: searchMode === id ? 'var(--primary)' : '#374151',
+                  fontSize: '12px', fontWeight: searchMode === id ? '700' : '500',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >{label}</button>
+            ))}
+          </div>
+
           {/* Passo 1: escolher a cidade — os bairros abaixo são sempre da cidade
               selecionada aqui, pra nunca misturar bairros de mesmo nome em
-              cidades diferentes (ex: Centro de SP vs. Centro de Porto Alegre) */}
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+              cidades diferentes (ex: Centro de SP vs. Centro de Porto Alegre).
+              Só faz sentido no modo Local — buscar por empreendimento/construtora
+              não é restrito por cidade. */}
+          {searchMode === 'local' && <div style={{ padding: '10px 14px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
             <span style={{ fontSize: '12px', fontWeight: '700', color: '#6b7280', flexShrink: 0 }}>Cidade</span>
             <button
               onClick={() => setCidadeMobileAberta(v => !v)}
@@ -817,13 +921,15 @@ function ImoveisContent() {
                 </div>
               </>
             )}
-          </div>
+          </div>}
 
           {/* Lista de sugestões */}
           <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
             {!mobileSearchInput && (
               <div style={{ padding: '14px 16px 6px', fontSize: '11px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                Bairros com imóveis em {searchCity}
+                {searchMode === 'imovel' ? 'Empreendimentos no catálogo' :
+                 searchMode === 'empresa' ? 'Construtoras no catálogo' :
+                 `Bairros com imóveis em ${searchCity}`}
               </div>
             )}
             {mobileSuggestions.map(nb => (
@@ -840,21 +946,23 @@ function ImoveisContent() {
               >
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '50%',
-                  background: nb.type === 'rua' ? '#f0fdf4' : '#eff6ff', display: 'flex', alignItems: 'center',
+                  background: SUGESTAO_COR[nb.type].bg, display: 'flex', alignItems: 'center',
                   justifyContent: 'center', fontSize: '16px', flexShrink: 0,
-                }}>{nb.type === 'rua' ? '🛣️' : '📍'}</div>
+                }}>{SUGESTAO_ICONE[nb.type]}</div>
                 <span style={{ flex: 1, fontSize: '15px', color: '#111827', fontWeight: '500' }}>
                   {nb.name}
                 </span>
                 <span style={{
-                  fontSize: '10px', background: nb.type === 'rua' ? '#f0fdf4' : '#eff6ff', color: nb.type === 'rua' ? '#16a34a' : '#2563eb',
+                  fontSize: '10px', background: SUGESTAO_COR[nb.type].bg, color: SUGESTAO_COR[nb.type].fg,
                   borderRadius: '5px', padding: '3px 7px', fontWeight: '700', flexShrink: 0,
-                }}>{nb.type === 'rua' ? 'rua' : 'bairro'}</span>
+                }}>{SUGESTAO_LABEL[nb.type]}</span>
               </button>
             ))}
             {mobileSearchInput && mobileSuggestions.length === 0 && (
               <div style={{ padding: '40px 16px', textAlign: 'center', color: '#9ca3af', fontSize: '14px' }}>
-                Nenhum bairro encontrado
+                {searchMode === 'imovel' ? 'Nenhum empreendimento encontrado' :
+                 searchMode === 'empresa' ? 'Nenhuma construtora encontrada' :
+                 'Nenhum bairro encontrado'}
               </div>
             )}
           </div>
@@ -994,34 +1102,62 @@ function ImoveisContent() {
                 flexShrink: 0,
               }}
             >
-              <span style={{ flexShrink: 0 }}>📍</span>
+              <span style={{ flexShrink: 0 }}>{searchMode === 'imovel' ? '🏢' : searchMode === 'empresa' ? '🏗' : '📍'}</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>
-                {search || 'Buscar bairro...'}
+                {search || (searchMode === 'imovel' ? 'Buscar empreendimento...' : searchMode === 'empresa' ? 'Buscar construtora...' : 'Buscar bairro...')}
               </span>
             </button>
           ) : (
-            /* Desktop: seletor de cidade + input com autocomplete inline */
+            /* Desktop: seletor de modo + seletor de cidade + input com autocomplete inline */
             <>
+              {/* Modo de busca: Local / Imóvel / Empresa */}
+              <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid rgba(255,255,255,.2)', flexShrink: 0 }}>
+                {([
+                  { id: 'local' as const,   label: '📍 Local' },
+                  { id: 'imovel' as const,  label: '🏢 Imóvel' },
+                  { id: 'empresa' as const, label: '🏗 Empresa' },
+                ]).map(({ id, label }, i) => (
+                  <button key={id}
+                    onClick={() => { setSearchMode(id); setSearch(''); setActiveLocation(''); setShowSuggestions(false); }}
+                    style={{
+                      height: '34px', padding: '0 10px', border: 'none',
+                      borderRight: i < 2 ? '1px solid rgba(255,255,255,.15)' : 'none',
+                      background: searchMode === id ? 'rgba(96,165,250,.25)' : 'rgba(255,255,255,.06)',
+                      color: searchMode === id ? '#60a5fa' : 'rgba(255,255,255,.7)',
+                      fontSize: '12px', fontWeight: searchMode === id ? '700' : '500',
+                      cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
+                    }}
+                  >{label}</button>
+                ))}
+              </div>
               <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', border: '1.5px solid rgba(255,255,255,.2)' }}>
-                <button
-                  onClick={e => openDrop('cidade', e)}
-                  title="Escolha a cidade antes de buscar o bairro"
-                  style={{
-                    height: '34px', border: 'none', outline: 'none', borderRight: '1px solid rgba(255,255,255,.2)',
-                    background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '12px',
-                    fontWeight: '700', padding: '0 6px', maxWidth: '108px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '4px',
-                  }}
-                >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{searchCity}</span>
-                  <span style={{ fontSize: '9px', flexShrink: 0, transform: openDropdown === 'cidade' ? 'rotate(180deg)' : 'none' }}>▾</span>
-                </button>
+                {searchMode === 'local' && (
+                  <button
+                    onClick={e => openDrop('cidade', e)}
+                    title="Escolha a cidade antes de buscar o bairro"
+                    style={{
+                      height: '34px', border: 'none', outline: 'none', borderRight: '1px solid rgba(255,255,255,.2)',
+                      background: 'rgba(255,255,255,.08)', color: '#fff', fontFamily: 'inherit', fontSize: '12px',
+                      fontWeight: '700', padding: '0 6px', maxWidth: '108px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{searchCity}</span>
+                    <span style={{ fontSize: '9px', flexShrink: 0, transform: openDropdown === 'cidade' ? 'rotate(180deg)' : 'none' }}>▾</span>
+                  </button>
+                )}
                 <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>📍</span>
+                  <span style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', pointerEvents: 'none' }}>
+                    {searchMode === 'imovel' ? '🏢' : searchMode === 'empresa' ? '🏗' : '📍'}
+                  </span>
                   <input
                     type="text" value={search}
                     onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
-                    placeholder={`Bairro/rua em ${searchCity}`}
+                    placeholder={
+                      searchMode === 'imovel' ? 'Nome do empreendimento...' :
+                      searchMode === 'empresa' ? 'Nome da construtora...' :
+                      `Bairro/rua em ${searchCity}`
+                    }
                     onKeyDown={e => {
                       if (e.key === 'Enter') { inputRef.current?.blur(); geocodeAndFly(search); }
                       if (e.key === 'Escape') { setShowSuggestions(false); inputRef.current?.blur(); }
@@ -1055,9 +1191,9 @@ function ImoveisContent() {
                       onClick={() => { setSearch(nb.name); setShowSuggestions(false); inputRef.current?.blur(); geocodeAndFly(nb.name); }}
                       style={{ display: 'flex', alignItems: 'center', gap: '7px', width: '100%', padding: '11px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '14px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
                     >
-                      <span style={{ fontSize: '13px', opacity: 0.5 }}>{nb.type === 'rua' ? '🛣️' : '📍'}</span>
+                      <span style={{ fontSize: '13px', opacity: 0.5 }}>{SUGESTAO_ICONE[nb.type]}</span>
                       <span style={{ flex: 1 }}>{nb.name}</span>
-                      <span style={{ fontSize: '10px', background: nb.type === 'rua' ? '#f0fdf4' : '#eff6ff', color: nb.type === 'rua' ? '#16a34a' : '#2563eb', borderRadius: '4px', padding: '2px 6px', fontWeight: '700', flexShrink: 0 }}>{nb.type === 'rua' ? 'rua' : 'bairro'}</span>
+                      <span style={{ fontSize: '10px', background: SUGESTAO_COR[nb.type].bg, color: SUGESTAO_COR[nb.type].fg, borderRadius: '4px', padding: '2px 6px', fontWeight: '700', flexShrink: 0 }}>{SUGESTAO_LABEL[nb.type]}</span>
                     </button>
                   ))}
                 </div>
@@ -1066,11 +1202,11 @@ function ImoveisContent() {
           )}
         </div>
 
-        {/* Chip de localização ativa */}
+        {/* Chip de localização/imóvel/empresa ativa */}
         {activeLocation && (
           <button onClick={() => { setActiveLocation(''); setSearch(''); }}
             style={{ height: '36px', padding: '0 10px', borderRadius: '18px', border: '1.5px solid #60a5fa', background: 'rgba(96,165,250,.15)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            📍 {activeLocation} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
+            {searchMode === 'imovel' ? '🏢' : searchMode === 'empresa' ? '🏗' : '📍'} {activeLocation} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
           </button>
         )}
 
@@ -1184,6 +1320,8 @@ function ImoveisContent() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
               {loading ? 'Carregando...' : `${headlineCount.toLocaleString('pt-BR')} imóveis${
+                activeLocation && searchMode === 'imovel'  ? ` do empreendimento "${activeLocation}"` :
+                activeLocation && searchMode === 'empresa' ? ` da construtora "${activeLocation}"` :
                 activeLocation ? ` em ${activeLocation}` :
                 cidadeSemBairro ? ` em ${searchCity}` :
                 ''
@@ -1241,7 +1379,9 @@ function ImoveisContent() {
                 {loading ? 'Carregando...' : `${headlineCount.toLocaleString('pt-BR')} imóveis`}
                 {(activeLocation || cidadeSemBairro) && (
                   <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
-                    {activeLocation ? `em ${activeLocation}, ${searchCity}` : `em ${searchCity}`}
+                    {activeLocation && searchMode === 'imovel'  ? `empreendimento "${activeLocation}"` :
+                     activeLocation && searchMode === 'empresa' ? `construtora "${activeLocation}"` :
+                     activeLocation ? `em ${activeLocation}, ${searchCity}` : `em ${searchCity}`}
                   </span>
                 )}
               </span>
