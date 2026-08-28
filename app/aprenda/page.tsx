@@ -19,8 +19,28 @@ export const metadata: Metadata = {
   },
 };
 
+function ArtigoCard({ a, compacto }: { a: ReturnType<typeof getArtigos>[number]; compacto?: boolean }) {
+  return (
+    <Link href={`/aprenda/${a.slug}`} className="card card-hover" style={{
+      padding: compacto ? '18px 20px' : '24px 26px', textDecoration: 'none', display: 'block',
+    }}>
+      <h2 style={{ fontSize: compacto ? 17 : 21, fontWeight: 800, color: 'var(--text)', margin: '0 0 8px', letterSpacing: '-0.3px' }}>
+        {a.titulo}
+      </h2>
+      <p style={{ fontSize: compacto ? 13.5 : 15, lineHeight: 1.6, color: 'var(--text-muted)', margin: '0 0 12px' }}>
+        {a.metaDescription}
+      </p>
+      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>
+        Ler artigo → <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>· {a.leituraMin} min</span>
+      </span>
+    </Link>
+  );
+}
+
 export default function AprendaIndex() {
   const artigos = getArtigos();
+  const artigosAmplo   = artigos.filter(a => a.categoria === 'amplo');
+  const artigosNichado = artigos.filter(a => a.categoria === 'nichado');
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -62,29 +82,27 @@ export default function AprendaIndex() {
         </div>
       </div>
 
-      {/* Lista de artigos */}
-      <div className="container" style={{ maxWidth: 820, padding: '40px 24px 80px' }}>
+      {/* Temas de interesse geral — MCMV, juros, crédito associativo etc. */}
+      <div className="container" style={{ maxWidth: 820, padding: '40px 24px 0' }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 16 }}>
-          Artigos completos
+          Os temas que mais interessam
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {artigos.map(a => (
-            <Link key={a.slug} href={`/aprenda/${a.slug}`} className="card card-hover" style={{
-              padding: '24px 26px', textDecoration: 'none', display: 'block',
-            }}>
-              <h2 style={{ fontSize: 21, fontWeight: 800, color: 'var(--text)', margin: '0 0 8px', letterSpacing: '-0.3px' }}>
-                {a.titulo}
-              </h2>
-              <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--text-muted)', margin: '0 0 12px' }}>
-                {a.metaDescription}
-              </p>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--primary)' }}>
-                Ler artigo → <span style={{ color: 'var(--text-faint)', fontWeight: 500 }}>· {a.leituraMin} min</span>
-              </span>
-            </Link>
-          ))}
+          {artigosAmplo.map(a => <ArtigoCard key={a.slug} a={a} />)}
         </div>
       </div>
+
+      {/* Temas específicos — público mais restrito (SCP, estrangeiro, HIS/HMP...) */}
+      {artigosNichado.length > 0 && (
+        <div className="container" style={{ maxWidth: 820, padding: '48px 24px 80px' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 16 }}>
+            Temas específicos
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {artigosNichado.map(a => <ArtigoCard key={a.slug} a={a} compacto />)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

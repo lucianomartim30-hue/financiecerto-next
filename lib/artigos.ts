@@ -61,6 +61,16 @@ export interface Artigo {
    * evita associar automaticamente o catálogo geral a um assunto que não é sobre isso. */
   ctaFinalImoveisOculto?: boolean;
   relacionados: string[];    // slugs de artigos relacionados
+  /** 'amplo' = tema que interessa à maioria de quem visita o site (MCMV,
+   * juros, crédito associativo...) — aparece em destaque em /aprenda.
+   * 'nichado' = público específico (SCP, estrangeiro, HIS/HMP...) — aparece
+   * numa seção separada, menos proeminente. Sem isso, /aprenda ordenava só
+   * por data de atualização, o que podia colocar um artigo nichado acima de
+   * um de interesse geral só por ter sido editado por último. */
+  categoria: 'amplo' | 'nichado';
+  /** Posição dentro da própria categoria (1 = primeiro) — controla a ordem
+   * de exibição em /aprenda dentro de cada seção. */
+  ordem: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -69,6 +79,8 @@ export interface Artigo {
 export const ARTIGOS: Artigo[] = [
   {
     slug: 'juros-evolucao-obra',
+    categoria: 'amplo',
+    ordem: 2,
     keyword: 'juros de evolução de obra',
     triggers: ['juros de evolução de obra', 'juros evolutivos', 'quanto pago durante a obra', 'prestação 0'],
     titulo: 'Juros de Evolução de Obra: o que é e quanto você paga durante a obra',
@@ -174,6 +186,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'mcmv-sbpe-sfi-qual-modalidade-escolher',
+    categoria: 'amplo',
+    ordem: 1,
     keyword: 'MCMV, SBPE ou SFI qual escolher',
     triggers: ['mcmv sbpe sfi', 'mcmv ou sbpe', 'diferença entre mcmv e sbpe', 'qual modalidade de financiamento', 'qual financiamento escolher'],
     titulo: 'MCMV, SBPE ou SFI: Qual Modalidade de Financiamento Escolher',
@@ -288,6 +302,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'sac-ou-price-qual-sistema-amortizacao-escolher',
+    categoria: 'amplo',
+    ordem: 4,
     keyword: 'SAC ou Price qual escolher',
     triggers: ['sac ou price', 'sistema de amortização', 'diferença entre sac e price'],
     titulo: 'SAC ou Price: Qual Sistema de Amortização Escolher',
@@ -367,6 +383,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'credito-associativo-como-funciona-comprar-na-planta',
+    categoria: 'amplo',
+    ordem: 3,
     keyword: 'crédito associativo como funciona',
     triggers: ['crédito associativo', 'como funciona financiar na planta', 'financiar imóvel na planta mcmv'],
     titulo: 'Crédito Associativo: Como Funciona Financiar um Imóvel na Planta',
@@ -470,6 +488,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'custos-comprar-imovel-financiado-itbi-cartorio-taxas',
+    categoria: 'amplo',
+    ordem: 6,
     keyword: 'custos para comprar imóvel financiado',
     triggers: ['itbi', 'custos para comprar imóvel', 'quanto custa o cartório', 'taxas de financiamento imobiliário'],
     titulo: 'Quanto Custa Comprar um Imóvel Financiado: ITBI, Cartório e Taxas',
@@ -573,6 +593,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'documentos-financiar-imovel-clt-autonomo-mei',
+    categoria: 'amplo',
+    ordem: 7,
     keyword: 'documentos para financiar imóvel',
     triggers: ['documentos para financiar', 'documentação clt', 'documentação autônomo', 'documentação mei financiamento'],
     titulo: 'Documentos para Financiar Imóvel: CLT, Autônomo e MEI',
@@ -661,6 +683,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'como-usar-fgts-no-financiamento',
+    categoria: 'amplo',
+    ordem: 5,
     keyword: 'como usar FGTS no financiamento',
     triggers: ['usar o fgts', 'fgts no financiamento', 'fgts futuro'],
     titulo: 'Como Usar o FGTS no Financiamento Imobiliário',
@@ -756,6 +780,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'his-hmp-o-que-sao-quem-pode-comprar',
+    categoria: 'nichado',
+    ordem: 1,
     keyword: 'HIS e HMP o que são',
     triggers: ['o que é his', 'o que é hmp', 'his hmp'],
     titulo: 'HIS e HMP: O Que São, Quem Pode Comprar e Regras de Revenda e Aluguel',
@@ -868,6 +894,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'imoveis-nr-nao-residencial-o-que-e-quem-pode-comprar',
+    categoria: 'nichado',
+    ordem: 2,
     keyword: 'imóvel NR o que é',
     triggers: ['imóvel nr', 'o que é não residencial', 'sala comercial financiar'],
     titulo: 'Imóveis NR (Não Residencial): O Que São e Quem Pode Comprar',
@@ -960,6 +988,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'brasileiro-no-exterior-financiar-imovel',
+    categoria: 'nichado',
+    ordem: 3,
     keyword: 'financiar imóvel no Brasil morando no exterior',
     triggers: ['brasileiro no exterior', 'brasileiro morando fora', 'morando nos eua financiar imóvel', 'morando no exterior comprar imóvel', 'renda no exterior financiamento'],
     titulo: 'Brasileiro no Exterior Pode Financiar Imóvel no Brasil? Guia Completo',
@@ -1049,6 +1079,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'estrangeiro-comprar-imovel-brasil-golden-visa',
+    categoria: 'nichado',
+    ordem: 4,
     keyword: 'estrangeiro comprar imóvel no Brasil',
     triggers: ['estrangeiro comprar imóvel', 'golden visa', 'visto de investidor imobiliário', 'estrangeiro financiar imóvel no brasil'],
     titulo: 'Estrangeiro Pode Comprar Imóvel no Brasil? CPF, Financiamento e Golden Visa',
@@ -1138,6 +1170,8 @@ export const ARTIGOS: Artigo[] = [
   },
   {
     slug: 'scp-sociedade-conta-participacao-imobiliaria',
+    categoria: 'nichado',
+    ordem: 5,
     keyword: 'SCP imobiliária',
     triggers: ['scp', 'sociedade em conta de participação', 'sócio ostensivo', 'sócio participante', 'imóvel por scp', 'investir por scp', 'esse empreendimento usa scp'],
     titulo: 'Sociedade em Conta de Participação (SCP) no mercado imobiliário',
@@ -1316,7 +1350,13 @@ export function getArtigo(slug: string): Artigo | undefined {
 }
 
 export function getArtigos(): Artigo[] {
-  return [...ARTIGOS].sort((a, b) => (a.atualizado < b.atualizado ? 1 : -1));
+  // Amplo antes de nichado, e dentro de cada categoria pela ordem definida em
+  // cada artigo — não por data de atualização, que colocava artigo nichado
+  // acima de um de interesse geral só por ter sido editado por último.
+  return [...ARTIGOS].sort((a, b) => {
+    if (a.categoria !== b.categoria) return a.categoria === 'amplo' ? -1 : 1;
+    return a.ordem - b.ordem;
+  });
 }
 
 /**
