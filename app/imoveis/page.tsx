@@ -207,6 +207,12 @@ function ImoveisContent() {
   // qual cidade o empreendimento fica, então busca no catálogo inteiro.
   const [searchMode, setSearchMode] = useState<'local' | 'imovel' | 'empresa'>('local');
 
+  // Quando a busca por Imóvel/Empresa dá resultado em mais de uma cidade
+  // (ex.: "Cyrela" tem obras em Porto Alegre E em São Paulo), pede pra
+  // pessoa escolher a região antes de filtrar/enquadrar o mapa — sem isso,
+  // o mapa mostrava tudo junto misturado, o que não ajuda ninguém.
+  const [cidadeResultado, setCidadeResultado] = useState<string | null>(null);
+
   // Cidade escolhida para a busca por bairro — sempre um valor concreto (nunca
   // "todas"), pra que o bairro digitado/selecionado só possa casar com imóveis
   // dessa cidade. Ver CIDADES_BUSCA acima.
@@ -453,9 +459,11 @@ function ImoveisContent() {
     // errado no mapa/lista.
     if (activeLocation && searchMode === 'imovel') {
       if (!normStr(b.name || '').includes(normStr(activeLocation))) return false;
+      if (cidadeResultado && normStr(b.city || '') !== normStr(cidadeResultado)) return false;
     }
     else if (activeLocation && searchMode === 'empresa') {
       if (!normStr(b.developer || '').includes(normStr(activeLocation))) return false;
+      if (cidadeResultado && normStr(b.city || '') !== normStr(cidadeResultado)) return false;
     }
     else if (activeLocation) {
       if (normStr(b.city || '') !== normStr(searchCity)) return false;
@@ -502,7 +510,7 @@ function ImoveisContent() {
     }
     if (filterTipologia && !(b.property_types || []).includes(filterTipologia)) return false;
     return true;
-  }, [activeLocation, searchCity, searchMode, geoAtivo, geoCities, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
+  }, [activeLocation, searchCity, searchMode, cidadeResultado, geoAtivo, geoCities, filterMin, filterMax, filterBedrooms, filterVagas, filterBaths, filterAreaMin, filterAreaMax, filterStatus, filterFinality, filterTipologia]);
 
   // Conta quantos imóveis existem para cada tipo de finalidade no catálogo
   const finalityCounts = useMemo(() => {
@@ -624,16 +632,22 @@ function ImoveisContent() {
     if (searchMode === 'imovel' || searchMode === 'empresa') {
       setActiveLocation(query.trim());
       setDisplayCount(12);
+      setCidadeResultado(null); // nova busca — qualquer escolha de cidade anterior não vale mais
       const qNorm = normStr(query);
       const campo = (b: Imovel) => searchMode === 'imovel' ? b.name : (b.developer || '');
-      // Sem restrição de cidade, os resultados podem estar espalhados pelo
-      // Brasil inteiro (ex.: "Vivaz" tem torres em SP e em Porto Alegre) —
-      // por isso enquadra TODOS os resultados com coordenada (fitBounds),
-      // em vez de voar pro primeiro item do array (que já causou o mapa
-      // abrir numa cidade errada enquanto os cards mostravam outra).
-      const matches = allBuildings.filter(b => b.lat && b.lng && normStr(campo(b)).includes(qNorm));
+      const matches = allBuildings.filter(b => normStr(campo(b)).includes(qNorm));
+      const comCoord = matches.filter(b => b.lat && b.lng);
       import('@/lib/gtag').then(m => m.trackBusca({ termo: `${query} (${searchMode})`, resultados: matches.length }));
-      if (matches.length > 0) mapRef.current?.fitBounds(matches.map(b => ({ lat: b.lat!, lng: b.lng! })));
+      // Sem restrição de cidade, os resultados podem estar espalhados pelo
+      // Brasil inteiro (ex.: "Cyrela" tem obras em Porto Alegre E em São
+      // Paulo). Com mais de uma cidade, não dá pra enquadrar tudo junto de
+      // forma útil — deixa o mapa como está e mostra o seletor de cidade
+      // (ver cidadesDoResultado) pra pessoa escolher a região antes. Com
+      // só uma cidade, enquadra direto, sem esse passo extra.
+      const cidadesDistintas = new Set(comCoord.map(b => normStr(b.city || '')));
+      if (cidadesDistintas.size <= 1 && comCoord.length > 0) {
+        mapRef.current?.fitBounds(comCoord.map(b => ({ lat: b.lat!, lng: b.lng! })));
+      }
       return;
     }
 
@@ -674,6 +688,31 @@ function ImoveisContent() {
     finally { setGeocoding(false); }
   }, [allBuildings, searchCity, searchMode]);
 
+  // Cidades presentes no resultado atual de Imóvel/Empresa — alimenta o
+  // seletor de região (só aparece quando há mais de uma cidade e a pessoa
+  // ainda não escolheu nenhuma).
+  const cidadesDoResultado = useMemo(() => {
+    if (searchMode === 'local' || !activeLocation) return [] as { city: string; count: number }[];
+    const qNorm = normStr(activeLocation);
+    const campo = (b: Imovel) => searchMode === 'imovel' ? b.name : (b.developer || '');
+    const counts = new Map<string, number>();
+    allBuildings.forEach(b => {
+      if (b.city && normStr(campo(b)).includes(qNorm)) {
+        counts.set(b.city, (counts.get(b.city) || 0) + 1);
+      }
+    });
+    return [...counts.entries()].map(([city, count]) => ({ city, count })).sort((a, b) => b.count - a.count);
+  }, [activeLocation, searchMode, allBuildings]);
+
+  const escolherCidadeResultado = useCallback((city: string) => {
+    setCidadeResultado(city);
+    setDisplayCount(12);
+    const qNorm = normStr(activeLocation);
+    const campo = (b: Imovel) => searchMode === 'imovel' ? b.name : (b.developer || '');
+    const matches = allBuildings.filter(b => b.lat && b.lng && normStr(campo(b)).includes(qNorm) && normStr(b.city || '') === normStr(city));
+    if (matches.length > 0) mapRef.current?.fitBounds(matches.map(b => ({ lat: b.lat!, lng: b.lng! })));
+  }, [activeLocation, searchMode, allBuildings]);
+
   // Commit de busca a partir do modal mobile
   const commitMobileSearch = useCallback((name: string) => {
     setShowMobileSearch(false);
@@ -691,7 +730,7 @@ function ImoveisContent() {
   }, [minInput, maxInput, areaMinInput, areaMaxInput]);
 
   const clearAll = useCallback(() => {
-    setActiveLocation(''); setSearch(''); setSearchMode('local');
+    setActiveLocation(''); setSearch(''); setSearchMode('local'); setCidadeResultado(null);
     setCidadeSemBairro(false); setSearchCity('São Paulo');
     setFilterStatus(''); setFilterFinality(''); setFilterTipologia(''); setFilterMin(0); setFilterMax(0);
     setFilterBedrooms(0); setFilterVagas(0); setFilterBaths(0);
@@ -860,7 +899,7 @@ function ImoveisContent() {
               { id: 'empresa' as const, label: '🏗 Empresa' },
             ]).map(({ id, label }) => (
               <button key={id}
-                onClick={() => { setSearchMode(id); setMobileSearchInput(''); }}
+                onClick={() => { setSearchMode(id); setMobileSearchInput(''); setActiveLocation(''); setSearch(''); setCidadeResultado(null); }}
                 style={{
                   flex: 1, height: '34px', borderRadius: '8px',
                   border: `1.5px solid ${searchMode === id ? 'var(--primary)' : '#e5e7eb'}`,
@@ -1122,7 +1161,7 @@ function ImoveisContent() {
                   { id: 'empresa' as const, label: '🏗 Empresa' },
                 ]).map(({ id, label }, i) => (
                   <button key={id}
-                    onClick={() => { setSearchMode(id); setSearch(''); setActiveLocation(''); setShowSuggestions(false); }}
+                    onClick={() => { setSearchMode(id); setSearch(''); setActiveLocation(''); setShowSuggestions(false); setCidadeResultado(null); }}
                     style={{
                       height: '34px', padding: '0 18px', border: 'none',
                       borderRight: i < 2 ? '1px solid rgba(255,255,255,.15)' : 'none',
@@ -1156,7 +1195,7 @@ function ImoveisContent() {
                   </span>
                   <input
                     type="text" value={search}
-                    onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) setActiveLocation(''); }}
+                    onChange={e => { setSearch(e.target.value); setShowSuggestions(true); if (!e.target.value) { setActiveLocation(''); setCidadeResultado(null); } }}
                     placeholder={
                       searchMode === 'imovel' ? 'Nome do empreendimento...' :
                       searchMode === 'empresa' ? 'Nome da construtora...' :
@@ -1174,7 +1213,7 @@ function ImoveisContent() {
                 </div>
                 {search && (
                   <button
-                    onClick={() => { setSearch(''); setActiveLocation(''); setShowSuggestions(false); inputRef.current?.focus(); }}
+                    onClick={() => { setSearch(''); setActiveLocation(''); setCidadeResultado(null); setShowSuggestions(false); inputRef.current?.focus(); }}
                     style={{ width: '22px', height: '34px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: '-4px' }}
                   >×</button>
                 )}
@@ -1208,10 +1247,25 @@ function ImoveisContent() {
 
         {/* Chip de localização/imóvel/empresa ativa */}
         {activeLocation && (
-          <button onClick={() => { setActiveLocation(''); setSearch(''); }}
+          <button onClick={() => { setActiveLocation(''); setSearch(''); setCidadeResultado(null); }}
             style={{ height: '36px', padding: '0 10px', borderRadius: '18px', border: '1.5px solid #60a5fa', background: 'rgba(96,165,250,.15)', color: '#60a5fa', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {searchMode === 'imovel' ? '🏢' : searchMode === 'empresa' ? '🏗' : '📍'} {activeLocation} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
+            {searchMode === 'imovel' ? '🏢' : searchMode === 'empresa' ? '🏗' : '📍'} {activeLocation}{cidadeResultado ? ` · ${cidadeResultado}` : ''} <span style={{ fontSize: '14px', lineHeight: 1 }}>×</span>
           </button>
+        )}
+
+        {/* Seletor de cidade/região do resultado — só aparece quando a busca
+            por Imóvel/Empresa deu resultado em mais de uma cidade e a pessoa
+            ainda não escolheu nenhuma. */}
+        {activeLocation && searchMode !== 'local' && !cidadeResultado && cidadesDoResultado.length > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,.65)', fontWeight: '600', whiteSpace: 'nowrap' }}>Em qual cidade?</span>
+            {cidadesDoResultado.map(({ city, count }) => (
+              <button key={city} onClick={() => escolherCidadeResultado(city)}
+                style={{ height: '30px', padding: '0 10px', borderRadius: '15px', border: '1.5px solid rgba(96,165,250,.5)', background: 'rgba(96,165,250,.12)', color: '#93c5fd', fontSize: '12px', fontWeight: '700', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                {city} <span style={{ opacity: 0.75, fontWeight: 400 }}>({count})</span>
+              </button>
+            ))}
+          </div>
         )}
 
         {/* Chip de cidade escolhida (sem bairro específico) */}
@@ -1324,8 +1378,8 @@ function ImoveisContent() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)' }}>
               {loading ? 'Carregando...' : `${headlineCount.toLocaleString('pt-BR')} imóveis${
-                activeLocation && searchMode === 'imovel'  ? ` do empreendimento "${activeLocation}"` :
-                activeLocation && searchMode === 'empresa' ? ` da construtora "${activeLocation}"` :
+                activeLocation && searchMode === 'imovel'  ? ` do empreendimento "${activeLocation}"${cidadeResultado ? ` em ${cidadeResultado}` : ''}` :
+                activeLocation && searchMode === 'empresa' ? ` da construtora "${activeLocation}"${cidadeResultado ? ` em ${cidadeResultado}` : ''}` :
                 activeLocation ? ` em ${activeLocation}` :
                 cidadeSemBairro ? ` em ${searchCity}` :
                 ''
@@ -1383,8 +1437,8 @@ function ImoveisContent() {
                 {loading ? 'Carregando...' : `${headlineCount.toLocaleString('pt-BR')} imóveis`}
                 {(activeLocation || cidadeSemBairro) && (
                   <span style={{ fontSize: '12px', color: '#9ca3af', fontWeight: '400', marginLeft: '6px' }}>
-                    {activeLocation && searchMode === 'imovel'  ? `empreendimento "${activeLocation}"` :
-                     activeLocation && searchMode === 'empresa' ? `construtora "${activeLocation}"` :
+                    {activeLocation && searchMode === 'imovel'  ? `empreendimento "${activeLocation}"${cidadeResultado ? ` em ${cidadeResultado}` : ''}` :
+                     activeLocation && searchMode === 'empresa' ? `construtora "${activeLocation}"${cidadeResultado ? ` em ${cidadeResultado}` : ''}` :
                      activeLocation ? `em ${activeLocation}, ${searchCity}` : `em ${searchCity}`}
                   </span>
                 )}
