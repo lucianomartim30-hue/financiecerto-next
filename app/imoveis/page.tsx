@@ -626,10 +626,14 @@ function ImoveisContent() {
       setDisplayCount(12);
       const qNorm = normStr(query);
       const campo = (b: Imovel) => searchMode === 'imovel' ? b.name : (b.developer || '');
-      const resultados = allBuildings.filter(b => normStr(campo(b)).includes(qNorm)).length;
-      import('@/lib/gtag').then(m => m.trackBusca({ termo: `${query} (${searchMode})`, resultados }));
-      const match = allBuildings.find(b => b.lat && b.lng && normStr(campo(b)).includes(qNorm));
-      if (match) mapRef.current?.flyTo(match.lat!, match.lng!, 13);
+      // Sem restrição de cidade, os resultados podem estar espalhados pelo
+      // Brasil inteiro (ex.: "Vivaz" tem torres em SP e em Porto Alegre) —
+      // por isso enquadra TODOS os resultados com coordenada (fitBounds),
+      // em vez de voar pro primeiro item do array (que já causou o mapa
+      // abrir numa cidade errada enquanto os cards mostravam outra).
+      const matches = allBuildings.filter(b => b.lat && b.lng && normStr(campo(b)).includes(qNorm));
+      import('@/lib/gtag').then(m => m.trackBusca({ termo: `${query} (${searchMode})`, resultados: matches.length }));
+      if (matches.length > 0) mapRef.current?.fitBounds(matches.map(b => ({ lat: b.lat!, lng: b.lng! })));
       return;
     }
 
@@ -1120,11 +1124,11 @@ function ImoveisContent() {
                   <button key={id}
                     onClick={() => { setSearchMode(id); setSearch(''); setActiveLocation(''); setShowSuggestions(false); }}
                     style={{
-                      height: '34px', padding: '0 10px', border: 'none',
+                      height: '34px', padding: '0 18px', border: 'none',
                       borderRight: i < 2 ? '1px solid rgba(255,255,255,.15)' : 'none',
                       background: searchMode === id ? 'rgba(96,165,250,.25)' : 'rgba(255,255,255,.06)',
                       color: searchMode === id ? '#60a5fa' : 'rgba(255,255,255,.7)',
-                      fontSize: '12px', fontWeight: searchMode === id ? '700' : '500',
+                      fontSize: '13px', fontWeight: searchMode === id ? '700' : '500',
                       cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
                     }}
                   >{label}</button>

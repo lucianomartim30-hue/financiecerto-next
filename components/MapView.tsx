@@ -21,6 +21,11 @@ export type Bounds = {
 
 export interface MapViewHandle {
   flyTo: (lat: number, lng: number, zoom?: number) => void;
+  // Enquadra todos os pontos passados na tela (em vez de voar pra um só) —
+  // necessário pra buscas por empreendimento/construtora, que não são
+  // restritas a uma cidade e podem ter resultados espalhados pelo Brasil
+  // (ex.: "Vivaz" tem torres em São Paulo E em Porto Alegre).
+  fitBounds: (points: { lat: number; lng: number }[]) => void;
 }
 
 interface MapViewProps {
@@ -66,6 +71,22 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(function MapView(
   useImperativeHandle(ref, () => ({
     flyTo(lat: number, lng: number, zoom = 14) {
       mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 1000 });
+    },
+    fitBounds(points: { lat: number; lng: number }[]) {
+      if (!mapRef.current || points.length === 0) return;
+      if (points.length === 1) {
+        mapRef.current.flyTo({ center: [points[0].lng, points[0].lat], zoom: 14, duration: 1000 });
+        return;
+      }
+      let minLat = points[0].lat, maxLat = points[0].lat;
+      let minLng = points[0].lng, maxLng = points[0].lng;
+      for (const p of points) {
+        if (p.lat < minLat) minLat = p.lat;
+        if (p.lat > maxLat) maxLat = p.lat;
+        if (p.lng < minLng) minLng = p.lng;
+        if (p.lng > maxLng) maxLng = p.lng;
+      }
+      mapRef.current.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, maxZoom: 14, duration: 1000 });
     },
   }));
 
