@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
   }
   const body = await req.json().catch(() => ({}));
-  const { buildingId, unidade, tipo, areaM2, quartos, vagas, andar, precoOriginal, precoPromocional, beneficio, validoAte, observacao } = body ?? {};
+  const { buildingId, unidade, tipo, areaM2, quartos, vagas, andar, precoOriginal, precoPromocional, ultimaUnidade, beneficio, validoAte, observacao } = body ?? {};
 
   if (!buildingId || typeof precoPromocional !== 'number' || precoPromocional <= 0) {
     return NextResponse.json({ error: 'Dados incompletos — buildingId e precoPromocional são obrigatórios.' }, { status: 400 });
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     andar:         andar ? String(andar) : undefined,
     precoOriginal: typeof precoOriginal === 'number' && precoOriginal > 0 ? precoOriginal : undefined,
     precoPromocional,
+    ultimaUnidade: ultimaUnidade === true ? true : undefined,
     beneficio:     beneficio ? String(beneficio) : undefined,
     validoAte:     validoAte ? String(validoAte) : undefined,
     observacao:    observacao ? String(observacao) : undefined,

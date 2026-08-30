@@ -38,6 +38,7 @@ interface Imovel {
     vagas?: number;
     precoOriginal?: number;
     precoPromocional: number;
+    ultimaUnidade?: boolean;
     beneficio?: string;
   }[];
 }
@@ -176,7 +177,9 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
                     )}
                     {specs && <p style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>{specs}</p>}
                     {p.beneficio && <p style={{ fontSize: '9px', color: '#b91c1c', fontWeight: '600', marginTop: '1px' }}>🎁 {p.beneficio}</p>}
-                    {temDesconto && (
+                    {p.ultimaUnidade ? (
+                      <p style={{ fontSize: '9px', color: '#b91c1c', fontWeight: '700', marginTop: '1px' }}>🏁 Última unidade disponível dessa característica!</p>
+                    ) : temDesconto && (
                       <p style={{ fontSize: '9px', color: 'var(--text-faint)', marginTop: '1px' }}>Demais unidades dessa característica a partir de {formatBRL(p.precoOriginal!)}</p>
                     )}
                   </div>

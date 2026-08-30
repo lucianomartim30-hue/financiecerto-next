@@ -83,6 +83,7 @@ interface ImovelDetalhe {
     vagas?: number;
     precoOriginal?: number;
     precoPromocional: number;
+    ultimaUnidade?: boolean;
     beneficio?: string;
     validoAte?: string;
     observacao?: string;
@@ -1968,7 +1969,9 @@ export default function ImovelDetailClient({ id }: { id: string }) {
                 )}
                 {specs && <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.85)', marginTop: '4px' }}>{specs}</p>}
                 {p.beneficio && <p style={{ fontSize: '13px', color: '#fff', fontWeight: '600', marginTop: '6px' }}>🎁 {p.beneficio}</p>}
-                {temDesconto && (
+                {p.ultimaUnidade ? (
+                  <p style={{ fontSize: '11px', color: '#fef08a', fontWeight: '800', marginTop: '4px' }}>🏁 Última unidade disponível dessa característica!</p>
+                ) : temDesconto && (
                   <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.75)', marginTop: '4px' }}>Demais unidades dessa característica a partir de {formatBRL(p.precoOriginal!)} (tabela da construtora)</p>
                 )}
                 {p.observacao && <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.75)', marginTop: '4px' }}>{p.observacao}</p>}

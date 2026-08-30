@@ -91,10 +91,11 @@ export default function AdminPromocoesPage() {
   const [beneficio, setBeneficio] = useState('');
   const [validoAte, setValidoAte] = useState('');
   const [observacao, setObservacao] = useState('');
+  const [ultimaUnidade, setUltimaUnidade] = useState(false);
 
   const limparFormulario = () => {
     setUnidade(''); setTipo(''); setAreaM2(''); setQuartos(''); setVagas(''); setAndar(''); setPrecoOriginal(''); setPrecoPromocional('');
-    setBeneficio(''); setValidoAte(''); setObservacao('');
+    setBeneficio(''); setValidoAte(''); setObservacao(''); setUltimaUnidade(false);
   };
 
   const carregar = useCallback(async () => {
@@ -138,6 +139,7 @@ export default function AdminPromocoesPage() {
           andar: andar.trim() || undefined,
           precoOriginal: precoOriginal ? Number(precoOriginal.replace(/\D/g, '')) : undefined,
           precoPromocional: preco,
+          ultimaUnidade: ultimaUnidade || undefined,
           beneficio: beneficio.trim() || undefined,
           validoAte: validoAte || undefined,
           observacao: observacao.trim() || undefined,
@@ -222,6 +224,7 @@ export default function AdminPromocoesPage() {
                             {[p.andar, p.quartos !== undefined ? `${p.quartos} qt${p.quartos === 1 ? '' : 's'}` : null, p.vagas !== undefined ? `${p.vagas} vg` : null].filter(Boolean).join(' · ')}
                           </p>
                         )}
+                        {p.ultimaUnidade && <p style={{ fontSize: '11px', color: '#dc2626', fontWeight: '700', marginTop: '2px' }}>🏁 Última unidade dessa característica</p>}
                         {p.beneficio && <p style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '600', marginTop: '2px' }}>🎁 {p.beneficio}</p>}
                         {p.validoAte && <p style={{ fontSize: '11px', color: vencida ? '#dc2626' : 'var(--text-faint)', marginTop: '2px' }}>{vencida ? 'Vencida em' : 'Válido até'} {new Date(p.validoAte + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
                         {p.observacao && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '2px' }}>{p.observacao}</p>}
@@ -281,6 +284,10 @@ export default function AdminPromocoesPage() {
                 <input value={precoPromocional} onChange={e => setPrecoPromocional(e.target.value)} placeholder="649000" style={inputStyle} />
               </div>
             </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', fontSize: '13px', color: 'var(--text)', cursor: 'pointer' }}>
+              <input type="checkbox" checked={ultimaUnidade} onChange={e => setUltimaUnidade(e.target.checked)} style={{ width: '16px', height: '16px' }} />
+              É a última unidade dessa característica no empreendimento? (some a frase "demais unidades a partir de X", que ficaria falsa)
+            </label>
             <div style={{ marginBottom: '10px' }}>
               <label style={labelStyle}>Benefício</label>
               <input value={beneficio} onChange={e => setBeneficio(e.target.value)} placeholder="6 meses de condomínio grátis" style={inputStyle} />
