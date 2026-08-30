@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import type { Lead as LeadBase, LeadStatus } from '@/lib/leads-kv';
+import type { RegistroAnonimo } from '@/lib/rastreio-kv';
 
 // GET /api/leads enriquece cada lead com o histórico do visitante (fc_vid) —
 // ver kvGetVisitante em lib/visitantes-kv.ts — quando o navegador já se
@@ -80,6 +81,69 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
+// ─── Rastreio de visitante anônimo (ver lib/rastreio-kv.ts) ──────────────────
+function tempoAtras(iso: string): string {
+  const min = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (min < 60) return `há ${min} min`;
+  const h = Math.round(min / 60);
+  if (h < 24) return `há ${h}h`;
+  const d = Math.round(h / 24);
+  return `há ${d}d`;
+}
+
+function CartaoRastreio({ r, catalogo }: { r: RegistroAnonimo; catalogo: Record<string, { name: string }> }) {
+  return (
+    <div style={{ padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: '10px', background: 'var(--bg-card)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '10px' }}>
+        <p style={{ fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{r.id.slice(0, 8)}…</p>
+        <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>última visita {tempoAtras(r.ultimaVisita)}</p>
+      </div>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+        {r.visitouSimulador && (
+          <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', background: 'rgba(37,99,235,.1)', color: 'var(--primary)' }}>🧮 simulou</span>
+        )}
+        {r.imoveisVistos.length > 0 && (
+          <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', background: 'rgba(22,163,74,.1)', color: '#16a34a' }}>🏠 viu {r.imoveisVistos.length} imóve{r.imoveisVistos.length === 1 ? 'l' : 'is'}</span>
+        )}
+        {r.visitouListagemImoveis && r.imoveisVistos.length === 0 && (
+          <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', background: 'rgba(107,114,128,.12)', color: 'var(--text-muted)' }}>📋 só listagem</span>
+        )}
+      </div>
+      {r.imoveisVistos.length > 0 && (
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+          {r.imoveisVistos.map(id => (
+            <a key={id} href={`/imoveis/${id}`} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '2px 6px' }}>
+              {catalogo[id]?.name || `#${id}`} ↗
+            </a>
+          ))}
+        </div>
+      )}
+      <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginTop: '8px' }}>primeira visita {tempoAtras(r.primeiraVisita)} · {r.totalEventos} evento{r.totalEventos === 1 ? '' : 's'}</p>
+    </div>
+  );
+}
+
+function SecaoRastreio({ titulo, descricao, registros, catalogo }: { titulo: string; descricao: string; registros: RegistroAnonimo[]; catalogo: Record<string, { name: string }> }) {
+  if (registros.length === 0) return null;
+  return (
+    <div style={{ marginBottom: '24px' }}>
+      <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: '2px' }}>{titulo} <span style={{ color: 'var(--text-faint)', fontWeight: '600' }}>({registros.length})</span></p>
+      <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '10px' }}>{descricao}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {registros.map(r => <CartaoRastreio key={r.id} r={r} catalogo={catalogo} />)}
+      </div>
+    </div>
+  );
+}
+
+type DadosRastreio = {
+  total: number;
+  altaIntencao: RegistroAnonimo[];
+  potenciais: RegistroAnonimo[];
+  interessados: RegistroAnonimo[];
+  soListagem: RegistroAnonimo[];
+};
+
 // ─── Painel principal ───────────────────────────────────────────────────────
 export default function AdminLeadsPage() {
   const [authed, setAuthed]   = useState<boolean | null>(null); // null = checando
@@ -89,6 +153,11 @@ export default function AdminLeadsPage() {
   // Nome/link dos imóveis favoritados (lead.favoritosIds só guarda IDs) — resolvido
   // uma vez contra o catálogo público, igual à página /favoritos.
   const [catalogo, setCatalogo] = useState<Record<string, { name: string }>>({});
+
+  // Aba "Rastreio" — visitante anônimo que ainda não virou lead (ver lib/rastreio-kv.ts).
+  const [aba, setAba] = useState<'leads' | 'rastreio'>('leads');
+  const [rastreio, setRastreio] = useState<DadosRastreio | null>(null);
+  const [carregandoRastreio, setCarregandoRastreio] = useState(false);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -113,6 +182,17 @@ export default function AdminLeadsPage() {
       })
       .catch(() => {});
   }, [authed]);
+
+  // Carrega o rastreio só quando a aba é aberta pela primeira vez.
+  useEffect(() => {
+    if (aba !== 'rastreio' || rastreio || carregandoRastreio) return;
+    setCarregandoRastreio(true);
+    fetch('/api/admin/rastreio')
+      .then(r => r.json())
+      .then(setRastreio)
+      .catch(() => {})
+      .finally(() => setCarregandoRastreio(false));
+  }, [aba, rastreio, carregandoRastreio]);
 
   async function atualizarStatus(id: string, status: LeadStatus) {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l)); // otimista
@@ -157,11 +237,47 @@ export default function AdminLeadsPage() {
             {leads.length} lead{leads.length !== 1 ? 's' : ''} registrado{leads.length !== 1 ? 's' : ''} automaticamente (clique no WhatsApp ou formulário de contato)
           </p>
         </div>
-        <button onClick={carregar} style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text-muted)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+        <button onClick={() => aba === 'leads' ? carregar() : setRastreio(null)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text-muted)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
           ↻ Atualizar
         </button>
       </div>
 
+      {/* Abas */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+        <button onClick={() => setAba('leads')} style={{
+          padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+          border: `1.5px solid ${aba === 'leads' ? 'var(--primary)' : 'var(--border)'}`,
+          background: aba === 'leads' ? 'var(--primary-light)' : 'var(--bg)',
+          color: aba === 'leads' ? 'var(--primary)' : 'var(--text-muted)',
+        }}>📋 Leads ({leads.length})</button>
+        <button onClick={() => setAba('rastreio')} style={{
+          padding: '8px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+          border: `1.5px solid ${aba === 'rastreio' ? 'var(--primary)' : 'var(--border)'}`,
+          background: aba === 'rastreio' ? 'var(--primary-light)' : 'var(--bg)',
+          color: aba === 'rastreio' ? 'var(--primary)' : 'var(--text-muted)',
+        }}>👣 Rastreio anônimo{rastreio ? ` (${rastreio.total})` : ''}</button>
+      </div>
+
+      {aba === 'rastreio' ? (
+        <div>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+            Quem navegou no site nos últimos 60 dias sem nunca ter clicado no WhatsApp ou preenchido um formulário — ainda não é um lead formal, mas o comportamento já indica intenção. Identificado só por um id de navegador, sem nome nem contato.
+          </p>
+          {carregandoRastreio && !rastreio && <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Carregando…</p>}
+          {rastreio && rastreio.total === 0 && (
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Nenhum visitante anônimo registrado ainda.</p>
+          )}
+          {rastreio && (
+            <>
+              <SecaoRastreio titulo="🔥 Alta intenção" descricao="Simulou financiamento e já abriu página de imóvel — o perfil mais quente que ainda não converteu." registros={rastreio.altaIntencao} catalogo={catalogo} />
+              <SecaoRastreio titulo="🧮 Simulou mas não viu nenhum imóvel" descricao="Calculou o financiamento, mas ainda não abriu nenhuma página de imóvel específico." registros={rastreio.potenciais} catalogo={catalogo} />
+              <SecaoRastreio titulo="🏠 Viu imóveis mas não simulou" descricao="Interessado em imóveis específicos, mas ainda não calculou se cabe no bolso." registros={rastreio.interessados} catalogo={catalogo} />
+              <SecaoRastreio titulo="📋 Só passou pela listagem" descricao="Abriu a vitrine de imóveis mas não entrou em nenhum card nem simulou — sinal mais fraco." registros={rastreio.soListagem} catalogo={catalogo} />
+            </>
+          )}
+        </div>
+      ) : (
+      <>
       {/* Filtro por status */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
         <button onClick={() => setFiltro('todos')} style={{
@@ -330,6 +446,8 @@ export default function AdminLeadsPage() {
           </div>
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }
