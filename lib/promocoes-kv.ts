@@ -16,6 +16,7 @@
 export interface Promocao {
   id: string;               // gerado na criação, usado pra editar/remover
   unidade?: string;         // "605" — número/identificação da unidade em destaque
+  tipo?: string;            // "Garden" | "Duplex" | "Studio" | "Apartamento" | "Sala" — precisa ficar visível, muda a expectativa de quem vê (ex: Garden não é apartamento comum)
   areaM2?: number;          // 28 — pública: ajuda a pessoa a entender o que está levando
   quartos?: number;         // dormitórios da unidade em promoção
   vagas?: number;           // vagas de garagem da unidade em promoção

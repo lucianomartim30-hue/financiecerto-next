@@ -76,6 +76,7 @@ interface ImovelDetalhe {
   promocoes?: {
     id: string;
     unidade?: string;
+    tipo?: string;
     andar?: string;
     areaM2?: number;
     quartos?: number;
@@ -1949,9 +1950,9 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             return (
             <div key={p.id} style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderRadius: '14px', padding: '16px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
               <div>
-                {(p.unidade || p.andar) && (
+                {(p.tipo || p.unidade || p.andar) && (
                   <p style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,.85)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '4px' }}>
-                    {[p.unidade ? `Apto ${p.unidade}` : null, p.andar].filter(Boolean).join(', ')}
+                    {[p.tipo, p.unidade ? `Apto ${p.unidade}` : null, p.andar].filter(Boolean).join(', ')}
                   </p>
                 )}
                 <p style={{ fontSize: '22px', fontWeight: '900', color: '#fff', lineHeight: 1 }}>

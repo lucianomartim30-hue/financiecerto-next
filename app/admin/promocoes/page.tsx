@@ -81,6 +81,7 @@ export default function AdminPromocoesPage() {
   const [removendo, setRemovendo] = useState<string | null>(null);
 
   const [unidade, setUnidade] = useState('');
+  const [tipo, setTipo] = useState('');
   const [areaM2, setAreaM2] = useState('');
   const [quartos, setQuartos] = useState('');
   const [vagas, setVagas] = useState('');
@@ -92,7 +93,7 @@ export default function AdminPromocoesPage() {
   const [observacao, setObservacao] = useState('');
 
   const limparFormulario = () => {
-    setUnidade(''); setAreaM2(''); setQuartos(''); setVagas(''); setAndar(''); setPrecoOriginal(''); setPrecoPromocional('');
+    setUnidade(''); setTipo(''); setAreaM2(''); setQuartos(''); setVagas(''); setAndar(''); setPrecoOriginal(''); setPrecoPromocional('');
     setBeneficio(''); setValidoAte(''); setObservacao('');
   };
 
@@ -130,6 +131,7 @@ export default function AdminPromocoesPage() {
         body: JSON.stringify({
           buildingId: id,
           unidade: unidade.trim() || undefined,
+          tipo: tipo.trim() || undefined,
           areaM2: areaM2 ? Number(areaM2) : undefined,
           quartos: quartos ? Number(quartos) : undefined,
           vagas: vagas ? Number(vagas) : undefined,
@@ -213,7 +215,7 @@ export default function AdminPromocoesPage() {
                             <span style={{ fontWeight: '500', color: 'var(--text-faint)', textDecoration: 'line-through', marginRight: '6px' }}>{formatBRL(p.precoOriginal)}</span>
                           )}
                           {formatBRL(p.precoPromocional)}
-                          {p.unidade && <span style={{ fontWeight: '500', color: 'var(--text-muted)' }}> — unidade {p.unidade}{p.areaM2 ? ` (${p.areaM2}m²)` : ''}</span>}
+                          {(p.tipo || p.unidade) && <span style={{ fontWeight: '500', color: 'var(--text-muted)' }}> — {p.tipo ? `${p.tipo} ` : ''}{p.unidade ? `unidade ${p.unidade}` : ''}{p.areaM2 ? ` (${p.areaM2}m²)` : ''}</span>}
                         </p>
                         {(p.andar || p.quartos !== undefined || p.vagas !== undefined) && (
                           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
@@ -250,6 +252,10 @@ export default function AdminPromocoesPage() {
                 <label style={labelStyle}>Andar</label>
                 <input value={andar} onChange={e => setAndar(e.target.value)} placeholder="6º andar" style={inputStyle} />
               </div>
+            </div>
+            <div style={{ marginBottom: '10px' }}>
+              <label style={labelStyle}>Tipo (Garden, Duplex, Studio... deixe em branco se for apartamento comum)</label>
+              <input value={tipo} onChange={e => setTipo(e.target.value)} placeholder="Garden" style={inputStyle} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               <div>

@@ -31,6 +31,7 @@ interface Imovel {
   delivery_date: string | null;
   promocoes_destaque?: {
     unidade?: string;
+    tipo?: string;
     andar?: string;
     areaM2?: number;
     quartos?: number;
@@ -164,8 +165,8 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
                         <span style={{ fontSize: '9px', fontWeight: '600', color: '#991b1b', textDecoration: 'line-through', marginRight: '4px' }}>{formatBRL(p.precoOriginal!)}</span>
                       )}
                       {formatBRL(p.precoPromocional)}
-                      {(p.unidade || p.andar) && (
-                        <span style={{ fontSize: '9px', fontWeight: '600', color: '#991b1b' }}> — {[p.unidade ? `Apto ${p.unidade}` : null, p.andar].filter(Boolean).join(', ')}</span>
+                      {(p.tipo || p.unidade || p.andar) && (
+                        <span style={{ fontSize: '9px', fontWeight: '600', color: '#991b1b' }}> — {[p.tipo, p.unidade ? `Apto ${p.unidade}` : null, p.andar].filter(Boolean).join(', ')}</span>
                       )}
                     </p>
                     {temDesconto && (
