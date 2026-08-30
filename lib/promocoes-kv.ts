@@ -15,10 +15,12 @@
 
 export interface Promocao {
   id: string;               // gerado na criação, usado pra editar/remover
-  unidade?: string;         // "605" — número/identificação da unidade em destaque (público — a oferta é pra essa unidade específica)
-  areaM2?: number;          // 28 (NUNCA público, ver paraPublico — não agrega à mensagem, é só referência interna)
-  andar?: string;           // "6º andar" — público
-  precoOriginal?: number;   // preço de tabela da construtora pra essa unidade, antes do desconto
+  unidade?: string;         // "605" — número/identificação da unidade em destaque
+  areaM2?: number;          // 28 — pública: ajuda a pessoa a entender o que está levando
+  quartos?: number;         // dormitórios da unidade em promoção
+  vagas?: number;           // vagas de garagem da unidade em promoção
+  andar?: string;           // "6º andar"
+  precoOriginal?: number;   // preço de tabela da construtora pra essa unidade, antes do desconto — mostrado riscado, pra pessoa ver quanto economiza
   precoPromocional: number; // 649000
   beneficio?: string;       // "6 meses de condomínio grátis" | "60 mil pontos Livelo"
   validoAte?: string;       // ISO date (YYYY-MM-DD) — some sozinha do site depois dessa data
@@ -64,23 +66,12 @@ function estaValida(p: Promocao): boolean {
   return p.validoAte >= hoje;
 }
 
-export type PromocaoPublica = Omit<Promocao, 'areaM2'>;
+export type PromocaoPublica = Promocao;
 
-/**
- * Área nunca pode chegar a quem não é admin — não agrega nada à mensagem
- * pública (unidade + andar já deixam claro qual é a oferta) e é um dado a
- * mais que só interessa pro corretor localizar a unidade internamente.
- * Redige na origem (não em cada rota que consome isso), pra não depender de
- * ninguém lembrar de filtrar depois.
- */
-function paraPublico(promos: Promocao[]): PromocaoPublica[] {
-  return promos.map(({ areaM2: _areaM2, ...resto }) => resto);
-}
-
-/** Promoções ativas (não vencidas) de um empreendimento, sem área — usado pelo site público. */
+/** Promoções ativas (não vencidas) de um empreendimento — usado pelo site público. */
 export async function kvGetPromocoes(buildingId: string): Promise<PromocaoPublica[]> {
   const mapa = await getMapa();
-  return paraPublico((mapa[buildingId] ?? []).filter(estaValida));
+  return (mapa[buildingId] ?? []).filter(estaValida);
 }
 
 /**
@@ -99,18 +90,13 @@ export async function kvGetTodasPromocoesAtivas(): Promise<Record<string, Promoc
 }
 
 /**
- * Todas as promoções ativas por empreendimento, já redigidas (sem área) —
- * pra mostrar no card de /imoveis sem precisar de uma chamada por card.
- * Quando um empreendimento tem várias unidades em promoção, todas vêm na
- * lista — o card mostra cada uma, não só a mais barata.
+ * Todas as promoções ativas por empreendimento — pra mostrar no card de
+ * /imoveis sem precisar de uma chamada por card. Quando um empreendimento
+ * tem várias unidades em promoção, todas vêm na lista — o card mostra cada
+ * uma, não só a mais barata.
  */
 export async function kvGetTodasPromocoesPublicas(): Promise<Record<string, PromocaoPublica[]>> {
-  const ativo = await kvGetTodasPromocoesAtivas();
-  const publicas: Record<string, PromocaoPublica[]> = {};
-  for (const [buildingId, promos] of Object.entries(ativo)) {
-    publicas[buildingId] = paraPublico(promos);
-  }
-  return publicas;
+  return kvGetTodasPromocoesAtivas();
 }
 
 /** Todas as promoções (inclusive vencidas) de um empreendimento — usado no painel admin. */

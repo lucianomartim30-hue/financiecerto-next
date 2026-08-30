@@ -77,6 +77,9 @@ interface ImovelDetalhe {
     id: string;
     unidade?: string;
     andar?: string;
+    areaM2?: number;
+    quartos?: number;
+    vagas?: number;
     precoOriginal?: number;
     precoPromocional: number;
     beneficio?: string;
@@ -1936,7 +1939,14 @@ export default function ImovelDetailClient({ id }: { id: string }) {
           <p style={{ fontSize: '13px', fontWeight: '800', color: '#b91c1c' }}>
             🔥 {imovel.promocoes.length > 1 ? `${imovel.promocoes.length} unidades em promoção` : 'Unidade em promoção'}
           </p>
-          {imovel.promocoes.map(p => (
+          {imovel.promocoes.map(p => {
+            const temDesconto = !!(p.precoOriginal && p.precoOriginal > p.precoPromocional);
+            const specs = [
+              p.areaM2 ? `▦ ${p.areaM2}m²` : null,
+              p.quartos !== undefined ? `🛏 ${p.quartos} quarto${p.quartos === 1 ? '' : 's'}` : null,
+              p.vagas !== undefined ? `🅿 ${p.vagas} vaga${p.vagas === 1 ? '' : 's'}` : null,
+            ].filter(Boolean).join('  ·  ');
+            return (
             <div key={p.id} style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderRadius: '14px', padding: '16px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
               <div>
                 {(p.unidade || p.andar) && (
@@ -1945,14 +1955,20 @@ export default function ImovelDetailClient({ id }: { id: string }) {
                   </p>
                 )}
                 <p style={{ fontSize: '22px', fontWeight: '900', color: '#fff', lineHeight: 1 }}>
-                  {p.precoOriginal && p.precoOriginal > p.precoPromocional && (
-                    <span style={{ fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,.65)', textDecoration: 'line-through', marginRight: '8px' }}>{formatBRL(p.precoOriginal)}</span>
+                  {temDesconto && (
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,.65)', textDecoration: 'line-through', marginRight: '8px' }}>{formatBRL(p.precoOriginal!)}</span>
                   )}
                   {formatBRL(p.precoPromocional)}
                 </p>
+                {temDesconto && (
+                  <p style={{ fontSize: '13px', color: '#fef08a', fontWeight: '700', marginTop: '4px' }}>
+                    💰 Economize {formatBRL(p.precoOriginal! - p.precoPromocional)} ({Math.round((1 - p.precoPromocional / p.precoOriginal!) * 100)}% de desconto)
+                  </p>
+                )}
+                {specs && <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.85)', marginTop: '4px' }}>{specs}</p>}
                 {p.beneficio && <p style={{ fontSize: '13px', color: '#fff', fontWeight: '600', marginTop: '6px' }}>🎁 {p.beneficio}</p>}
-                {p.precoOriginal && p.precoOriginal > p.precoPromocional && (
-                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.75)', marginTop: '4px' }}>Demais unidades dessa característica a partir de {formatBRL(p.precoOriginal)} (tabela da construtora)</p>
+                {temDesconto && (
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.75)', marginTop: '4px' }}>Demais unidades dessa característica a partir de {formatBRL(p.precoOriginal!)} (tabela da construtora)</p>
                 )}
                 {p.observacao && <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.75)', marginTop: '4px' }}>{p.observacao}</p>}
               </div>
@@ -1962,7 +1978,8 @@ export default function ImovelDetailClient({ id }: { id: string }) {
                 </span>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

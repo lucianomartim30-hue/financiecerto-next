@@ -32,6 +32,9 @@ interface Imovel {
   promocoes_destaque?: {
     unidade?: string;
     andar?: string;
+    areaM2?: number;
+    quartos?: number;
+    vagas?: number;
     precoOriginal?: number;
     precoPromocional: number;
     beneficio?: string;
@@ -147,23 +150,37 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
               <p style={{ fontSize: '9px', fontWeight: '800', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '.3px', marginBottom: '3px' }}>
                 🔥 {im.promocoes_destaque.length > 1 ? `${im.promocoes_destaque.length} unidades em promoção` : 'Unidade em promoção'}
               </p>
-              {im.promocoes_destaque.map((p, i) => (
-                <div key={i} style={{ marginBottom: i < im.promocoes_destaque!.length - 1 ? '6px' : 0 }}>
-                  <p style={{ fontSize: '11px', fontWeight: '800', color: '#dc2626', lineHeight: 1.3 }}>
-                    {p.precoOriginal && p.precoOriginal > p.precoPromocional && (
-                      <span style={{ fontSize: '9px', fontWeight: '600', color: '#991b1b', textDecoration: 'line-through', marginRight: '4px' }}>{formatBRL(p.precoOriginal)}</span>
+              {im.promocoes_destaque.map((p, i) => {
+                const temDesconto = !!(p.precoOriginal && p.precoOriginal > p.precoPromocional);
+                const specs = [
+                  p.areaM2 ? `▦ ${p.areaM2}m²` : null,
+                  p.quartos !== undefined ? `🛏 ${p.quartos} qt${p.quartos === 1 ? '' : 's'}` : null,
+                  p.vagas !== undefined ? `🅿 ${p.vagas} vg` : null,
+                ].filter(Boolean).join('  ·  ');
+                return (
+                  <div key={i} style={{ marginBottom: i < im.promocoes_destaque!.length - 1 ? '8px' : 0 }}>
+                    <p style={{ fontSize: '11px', fontWeight: '800', color: '#dc2626', lineHeight: 1.3 }}>
+                      {temDesconto && (
+                        <span style={{ fontSize: '9px', fontWeight: '600', color: '#991b1b', textDecoration: 'line-through', marginRight: '4px' }}>{formatBRL(p.precoOriginal!)}</span>
+                      )}
+                      {formatBRL(p.precoPromocional)}
+                      {(p.unidade || p.andar) && (
+                        <span style={{ fontSize: '9px', fontWeight: '600', color: '#991b1b' }}> — {[p.unidade ? `Apto ${p.unidade}` : null, p.andar].filter(Boolean).join(', ')}</span>
+                      )}
+                    </p>
+                    {temDesconto && (
+                      <p style={{ fontSize: '9px', color: '#16a34a', fontWeight: '700', marginTop: '1px' }}>
+                        💰 Economize {formatBRL(p.precoOriginal! - p.precoPromocional)} ({Math.round((1 - p.precoPromocional / p.precoOriginal!) * 100)}% off)
+                      </p>
                     )}
-                    {formatBRL(p.precoPromocional)}
-                    {(p.unidade || p.andar) && (
-                      <span style={{ fontSize: '9px', fontWeight: '600', color: '#991b1b' }}> — {[p.unidade ? `Apto ${p.unidade}` : null, p.andar].filter(Boolean).join(', ')}</span>
+                    {specs && <p style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>{specs}</p>}
+                    {p.beneficio && <p style={{ fontSize: '9px', color: '#b91c1c', fontWeight: '600', marginTop: '1px' }}>🎁 {p.beneficio}</p>}
+                    {temDesconto && (
+                      <p style={{ fontSize: '9px', color: 'var(--text-faint)', marginTop: '1px' }}>Demais unidades dessa característica a partir de {formatBRL(p.precoOriginal!)}</p>
                     )}
-                  </p>
-                  {p.beneficio && <p style={{ fontSize: '9px', color: '#b91c1c', fontWeight: '600' }}>🎁 {p.beneficio}</p>}
-                  {p.precoOriginal && p.precoOriginal > p.precoPromocional && (
-                    <p style={{ fontSize: '9px', color: 'var(--text-faint)', marginTop: '1px' }}>Demais unidades dessa característica a partir de {formatBRL(p.precoOriginal)}</p>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{precoExibido && precoExibido >= 100 ? formatBRL(precoExibido) : 'Consultar'}</p>

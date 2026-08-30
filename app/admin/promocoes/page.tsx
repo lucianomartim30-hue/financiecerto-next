@@ -82,6 +82,8 @@ export default function AdminPromocoesPage() {
 
   const [unidade, setUnidade] = useState('');
   const [areaM2, setAreaM2] = useState('');
+  const [quartos, setQuartos] = useState('');
+  const [vagas, setVagas] = useState('');
   const [andar, setAndar] = useState('');
   const [precoOriginal, setPrecoOriginal] = useState('');
   const [precoPromocional, setPrecoPromocional] = useState('');
@@ -90,7 +92,7 @@ export default function AdminPromocoesPage() {
   const [observacao, setObservacao] = useState('');
 
   const limparFormulario = () => {
-    setUnidade(''); setAreaM2(''); setAndar(''); setPrecoOriginal(''); setPrecoPromocional('');
+    setUnidade(''); setAreaM2(''); setQuartos(''); setVagas(''); setAndar(''); setPrecoOriginal(''); setPrecoPromocional('');
     setBeneficio(''); setValidoAte(''); setObservacao('');
   };
 
@@ -129,6 +131,8 @@ export default function AdminPromocoesPage() {
           buildingId: id,
           unidade: unidade.trim() || undefined,
           areaM2: areaM2 ? Number(areaM2) : undefined,
+          quartos: quartos ? Number(quartos) : undefined,
+          vagas: vagas ? Number(vagas) : undefined,
           andar: andar.trim() || undefined,
           precoOriginal: precoOriginal ? Number(precoOriginal.replace(/\D/g, '')) : undefined,
           precoPromocional: preco,
@@ -211,7 +215,11 @@ export default function AdminPromocoesPage() {
                           {formatBRL(p.precoPromocional)}
                           {p.unidade && <span style={{ fontWeight: '500', color: 'var(--text-muted)' }}> — unidade {p.unidade}{p.areaM2 ? ` (${p.areaM2}m²)` : ''}</span>}
                         </p>
-                        {p.andar && <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{p.andar}</p>}
+                        {(p.andar || p.quartos !== undefined || p.vagas !== undefined) && (
+                          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {[p.andar, p.quartos !== undefined ? `${p.quartos} qt${p.quartos === 1 ? '' : 's'}` : null, p.vagas !== undefined ? `${p.vagas} vg` : null].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
                         {p.beneficio && <p style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: '600', marginTop: '2px' }}>🎁 {p.beneficio}</p>}
                         {p.validoAte && <p style={{ fontSize: '11px', color: vencida ? '#dc2626' : 'var(--text-faint)', marginTop: '2px' }}>{vencida ? 'Vencida em' : 'Válido até'} {new Date(p.validoAte + 'T00:00:00').toLocaleDateString('pt-BR')}</p>}
                         {p.observacao && <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '2px' }}>{p.observacao}</p>}
@@ -232,20 +240,30 @@ export default function AdminPromocoesPage() {
 
           <div style={{ padding: '16px', border: '1.5px dashed var(--border)', borderRadius: '12px' }}>
             <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '12px' }}>+ Adicionar promoção</p>
-            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '10px' }}>Área fica só pra você — nunca aparece no site. Unidade, andar e preço de tabela aparecem no card e na página do imóvel.</p>
+            <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '10px' }}>Tudo aqui aparece no card e na página do imóvel — unidade, andar, área, quartos, vagas e a economia (preço de tabela vs. promocional).</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               <div>
-                <label style={labelStyle}>Unidade (público)</label>
+                <label style={labelStyle}>Unidade</label>
                 <input value={unidade} onChange={e => setUnidade(e.target.value)} placeholder="605" style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>Andar (público)</label>
+                <label style={labelStyle}>Andar</label>
                 <input value={andar} onChange={e => setAndar(e.target.value)} placeholder="6º andar" style={inputStyle} />
               </div>
             </div>
-            <div style={{ marginBottom: '10px' }}>
-              <label style={labelStyle}>Área m² (privado)</label>
-              <input value={areaM2} onChange={e => setAreaM2(e.target.value.replace(/\D/g, ''))} placeholder="28" style={inputStyle} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+              <div>
+                <label style={labelStyle}>Área m²</label>
+                <input value={areaM2} onChange={e => setAreaM2(e.target.value.replace(/\D/g, ''))} placeholder="28" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Quartos</label>
+                <input value={quartos} onChange={e => setQuartos(e.target.value.replace(/\D/g, ''))} placeholder="2" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Vagas</label>
+                <input value={vagas} onChange={e => setVagas(e.target.value.replace(/\D/g, ''))} placeholder="1" style={inputStyle} />
+              </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
               <div>
