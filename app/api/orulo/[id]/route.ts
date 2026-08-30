@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kvGetCatalog } from '@/lib/orulo-kv';
 import { kvGetFotosOcultas } from '@/lib/fotos-ocultas-kv';
 import { kvGetPromocoes, kvGetPromocoesAdmin } from '@/lib/promocoes-kv';
+import { kvGetOruloEndUserToken } from '@/lib/orulo-enduser-kv';
 import { getPlantasManuais } from '@/lib/plantas-manuais';
 import { sessionToken } from '../../admin-auth/route';
 
@@ -78,6 +79,61 @@ async function fallbackFromCache(id: string) {
       typologies: [],
       sharing_url: cached.sharing_url || cached.orulo_url || null,
       promocoes,
+      // Nunca cacheado (exigência da Órulo pro oruloEndUserAuth) — no fallback
+      // do cache local não tem como buscar ao vivo, então vem vazio.
+      campanhaOrulo: null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export interface CampanhaOrulo {
+  texto: string;
+  descontoMax: number | null;
+  validade: string | null; // dd/mm/aaaa, como a Órulo devolve
+}
+
+/** dd/mm/aaaa (formato da Órulo) → Date, fim do dia. */
+function parseDataOrulo(data: string): Date | null {
+  const m = data.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  return new Date(`${m[3]}-${m[2]}-${m[1]}T23:59:59`);
+}
+
+/**
+ * Busca AO VIVO (nunca cacheada — exigência da própria Órulo pra dados do
+ * oruloEndUserAuth, ver lib/orulo-enduser-kv.ts) o texto da campanha oficial
+ * que a construtora registrou na Órulo pra esse empreendimento, se houver.
+ * Sem token de usuário final conectado (/admin/orulo), retorna null sem erro.
+ */
+async function fetchCampanhaOrulo(id: string): Promise<CampanhaOrulo | null> {
+  try {
+    const endUser = await kvGetOruloEndUserToken();
+    if (!endUser) return null;
+
+    const resp = await fetch(`${ORULO_BASE}/api/v2/buildings/${id}`, {
+      headers: { Authorization: `Bearer ${endUser.accessToken}` },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!resp.ok) return null; // token expirado/revogado ou erro — degrada em silêncio
+
+    const raw = await resp.json();
+    const b = raw.building ?? raw;
+    const op = b.opportunity as Record<string, unknown> | undefined;
+    const texto = op?.client_description as string | undefined;
+    if (!op?.client || !texto) return null;
+
+    const validade = (op.client_expiration_date as string) || null;
+    if (validade) {
+      const exp = parseDataOrulo(validade);
+      if (exp && exp < new Date()) return null; // campanha vencida
+    }
+
+    return {
+      texto,
+      descontoMax: typeof op.client_max_discount === 'number' ? op.client_max_discount : null,
+      validade,
     };
   } catch {
     return null;
@@ -213,14 +269,15 @@ export async function GET(
       if (!mock) return NextResponse.json({ error: 'Imóvel não encontrado.' }, { status: 404 });
       const admin = isAdmin(req);
       const promocoes = admin ? await kvGetPromocoesAdmin(id) : await kvGetPromocoes(id);
-      return NextResponse.json({ ...mock, promocoes });
+      return NextResponse.json({ ...mock, promocoes, campanhaOrulo: null });
     }
 
     const token = await getToken();
-    const [resp, imageUrlMap, floorPlanUrlMap] = await Promise.all([
+    const [resp, imageUrlMap, floorPlanUrlMap, campanhaOrulo] = await Promise.all([
       fetch(`${ORULO_BASE}/api/v2/buildings/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
       fetchMediaUrlMap(id, token, 'images'),
       fetchMediaUrlMap(id, token, 'floor_plans'),
+      fetchCampanhaOrulo(id),
     ]);
 
     if (resp.status === 404) {
@@ -416,6 +473,7 @@ export async function GET(
       typologies,
       sharing_url: (b.orulo_url as string) || (b.sharing_url as string) || null,
       promocoes,
+      campanhaOrulo,
       // Só presente pro painel /admin/fotos — permite mostrar/reexibir fotos
       // ocultas, que o cliente comum nunca recebe no array `photos` acima.
       admin_fotos: admin

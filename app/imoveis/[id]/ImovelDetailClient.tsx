@@ -88,6 +88,12 @@ interface ImovelDetalhe {
     validoAte?: string;
     observacao?: string;
   }[];
+  /** Campanha oficial que a construtora registrou na própria Órulo — buscada ao vivo, nunca cacheada (ver app/api/orulo/[id]/route.ts). */
+  campanhaOrulo?: {
+    texto: string;
+    descontoMax: number | null;
+    validade: string | null;
+  } | null;
 }
 interface RelatedImovel {
   id: string;
@@ -1934,6 +1940,26 @@ export default function ImovelDetailClient({ id }: { id: string }) {
           </div>
         </div>
       </div>
+
+      {/* ── Campanha oficial registrada na Órulo (buscada ao vivo) ────────── */}
+      {imovel.campanhaOrulo && (
+        <div style={{ maxWidth: '1100px', margin: '16px auto 0', padding: '0 24px' }}>
+          <div style={{ padding: '16px 18px', borderRadius: '14px', background: 'rgba(37,99,235,.06)', border: '1.5px solid rgba(37,99,235,.25)' }}>
+            <p style={{ fontSize: '13px', fontWeight: '800', color: '#1d4ed8', marginBottom: '6px' }}>
+              🏗️ Campanha oficial da construtora (via Órulo)
+            </p>
+            <p style={{ fontSize: '13px', color: 'var(--text)', whiteSpace: 'pre-line' }}>{imovel.campanhaOrulo.texto}</p>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
+              {imovel.campanhaOrulo.descontoMax != null && (
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#1d4ed8' }}>💰 Até {imovel.campanhaOrulo.descontoMax}% de desconto</span>
+              )}
+              {imovel.campanhaOrulo.validade && (
+                <span style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Válido até {imovel.campanhaOrulo.validade}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Condição especial da construtora (ver lib/promocoes-kv.ts) ────── */}
       {imovel.promocoes && imovel.promocoes.length > 0 && (
