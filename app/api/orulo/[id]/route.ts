@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kvGetCatalog } from '@/lib/orulo-kv';
 import { kvGetFotosOcultas } from '@/lib/fotos-ocultas-kv';
+import { kvGetPromocoes, kvGetPromocoesAdmin } from '@/lib/promocoes-kv';
 import { getPlantasManuais } from '@/lib/plantas-manuais';
 import { sessionToken } from '../../admin-auth/route';
 
@@ -32,6 +33,7 @@ async function fallbackFromCache(id: string) {
     const catalog = await kvGetCatalog();
     const cached = catalog?.find(b => b.id === id);
     if (!cached) return null;
+    const promocoes = await kvGetPromocoes(id);
     return {
       id: cached.id,
       name: cached.name,
@@ -75,6 +77,7 @@ async function fallbackFromCache(id: string) {
       amenities: [],
       typologies: [],
       sharing_url: cached.sharing_url || cached.orulo_url || null,
+      promocoes,
     };
   } catch {
     return null;
@@ -208,7 +211,9 @@ export async function GET(
     if (process.env.USE_MOCK === 'true') {
       const mock = getMock(id);
       if (!mock) return NextResponse.json({ error: 'Imóvel não encontrado.' }, { status: 404 });
-      return NextResponse.json(mock);
+      const admin = isAdmin(req);
+      const promocoes = admin ? await kvGetPromocoesAdmin(id) : await kvGetPromocoes(id);
+      return NextResponse.json({ ...mock, promocoes });
     }
 
     const token = await getToken();
@@ -275,6 +280,11 @@ export async function GET(
           return !imgId || !ocultas.has(imgId);
         });
     const admin = isAdmin(req);
+
+    // ── Promoções manuais (ver lib/promocoes-kv.ts) ───────────────────────────
+    // Visitante comum só vê promoções em vigor; o painel /admin/promocoes
+    // precisa ver também as vencidas, pra poder limpar o histórico.
+    const promocoes = admin ? await kvGetPromocoesAdmin(id) : await kvGetPromocoes(id);
 
     // ── Plantas baixas ─────────────────────────────────────────────────────────
     // floor_plans[] tem a mesma estrutura: { id, description, type, associations }
@@ -405,6 +415,7 @@ export async function GET(
       amenities,
       typologies,
       sharing_url: (b.orulo_url as string) || (b.sharing_url as string) || null,
+      promocoes,
       // Só presente pro painel /admin/fotos — permite mostrar/reexibir fotos
       // ocultas, que o cliente comum nunca recebe no array `photos` acima.
       admin_fotos: admin

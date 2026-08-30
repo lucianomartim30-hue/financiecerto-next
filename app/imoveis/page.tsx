@@ -29,6 +29,13 @@ interface Imovel {
   typology_ranges?: { type: string; price_min: number | null; price_max: number | null; bedrooms_min: number | null; bedrooms_max: number | null; area_min: number | null; area_max: number | null }[];
   lat: number | null; lng: number | null;
   delivery_date: string | null;
+  promocoes_destaque?: {
+    unidade?: string;
+    andar?: string;
+    precoOriginal?: number;
+    precoPromocional: number;
+    beneficio?: string;
+  }[];
 }
 
 // Calcula finality no cliente — lê finality_norm se disponível,
@@ -123,6 +130,11 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
           <span style={{ position: 'absolute', top: '7px', left: '7px', background: sc.cor, color: '#fff', fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
             {sc.label}
           </span>
+          {im.promocoes_destaque && im.promocoes_destaque.length > 0 && (
+            <span style={{ position: 'absolute', top: '7px', right: '7px', background: '#dc2626', color: '#fff', fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+              🔥 Promoção
+            </span>
+          )}
         </div>
         <div style={{ padding: '9px 10px 11px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text)', lineHeight: '1.35', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{im.name}</p>
@@ -130,7 +142,32 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
           <p style={{ fontSize: '10px', color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             📍 {[im.neighborhood || im.city, im.street].filter(Boolean).join(' · ')}
           </p>
-          <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{precoExibido && precoExibido >= 100 ? formatBRL(precoExibido) : 'Consultar'}</p>
+          {im.promocoes_destaque && im.promocoes_destaque.length > 0 ? (
+            <div style={{ marginTop: '2px', padding: '5px 7px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '7px' }}>
+              <p style={{ fontSize: '9px', fontWeight: '800', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '.3px', marginBottom: '3px' }}>
+                🔥 {im.promocoes_destaque.length > 1 ? `${im.promocoes_destaque.length} unidades em promoção` : 'Unidade em promoção'}
+              </p>
+              {im.promocoes_destaque.map((p, i) => (
+                <div key={i} style={{ marginBottom: i < im.promocoes_destaque!.length - 1 ? '6px' : 0 }}>
+                  <p style={{ fontSize: '11px', fontWeight: '800', color: '#dc2626', lineHeight: 1.3 }}>
+                    {p.precoOriginal && p.precoOriginal > p.precoPromocional && (
+                      <span style={{ fontSize: '9px', fontWeight: '600', color: '#991b1b', textDecoration: 'line-through', marginRight: '4px' }}>{formatBRL(p.precoOriginal)}</span>
+                    )}
+                    {formatBRL(p.precoPromocional)}
+                    {(p.unidade || p.andar) && (
+                      <span style={{ fontSize: '9px', fontWeight: '600', color: '#991b1b' }}> — {[p.unidade ? `Apto ${p.unidade}` : null, p.andar].filter(Boolean).join(', ')}</span>
+                    )}
+                  </p>
+                  {p.beneficio && <p style={{ fontSize: '9px', color: '#b91c1c', fontWeight: '600' }}>🎁 {p.beneficio}</p>}
+                  {p.precoOriginal && p.precoOriginal > p.precoPromocional && (
+                    <p style={{ fontSize: '9px', color: 'var(--text-faint)', marginTop: '1px' }}>Demais unidades dessa característica a partir de {formatBRL(p.precoOriginal)}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p style={{ fontSize: '13px', fontWeight: '900', color: 'var(--primary)', marginTop: '2px' }}>{precoExibido && precoExibido >= 100 ? formatBRL(precoExibido) : 'Consultar'}</p>
+          )}
           <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '2px' }}>
             {tipologiaAtiva && <span style={{ fontSize: '9px', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '5px', padding: '1px 4px', fontWeight: 700 }}>{tipologiaAtiva}</span>}
             {fmtRange(quartosMin, quartosMax, 'qts') && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>🛏 {fmtRange(quartosMin, quartosMax, 'qts')}</span>}
@@ -174,6 +211,11 @@ function ImoveisContent() {
 
   const [allBuildings, setAllBuildings] = useState<Imovel[]>([]);
   const [loading, setLoading] = useState(true);
+  // Distingue "sem resultado" (busca genuinamente vazia) de "falha ao
+  // carregar" (timeout, conexão instável — comum em 4G/wifi trocando) — sem
+  // isso, qualquer erro de rede aparecia como "Nenhum imóvel encontrado" e
+  // a pessoa achava que era problema dos filtros, sem opção de tentar de novo.
+  const [loadError, setLoadError] = useState(false);
   const [displayCount, setDisplayCount] = useState(12);
 
   // Título próprio (analytics) — sem isso, herda o título da home e some nos relatórios do GA
@@ -427,14 +469,22 @@ function ImoveisContent() {
       .slice(0, 25);
   }, [deferredMobileInput, allLocationSuggestions, allNeighborhoods, searchMode, allBuildingNames, allDevelopers]);
 
-  useEffect(() => {
+  // Timeout de 20s — evita ficar "Carregando..." pra sempre numa conexão
+  // móvel ruim (o catálogo completo pesa alguns MB); acima disso, melhor
+  // mostrar erro com opção de tentar de novo do que travar em silêncio.
+  const carregarImoveis = useCallback(() => {
     setLoading(true);
-    fetch('/api/orulo?all=1')
-      .then(r => r.json())
+    setLoadError(false);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    fetch('/api/orulo?all=1', { signal: controller.signal })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(d => setAllBuildings(d.buildings || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => setLoadError(true))
+      .finally(() => { clearTimeout(timeoutId); setLoading(false); });
   }, []);
+
+  useEffect(() => { carregarImoveis(); }, [carregarImoveis]);
 
   // Cidades exibidas no seletor: só as que têm pelo menos 1 empreendimento
   // ativo no catálogo agora — CIDADES_BUSCA é a lista de cidades liberadas
@@ -798,6 +848,13 @@ function ImoveisContent() {
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: '10px' }}>
           {Array.from({ length: cols * 3 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : loadError && allBuildings.length === 0 ? (
+        <div style={{ padding: '60px 16px', textAlign: 'center' }}>
+          <p style={{ fontSize: '28px', marginBottom: '10px' }}>📡</p>
+          <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>Não foi possível carregar os imóveis</p>
+          <p style={{ fontSize: '13px', color: '#9ca3af' }}>Verifique sua conexão e tente novamente.</p>
+          <button onClick={carregarImoveis} style={{ marginTop: '14px', padding: '10px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>Tentar novamente</button>
         </div>
       ) : visibleBuildings.length === 0 ? (
         <div style={{ padding: '60px 16px', textAlign: 'center' }}>

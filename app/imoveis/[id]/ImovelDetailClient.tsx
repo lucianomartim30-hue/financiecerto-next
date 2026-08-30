@@ -72,6 +72,17 @@ interface ImovelDetalhe {
   sharing_url: string | null;
   /** Ciclo de vida SEO calculado pelo sync — ver lib/orulo-kv.ts. Ausente em respostas ao vivo da Orulo (sempre "active" nesse caso). */
   seo_status?: 'active' | 'out_of_stock' | 'suspected_missing' | 'removed_confirmed';
+  /** Condições especiais recebidas direto da construtora — ver lib/promocoes-kv.ts. */
+  promocoes?: {
+    id: string;
+    unidade?: string;
+    andar?: string;
+    precoOriginal?: number;
+    precoPromocional: number;
+    beneficio?: string;
+    validoAte?: string;
+    observacao?: string;
+  }[];
 }
 interface RelatedImovel {
   id: string;
@@ -1471,7 +1482,7 @@ function SecaoVistosRecentemente({ currentId }: { currentId: string }) {
     import('@/lib/vistos-recentemente').then(({ getVistosIds }) => {
       const ids = getVistosIds(currentId).slice(0, 6);
       if (ids.length === 0) { setLoading(false); return; }
-      fetch('/api/orulo?all=1')
+      fetch(`/api/orulo?ids=${ids.join(',')}`)
         .then(r => r.json())
         .then((data: { buildings?: RelatedImovel[] }) => {
           const porId = new Map((data.buildings || []).map(im => [im.id, im]));
@@ -1918,6 +1929,42 @@ export default function ImovelDetailClient({ id }: { id: string }) {
           </div>
         </div>
       </div>
+
+      {/* ── Condição especial da construtora (ver lib/promocoes-kv.ts) ────── */}
+      {imovel.promocoes && imovel.promocoes.length > 0 && (
+        <div style={{ maxWidth: '1100px', margin: '16px auto 0', padding: '0 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <p style={{ fontSize: '13px', fontWeight: '800', color: '#b91c1c' }}>
+            🔥 {imovel.promocoes.length > 1 ? `${imovel.promocoes.length} unidades em promoção` : 'Unidade em promoção'}
+          </p>
+          {imovel.promocoes.map(p => (
+            <div key={p.id} style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderRadius: '14px', padding: '16px 20px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                {(p.unidade || p.andar) && (
+                  <p style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,.85)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '4px' }}>
+                    {[p.unidade ? `Apto ${p.unidade}` : null, p.andar].filter(Boolean).join(', ')}
+                  </p>
+                )}
+                <p style={{ fontSize: '22px', fontWeight: '900', color: '#fff', lineHeight: 1 }}>
+                  {p.precoOriginal && p.precoOriginal > p.precoPromocional && (
+                    <span style={{ fontSize: '14px', fontWeight: '500', color: 'rgba(255,255,255,.65)', textDecoration: 'line-through', marginRight: '8px' }}>{formatBRL(p.precoOriginal)}</span>
+                  )}
+                  {formatBRL(p.precoPromocional)}
+                </p>
+                {p.beneficio && <p style={{ fontSize: '13px', color: '#fff', fontWeight: '600', marginTop: '6px' }}>🎁 {p.beneficio}</p>}
+                {p.precoOriginal && p.precoOriginal > p.precoPromocional && (
+                  <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.75)', marginTop: '4px' }}>Demais unidades dessa característica a partir de {formatBRL(p.precoOriginal)} (tabela da construtora)</p>
+                )}
+                {p.observacao && <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.75)', marginTop: '4px' }}>{p.observacao}</p>}
+              </div>
+              {p.validoAte && (
+                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.85)', flexShrink: 0 }}>
+                  Válido até {new Date(p.validoAte + 'T00:00:00').toLocaleDateString('pt-BR')}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Contato rápido (topo) ───────────────────────────────────────── */}
       <div id="contato" style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 24px 0', scrollMarginTop: '100px' }}>

@@ -26,6 +26,11 @@ export default function FavoritosContent() {
   const [ids, setIds] = useState<string[] | null>(null); // null = ainda não leu localStorage
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [loading, setLoading] = useState(true);
+  // Distingue "sem favoritos" de "falha ao carregar" — sem isso, uma conexão
+  // instável fazia a lista de favoritos salvos sumir da tela como se a
+  // pessoa nunca tivesse favoritado nada.
+  const [loadError, setLoadError] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     setIds(getFavoritoIds());
@@ -34,10 +39,13 @@ export default function FavoritosContent() {
 
   useEffect(() => {
     if (ids === null) return;
-    if (ids.length === 0) { setImoveis([]); setLoading(false); return; }
+    if (ids.length === 0) { setImoveis([]); setLoading(false); setLoadError(false); return; }
     setLoading(true);
-    fetch('/api/orulo?all=1')
-      .then(r => r.json())
+    setLoadError(false);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    fetch(`/api/orulo?ids=${ids.join(',')}`, { signal: controller.signal })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(data => {
         const all: Imovel[] = data.buildings || [];
         const idSet = new Set(ids);
@@ -45,22 +53,35 @@ export default function FavoritosContent() {
         const porId = new Map(all.map(b => [b.id, b]));
         setImoveis(ids.map(id => porId.get(id)).filter((b): b is Imovel => !!b && idSet.has(b.id)));
       })
-      .catch(() => setImoveis([]))
-      .finally(() => setLoading(false));
-  }, [ids]);
+      .catch(() => setLoadError(true))
+      .finally(() => { clearTimeout(timeoutId); setLoading(false); });
+  }, [ids, retryTick]);
 
   return (
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px 64px' }}>
       <h1 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>❤️ Meus Favoritos</h1>
       <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '28px' }}>
-        Salvos neste navegador — {ids?.length ?? 0} imóvel{ids?.length === 1 ? '' : 'is'}
+        Salvos neste navegador — {ids?.length ?? 0} {ids?.length === 1 ? 'imóvel' : 'imóveis'}
       </p>
 
       {loading && (
         <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>Carregando...</p>
       )}
 
-      {!loading && ids !== null && ids.length === 0 && (
+      {!loading && loadError && (
+        <div style={{ padding: '48px 24px', textAlign: 'center', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '16px' }}>
+          <p style={{ fontSize: '32px', marginBottom: '10px' }}>📡</p>
+          <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>Não foi possível carregar seus favoritos</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+            Verifique sua conexão e tente novamente.
+          </p>
+          <button onClick={() => setRetryTick(t => t + 1)} className="btn-primary" style={{ border: 'none', cursor: 'pointer' }}>
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
+      {!loading && !loadError && ids !== null && ids.length === 0 && (
         <div style={{ padding: '48px 24px', textAlign: 'center', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '16px' }}>
           <p style={{ fontSize: '32px', marginBottom: '10px' }}>🤍</p>
           <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>Nenhum favorito ainda</p>

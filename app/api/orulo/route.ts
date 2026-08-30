@@ -30,6 +30,7 @@ import {
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { filterLotesForaSP } from '@/lib/filtro-lotes-fora-sp';
 import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
+import { kvGetTodasPromocoesPublicas } from '@/lib/promocoes-kv';
 import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 
 // O fallback ao vivo (cache KV vazio/frio) pode varrer o estado inteiro em lotes
@@ -203,12 +204,21 @@ export async function GET(req: NextRequest) {
     const statusReq    = searchParams.get('status');
     const q            = searchParams.get('q');
     const residencial  = searchParams.get('residencial') === '1';
+    const idsParam     = searchParams.get('ids') || '';
+    const ids          = idsParam ? idsParam.split(',').map(s => s.trim()).filter(Boolean) : null;
 
     // ── Mock ────────────────────────────────────────────────────────────────
     if (process.env.USE_MOCK === 'true') {
       let buildings = MOCK_BUILDINGS.map(b => ({ ...b, status_norm: normalizeStatus(b.status), lat: null as number | null, lng: null as number | null }));
-      buildings = applyFilters(buildings as unknown as NormalizedBuilding[], { neighborhood, neighborhoods, cities, propertyTypes, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q }) as unknown as typeof buildings;
-      return NextResponse.json({ buildings, total: buildings.length, page: 1, pages: 1, source: 'mock' });
+      if (ids && ids.length > 0) {
+        const idSet = new Set(ids);
+        buildings = buildings.filter(b => idSet.has(b.id));
+      } else {
+        buildings = applyFilters(buildings as unknown as NormalizedBuilding[], { neighborhood, neighborhoods, cities, propertyTypes, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q }) as unknown as typeof buildings;
+      }
+      const todasPromocoesMock = await kvGetTodasPromocoesPublicas();
+      const buildingsComPromo = buildings.map(b => todasPromocoesMock[b.id] ? { ...b, promocoes_destaque: todasPromocoesMock[b.id] } : b);
+      return NextResponse.json({ buildings: buildingsComPromo, total: buildings.length, page: 1, pages: 1, source: 'mock' });
     }
 
     const token = await getToken();
@@ -216,6 +226,19 @@ export async function GET(req: NextRequest) {
 
     // ── Camada 1: Catálogo do KV ─────────────────────────────────────────────
     const cached = await kvGetCatalog();
+
+    // Lookup direto por IDs (ex: "vistos recentemente" no detalhe do imóvel) —
+    // evita baixar o catálogo inteiro (alguns MB) só pra resolver 6 IDs;
+    // não passa pelos outros filtros (cidade/status/etc.) porque esses
+    // imóveis já foram validados quando a pessoa visitou antes.
+    if (ids && ids.length > 0 && cached && cached.length > 0) {
+      const idSet = new Set(ids);
+      const buildings = cached.filter(b => idSet.has(b.id));
+      return NextResponse.json(
+        { buildings, total: buildings.length, page: 1, pages: 1, source: 'kv_cache_ids' },
+        { headers: { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800' } },
+      );
+    }
 
     // Auto-sync em background se catálogo incompleto (fire-and-forget)
     maybeAutoSync(req);
@@ -256,7 +279,23 @@ export async function GET(req: NextRequest) {
 
       all = applyFilters(all, { neighborhood, neighborhoods, cities, propertyTypes, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q });
 
+      // Anexa as promoções manuais em vigor (ver lib/promocoes-kv.ts) — já vem
+      // redigido (sem área), seguro pra ir direto pro card de /imoveis sem
+      // precisar de uma chamada por card. Quando há mais de uma unidade em
+      // promoção no mesmo empreendimento, todas vêm na lista.
+      const todasPromocoes = await kvGetTodasPromocoesPublicas();
+      if (Object.keys(todasPromocoes).length > 0) {
+        all = all.map(b => todasPromocoes[b.id] ? { ...b, promocoes_destaque: todasPromocoes[b.id] } : b);
+      }
+
       const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
+
+      // Catálogo vem do KV (atualizado por sync periódico, não em tempo real)
+      // — cachear na CDN por alguns minutos evita reprocessar/retransmitir o
+      // catálogo inteiro (alguns MB) a cada visita, o que pesava bastante em
+      // conexão móvel. stale-while-revalidate mantém resposta instantânea
+      // mesmo no primeiro request após expirar o cache.
+      const cacheHeaders = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=1800' };
 
       if (returnAll) {
         return NextResponse.json({
@@ -266,7 +305,7 @@ export async function GET(req: NextRequest) {
           pages:     1,
           source:    'kv_cache',
           neighborhoods: uniqueNeighborhoods,
-        });
+        }, { headers: cacheHeaders });
       }
 
       const PER_PAGE = 20;
@@ -278,7 +317,7 @@ export async function GET(req: NextRequest) {
         pages:        Math.ceil(all.length / PER_PAGE) || 1,
         source:       'kv_cache',
         neighborhoods: uniqueNeighborhoods,
-      });
+      }, { headers: cacheHeaders });
     }
 
     // ── Camada 2: API ao vivo (fallback — KV vazio ou não configurado) ────────
