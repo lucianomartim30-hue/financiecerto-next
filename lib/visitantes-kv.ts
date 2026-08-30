@@ -55,6 +55,12 @@ export async function kvGetVisitante(visitorId: string): Promise<Visitante | nul
   return mapa[visitorId] ?? null;
 }
 
+/** ids (fc_vid) de todo visitante já identificado — usado pra excluir do relatório de rastreio anônimo (lib/rastreio-kv.ts) quem já é lead conhecido. */
+export async function kvListarIdsConhecidos(): Promise<Set<string>> {
+  const mapa = await getMapa();
+  return new Set(Object.keys(mapa));
+}
+
 /** Chamado quando um lead é criado — grava/atualiza identidade e conta a visita ao imóvel do lead. */
 export async function kvIdentificarVisitante(
   visitorId: string,

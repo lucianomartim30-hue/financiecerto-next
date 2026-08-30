@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEmailDaSessao } from '@/lib/conta-kv';
 import { kvSalvarSimulacao } from '@/lib/simulacoes-kv';
+import { kvRegistrarEvento } from '@/lib/rastreio-kv';
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,6 +34,10 @@ export async function POST(req: NextRequest) {
       prazoAnos:        Number(body.prazoAnos) || 0,
       comprometimento:  Number(body.comprometimento) || 0,
     });
+
+    // Sinal de "simulou financiamento" no rastreio anônimo — não bloqueia a
+    // resposta nem depende dela dar certo (ver lib/rastreio-kv.ts).
+    if (visitorId) kvRegistrarEvento(visitorId, { tipo: 'simulador' }).catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch {

@@ -507,6 +507,17 @@ function ImoveisContent() {
 
   useEffect(() => { carregarImoveis(); }, [carregarImoveis]);
 
+  // Sinal de "abriu a vitrine de imóveis" pro rastreio de visitante anônimo
+  // (ver lib/rastreio-kv.ts) — uma vez por carregamento da página, sem travar
+  // nada se falhar.
+  useEffect(() => {
+    fetch('/api/rastreio', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tipo: 'listagem' }),
+    }).catch(() => {});
+  }, []);
+
   // Cidades exibidas no seletor: só as que têm pelo menos 1 empreendimento
   // ativo no catálogo agora — CIDADES_BUSCA é a lista de cidades liberadas
   // (onde o portal pode operar), mas o catálogo real muda com o tempo (Orulo
