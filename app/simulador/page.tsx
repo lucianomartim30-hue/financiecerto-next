@@ -386,6 +386,9 @@ function SimuladorInner() {
   // Qual painel o usuário quer ver na revelação: mcmv | sbpe | sfi
   const [painelAtivo, setPainelAtivo] = useState<'mcmv' | 'sbpe' | 'sfi'>('mcmv');
   const [tipoImovel,  setTipoImovel]  = useState<'residencial' | 'comercial'>('residencial');
+  // "Como o banco calcula" vem fechado por padrão — parágrafo técnico denso
+  // não deve competir visualmente com os números do resultado.
+  const [mostrarCalculo, setMostrarCalculo] = useState(false);
   // Evita duplicar `simulation_start` no GA4 quando o usuário volta pro passo 0
   // (botão "voltar" ou "reiniciar") e avança de novo — sem isso, cada reinício
   // vira um novo "início de simulação" artificial nos relatórios.
@@ -838,21 +841,25 @@ function SimuladorInner() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: 14 }}>
             {[
-              { l: 'Parcela estimada', v: formatBRL(dados.parcela) + '/mês', d: `${compr.toFixed(1)}% da renda` },
-              { l: 'Prazo máximo', v: `${prazoAnos} anos`, d: `${prazoMaxMeses} meses` },
+              { emoji: '💳', cor: '#059669', bg: '#ecfdf5', l: 'Parcela estimada', v: formatBRL(dados.parcela) + '/mês', d: `${compr.toFixed(1)}% da renda` },
+              { emoji: '⏳', cor: '#854F0B', bg: '#FAEEDA', l: 'Prazo máximo', v: `${prazoAnos} anos`, d: `${prazoMaxMeses} meses` },
               {
+                emoji: '🏦', cor: '#2563eb', bg: '#eff6ff',
                 l: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? 'Subsídio estimado' : 'FGTS utilizado',
                 v: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? formatBRL(subsidioEstimado) : (painelAtivo === 'sfi' ? 'Não permitido' : formatBRL(perfil.fgts)),
                 d: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? 'Confirme na Caixa Econômica Federal' : painelAtivo === 'sfi' ? 'SFI não usa FGTS' : 'Já incluído no poder de compra acima',
               },
-              { l: 'Modalidade', v: painelAtivo === 'sbpe' ? 'SFH / SBPE' : dados.label, d: painelAtivo === 'sbpe' ? 'SBPE opera dentro do SFH' : painelAtivo === 'sfi' ? 'Paralelo ao SFH, sem teto' : 'Subsídio CEF' },
-            ].map(({ l, v, d }) => (
-              <div key={l} style={{ padding: '16px', background: 'var(--bg-card)' }}>
-                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.4px' }}>{l}</div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>{v}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{d}</div>
+              { emoji: '🏷️', cor: '#57534e', bg: '#f5f5f4', l: 'Modalidade', v: painelAtivo === 'sbpe' ? 'SFH / SBPE' : dados.label, d: painelAtivo === 'sbpe' ? 'SBPE opera dentro do SFH' : painelAtivo === 'sfi' ? 'Paralelo ao SFH, sem teto' : 'Subsídio CEF' },
+            ].map(({ emoji, cor, bg, l, v, d }) => (
+              <div key={l} style={{ padding: 14, background: bg, border: `1px solid ${cor}33`, borderRadius: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <span style={{ fontSize: 13 }}>{emoji}</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: cor, textTransform: 'uppercase', letterSpacing: '.4px' }}>{l}</span>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: cor, lineHeight: 1.15 }}>{v}</div>
+                <div style={{ fontSize: 11, color: cor, opacity: .75, marginTop: 3 }}>{d}</div>
               </div>
             ))}
           </div>
@@ -937,27 +944,49 @@ function SimuladorInner() {
               <span style={{ fontSize: 14, fontWeight: 800, color: dados.cor }}>= 🏠 Poder de compra total</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: dados.cor }}>{formatBRL(totalPoderCompra5)}</span>
             </div>
-            {/* Explicação: como o banco calcula (CET / encargo mensal completo) */}
-            <div style={{ marginTop: 12, padding: '12px 14px', background: '#F1F5F9', borderRadius: 10, fontSize: 12, color: '#4B5563', lineHeight: 1.8 }}>
-              <strong style={{ color: dados.cor, fontSize: 12 }}>
-                💡 Como o banco calcula o financiamento
-              </strong>
-              <br />
-              O banco avalia o <strong>encargo mensal completo</strong> — não o valor bruto liberado. O encargo inclui <strong>amortização + juros (A+J) + seguro de vida (MIP) + seguro do imóvel (DFI) + tarifa de administração</strong>. Esse total não pode ultrapassar <strong>30% da renda bruta</strong> (Res. CMN 4.676/2018 — regra aplicada à CEF e todos os bancos no SFH/MCMV).
-              <br /><br />
-              Renda de <strong>{formatBRL(perfil.rendaBruta)}/mês</strong> × 30% = <strong>{formatBRL(Math.round(perfil.rendaBruta * 0.30))}/mês</strong> de encargo máximo.
-              {' '}Parcela estimada neste perfil: <strong>{formatBRL(dados.parcela)}/mês</strong> ({dados.comprometimento.toFixed(1)}% da renda) — inclui todos os custos.
-              {' '}Portanto o banco aprova <strong>{formatBRL(valorFinanciadoAtivo5)}</strong> de financiamento.
-              {(entradaEmDinheiro5 > 0 || fgtsAtivo5 > 0 || subsidioAtivo5 > 0) && (
-                <span>
-                  {' '}Somando{' '}
-                  {[
-                    entradaEmDinheiro5 > 0 ? `entrada de ${formatBRL(entradaEmDinheiro5)}` : null,
-                    fgtsAtivo5 > 0        ? `FGTS de ${formatBRL(fgtsAtivo5)}` : null,
-                    subsidioAtivo5 > 0    ? `subsídio de ${formatBRL(subsidioAtivo5)}` : null,
-                  ].filter(Boolean).join(' + ')}
-                  , o poder de compra total chega a <strong>{formatBRL(totalPoderCompra5)}</strong>.
-                </span>
+            {/* Explicação: como o banco calcula (CET / encargo mensal completo) — accordion fechado por padrão */}
+            <div style={{ marginTop: 12, border: '1.5px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setMostrarCalculo(v => !v)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F1F5F9', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 700, color: dados.cor }}>💡 Como o banco calcula o financiamento</span>
+                <span style={{ fontSize: 12, color: 'var(--text-faint)', transform: mostrarCalculo ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+              </button>
+              {mostrarCalculo && (
+                <div style={{ padding: '12px 14px', background: 'var(--bg-card)', fontSize: 12, color: '#4B5563', lineHeight: 1.6 }}>
+                  <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                    <span style={{ color: dados.cor }}>•</span>
+                    <span>Encargo máximo: <strong>30% da renda bruta</strong> ({formatBRL(perfil.rendaBruta)} × 30% = {formatBRL(Math.round(perfil.rendaBruta * 0.30))}/mês)</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                    <span style={{ color: dados.cor }}>•</span>
+                    <span>Parcela estimada: <strong>{formatBRL(dados.parcela)}/mês</strong> ({dados.comprometimento.toFixed(1)}% da renda) — inclui amortização + juros + seguro de vida (MIP) + seguro do imóvel (DFI) + tarifa</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                    <span style={{ color: dados.cor }}>•</span>
+                    <span>Regra da Res. CMN 4.676/2018, válida para todos os bancos no SFH/MCMV</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                    <span style={{ color: dados.cor }}>•</span>
+                    <span>Financiamento aprovado: <strong>{formatBRL(valorFinanciadoAtivo5)}</strong></span>
+                  </div>
+                  {(entradaEmDinheiro5 > 0 || fgtsAtivo5 > 0 || subsidioAtivo5 > 0) && (
+                    <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                      <span style={{ color: dados.cor }}>•</span>
+                      <span>
+                        Somando{' '}
+                        {[
+                          entradaEmDinheiro5 > 0 ? `entrada de ${formatBRL(entradaEmDinheiro5)}` : null,
+                          fgtsAtivo5 > 0        ? `FGTS de ${formatBRL(fgtsAtivo5)}` : null,
+                          subsidioAtivo5 > 0    ? `subsídio de ${formatBRL(subsidioAtivo5)}` : null,
+                        ].filter(Boolean).join(' + ')}
+                        , o poder de compra total chega a <strong>{formatBRL(totalPoderCompra5)}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -1237,27 +1266,40 @@ function SimuladorInner() {
               <span style={{ fontSize: 14, fontWeight: 800, color: sc.cor }}>= 🏠 Valor do imóvel</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: sc.cor }}>{formatBRL(sim.valorImovel)}</span>
             </div>
-            {/* Explicação: como o banco calcula (CET / encargo mensal completo) */}
-            <div style={{ marginTop: 12, padding: '12px 14px', background: '#F1F5F9', borderRadius: 10, fontSize: 12, color: '#4B5563', lineHeight: 1.8 }}>
-              <strong style={{ color: sc.cor, fontSize: 12 }}>
-                💡 Como o banco calcula o financiamento
-              </strong>
-              <br />
-              O banco avalia o <strong>encargo mensal completo</strong> — não o valor bruto liberado. O limite é <strong>30% da renda bruta</strong> sobre o encargo total (Res. CMN 4.676/2018).
-              <br /><br />
-              <strong>Renda {formatBRL(parseMoeda(e.renda))}/mês × 30% = {formatBRL(Math.round(parseMoeda(e.renda) * 0.30))}/mês</strong> de encargo máximo.
-              <br />
-              Encargo real desta simulação: <strong>{formatBRL(sim.parcelaPrimeiro)}/mês</strong> ({sim.comprometimento.toFixed(1)}% da renda{sim.comprometimento > 30 ? ' ⚠️ acima do limite' : ''})
-              <br />
-              <span style={{ paddingLeft: 8, display: 'inline-block', color: '#6B7280' }}>
-                ↳ A+J (amort. + juros): {formatBRL(sim.parcelaPrimeiro - sim.seguros.total)}/mês
-              </span>
-              <br />
-              <span style={{ paddingLeft: 8, display: 'inline-block', color: '#6B7280' }}>
-                ↳ MIP (seg. vida) + DFI (seg. imóvel) + tarifa: {formatBRL(sim.seguros.total)}/mês
-              </span>
-              <br />
-              Com esse encargo, o banco aprova <strong>{formatBRL(sim.valorFinanciado)}</strong> de financiamento à taxa de <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong>.
+            {/* Explicação: como o banco calcula (CET / encargo mensal completo) — accordion fechado por padrão */}
+            <div style={{ marginTop: 12, border: '1.5px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+              <button
+                type="button"
+                onClick={() => setMostrarCalculo(v => !v)}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#F1F5F9', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 700, color: sc.cor }}>💡 Como o banco calcula o financiamento</span>
+                <span style={{ fontSize: 12, color: 'var(--text-faint)', transform: mostrarCalculo ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>▾</span>
+              </button>
+              {mostrarCalculo && (
+                <div style={{ padding: '12px 14px', background: 'var(--bg-card)', fontSize: 12, color: '#4B5563', lineHeight: 1.6 }}>
+                  <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                    <span style={{ color: sc.cor }}>•</span>
+                    <span>Encargo máximo: <strong>30% da renda bruta</strong> ({formatBRL(parseMoeda(e.renda))} × 30% = {formatBRL(Math.round(parseMoeda(e.renda) * 0.30))}/mês)</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                    <span style={{ color: sc.cor }}>•</span>
+                    <span>Encargo real desta simulação: <strong>{formatBRL(sim.parcelaPrimeiro)}/mês</strong> ({sim.comprometimento.toFixed(1)}% da renda{sim.comprometimento > 30 ? ' ⚠️ acima do limite' : ''})</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                    <span style={{ color: sc.cor }}>•</span>
+                    <span>↳ A+J (amort. + juros): {formatBRL(sim.parcelaPrimeiro - sim.seguros.total)}/mês · ↳ MIP + DFI + tarifa: {formatBRL(sim.seguros.total)}/mês</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                    <span style={{ color: sc.cor }}>•</span>
+                    <span>Regra da Res. CMN 4.676/2018, válida para todos os bancos no SFH/MCMV</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
+                    <span style={{ color: sc.cor }}>•</span>
+                    <span>Financiamento aprovado: <strong>{formatBRL(sim.valorFinanciado)}</strong> à taxa de <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong></span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
