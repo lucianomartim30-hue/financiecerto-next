@@ -7,10 +7,13 @@
  * simulou financiamento mas não viu nenhum imóvel" (potencial lead invisível
  * hoje) e o inverso.
  *
- * Mesmo padrão de mapa único em uma chave (ver lib/promocoes-kv.ts) — mas como
- * aqui QUALQUER visitante entra (não só quem converte), o volume tende a ser
- * bem maior, então os registros expiram sozinhos (poda no próprio código, já
- * que TTL da KV é por chave inteira, não por entrada do mapa).
+ * Uma chave por visitante (não um mapa único) — isso dispara em praticamente
+ * toda visita ao site (listagem, imóvel, simulação), então precisa ser barato:
+ * cada evento só lê/escreve o registro daquele visitante, nunca o site
+ * inteiro. TTL nativo da KV expira sozinho (60 dias), sem poda manual.
+ * Versão anterior usava um mapa único — reescrever esse JSON gigante a cada
+ * visita anônima consumiu CPU rápido demais no plano Hobby da Vercel
+ * (detectado 2026-08-31, corrigido no mesmo dia).
  */
 
 export interface RegistroAnonimo {
@@ -23,9 +26,10 @@ export interface RegistroAnonimo {
   totalEventos: number;
 }
 
-const KV_KEY = 'rastreio:map';
+const KV_PREFIX = 'rastreio:v:';
 const MAX_IMOVEIS = 20;
 const DIAS_EXPIRACAO = 60;
+const TTL_SEGUNDOS = DIAS_EXPIRACAO * 24 * 60 * 60;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function getKv(): Promise<any | null> {
@@ -39,28 +43,6 @@ async function getKv(): Promise<any | null> {
   }
 }
 
-function expirado(r: RegistroAnonimo): boolean {
-  const limite = Date.now() - DIAS_EXPIRACAO * 24 * 60 * 60 * 1000;
-  return new Date(r.ultimaVisita).getTime() < limite;
-}
-
-async function getMapa(): Promise<Record<string, RegistroAnonimo>> {
-  const kv = await getKv();
-  if (!kv) return {};
-  try {
-    const raw = await kv.get(KV_KEY);
-    return (raw as Record<string, RegistroAnonimo>) ?? {};
-  } catch {
-    return {};
-  }
-}
-
-async function setMapa(mapa: Record<string, RegistroAnonimo>): Promise<void> {
-  const kv = await getKv();
-  if (!kv) return;
-  await kv.set(KV_KEY, mapa);
-}
-
 export type TipoEvento = 'imovel' | 'simulador' | 'listagem';
 
 /** Registra um evento anônimo — chamado de /api/visita, /api/simulacoes e /api/rastreio. */
@@ -71,22 +53,16 @@ export async function kvRegistrarEvento(
   const kv = await getKv();
   if (!kv) return;
   try {
-    const mapa = await getMapa();
-
-    // Poda entradas velhas a cada escrita — sem isso o mapa cresce pra sempre
-    // (TTL da KV é por chave inteira, não dá pra expirar só uma entrada do JSON).
-    for (const key of Object.keys(mapa)) {
-      if (expirado(mapa[key])) delete mapa[key];
-    }
+    const key = KV_PREFIX + visitorId;
+    const atual = ((await kv.get(key)) as RegistroAnonimo | null) ?? null;
 
     const agora = new Date().toISOString();
-    const atual = mapa[visitorId];
     const imoveisVistos =
       evento.tipo === 'imovel' && evento.imovelId
         ? [evento.imovelId, ...(atual?.imoveisVistos ?? []).filter(id => id !== evento.imovelId)].slice(0, MAX_IMOVEIS)
         : (atual?.imoveisVistos ?? []);
 
-    mapa[visitorId] = {
+    const registro: RegistroAnonimo = {
       id: visitorId,
       primeiraVisita: atual?.primeiraVisita ?? agora,
       ultimaVisita: agora,
@@ -96,16 +72,25 @@ export async function kvRegistrarEvento(
       totalEventos: (atual?.totalEventos ?? 0) + 1,
     };
 
-    await setMapa(mapa);
+    await kv.set(key, registro, { ex: TTL_SEGUNDOS });
   } catch (e) {
     console.error('[rastreio-kv] registrarEvento', e);
   }
 }
 
-/** Todos os registros ainda válidos — usado pelo painel /admin/rastreio. */
+/** Todos os registros ainda válidos — usado pelo painel /admin/leads (aba Rastreio). Só roda quando o admin abre a aba, não a cada visita. */
 export async function kvListarRastreios(): Promise<RegistroAnonimo[]> {
-  const mapa = await getMapa();
-  return Object.values(mapa).filter(r => !expirado(r));
+  const kv = await getKv();
+  if (!kv) return [];
+  try {
+    const keys = (await kv.keys(`${KV_PREFIX}*`)) as string[];
+    if (!keys || keys.length === 0) return [];
+    const valores = (await kv.mget(...keys)) as (RegistroAnonimo | null)[];
+    return valores.filter((v): v is RegistroAnonimo => !!v);
+  } catch (e) {
+    console.error('[rastreio-kv] listarRastreios', e);
+    return [];
+  }
 }
 
 /** Remove o rastro anônimo de um visitante — chamado quando ele vira lead, pra não duplicar em visitantes-kv. */
@@ -113,10 +98,7 @@ export async function kvRemoverRastreio(visitorId: string): Promise<void> {
   const kv = await getKv();
   if (!kv) return;
   try {
-    const mapa = await getMapa();
-    if (!(visitorId in mapa)) return;
-    delete mapa[visitorId];
-    await setMapa(mapa);
+    await kv.del(KV_PREFIX + visitorId);
   } catch (e) {
     console.error('[rastreio-kv] removerRastreio', e);
   }
