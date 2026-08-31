@@ -28,6 +28,7 @@ import {
   fetchAllActiveIds,
   fetchBuildingsBatch,
   SITE_BASE,
+  _ultimoErroIdsActive, // TESTE TEMPORÁRIO — diagnóstico, remover depois de identificar a causa
 } from '@/lib/orulo-api';
 import { kvGetCatalog, kvSetCatalog, kvSetMeta, type CatalogEntry, type SeoStatus } from '@/lib/orulo-kv';
 
@@ -70,7 +71,10 @@ export async function GET(req: NextRequest) {
 
     if (totalActive === 0) {
       return NextResponse.json(
-        { error: 'Orulo retornou 0 IDs ativos — problema de autenticação ou API.' },
+        {
+          error: 'Orulo retornou 0 IDs ativos — problema de autenticação ou API.',
+          diagnostico: _ultimoErroIdsActive, // TESTE TEMPORÁRIO
+        },
         { status: 502 },
       );
     }

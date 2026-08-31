@@ -249,6 +249,11 @@ export interface OruloIdEntry {
   updated_at: string;
 }
 
+// TESTE TEMPORÁRIO — diagnóstico do bug "0 IDs ativos" (2026-08-31). Guarda o
+// último erro real (status + corpo) pra expor na resposta do /sync, já que os
+// logs de runtime não estavam acessíveis via CLI no momento do incidente.
+export let _ultimoErroIdsActive: { page: number; status?: number; body?: string; erro?: string } | null = null;
+
 export async function fetchAllActiveIds(token: string): Promise<OruloIdEntry[]> {
   const PER_PAGE = 500;
   const allIds: OruloIdEntry[] = [];
@@ -261,7 +266,12 @@ export async function fetchAllActiveIds(token: string): Promise<OruloIdEntry[]> 
         `${ORULO_BASE}/api/v2/buildings/ids/active?results_per_page=${PER_PAGE}&page=${page}`,
         { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) },
       );
-      if (!resp.ok) { console.error('[ids/active] HTTP', resp.status, 'page', page); break; }
+      if (!resp.ok) {
+        const bodyText = await resp.text().catch(() => '');
+        console.error('[ids/active] HTTP', resp.status, 'page', page, bodyText.slice(0, 500));
+        _ultimoErroIdsActive = { page, status: resp.status, body: bodyText.slice(0, 500) };
+        break;
+      }
       const data = await resp.json();
 
       // A API pode retornar building_ids ou buildings (ambos são suportados)
@@ -286,6 +296,7 @@ export async function fetchAllActiveIds(token: string): Promise<OruloIdEntry[]> 
       page++;
     } catch (e) {
       console.error('[ids/active] error page', page, e);
+      _ultimoErroIdsActive = { page, erro: String(e) };
       break;
     }
   }
