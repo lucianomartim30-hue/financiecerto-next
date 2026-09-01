@@ -100,7 +100,13 @@ export async function kvListarRastreios(): Promise<RegistroAnonimo[]> {
     const keys = (await kv.keys(`${KV_PREFIX}*`)) as string[];
     if (!keys || keys.length === 0) return [];
     const valores = (await kv.mget(...keys)) as (RegistroAnonimo | null)[];
-    return valores.filter((v): v is RegistroAnonimo => !!v);
+    // Registros gravados antes de imoveisFavoritados existir não têm esse
+    // campo — sem normalizar aqui, qualquer leitor que faça .length nele
+    // (ex: /api/admin/rastreio) quebra com TypeError (bug real, achado
+    // 2026-09-01, derrubava a aba Rastreio anônimo inteira).
+    return valores
+      .filter((v): v is RegistroAnonimo => !!v)
+      .map(v => ({ ...v, imoveisFavoritados: v.imoveisFavoritados ?? [] }));
   } catch (e) {
     console.error('[rastreio-kv] listarRastreios', e);
     return [];
