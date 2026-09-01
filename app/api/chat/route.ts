@@ -227,7 +227,7 @@ Plataforma 100% gratuita, sem cadastro, resultado em menos de 2 minutos.
 ━━━ ESTRUTURA DO SITE ━━━
 
 **Página inicial (/):**
-Apresenta a proposta da plataforma: "Descubra o imóvel certo para sua realidade financeira." CTAs: "Descobrir meu perfil", "Simular na planta", "Simular pronto". Destaca as 4 funcionalidades centrais: Simulador 2026 (MCMV/SBPE/SFI), Simulador na Planta, Portal de Imóveis (+2.000 empreendimentos), e o Consultor João.
+Apresenta a proposta da plataforma: "Descubra o imóvel certo para sua realidade financeira." CTAs: "Descobrir meu perfil", "Simular na planta", "Simular pronto". Destaca as 4 funcionalidades centrais: Simulador 2026 (MCMV/SBPE/SFI), Simulador na Planta, Portal de Imóveis (+4.000 empreendimentos), e o Consultor João.
 
 **Simulador de Perfil (/simulador):**
 Ferramenta principal para descobrir o perfil de compra. O usuário informa renda bruta familiar, FGTS disponível, entrada disponível, prazo desejado, idade e dependentes. O sistema identifica a faixa MCMV (1–4) ou SBPE/SFI, e calcula: taxa de juros real, teto máximo de compra (poder de compra), parcela estimada (Price e SAC), comprometimento de renda e subsídio disponível. Após o resultado, exibe o componente BuscaImoveisInteligente — onde o usuário informa quartos, vagas e bairro para ver imóveis compatíveis com seu perfil.
@@ -236,7 +236,7 @@ Ferramenta principal para descobrir o perfil de compra. O usuário informa renda
 Simula o fluxo completo de compra na planta (crédito associativo). Reproduz o cronograma real: ato, mensais à construtora, reforços, chaves e evolução de obra (juros evolutivos mês a mês conforme o avanço). Considera estágio atual do empreendimento (pré-lançamento, lançamento, em obra), valor do imóvel e prazo. Mostra quanto o cliente pagará por mês durante a obra e depois — análise completa do fluxo real.
 
 **Portal de Imóveis (/imoveis):**
-Mais de 2.000 empreendimentos de incorporadoras (base Orulo), com fotos reais, filtros por preço, bairro, quartos e status. Cada card mostra nome, construtora, bairro, preço a partir de, quartos e área. Ao clicar, abre página detalhada com fotos, endereço, planta, previsão de entrega e imóveis similares (mesmo perfil e bairros próximos).
+Mais de 4.000 empreendimentos de incorporadoras (base Orulo), com fotos reais, filtros por preço, bairro, quartos e status. Cada card mostra nome, construtora, bairro, preço a partir de, quartos e área. Ao clicar, abre página detalhada com fotos, endereço, planta, previsão de entrega e imóveis similares (mesmo perfil e bairros próximos).
 
 **Guia de Financiamento (/guia):**
 Conteúdo educativo em 5 capítulos:
@@ -260,7 +260,7 @@ Conteúdo educacional em artigos completos, cobrindo: modalidades de financiamen
 Sempre que possível, direcione o usuário para a ferramenta certa:
 - Quer saber quanto pode comprar → "Faça o simulador em /simulador — resultado em 2 minutos com taxa real, poder de compra e parcela."
 - Pergunta sobre imóvel na planta → "No /simulador/na-planta você simula mês a mês o que pagará durante a obra e depois."
-- Quer ver imóveis → "No /imoveis tem mais de 2.000 empreendimentos — ou use o BuscaImoveisInteligente depois do simulador para filtrar por quartos, vagas e bairro."
+- Quer ver imóveis → "No /imoveis tem mais de 4.000 empreendimentos — ou use o BuscaImoveisInteligente depois do simulador para filtrar por quartos, vagas e bairro."
 - Dúvida sobre algum termo → "O /glossario explica todos os termos com linguagem simples."
 - Quer entender o processo completo → "O /guia cobre tudo: do SICAQ ao habite-se, documentação e custos."
 - Dúvida sobre SCP, brasileiro no exterior, estrangeiro comprando no Brasil, HIS/HMP, imóvel NR ou outro tema de /aprenda → responda com o conteúdo relevante já anexado a este prompt (se houver) e, se fizer sentido, indique o artigo completo em /aprenda.
@@ -759,7 +759,7 @@ function buildContextBlock(ctx: Record<string, unknown> | null | undefined): str
       '/': 'Página inicial',
       '/simulador': 'Simulador de Perfil (Descobrir perfil / Já sei o imóvel)',
       '/simulador/na-planta': 'Simulador na Planta (crédito associativo)',
-      '/imoveis': 'Portal de imóveis (+2.000 empreendimentos)',
+      '/imoveis': 'Portal de imóveis (+4.000 empreendimentos)',
       '/guia': 'Guia completo de financiamento (5 capítulos)',
       '/glossario': 'Glossário de termos imobiliários',
       '/aprenda': 'Hub Aprenda (artigos educativos)',

@@ -241,7 +241,7 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
               Pronto pra ver os imóveis?
             </p>
             <p style={{ fontSize: 15, color: 'rgba(255,255,255,.75)', margin: '0 0 18px' }}>
-              Mais de mil empreendimentos em São Paulo, já filtrados pela sua capacidade de financiamento.
+              Mais de 4 mil empreendimentos em São Paulo, já filtrados pela sua capacidade de financiamento.
             </p>
             <CtaImoveisLink slug={artigo.slug} texto="Ver imóveis compatíveis em São Paulo" />
           </div>

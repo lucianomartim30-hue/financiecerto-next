@@ -214,7 +214,7 @@ export default function SobrePage() {
                 n: '3',
                 icon: '🏘️',
                 titulo: 'Encontrar imóveis compatíveis',
-                desc: 'Mais de 2.000 empreendimentos em São Paulo filtrados automaticamente pelo seu perfil — sem desperdiçar tempo com imóveis fora do seu alcance real.',
+                desc: 'Mais de 4.000 empreendimentos em São Paulo filtrados automaticamente pelo seu perfil — sem desperdiçar tempo com imóveis fora do seu alcance real.',
                 link: '/imoveis',
                 label: 'Ver empreendimentos',
               },
@@ -313,7 +313,7 @@ export default function SobrePage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 20 }}>
             {[
-              { numero: '+2.000', desc: 'Empreendimentos catalogados em São Paulo' },
+              { numero: '+4.000', desc: 'Empreendimentos catalogados em São Paulo' },
               { numero: '5', desc: 'Modalidades cobertas: MCMV F1, F2, F3, F4 e SBPE' },
               { numero: '5 capítulos', desc: 'No Guia completo de financiamento imobiliário' },
               { numero: '+25 termos', desc: 'Explicados no Glossário em linguagem simples' },

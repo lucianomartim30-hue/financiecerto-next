@@ -12,7 +12,7 @@ import { getStatusCfg } from '@/lib/status';
 export const revalidate = 3600;
 
 const STATS = [
-  { value: '2.000+', label: 'Empreendimentos', href: '/imoveis' },
+  { value: '4.000+', label: 'Empreendimentos', href: '/imoveis' },
   { value: 'MCMV · SBPE · SFI', label: 'Todos os perfis de renda', href: '/simulador' },
   { value: '35 anos', label: 'Prazo máximo', href: '/simulador' },
   { value: 'R$ 190k a 34mi', label: 'Do econômico ao alto padrão', href: '/imoveis' },
@@ -72,7 +72,7 @@ const FEATURES = [
   {
     icon: '🏢',
     title: 'Portal de Imóveis',
-    desc: 'Mais de 2.000 empreendimentos da Órulo filtrados pelo seu perfil financeiro.',
+    desc: 'Mais de 4.000 empreendimentos da Órulo filtrados pelo seu perfil financeiro.',
     color: 'var(--purple-light)',
     textColor: 'var(--purple)',
   },
