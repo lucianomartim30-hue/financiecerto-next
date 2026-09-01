@@ -67,6 +67,23 @@ export function toggleFavorito(id: string): boolean {
   return true;
 }
 
+/**
+ * Traz de volta pro localStorage os favoritos já salvos no servidor pra esse
+ * dono (ver GET /api/favoritos) — chamado uma vez por sessão em
+ * components/FavoritosSync.tsx. Sem isso, um aparelho novo (ou localStorage
+ * limpo) não mostrava os favoritos de uma conta já logada em nenhum lugar do
+ * site fora de /conta, mesmo eles existindo no servidor.
+ */
+export function mesclarFavoritosDoServidor(idsServidor: string[]): void {
+  if (idsServidor.length === 0) return;
+  const locais = readAll();
+  const idsLocais = new Set(locais.map(f => f.id));
+  const novos = idsServidor.filter(id => !idsLocais.has(id));
+  if (novos.length === 0) return;
+  const agora = new Date().toISOString();
+  writeAll([...locais, ...novos.map(id => ({ id, addedAt: agora }))]);
+}
+
 /** Escuta mudanças nos favoritos — inclusive entre componentes/abas diferentes. */
 export function onFavoritosChange(cb: () => void): () => void {
   if (typeof window === 'undefined') return () => {};
