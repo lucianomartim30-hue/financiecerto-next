@@ -11,6 +11,7 @@ import { kvGetBuscasSalvas } from '@/lib/buscas-salvas-kv';
 import { kvGetLeads } from '@/lib/leads-kv';
 import { kvGetSimulacoes } from '@/lib/simulacoes-kv';
 import { kvGetFavoritos } from '@/lib/favoritos-kv';
+import { kvGetImoveisVistos } from '@/lib/imoveis-vistos-kv';
 
 export async function GET(req: NextRequest) {
   const email = await getEmailDaSessao(req.cookies.get('fc_conta')?.value);
@@ -19,14 +20,15 @@ export async function GET(req: NextRequest) {
   }
 
   const owner = `e:${email}`;
-  const [buscas, leads, simulacoes, favoritoIds] = await Promise.all([
+  const [buscas, leads, simulacoes, favoritoIds, vistosIds] = await Promise.all([
     kvGetBuscasSalvas(),
     kvGetLeads(),
     kvGetSimulacoes(owner),
     kvGetFavoritos(owner),
+    kvGetImoveisVistos(owner),
   ]);
   const alertas  = buscas.filter(b => b.ativa && b.email?.trim().toLowerCase() === email.toLowerCase());
   const contatos = leads.filter(l => l.contato?.email?.trim().toLowerCase() === email.toLowerCase());
 
-  return NextResponse.json({ email, alertas, contatos, simulacoes, favoritoIds });
+  return NextResponse.json({ email, alertas, contatos, simulacoes, favoritoIds, vistosIds });
 }

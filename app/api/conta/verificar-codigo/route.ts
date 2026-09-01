@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verificarCodigo } from '@/lib/conta-kv';
 import { kvReivindicarSimulacoes } from '@/lib/simulacoes-kv';
 import { kvReivindicarFavoritos } from '@/lib/favoritos-kv';
+import { kvReivindicarImoveisVistos } from '@/lib/imoveis-vistos-kv';
 
 const COOKIE_NAME = 'fc_conta';
 
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
   await Promise.all([
     kvReivindicarSimulacoes(visitorId, emailNorm),
     kvReivindicarFavoritos(visitorId, emailNorm),
+    kvReivindicarImoveisVistos(visitorId, emailNorm),
   ]);
 
   const res = NextResponse.json({ ok: true, email: emailNorm });

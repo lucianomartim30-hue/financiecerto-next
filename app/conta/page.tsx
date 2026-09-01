@@ -176,6 +176,7 @@ function Dashboard({ email, onSair }: { email: string; onSair: () => void }) {
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [simulacoes, setSimulacoes] = useState<Simulacao[]>([]);
   const [favoritoIds, setFavoritoIds] = useState<string[]>([]);
+  const [vistosIds, setVistosIds] = useState<string[]>([]);
   const [catalogo, setCatalogo] = useState<Record<string, BuildingResumo>>({});
   const [loading, setLoading] = useState(true);
   const [cancelando, setCancelando] = useState<string | null>(null);
@@ -188,6 +189,7 @@ function Dashboard({ email, onSair }: { email: string; onSair: () => void }) {
     setContatos(data?.contatos || []);
     setSimulacoes(data?.simulacoes || []);
     setFavoritoIds(data?.favoritoIds || []);
+    setVistosIds(data?.vistosIds || []);
     setLoading(false);
   }, []);
 
@@ -279,6 +281,34 @@ function Dashboard({ email, onSair }: { email: string; onSair: () => void }) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
               {favoritoIds.map(id => {
+                const b = catalogo[id];
+                return (
+                  <a key={id} href={`/imoveis/${id}`} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '10px', textDecoration: 'none' }}>
+                    {b?.photo && <img src={b.photo} alt="" style={{ width: '44px', height: '44px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />}
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b?.name || id}</p>
+                      <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '2px' }}>
+                        {b ? [b.neighborhood, b.city].filter(Boolean).join(' · ') : ''}{b?.min_price && b.min_price >= 100 ? ` · ${formatBRL(b.min_price)}` : ''}
+                      </p>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Imóveis vistos */}
+          <p style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+            👁️ Imóveis que você viu {vistosIds.length > 0 ? `(${vistosIds.length})` : ''}
+          </p>
+          {vistosIds.length === 0 ? (
+            <p style={{ fontSize: '13px', color: 'var(--text-faint)', marginBottom: '24px' }}>
+              Nenhum imóvel visto ainda. <a href="/imoveis" style={{ color: 'var(--primary)' }}>Ver imóveis →</a>
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+              {vistosIds.map(id => {
                 const b = catalogo[id];
                 return (
                   <a key={id} href={`/imoveis/${id}`} target="_blank" rel="noopener noreferrer"
