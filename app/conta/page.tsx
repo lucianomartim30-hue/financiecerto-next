@@ -216,6 +216,16 @@ function Dashboard({ email, onSair }: { email: string; onSair: () => void }) {
     }
   }
 
+  async function removerSimulacao(id: string) {
+    setCancelando(id);
+    try {
+      await fetch('/api/simulacoes', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+      setSimulacoes(prev => prev.filter(s => s.id !== id));
+    } finally {
+      setCancelando(null);
+    }
+  }
+
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
@@ -264,7 +274,14 @@ function Dashboard({ email, onSair }: { email: string; onSair: () => void }) {
                       Imóvel de {formatBRL(s.valorImovel)} · {s.prazoAnos} anos · {formatData(s.criadoEm)}
                     </p>
                   </div>
-                  <BotaoReenviar email={email} sim={s} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    <BotaoReenviar email={email} sim={s} />
+                    <button onClick={() => removerSimulacao(s.id)} disabled={cancelando === s.id}
+                      title="Remover"
+                      style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-faint)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {cancelando === s.id ? '…' : '✕'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

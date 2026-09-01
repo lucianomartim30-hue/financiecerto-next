@@ -61,6 +61,18 @@ export async function kvGetSimulacoes(owner: string): Promise<SimulacaoSalva[]> 
   }
 }
 
+/** Remove uma simulação salva da conta — chamado por /conta quando a pessoa clica em remover. */
+export async function kvRemoverSimulacao(owner: string, id: string): Promise<void> {
+  const kv = await getKv();
+  if (!kv) return;
+  try {
+    const atuais = await kvGetSimulacoes(owner);
+    await kv.set(chave(owner), atuais.filter(s => s.id !== id));
+  } catch (e) {
+    console.error('[simulacoes-kv] remover', e);
+  }
+}
+
 /** Migra simulações feitas antes do login naquele aparelho pra dentro da conta — chamado uma vez, no momento em que o código é confirmado. */
 export async function kvReivindicarSimulacoes(visitorId: string | undefined, email: string): Promise<void> {
   if (!visitorId) return;

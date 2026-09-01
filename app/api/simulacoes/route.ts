@@ -3,12 +3,25 @@
  * (fire-and-forget, chamado pelo simulador ao chegar no resultado). Salva
  * por conta (e-mail) se a pessoa está logada, senão por aparelho (fc_vid) —
  * nunca exige login pra simular, é só o registro que muda de dono.
+ * DELETE — remove uma simulação salva; só funciona logada (a lista some da
+ * tela de /conta, não faz sentido remover do aparelho anônimo).
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getEmailDaSessao } from '@/lib/conta-kv';
-import { kvSalvarSimulacao } from '@/lib/simulacoes-kv';
+import { kvSalvarSimulacao, kvRemoverSimulacao } from '@/lib/simulacoes-kv';
 import { kvRegistrarEvento } from '@/lib/rastreio-kv';
+
+export async function DELETE(req: NextRequest) {
+  const email = await getEmailDaSessao(req.cookies.get('fc_conta')?.value);
+  if (!email) return NextResponse.json({ ok: false }, { status: 401 });
+
+  const { id } = await req.json().catch(() => ({ id: null }));
+  if (!id || typeof id !== 'string') return NextResponse.json({ ok: false }, { status: 400 });
+
+  await kvRemoverSimulacao(`e:${email}`, id);
+  return NextResponse.json({ ok: true });
+}
 
 export async function POST(req: NextRequest) {
   try {
