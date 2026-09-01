@@ -39,6 +39,7 @@ interface Imovel {
     precoOriginal?: number;
     precoPromocional: number;
     ultimaUnidade?: boolean;
+    investidorSCP?: boolean;
     beneficio?: string;
   }[];
 }
@@ -105,7 +106,13 @@ const SUGESTAO_COR: Record<'bairro' | 'rua' | 'imovel' | 'empresa', { bg: string
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: string }) {
-  const sc = getStatus(im.status_norm || im.status || '', im.min_price);
+  // Cota de investidor via SCP → empreendimento ainda sem lançamento oficial,
+  // mesmo que a Órulo já tenha sincronizado como "Lançamento" (ver mesma
+  // lógica em ImovelDetailClient.tsx).
+  const temPromoSCP = !!im.promocoes_destaque?.some(p => p.investidorSCP);
+  const sc = temPromoSCP
+    ? { cor: '#0891b2', label: 'Breve Lançamento' }
+    : getStatus(im.status_norm || im.status || '', im.min_price);
   // Quando há filtro de tipologia ativo, mostra a faixa específica daquele tipo de
   // unidade (ex.: Cobertura Horizontal) em vez da faixa do prédio inteiro — senão o
   // card mostra o apartamento padrão mais barato do prédio, não a unidade filtrada.
@@ -150,7 +157,9 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
           {im.promocoes_destaque && im.promocoes_destaque.length > 0 ? (
             <div style={{ marginTop: '2px', padding: '5px 7px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '7px' }}>
               <p style={{ fontSize: '9px', fontWeight: '800', color: '#dc2626', textTransform: 'uppercase', letterSpacing: '.3px', marginBottom: '3px' }}>
-                🔥 {im.promocoes_destaque.length > 1 ? `${im.promocoes_destaque.length} unidades em promoção` : 'Unidade em promoção'}
+                {temPromoSCP
+                  ? `📈 ${im.promocoes_destaque.length > 1 ? `${im.promocoes_destaque.length} tipologias — investidor SCP` : 'Tipologia — investidor SCP'}`
+                  : `🔥 ${im.promocoes_destaque.length > 1 ? `${im.promocoes_destaque.length} unidades em promoção` : 'Unidade em promoção'}`}
               </p>
               {im.promocoes_destaque.map((p, i) => {
                 const temDesconto = !!(p.precoOriginal && p.precoOriginal > p.precoPromocional);

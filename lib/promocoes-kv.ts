@@ -24,6 +24,7 @@ export interface Promocao {
   precoOriginal?: number;   // preço de tabela da construtora pra essa unidade, antes do desconto — mostrado riscado, pra pessoa ver quanto economiza
   precoPromocional: number; // 649000
   ultimaUnidade?: boolean;  // true quando é a última/única unidade dessa característica no empreendimento — troca a mensagem "demais unidades a partir de X" (que ficaria falsa) por um aviso de urgência
+  investidorSCP?: boolean;  // true quando é cota de investidor via SCP (pré-lançamento, antes do lançamento oficial na Órulo) — troca "unidades em promoção" por linguagem de tipologia/investidor, mostra o botão "O que é SCP?" e sobrepõe o selo de estágio pra "Breve Lançamento"
   beneficio?: string;       // "6 meses de condomínio grátis" | "60 mil pontos Livelo"
   validoAte?: string;       // ISO date (YYYY-MM-DD) — some sozinha do site depois dessa data
   observacao?: string;      // texto livre, ex: "sujeito a disponibilidade"

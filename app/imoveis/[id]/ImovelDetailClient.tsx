@@ -84,6 +84,7 @@ interface ImovelDetalhe {
     precoOriginal?: number;
     precoPromocional: number;
     ultimaUnidade?: boolean;
+    investidorSCP?: boolean;
     beneficio?: string;
     validoAte?: string;
     observacao?: string;
@@ -1713,6 +1714,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [copied, setCopied] = useState(false);
+  const [mostrarInfoSCP, setMostrarInfoSCP] = useState(false);
   const [bpLightbox, setBpLightbox] = useState<Blueprint | null>(null);
   const [bpImgError, setBpImgError] = useState(false);
   const [valorTipologia, setValorTipologia] = useState<number | undefined>(undefined);
@@ -1811,7 +1813,14 @@ export default function ImovelDetailClient({ id }: { id: string }) {
   const waMsgTopo = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovelTopo}`);
   const waMsgTopoVisita = encodeURIComponent(`Olá! Gostaria de agendar uma visita ao imóvel *${imovel.name}* que vi no FinancieCerto.\n${urlImovelTopo}`);
 
-  const statusCfg = getStatus(imovel.status || '', imovel.min_price);
+  // Quando existe promoção de cota de investidor via SCP, o empreendimento
+  // ainda não teve lançamento oficial de verdade — mesmo que a Órulo já
+  // tenha sincronizado como "Lançamento" (o registro dela às vezes precede
+  // o anúncio formal). O selo do topo reflete isso, não o estágio bruto da Órulo.
+  const temPromoSCP = !!imovel.promocoes?.some(p => p.investidorSCP);
+  const statusCfg = temPromoSCP
+    ? { cor: '#0891b2', bg: 'rgba(8,145,178,.15)', label: 'Breve Lançamento' }
+    : getStatus(imovel.status || '', imovel.min_price);
   // Chips de resumo rápido no header — apenas specs da unidade
   const specs = [
     faixaRange(imovel.area_min, imovel.area_max, 'm²')             && { icon: '▦',  label: faixaRange(imovel.area_min, imovel.area_max, 'm²')! },
@@ -1964,9 +1973,27 @@ export default function ImovelDetailClient({ id }: { id: string }) {
       {/* ── Condição especial da construtora (ver lib/promocoes-kv.ts) ────── */}
       {imovel.promocoes && imovel.promocoes.length > 0 && (
         <div style={{ maxWidth: '1100px', margin: '16px auto 0', padding: '0 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <p style={{ fontSize: '13px', fontWeight: '800', color: '#b91c1c' }}>
-            🔥 {imovel.promocoes.length > 1 ? `${imovel.promocoes.length} unidades em promoção` : 'Unidade em promoção'}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <p style={{ fontSize: '13px', fontWeight: '800', color: '#b91c1c', margin: 0 }}>
+              {temPromoSCP
+                ? `📈 ${imovel.promocoes.length > 1 ? `${imovel.promocoes.length} tipologias — condição de investidor via SCP` : 'Tipologia — condição de investidor via SCP'}`
+                : `🔥 ${imovel.promocoes.length > 1 ? `${imovel.promocoes.length} unidades em promoção` : 'Unidade em promoção'}`}
+            </p>
+            {temPromoSCP && (
+              <button
+                type="button"
+                onClick={() => setMostrarInfoSCP(v => !v)}
+                style={{ fontSize: '11px', fontWeight: '700', color: '#7c3aed', background: 'rgba(124,58,237,.1)', border: '1px solid rgba(124,58,237,.3)', borderRadius: '999px', padding: '3px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                {mostrarInfoSCP ? '✕ Fechar' : 'ℹ️ O que é SCP?'}
+              </button>
+            )}
+          </div>
+          {temPromoSCP && mostrarInfoSCP && (
+            <div style={{ background: 'rgba(124,58,237,.06)', border: '1.5px solid rgba(124,58,237,.25)', borderRadius: '12px', padding: '12px 16px', fontSize: '12.5px', color: 'var(--text)', lineHeight: 1.5 }}>
+              <b>SCP (Sociedade em Conta de Participação)</b> é uma forma de investir num empreendimento antes do lançamento oficial: você entra como sócio investidor de uma sociedade que vai incorporar o projeto, geralmente com preço abaixo do mercado por causa do risco e do prazo mais longo (aqui, lançamento previsto para 12–18 meses). Não é a compra de uma unidade específica com matrícula própria ainda, e por isso não se financia pelo banco (SBPE/MCMV) — o pagamento é direto com a construtora, nas condições descritas em cada tipologia abaixo.
+            </div>
+          )}
           {imovel.promocoes.map(p => {
             const temDesconto = !!(p.precoOriginal && p.precoOriginal > p.precoPromocional);
             const specs = [
