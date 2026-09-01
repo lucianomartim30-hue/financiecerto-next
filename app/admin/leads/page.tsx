@@ -105,6 +105,9 @@ function CartaoRastreio({ r, catalogo }: { r: RegistroAnonimo; catalogo: Record<
         {r.imoveisVistos.length > 0 && (
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', background: 'rgba(22,163,74,.1)', color: '#16a34a' }}>🏠 viu {r.imoveisVistos.length} imóve{r.imoveisVistos.length === 1 ? 'l' : 'is'}</span>
         )}
+        {r.imoveisFavoritados.length > 0 && (
+          <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', background: 'rgba(220,38,38,.1)', color: '#dc2626' }}>❤️ favoritou {r.imoveisFavoritados.length}</span>
+        )}
         {r.visitouListagemImoveis && r.imoveisVistos.length === 0 && (
           <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '999px', background: 'rgba(107,114,128,.12)', color: 'var(--text-muted)' }}>📋 só listagem</span>
         )}
@@ -114,6 +117,15 @@ function CartaoRastreio({ r, catalogo }: { r: RegistroAnonimo; catalogo: Record<
           {r.imoveisVistos.map(id => (
             <a key={id} href={`/imoveis/${id}`} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: 'var(--primary)', textDecoration: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '2px 6px' }}>
               {catalogo[id]?.name || `#${id}`} ↗
+            </a>
+          ))}
+        </div>
+      )}
+      {r.imoveisFavoritados.length > 0 && (
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+          {r.imoveisFavoritados.map(id => (
+            <a key={id} href={`/imoveis/${id}`} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: '#dc2626', textDecoration: 'none', border: '1px solid rgba(220,38,38,.3)', borderRadius: '6px', padding: '2px 6px' }}>
+              ❤️ {catalogo[id]?.name || `#${id}`} ↗
             </a>
           ))}
         </div>

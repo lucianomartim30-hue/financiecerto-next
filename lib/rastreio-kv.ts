@@ -23,6 +23,7 @@ export interface RegistroAnonimo {
   visitouSimulador: boolean;       // completou ao menos 1 simulação (ver /api/simulacoes)
   visitouListagemImoveis: boolean; // abriu /imoveis (a vitrine)
   imoveisVistos: string[];         // ids Orulo de páginas de imóvel abertas, mais recente primeiro
+  imoveisFavoritados: string[];    // ids Orulo favoritados (ver /api/favoritos) — sinal mais forte que só visitar
   totalEventos: number;
 }
 
@@ -43,12 +44,20 @@ async function getKv(): Promise<any | null> {
   }
 }
 
-export type TipoEvento = 'imovel' | 'simulador' | 'listagem';
+export type TipoEvento = 'imovel' | 'simulador' | 'listagem' | 'favorito';
 
-/** Registra um evento anônimo — chamado de /api/visita, /api/simulacoes e /api/rastreio. */
+/**
+ * Registra um evento anônimo — chamado de /api/visita, /api/simulacoes,
+ * /api/rastreio e /api/favoritos.
+ *
+ * `favoritosIds`, quando o tipo é 'favorito', é sempre a lista COMPLETA atual
+ * de favoritos (é assim que /api/favoritos manda — espelha o localStorage
+ * inteiro a cada mudança, não um id novo isolado) — por isso substitui
+ * `imoveisFavoritados` em vez de acrescentar como os outros tipos fazem.
+ */
 export async function kvRegistrarEvento(
   visitorId: string,
-  evento: { tipo: TipoEvento; imovelId?: string },
+  evento: { tipo: TipoEvento; imovelId?: string; favoritosIds?: string[] },
 ): Promise<void> {
   const kv = await getKv();
   if (!kv) return;
@@ -61,6 +70,10 @@ export async function kvRegistrarEvento(
       evento.tipo === 'imovel' && evento.imovelId
         ? [evento.imovelId, ...(atual?.imoveisVistos ?? []).filter(id => id !== evento.imovelId)].slice(0, MAX_IMOVEIS)
         : (atual?.imoveisVistos ?? []);
+    const imoveisFavoritados =
+      evento.tipo === 'favorito' && evento.favoritosIds
+        ? evento.favoritosIds.slice(0, MAX_IMOVEIS)
+        : (atual?.imoveisFavoritados ?? []);
 
     const registro: RegistroAnonimo = {
       id: visitorId,
@@ -69,6 +82,7 @@ export async function kvRegistrarEvento(
       visitouSimulador: !!atual?.visitouSimulador || evento.tipo === 'simulador',
       visitouListagemImoveis: !!atual?.visitouListagemImoveis || evento.tipo === 'listagem',
       imoveisVistos,
+      imoveisFavoritados,
       totalEventos: (atual?.totalEventos ?? 0) + 1,
     };
 

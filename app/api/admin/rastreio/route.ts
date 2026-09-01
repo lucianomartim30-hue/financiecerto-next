@@ -27,10 +27,16 @@ export async function GET(req: NextRequest) {
   const [registros, idsConhecidos] = await Promise.all([kvListarRastreios(), kvListarIdsConhecidos()]);
   const desconhecidos = registros.filter(r => !idsConhecidos.has(r.id));
 
-  const potenciais = desconhecidos.filter(r => r.visitouSimulador && r.imoveisVistos.length === 0);
-  const interessados = desconhecidos.filter(r => !r.visitouSimulador && r.imoveisVistos.length > 0);
-  const altaIntencao = desconhecidos.filter(r => r.visitouSimulador && r.imoveisVistos.length > 0);
-  const soListagem = desconhecidos.filter(r => !r.visitouSimulador && r.imoveisVistos.length === 0 && r.visitouListagemImoveis);
+  // Favoritar é sinal de interesse em imóvel específico tão forte quanto (ou
+  // mais que) só visitar a página — sem contar isso aqui, quem favoritou sem
+  // "ver" formalmente nenhum imóvel não caía em nenhum dos 4 grupos abaixo e
+  // sumia da lista mesmo contando no total (bug real, achado em 2026-08-31).
+  const viuOuFavoritou = (r: RegistroAnonimo) => r.imoveisVistos.length > 0 || r.imoveisFavoritados.length > 0;
+
+  const potenciais = desconhecidos.filter(r => r.visitouSimulador && !viuOuFavoritou(r));
+  const interessados = desconhecidos.filter(r => !r.visitouSimulador && viuOuFavoritou(r));
+  const altaIntencao = desconhecidos.filter(r => r.visitouSimulador && viuOuFavoritou(r));
+  const soListagem = desconhecidos.filter(r => !r.visitouSimulador && !viuOuFavoritou(r) && r.visitouListagemImoveis);
 
   const ordenar = (arr: RegistroAnonimo[]) => [...arr].sort((a, b) => b.ultimaVisita.localeCompare(a.ultimaVisita));
 
