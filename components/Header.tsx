@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useRef, useEffect } from 'react';
 import { getFavoritosCount, onFavoritosChange } from '@/lib/favoritos';
+import BotaoVoltar from './BotaoVoltar';
 
 // ── Links simples da nav ───────────────────────────────────────────────────────
 const NAV_SIMPLE = [
@@ -78,13 +79,16 @@ export default function Header() {
           gap: '16px',
         }}>
 
-          {/* ── Logo ───────────────────────────────────────────────────────── */}
+          {/* ── Voltar + Logo ──────────────────────────────────────────────── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          <BotaoVoltar />
           <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
             <img src="/icons/icon-512.png" alt="FinancieCerto" width={40} height={40} style={{ borderRadius: '10px', flexShrink: 0 }} />
             <div style={{ fontSize: '18px', fontWeight: '800', letterSpacing: '-0.4px', lineHeight: 1 }}>
               <span style={{ color: '#0f172a' }}>Financie</span><span style={{ color: '#2563eb' }}>Certo</span>
             </div>
           </Link>
+          </div>
 
           {/* ── Navegação Desktop ──────────────────────────────────────────── */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '2px' }} className="desktop-nav">
