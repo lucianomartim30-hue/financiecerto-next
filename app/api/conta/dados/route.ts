@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     kvGetSimulacoes(owner),
     kvGetFavoritos(owner),
   ]);
-  const alertas  = buscas.filter(b => b.ativa && b.email.trim().toLowerCase() === email.toLowerCase());
+  const alertas  = buscas.filter(b => b.ativa && b.email?.trim().toLowerCase() === email.toLowerCase());
   const contatos = leads.filter(l => l.contato?.email?.trim().toLowerCase() === email.toLowerCase());
 
   return NextResponse.json({ email, alertas, contatos, simulacoes, favoritoIds });
