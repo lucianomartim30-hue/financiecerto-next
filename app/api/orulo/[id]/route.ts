@@ -409,10 +409,20 @@ export async function GET(
     });
 
     // Preenche o botão "Ver planta" de cada tipologia sem blueprint com a
-    // primeira planta manual cadastrada pro imóvel (ver lib/plantas-manuais.ts).
+    // planta manual cadastrada pro imóvel cuja faixa de área bate com a dela
+    // (ver lib/plantas-manuais.ts) — evita preencher a tipologia errada
+    // quando o empreendimento tem tipologias bem diferentes (ex: studio vs
+    // 2 dorms).
     if (plantasManuais.length > 0) {
       for (const t of typologies) {
-        if (!t.blueprint) t.blueprint = plantasManuais[0].url;
+        if (t.blueprint) continue;
+        const area = parseFloat(t.area) || null;
+        const match = plantasManuais.find(pm => {
+          if (pm.areaMin != null && (area == null || area < pm.areaMin)) return false;
+          if (pm.areaMax != null && (area == null || area > pm.areaMax)) return false;
+          return true;
+        });
+        if (match) t.blueprint = match.url;
       }
     }
 
