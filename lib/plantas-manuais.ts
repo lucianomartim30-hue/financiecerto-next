@@ -27,11 +27,16 @@ export interface PlantaManual {
 
 interface ConfigPlantas {
   itens: PlantaManual[];
-  // true = a seção "Plantas disponíveis" mostra só estas, ignorando as que
-  // vieram da Orulo — usado quando o catálogo sincronizado tem tipologias/
-  // preços desatualizados (ex: SCP pré-lançamento, onde só as unidades com
-  // condição vigente devem aparecer, não o resto do mix sincronizado).
-  substituirBlueprintsOrulo?: boolean;
+  // Nomes (ou trecho do nome, sem diferenciar maiúsculas) de plantas vindas
+  // da Orulo pra EXCLUIR da seção "Plantas disponíveis" — usado quando uma
+  // delas não corresponde a nenhuma unidade com preço vigente (ex: planta do
+  // andar de lazer, que não é planta de unidade nenhuma) ou representa uma
+  // unidade cujo preço sincronizado já não bate com a condição atual.
+  // Plantas da Orulo que não estiverem nessa lista continuam aparecendo
+  // normalmente — não é um "substituir tudo" (bug corrigido 2026-09-02:
+  // isso tinha derrubado também a planta do studio de 23m², que continua com
+  // preço vigente).
+  excluirBlueprintsOrulo?: string[];
 }
 
 // Chave = id do imóvel na Orulo.
@@ -41,12 +46,15 @@ const PLANTAS_MANUAIS: Record<string, ConfigPlantas> = {
       { url: '/plantas-manuais/2109-tipo-4-suites.jpg', name: 'Planta — Tipo 4 suítes' },
     ],
   },
-  '81515': { // W Stay Perdizes — só as unidades com preço SCP atualizado (book da WDS, 2026-09)
+  '81515': { // W Stay Perdizes — plantas das unidades com preço SCP atualizado (book da WDS, 2026-09)
     itens: [
+      { url: '/plantas-manuais/81515-23m2-studio.png', name: 'Planta Studio — 23 a 27m²', areaMin: 20, areaMax: 30 },
       { url: '/plantas-manuais/81515-46m2-1dorm-sala-tv.png', name: 'Planta — Apto 43 a 46m² (1 dorm + sala de TV)', areaMin: 40, areaMax: 50 },
       { url: '/plantas-manuais/81515-46m2-2dorms.png', name: 'Planta — Apto 43 a 46m² (2 dorms)', areaMin: 40, areaMax: 50 },
     ],
-    substituirBlueprintsOrulo: true,
+    // A de lazer não é planta de unidade; a "PLANTA STUDIO" da Orulo vira
+    // duplicata agora que temos a versão do book (mesmo estilo das outras).
+    excluirBlueprintsOrulo: ['PLANTA LAZER', 'PLANTA STUDIO'],
   },
 };
 
@@ -54,6 +62,6 @@ export function getPlantasManuais(imovelId: string): PlantaManual[] {
   return PLANTAS_MANUAIS[imovelId]?.itens ?? [];
 }
 
-export function deveSubstituirBlueprintsOrulo(imovelId: string): boolean {
-  return !!PLANTAS_MANUAIS[imovelId]?.substituirBlueprintsOrulo;
+export function getExcluirBlueprintsOrulo(imovelId: string): string[] {
+  return PLANTAS_MANUAIS[imovelId]?.excluirBlueprintsOrulo ?? [];
 }
