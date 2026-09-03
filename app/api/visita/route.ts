@@ -14,9 +14,11 @@ import { kvGetVisitante, kvRegistrarVisita } from '@/lib/visitantes-kv';
 import { kvRegistrarEvento } from '@/lib/rastreio-kv';
 import { kvRegistrarImovelVisto } from '@/lib/imoveis-vistos-kv';
 import { getEmailDaSessao } from '@/lib/conta-kv';
+import { isBotRequest } from '@/lib/bot-detect';
 
 export async function POST(req: NextRequest) {
   try {
+    if (isBotRequest(req)) return NextResponse.json({ ok: true });
     const visitorId = req.cookies.get('fc_vid')?.value;
     const { imovelId } = await req.json();
     if (visitorId && imovelId && typeof imovelId === 'string') {

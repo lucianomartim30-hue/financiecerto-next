@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getEmailDaSessao } from '@/lib/conta-kv';
 import { kvSalvarSimulacao, kvRemoverSimulacao } from '@/lib/simulacoes-kv';
 import { kvRegistrarEvento } from '@/lib/rastreio-kv';
+import { isBotRequest } from '@/lib/bot-detect';
 
 export async function DELETE(req: NextRequest) {
   const email = await getEmailDaSessao(req.cookies.get('fc_conta')?.value);
@@ -25,6 +26,7 @@ export async function DELETE(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    if (isBotRequest(req)) return NextResponse.json({ ok: true });
     const body = await req.json().catch(() => null);
     const valorImovel   = Number(body?.valorImovel);
     const parcelaPrice  = Number(body?.parcelaPrice);
