@@ -912,6 +912,26 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   const waMsg = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovel}`);
   const waMsgVisita = encodeURIComponent(`Olá! Gostaria de agendar uma visita ao imóvel *${imovel.name}* que vi no FinancieCerto.\n${urlImovel}`);
 
+  // Cota de investidor via SCP não passa por financiamento bancário — simular
+  // MCMV/SBPE em cima do preço de pré-lançamento (que nem é o preço real de
+  // compra do imóvel pronto) dava um resultado falso e contradizia o aviso
+  // "fora do financiamento bancário tradicional" que já está em cada card de
+  // promoção. Sem cálculo nenhum aqui, só o aviso.
+  const temPromoSCP = !!imovel.promocoes?.some(p => p.investidorSCP);
+  if (temPromoSCP) {
+    return (
+      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
+        <div style={{ padding: '20px', background: 'linear-gradient(135deg, #0f172a, #1e3a5f)' }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>FinancieCerto</span>
+          <p style={{ fontSize: '14px', fontWeight: '700', color: '#fff', margin: '6px 0 10px' }}>Análise Financeira Instantânea</p>
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.8)', lineHeight: 1.6 }}>
+            📈 Cota de investidor via SCP — pagamento direto com a construtora, fora do financiamento bancário tradicional (SBPE/MCMV). Consulte a forma de pagamento de cada tipologia acima.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
 
