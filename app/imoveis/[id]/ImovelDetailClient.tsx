@@ -1821,8 +1821,11 @@ export default function ImovelDetailClient({ id }: { id: string }) {
   const statusCfg = temPromoSCP
     ? { cor: '#0891b2', bg: 'rgba(8,145,178,.15)', label: 'Breve Lançamento' }
     : getStatus(imovel.status || '', imovel.min_price);
-  // Chips de resumo rápido no header — apenas specs da unidade
-  const specs = [
+  // Chips de resumo rápido no header — apenas specs da unidade. Com promoção
+  // SCP ativa, essa faixa (área/quartos/etc.) é o mix sincronizado da Orulo
+  // de antes do pré-lançamento, não bate com o que está à venda este mês —
+  // os cards de promoção já mostram a área de cada unidade disponível.
+  const specs = temPromoSCP ? [] : [
     faixaRange(imovel.area_min, imovel.area_max, 'm²')             && { icon: '▦',  label: faixaRange(imovel.area_min, imovel.area_max, 'm²')! },
     faixaRange(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos') && { icon: '🛏', label: faixaRange(imovel.bedrooms_min, imovel.bedrooms_max, 'quartos')! },
     faixaRange(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')  && { icon: '🚿', label: faixaRange(imovel.bathrooms_min, imovel.bathrooms_max, 'ban.')! },
@@ -2131,8 +2134,13 @@ export default function ImovelDetailClient({ id }: { id: string }) {
               <BlocoFinanceiro imovel={imovel} valorOverride={valorTipologia} tipologiaLabel={labelTipologia} />
             </div>
 
-            <SecaoCaracteristicas imovel={imovel} />
-            <SecaoTipologias typologies={imovel.typologies} onSimular={handleSimularTipologia} />
+            {/* Com promoção SCP ativa, área/quartos/tipologias sincronizados da
+                Orulo ficam desatualizados (mix e preços de antes do
+                pré-lançamento) — os cards de promoção acima já são a fonte
+                de verdade completa (área, preço, condição de pagamento) pro
+                que está disponível pra venda este mês. */}
+            {!temPromoSCP && <SecaoCaracteristicas imovel={imovel} />}
+            {!temPromoSCP && <SecaoTipologias typologies={imovel.typologies} onSimular={handleSimularTipologia} />}
             <SecaoDiferenciais amenities={imovel.amenities} />
             <SecaoEmpreendimento imovel={imovel} />
             <SecaoLocalizacao imovel={imovel} />
