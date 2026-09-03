@@ -80,6 +80,10 @@ export default function AdminPromocoesPage() {
   const [salvando, setSalvando] = useState(false);
   const [removendo, setRemovendo] = useState<string | null>(null);
 
+  const [lote, setLote] = useState('');
+  const [loteErro, setLoteErro] = useState('');
+  const [salvandoLote, setSalvandoLote] = useState(false);
+
   const [unidade, setUnidade] = useState('');
   const [tipo, setTipo] = useState('');
   const [areaM2, setAreaM2] = useState('');
@@ -156,6 +160,38 @@ export default function AdminPromocoesPage() {
     }
   }
 
+  async function substituirLote() {
+    const id = buildingId.trim();
+    setLoteErro('');
+    if (!id) { setLoteErro('Busque um empreendimento primeiro.'); return; }
+    let itens: unknown;
+    try {
+      itens = JSON.parse(lote);
+      if (!Array.isArray(itens)) throw new Error();
+    } catch {
+      setLoteErro('JSON inválido — cole um array de objetos.');
+      return;
+    }
+    setSalvandoLote(true);
+    try {
+      const res = await fetch('/api/admin/promocoes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buildingId: id, promocoes: itens }),
+      });
+      if (res.status === 401) { setAuthed(false); return; }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setLoteErro(data.error || 'Erro ao salvar.');
+        return;
+      }
+      setLote('');
+      await carregar();
+    } finally {
+      setSalvandoLote(false);
+    }
+  }
+
   async function remover(promocaoId: string) {
     const id = buildingId.trim();
     setRemovendo(promocaoId);
@@ -204,6 +240,23 @@ export default function AdminPromocoesPage() {
 
       {buildingName && (
         <>
+          <div style={{ marginBottom: '20px', padding: '14px', border: '1.5px dashed var(--border)', borderRadius: '10px', background: 'var(--bg)' }}>
+            <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text)', marginBottom: '6px' }}>📋 Substituir todas de uma vez (colar JSON)</p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+              Apaga TODAS as promoções deste empreendimento e cria só as deste array — útil quando a construtora manda uma tabela nova inteira (ex: SCP mensal). Cole o array e clique em Substituir.
+            </p>
+            <textarea
+              value={lote}
+              onChange={e => setLote(e.target.value)}
+              placeholder='[{"tipo":"R2V","areaM2":23,"precoPromocional":312660,"investidorSCP":true,"beneficio":"...","observacao":"..."}]'
+              rows={6}
+              style={{ ...inputStyle, marginBottom: '8px', fontFamily: 'monospace', fontSize: '12px' }}
+            />
+            {loteErro && <p style={{ fontSize: '12px', color: '#dc2626', marginBottom: '8px' }}>{loteErro}</p>}
+            <button onClick={substituirLote} disabled={salvandoLote || !lote.trim()} style={{ padding: '9px 16px', borderRadius: '8px', border: 'none', background: '#dc2626', color: '#fff', fontSize: '13px', fontWeight: '700', cursor: 'pointer', opacity: salvandoLote ? 0.7 : 1 }}>
+              {salvandoLote ? 'Substituindo…' : '🔁 Substituir todas'}
+            </button>
+          </div>
           <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text)', marginBottom: '16px' }}>{buildingName}</p>
 
           {promocoes.length > 0 && (

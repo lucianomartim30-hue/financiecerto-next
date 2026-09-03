@@ -131,3 +131,26 @@ export async function kvRemoverPromocao(buildingId: string, promocaoId: string):
   else mapa[buildingId] = restante;
   await setMapa(mapa);
 }
+
+/**
+ * Substitui TODAS as promoções de um empreendimento pela lista dada — um
+ * único "colar e salvar", em vez de remover e recadastrar uma por uma no
+ * formulário. Útil pra quando a construtora manda uma tabela nova todo mês
+ * (ex: SCP pré-lançamento) e a lista antiga inteira fica obsoleta de uma vez.
+ */
+export async function kvSubstituirPromocoes(
+  buildingId: string,
+  itens: Omit<Promocao, 'id' | 'criadoEm'>[],
+): Promise<Promocao[]> {
+  const mapa = await getMapa();
+  const agora = new Date().toISOString();
+  const novas: Promocao[] = itens.map((dados, i) => ({
+    ...dados,
+    id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+    criadoEm: agora,
+  }));
+  if (novas.length === 0) delete mapa[buildingId];
+  else mapa[buildingId] = novas;
+  await setMapa(mapa);
+  return novas;
+}
