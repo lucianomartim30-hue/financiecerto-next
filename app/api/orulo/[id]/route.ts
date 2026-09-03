@@ -3,7 +3,7 @@ import { kvGetCatalog } from '@/lib/orulo-kv';
 import { kvGetFotosOcultas } from '@/lib/fotos-ocultas-kv';
 import { kvGetPromocoes, kvGetPromocoesAdmin } from '@/lib/promocoes-kv';
 import { kvGetOruloEndUserToken } from '@/lib/orulo-enduser-kv';
-import { getPlantasManuais } from '@/lib/plantas-manuais';
+import { getPlantasManuais, deveSubstituirBlueprintsOrulo } from '@/lib/plantas-manuais';
 import { sessionToken } from '../../admin-auth/route';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
@@ -362,7 +362,12 @@ export async function GET(
     // Orulo não tem planta cadastrada pro imóvel, mas o corretor tem a
     // imagem em mãos. Entra na lista geral e some junto se algum dia a
     // Orulo passar a ter a planta própria (não sobrescreve o que já existe).
+    // Quando substituirBlueprintsOrulo está ligado (ex: SCP pré-lançamento
+    // com mix de tipologias desatualizado), ignora as plantas da Orulo e
+    // mostra só as manuais — evita confundir com plantas de unidades que já
+    // não têm preço vigente.
     const plantasManuais = getPlantasManuais(id);
+    if (deveSubstituirBlueprintsOrulo(id)) blueprints.length = 0;
     for (const pm of plantasManuais) {
       if (!blueprints.some(bp => bp.url === pm.url)) {
         blueprints.push({ name: pm.name, url: pm.url });
