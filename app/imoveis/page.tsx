@@ -161,7 +161,15 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
                   ? `📈 ${im.promocoes_destaque.length > 1 ? `${im.promocoes_destaque.length} tipologias — investidor SCP` : 'Tipologia — investidor SCP'}`
                   : `🔥 ${im.promocoes_destaque.length > 1 ? `${im.promocoes_destaque.length} unidades em promoção` : 'Unidade em promoção'}`}
               </p>
-              {im.promocoes_destaque.map((p, i) => {
+              {/* Com mais de 1 tipologia, o card só mostra a faixa de preço — o
+                  parágrafo de benefício de cada uma deixava o card gigante do
+                  lado dos outros na listagem (bug real, achado 2026-09-01). O
+                  detalhamento completo continua na página do imóvel. */}
+              {im.promocoes_destaque.length > 1 ? (
+                <p style={{ fontSize: '11px', fontWeight: '800', color: '#dc2626', lineHeight: 1.3 }}>
+                  A partir de {formatBRL(Math.min(...im.promocoes_destaque.map(p => p.precoPromocional)))}
+                </p>
+              ) : im.promocoes_destaque.map((p, i) => {
                 const temDesconto = !!(p.precoOriginal && p.precoOriginal > p.precoPromocional);
                 const specs = [
                   p.areaM2 ? `▦ ${p.areaM2}m²` : null,
