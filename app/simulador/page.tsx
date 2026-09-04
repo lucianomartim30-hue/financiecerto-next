@@ -11,6 +11,7 @@ import {
 } from '@/lib/calculos';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
 import { HisHmpHint } from '@/components/HisHmpHint';
+import { FAQ_SIMULADOR } from './faq-data';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtInput(v: string): string {
@@ -120,7 +121,10 @@ function BtnPrimario({ label, onClick, disabled }: { label: string; onClick: () 
 // Hero escuro — mesmo estilo da na-planta
 function Hero({ etapa }: { etapa: number }) {
   const heroCopy: Record<number, { tag: string; titulo: string; sub: string }> = {
-    0: { tag: 'Simulador FinancieCerto 2026', titulo: 'Primeiro entenda\nseu perfil.', sub: 'Qualquer renda, qualquer imóvel — identificamos MCMV, SBPE ou SFI e mostramos taxas e teto reais.' },
+    // H1 descreve a intenção de busca (auditoria de SEO, 2026-09-04); "Primeiro
+    // entenda seu perfil" — a mensagem comercial original — vira a abertura do
+    // texto de apoio, não é descartada.
+    0: { tag: 'Simulador FinancieCerto 2026', titulo: 'Simulador Minha Casa\nMinha Vida e financiamento imobiliário', sub: 'Primeiro entenda seu perfil: qualquer renda, qualquer imóvel — identificamos MCMV, SBPE ou SFI e mostramos taxas e teto reais.' },
     1: { tag: 'Passo 1 de 4', titulo: 'Qual é a sua\nrenda familiar?', sub: 'Usamos a renda bruta para calcular faixa, taxa e comprometimento.' },
     2: { tag: 'Passo 2 de 4', titulo: 'Sua idade e\ncomposição familiar', sub: 'A idade do proponente mais velho define o prazo máximo do financiamento.' },
     3: { tag: 'Passo 3 de 4', titulo: 'Você tem FGTS\ndisponível?', sub: 'O FGTS amplia seu poder de compra e reduz o valor financiado.' },
@@ -157,7 +161,10 @@ function Etapa({ children, etapa }: { children: React.ReactNode; etapa?: number 
 }
 
 function Titulo({ children }: { children: React.ReactNode }) {
-  return <h1 className="fc-titulo" style={{ fontSize: 34, fontWeight: 800, color: '#111827', lineHeight: 1.2, marginBottom: 14, marginTop: 0 }}>{children}</h1>;
+  // <h2>, não <h1> — o único <h1> da página é o do Hero (etapa 0). Antes desta
+  // troca, cada etapa criava um segundo <h1> simultâneo ao do Hero (auditoria
+  // de SEO, 2026-09-04). Mesma classe/estilo, só a tag semântica muda.
+  return <h2 className="fc-titulo" style={{ fontSize: 34, fontWeight: 800, color: '#111827', lineHeight: 1.2, marginBottom: 14, marginTop: 0 }}>{children}</h2>;
 }
 function Sub({ children }: { children: React.ReactNode }) {
   return <p style={{ fontSize: 16, color: '#4B5563', lineHeight: 1.65, marginBottom: 32, marginTop: 0 }}>{children}</p>;
@@ -394,11 +401,6 @@ function SimuladorInner() {
   // vira um novo "início de simulação" artificial nos relatórios.
   const inicioDisparado = useRef(false);
 
-  // Título próprio (analytics) — sem isso, herda o título da home e some nos relatórios do GA
-  useEffect(() => {
-    document.title = 'Simulador de Financiamento | FinancieCerto';
-  }, []);
-
   // Toda simulação concluída fica salva automaticamente — não só quando a
   // pessoa pede pra receber por e-mail (ver "Minhas simulações" em /conta).
   const ultimoSimSalvo = useRef<ResultadoSimulacao | null>(null);
@@ -595,6 +597,33 @@ function SimuladorInner() {
       <p style={{ fontSize: 12, color: 'var(--text-faint)', textAlign: 'center', marginTop: 14 }}>
         🔓 Grátis e sem cadastro · Regras SFH/MCMV vigentes · jul/2026 · TR {TR_MENSAL}%/mês
       </p>
+
+      {/* Conteúdo explicativo + FAQ — abaixo do CTA, nunca antes (auditoria de
+          SEO, 2026-09-04). Não interfere no fluxo nem na posição do botão. */}
+      <div style={{ marginTop: 40, paddingTop: 28, borderTop: '1px solid var(--border)' }}>
+        <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', marginTop: 0, marginBottom: 10 }}>
+          Simulador de financiamento imobiliário para MCMV, SBPE e SFI
+        </h2>
+        <p style={{ fontSize: 13.5, color: '#4B5563', lineHeight: 1.65, marginBottom: 20 }}>
+          Você informa renda familiar, idade, entrada e FGTS, e o simulador identifica automaticamente
+          se o seu perfil se enquadra no Minha Casa Minha Vida, no SBPE ou no SFI — estimando parcela,
+          taxa e poder de compra a partir das regras vigentes. O resultado é educativo: não representa
+          aprovação de crédito nem proposta de financiamento, só uma referência pra você chegar mais
+          preparado até o banco ou a Caixa Econômica Federal. Depois de simular, dá pra{' '}
+          <Link href="/imoveis/minha-casa-minha-vida" style={{ color: 'var(--primary)' }}>ver imóveis dentro do Minha Casa Minha Vida</Link>,{' '}
+          <Link href="/simulador/na-planta" style={{ color: 'var(--primary)' }}>simular um imóvel na planta</Link> com juros evolutivos,
+          ou <Link href="/imoveis" style={{ color: 'var(--primary)' }}>explorar todos os imóveis</Link> compatíveis com o seu perfil.
+        </p>
+
+        <div>
+          {FAQ_SIMULADOR.map(faq => (
+            <details key={faq.name} style={{ marginBottom: 8, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#111827' }}>{faq.name}</summary>
+              <p style={{ fontSize: 13.5, color: '#4B5563', lineHeight: 1.6, marginTop: 8, marginBottom: 0 }}>{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
     </Etapa>
   );
 
