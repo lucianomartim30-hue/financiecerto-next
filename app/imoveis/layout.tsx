@@ -1,7 +1,6 @@
 // app/imoveis/layout.tsx
 import type { Metadata } from 'next';
-import SchemaMarkup from '@/components/SchemaMarkup';
-import { searchResultsPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
+import { SITE_CONFIG } from '@/lib/schema';
 
 export const metadata: Metadata = {
   title: 'Imóveis e Empreendimentos à Venda em SP — com Simulação de Financiamento | FinancieCerto',
@@ -17,27 +16,15 @@ export const metadata: Metadata = {
   },
 };
 
+// Schema (SearchResultsPage/BreadcrumbList) saiu daqui — cada rota-filha
+// gera o seu, específico. Um schema aqui no layout pai renderizava junto
+// com o de cada filho (Next.js não substitui, soma), duplicando/conflitando
+// com o schema próprio de /imoveis/[id] e /imoveis/minha-casa-minha-vida
+// (Fase 2.5 da auditoria de SEO, 2026-09-04).
 export default function ImoveisLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const schemas = [
-    searchResultsPage({
-      url: `${SITE_CONFIG.domain}/imoveis`,
-      title: 'Imóveis à Venda e Aluguel',
-      description: 'Busque imóveis à venda e aluguel com financiamento disponível.',
-    }),
-    breadcrumb([
-      { name: 'Início', url: SITE_CONFIG.domain },
-      { name: 'Imóveis', url: `${SITE_CONFIG.domain}/imoveis` },
-    ]),
-  ];
-
-  return (
-    <>
-      <SchemaMarkup schemas={schemas} />
-      {children}
-    </>
-  );
+  return children;
 }

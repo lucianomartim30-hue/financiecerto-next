@@ -10,6 +10,8 @@ import type { MapViewHandle, Bounds } from '@/components/MapView';
 import { trackBusca } from '@/lib/gtag';
 import { getStatusCfg } from '@/lib/status';
 import { SP_BAIRROS, CIDADE_INFO, CIDADES_BUSCA, normStr, stripTipoLogradouro } from '@/lib/localizacao';
+import SchemaMarkup from '@/components/SchemaMarkup';
+import { searchResultsPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 const SalvarBuscaModal = dynamic(() => import('@/components/SalvarBuscaModal'), { ssr: false });
@@ -1623,10 +1625,30 @@ function ImoveisContent() {
   );
 }
 
+// Schema (SearchResultsPage/BreadcrumbList) migrado do layout pai (era
+// somado, não substituído, sobre o schema próprio de cada rota-filha —
+// Fase 2.5 da auditoria de SEO, 2026-09-04). Fica aqui, fora do <Suspense>,
+// porque não depende de useSearchParams: sai no HTML inicial do servidor
+// mesmo com o resto da página em Client Component.
+const IMOVEIS_SCHEMAS = [
+  searchResultsPage({
+    url: `${SITE_CONFIG.domain}/imoveis`,
+    title: 'Imóveis à Venda e Aluguel',
+    description: 'Busque imóveis à venda e aluguel com financiamento disponível.',
+  }),
+  breadcrumb([
+    { name: 'Início', url: SITE_CONFIG.domain },
+    { name: 'Imóveis', url: `${SITE_CONFIG.domain}/imoveis` },
+  ]),
+];
+
 export default function ImoveisPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '80px', textAlign: 'center' }}><p style={{ color: '#9ca3af' }}>Carregando...</p></div>}>
-      <ImoveisContent />
-    </Suspense>
+    <>
+      <SchemaMarkup schemas={IMOVEIS_SCHEMAS} />
+      <Suspense fallback={<div style={{ padding: '80px', textAlign: 'center' }}><p style={{ color: '#9ca3af' }}>Carregando...</p></div>}>
+        <ImoveisContent />
+      </Suspense>
+    </>
   );
 }

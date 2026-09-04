@@ -1,6 +1,7 @@
 import MCMVContent from './MCMVContent';
 import { getMCMVStats } from '@/lib/mcmv-catalog';
-import { SITE_CONFIG } from '@/lib/schema';
+import SchemaMarkup from '@/components/SchemaMarkup';
+import { searchResultsPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
 
 // Estatísticas (empreendimentos/unidades por faixa) não precisam ser
 // segundo-a-segundo — revalida a cada hora, igual à home.
@@ -31,6 +32,23 @@ export function generateMetadata() {
   };
 }
 
+// SearchResultsPage (não CollectionPage) porque a página é uma listagem
+// filtrável de imóveis, não uma coleção editorial — mesmo raciocínio do
+// schema de /imoveis, com breadcrumb de 3 níveis específico desta rota
+// (Fase 2.5 da auditoria de SEO, 2026-09-04).
+const MCMV_SCHEMAS = [
+  searchResultsPage({
+    url: MCMV_URL,
+    title: MCMV_TITLE,
+    description: MCMV_DESCRIPTION,
+  }),
+  breadcrumb([
+    { name: 'Início', url: SITE_CONFIG.domain },
+    { name: 'Imóveis', url: `${SITE_CONFIG.domain}/imoveis` },
+    { name: 'Minha Casa Minha Vida', url: MCMV_URL },
+  ]),
+];
+
 export default async function MCMVPage({
   searchParams,
 }: {
@@ -38,5 +56,10 @@ export default async function MCMVPage({
 }) {
   const sp = await searchParams;
   const stats = await getMCMVStats();
-  return <MCMVContent stats={stats} searchParams={sp} />;
+  return (
+    <>
+      <SchemaMarkup schemas={MCMV_SCHEMAS} />
+      <MCMVContent stats={stats} searchParams={sp} />
+    </>
+  );
 }
