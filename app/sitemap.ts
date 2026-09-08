@@ -14,6 +14,7 @@ import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 import { filterBreveLancamento } from '@/lib/filtro-breve-lancamento';
 import { filterLotesForaSP } from '@/lib/filtro-lotes-fora-sp';
 import { ZONA_SUL_OESTE, normalize } from '@/lib/imoveis-destaque';
+import { agruparConstrutoras } from '@/lib/construtoras-catalogo';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -39,6 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: BASE,                          lastModified: now, changeFrequency: 'daily',   priority: 1.0 },
     { url: `${BASE}/imoveis`,             lastModified: now, changeFrequency: 'hourly',  priority: 0.9 },
     { url: `${BASE}/imoveis/minha-casa-minha-vida`, lastModified: now, changeFrequency: 'hourly', priority: 0.85 },
+    { url: `${BASE}/construtoras`,         lastModified: now, changeFrequency: 'daily',   priority: 0.8 },
     { url: `${BASE}/simulador`,           lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${BASE}/simulador/na-planta`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${BASE}/guia`,                lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
@@ -64,9 +66,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // ── Páginas dinâmicas de imóveis + bairros ────────────────────────────────
   let buildingPages: MetadataRoute.Sitemap = [];
-  let bairroPages:   MetadataRoute.Sitemap = [];
+  const bairroPages: MetadataRoute.Sitemap = [];
+  let construtoraPages: MetadataRoute.Sitemap = [];
   try {
     const rawCatalog = await kvGetCatalog();
+    if (rawCatalog) {
+      construtoraPages = agruparConstrutoras(rawCatalog)
+        .filter(construtora => construtora.indexavel)
+        .map(construtora => ({
+          url: `${BASE}/construtoras/${construtora.slug}`,
+          lastModified: safeIso(construtora.ultimaAtualizacao, now),
+          changeFrequency: 'daily' as const,
+          priority: 0.75,
+        }));
+    }
     // O KV guarda o catálogo nacional bruto (todas as cidades ativas na Orulo,
     // mesmo as nunca liberadas no site). Sem este filtro o sitemap submete ao
     // Google imóveis e bairros de cidades que não aparecem em nenhuma busca do
@@ -120,5 +133,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // KV indisponível — retorna só as páginas estáticas
   }
 
-  return [...staticPages, ...regionPages, ...artigoPages, ...buildingPages, ...bairroPages];
+  return [...staticPages, ...regionPages, ...artigoPages, ...construtoraPages, ...buildingPages, ...bairroPages];
 }

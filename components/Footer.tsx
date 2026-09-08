@@ -10,6 +10,7 @@ const LINKS = {
   ],
   Plataforma: [
     { label: 'Imóveis compatíveis', href: '/imoveis' },
+    { label: 'Imóveis por construtora', href: '/construtoras' },
     { label: 'Guia completo', href: '/guia' },
     { label: 'Glossário', href: '/glossario' },
     { label: 'Sobre nós', href: '/sobre' },

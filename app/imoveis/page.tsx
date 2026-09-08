@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useMemo, useCallback, Suspense, useDeferredValue } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { formatBRL } from '@/lib/calculos';
@@ -12,6 +12,7 @@ import { getStatusCfg } from '@/lib/status';
 import { SP_BAIRROS, CIDADE_INFO, CIDADES_BUSCA, normStr, stripTipoLogradouro } from '@/lib/localizacao';
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { searchResultsPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
+import { construtoraToSlug } from '@/lib/construtora-nomes';
 
 const MapView = dynamic(() => import('@/components/MapView'), { ssr: false });
 const SalvarBuscaModal = dynamic(() => import('@/components/SalvarBuscaModal'), { ssr: false });
@@ -247,6 +248,7 @@ function NumSelector({ label, value, onChange }: { label: string; value: number;
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 function ImoveisContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [allBuildings, setAllBuildings] = useState<Imovel[]>([]);
@@ -824,12 +826,16 @@ function ImoveisContent() {
   }, [activeLocation, searchMode, allBuildings, passesOutrosFiltros]);
 
   // Commit de busca a partir do modal mobile
-  const commitMobileSearch = useCallback((name: string) => {
+  const commitMobileSearch = useCallback((name: string, type?: Sugestao['type']) => {
     setShowMobileSearch(false);
     setMobileSearchInput('');
+    if (type === 'empresa') {
+      router.push(`/construtoras/${construtoraToSlug(name)}`);
+      return;
+    }
     setSearch(name);
     geocodeAndFly(name);
-  }, [geocodeAndFly]);
+  }, [geocodeAndFly, router]);
 
   const applyMais = useCallback(() => {
     setFilterMin(Number(minInput.replace(/\D/g, '')) || 0);
@@ -1095,7 +1101,7 @@ function ImoveisContent() {
             {mobileSuggestions.map(nb => (
               <button
                 key={`${nb.type}-${nb.name}`}
-                onClick={() => commitMobileSearch(nb.name)}
+                onClick={() => commitMobileSearch(nb.name, nb.type)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
                   width: '100%', padding: '14px 16px',
@@ -1264,7 +1270,7 @@ function ImoveisContent() {
             >
               <span style={{ flexShrink: 0 }}>{searchMode === 'imovel' ? '🏢' : searchMode === 'empresa' ? '🏗' : '📍'}</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>
-                {search || (searchMode === 'imovel' ? 'Buscar empreendimento...' : searchMode === 'empresa' ? 'Buscar construtora...' : 'Buscar bairro...')}
+                {search || (searchMode === 'imovel' ? 'Buscar empreendimento...' : searchMode === 'empresa' ? 'Buscar construtora...' : 'Buscar imóvel ou construtora...')}
               </span>
             </button>
           ) : (
@@ -1348,7 +1354,16 @@ function ImoveisContent() {
                   {filteredSuggestions.map(nb => (
                     <button
                       key={`${nb.type}-${nb.name}`}
-                      onClick={() => { setSearch(nb.name); setShowSuggestions(false); inputRef.current?.blur(); geocodeAndFly(nb.name); }}
+                      onClick={() => {
+                        setShowSuggestions(false);
+                        inputRef.current?.blur();
+                        if (nb.type === 'empresa') {
+                          router.push(`/construtoras/${construtoraToSlug(nb.name)}`);
+                          return;
+                        }
+                        setSearch(nb.name);
+                        geocodeAndFly(nb.name);
+                      }}
                       style={{ display: 'flex', alignItems: 'center', gap: '7px', width: '100%', padding: '11px 12px', background: 'transparent', border: 'none', borderBottom: '1px solid #f3f4f6', cursor: 'pointer', fontSize: '14px', color: '#111827', textAlign: 'left', fontFamily: 'inherit' }}
                     >
                       <span style={{ fontSize: '13px', opacity: 0.5 }}>{SUGESTAO_ICONE[nb.type]}</span>

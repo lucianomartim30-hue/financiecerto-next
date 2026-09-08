@@ -12,6 +12,7 @@ import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
 import { getPrimeiraOrigem, buildConversao } from '@/lib/atribuicao';
 import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
 import { ofereceAgendarVisita, precisaFormularioContato } from '@/lib/atende-presencial';
+import { construtoraToSlug } from '@/lib/construtora-nomes';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -1421,6 +1422,10 @@ function SecaoEmpreendimento({ imovel }: { imovel: ImovelDetalhe }) {
             <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: imovel.developer_website ? '4px' : 0 }}>
               {imovel.developer}
             </p>
+            <Link href={`/construtoras/${construtoraToSlug(imovel.developer)}`}
+              style={{ display: 'inline-block', fontSize: '11px', color: 'var(--primary)', fontWeight: '700', textDecoration: 'none', marginRight: '12px', marginBottom: '3px' }}>
+              Ver imóveis desta construtora →
+            </Link>
             {imovel.developer_website && (
               <a href={imovel.developer_website} target="_blank" rel="noopener noreferrer"
                 style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>
