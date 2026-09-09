@@ -70,7 +70,7 @@ export default async function ConstrutorasPage() {
             Veja os empreendimentos disponíveis de cada construtora, compare localização, tamanho e preço e encontre o imóvel que combina com o seu perfil.
           </p>
         </header>
-        <ConstrutorasList construtoras={construtoras.map(c => ({ slug: c.slug, nome: c.nome, quantidade: c.imoveis.length, cidades: c.cidades }))} />
+        <ConstrutorasList construtoras={construtoras.map(c => ({ slug: c.slug, nome: c.nome, quantidade: c.imoveis.length, cidades: c.cidades, logo: c.logo }))} />
       </div>
     </main>
   );

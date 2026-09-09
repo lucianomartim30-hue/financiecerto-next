@@ -107,7 +107,12 @@ function parseCoord(v: unknown): number | null {
 }
 
 export function normalizeBuilding(b: Record<string, unknown>) {
-  const developer = (b.developer as Record<string, string> | null)?.name || (b.developer_name as string) || '';
+  const devObj = (b.developer as Record<string, unknown> | null) ?? {};
+  const developer = (devObj.name as string) || (b.developer_name as string) || '';
+  // Mesma extração já usada em app/api/orulo/[id]/route.ts — aqui fica disponível
+  // pra todo o catálogo (páginas de construtora), não só a ficha de um imóvel.
+  const developer_logo = (devObj.logo as string) || (devObj.image as string) || null;
+  const developer_website = (devObj.website as string) || null;
   const address   = (b.address   as Record<string, unknown>) || {};
   const img       = (b.default_image as Record<string, string>) || {};
 
@@ -172,6 +177,8 @@ export function normalizeBuilding(b: Record<string, unknown>) {
     id:            String(b.id),
     name:          (b.name as string) || 'Empreendimento',
     developer,
+    developer_logo,
+    developer_website,
     min_price:     (b.min_price     as number) ?? null,
     max_price:     (b.max_price     as number) ?? null,
     bedrooms_min:  (b.min_bedrooms  as number) ?? null,

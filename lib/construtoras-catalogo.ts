@@ -10,6 +10,7 @@ export interface ImovelConstrutora {
   id: string;
   name: string;
   developer: string;
+  developer_logo: string | null;
   min_price: number | null;
   bedrooms_min: number | null;
   bedrooms_max: number | null;
@@ -30,6 +31,7 @@ export interface GrupoConstrutora {
   slug: string;
   nome: string;
   aliases: string[];
+  logo: string | null;
   imoveis: ImovelConstrutora[];
   cidades: string[];
   bairros: string[];
@@ -55,6 +57,7 @@ function toImovel(b: CatalogEntry): ImovelConstrutora {
     id: b.id,
     name: b.name,
     developer: b.developer,
+    developer_logo: b.developer_logo ?? null,
     min_price: b.min_price,
     bedrooms_min: b.bedrooms_min,
     bedrooms_max: b.bedrooms_max,
@@ -99,10 +102,15 @@ export function agruparConstrutoras(catalogo: CatalogEntry[]): GrupoConstrutora[
     const bairros = [...new Set(entradas.map(b => b.neighborhood).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const precos = entradas.filter(temPrecoReal).map(b => b.min_price!);
     const atualizacoes = entradas.map(b => b.updated_at).filter((v): v is string => !!v).sort().reverse();
+    // Nem todo imóvel da construtora tem developer_logo preenchido (depende do
+    // que a Orulo cadastrou naquele building específico) — usa a primeira que
+    // aparecer no grupo, já que é a mesma marca pra todos os aliases.
+    const logo = entradas.find(b => b.developer_logo)?.developer_logo ?? null;
     return {
       slug,
       nome: grupo.nome,
       aliases: [...grupo.aliases].sort((a, b) => a.localeCompare(b, 'pt-BR')),
+      logo,
       imoveis: entradas.map(toImovel),
       cidades,
       bairros,

@@ -8,6 +8,7 @@ interface ConstrutoraResumo {
   nome: string;
   quantidade: number;
   cidades: string[];
+  logo: string | null;
 }
 function normalizar(texto: string): string {
   return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -43,10 +44,16 @@ export default function ConstrutorasList({ construtoras }: { construtoras: Const
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '14px' }}>
           {filtradas.map(construtora => (
             <Link key={construtora.slug} href={`/construtoras/${construtora.slug}`} style={{ textDecoration: 'none' }}>
-              <article style={{ height: '100%', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px', boxShadow: '0 2px 8px rgba(15,23,42,.04)' }}>
-                <h3 style={{ fontSize: '17px', color: 'var(--text)', marginBottom: '7px' }}>{construtora.nome}</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: 1.5, marginBottom: '10px' }}>
-                  {construtora.quantidade} {construtora.quantidade === 1 ? 'empreendimento' : 'empreendimentos'} em {construtora.cidades.slice(0, 3).join(', ')}
+              <article style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '10px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px', boxShadow: '0 2px 8px rgba(15,23,42,.04)' }}>
+                {construtora.logo ? (
+                  <img src={construtora.logo} alt={`Logo da construtora ${construtora.nome}`}
+                    style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'contain', background: 'var(--bg)', border: '1px solid var(--border)' }} />
+                ) : (
+                  <div aria-hidden style={{ width: '52px', height: '52px', borderRadius: '10px', display: 'grid', placeItems: 'center', fontSize: '20px', border: '1px dashed var(--border)', color: 'var(--text-faint)' }}>🏢</div>
+                )}
+                <h3 style={{ fontSize: '17px', color: 'var(--text)', margin: 0 }}>{construtora.nome}</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: 1.5, margin: 0 }}>
+                  {construtora.quantidade} {construtora.quantidade === 1 ? 'empreendimento' : 'empreendimentos'}
                 </p>
                 <span style={{ color: 'var(--primary)', fontSize: '13px', fontWeight: 800 }}>Ver imóveis →</span>
               </article>
