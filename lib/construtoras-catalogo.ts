@@ -38,7 +38,15 @@ export interface GrupoConstrutora {
   menorPreco: number | null;
   ultimaAtualizacao: string | null;
   indexavel: boolean;
+  /** Nível de destaque visual na home de construtoras (1 = maior). Não tem
+   * nenhum efeito em indexação — isso continua controlado só por `indexavel`. */
+  destaque: 1 | 2 | 3 | null;
 }
+
+// Construtoras de altíssimo padrão que entram no nível 2 de destaque mesmo
+// quando o volume de empreendimentos ativos as deixaria fora do ranking —
+// reconhecimento de marca aqui pesa mais que quantidade.
+const DESTAQUE_TIER2_FORCADO = new Set(['lindenberg', 'rfm-incorporadora']);
 
 function catalogoPublico(catalogo: CatalogEntry[]): CatalogEntry[] {
   let filtrado = catalogo.filter(b =>
@@ -92,7 +100,7 @@ export function agruparConstrutoras(catalogo: CatalogEntry[]): GrupoConstrutora[
     }
   }
 
-  return [...grupos.entries()].map(([slug, grupo]) => {
+  const construtoras = [...grupos.entries()].map(([slug, grupo]) => {
     const entradas = grupo.entradas.sort((a, b) => {
       const precoA = temPrecoReal(a) ? a.min_price! : Number.MAX_SAFE_INTEGER;
       const precoB = temPrecoReal(b) ? b.min_price! : Number.MAX_SAFE_INTEGER;
@@ -118,7 +126,39 @@ export function agruparConstrutoras(catalogo: CatalogEntry[]): GrupoConstrutora[
       ultimaAtualizacao: atualizacoes[0] ?? null,
       indexavel: entradas.length >= MIN_IMOVEIS_CONSTRUTORA_INDEXAVEL && precos.length > 0,
     };
-  }).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  });
+
+  // Destaque: ranking por volume de empreendimentos entre as indexáveis — só
+  // afeta ordem/visual na home de construtoras, nunca indexação.
+  const rankeadas = construtoras
+    .filter(c => c.indexavel)
+    .sort((a, b) => b.imoveis.length - a.imoveis.length || a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  const destaquePorSlug = new Map<string, 1 | 2 | 3>();
+  rankeadas.forEach((c, i) => {
+    const posicao = i + 1;
+    if (posicao <= 15) destaquePorSlug.set(c.slug, 1);
+    else if (posicao <= 50) destaquePorSlug.set(c.slug, 2);
+    else if (posicao <= 100) destaquePorSlug.set(c.slug, DESTAQUE_TIER2_FORCADO.has(c.slug) ? 2 : 3);
+  });
+  for (const slug of DESTAQUE_TIER2_FORCADO) {
+    if (!destaquePorSlug.has(slug)) destaquePorSlug.set(slug, 2);
+  }
+
+  return construtoras
+    .map(c => ({ ...c, destaque: destaquePorSlug.get(c.slug) ?? null }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    // Segundo sort (estável): traz as destacadas pro topo, ordenadas por
+    // nível e depois por volume; as sem destaque mantêm a ordem alfabética
+    // que já vem do sort acima (retornar 0 preserva a posição relativa).
+    .sort((a, b) => {
+      if (a.destaque && b.destaque) {
+        return a.destaque - b.destaque || b.imoveis.length - a.imoveis.length;
+      }
+      if (a.destaque && !b.destaque) return -1;
+      if (!a.destaque && b.destaque) return 1;
+      return 0;
+    });
 }
 
 export async function getConstrutoras(): Promise<GrupoConstrutora[]> {
