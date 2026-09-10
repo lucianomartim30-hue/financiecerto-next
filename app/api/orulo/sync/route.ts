@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
     const token     = await getToken();
 
     // ── Passo 1: buscar todos os IDs ativos ───────────────────────────────────
-    const activeIdEntries = await fetchAllActiveIds(token);
+    const { ids: activeIdEntries, complete: idsComplete } = await fetchAllActiveIds(token);
     const totalActive     = activeIdEntries.length;
 
     if (totalActive === 0) {
@@ -76,6 +76,26 @@ export async function GET(req: NextRequest) {
           diagnostico: _ultimoErroIdsActive, // TESTE TEMPORÁRIO
         },
         { status: 502 },
+      );
+    }
+
+    // A paginação de /buildings/ids/active parou no meio (erro, timeout ou
+    // rate-limit da Orulo) — activeIdEntries é uma lista PARCIAL, não a
+    // verdade completa de quem está ativo. Seguir em frente marcaria todo
+    // imóvel saudável que não coube nessa lista truncada como
+    // suspected_missing (some da vitrine na hora, sem esperar os 30 dias de
+    // confirmação — foi exatamente isso que aconteceu no incidente de
+    // 2026-09-10, causado por chamadas de sync em sequência estourando o
+    // rate-limit da Orulo). Sem uma lista completa e confiável, não dá pra
+    // comparar quem saiu — aborta sem tocar no KV.
+    if (!idsComplete) {
+      return NextResponse.json(
+        {
+          error: 'Lista de imóveis ativos da Orulo veio incompleta (paginação interrompida) — sync abortado sem alterar o catálogo, pra não marcar imóveis saudáveis como removidos.',
+          ids_recebidos: totalActive,
+          diagnostico: _ultimoErroIdsActive,
+        },
+        { status: 503 },
       );
     }
 

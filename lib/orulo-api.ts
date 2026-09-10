@@ -261,11 +261,23 @@ export interface OruloIdEntry {
 // logs de runtime não estavam acessíveis via CLI no momento do incidente.
 export let _ultimoErroIdsActive: { page: number; status?: number; body?: string; erro?: string } | null = null;
 
-export async function fetchAllActiveIds(token: string): Promise<OruloIdEntry[]> {
+export interface ActiveIdsResult {
+  ids: OruloIdEntry[];
+  /** false quando a paginação parou por erro/timeout/rate-limit antes de
+   * terminar — nesse caso `ids` é uma lista PARCIAL e não pode ser tratada
+   * como "todos os imóveis ativos" (ver incidente de 2026-09-10: uma página
+   * falhando no meio da paginação fazia milhares de imóveis saudáveis serem
+   * marcados como suspected_missing só porque não apareceram na lista
+   * truncada). O chamador deve abortar sem tocar no catálogo quando false. */
+  complete: boolean;
+}
+
+export async function fetchAllActiveIds(token: string): Promise<ActiveIdsResult> {
   const PER_PAGE = 500;
   const allIds: OruloIdEntry[] = [];
   let page = 1;
   let totalPages = 1;
+  let complete = false;
 
   while (page <= totalPages) {
     try {
@@ -301,6 +313,7 @@ export async function fetchAllActiveIds(token: string): Promise<OruloIdEntry[]> 
 
       console.log(`[ids/active] page ${page}/${totalPages} → ${list.length} IDs (total: ${allIds.length})`);
       page++;
+      if (page > totalPages) complete = true; // terminou a paginação de verdade, sem break por erro
     } catch (e) {
       console.error('[ids/active] error page', page, e);
       _ultimoErroIdsActive = { page, erro: String(e) };
@@ -308,7 +321,7 @@ export async function fetchAllActiveIds(token: string): Promise<OruloIdEntry[]> 
     }
   }
 
-  return allIds;
+  return { ids: allIds, complete };
 }
 
 // ── Detalhe de empreendimento individual ─────────────────────────────────────
