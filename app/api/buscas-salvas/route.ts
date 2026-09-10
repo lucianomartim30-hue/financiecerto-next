@@ -26,6 +26,17 @@ function isEmailValido(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+// Espelha a regra do cliente (hasFilters em app/imoveis/page.tsx): salvar "todos os
+// imóveis" sem nenhum filtro não faz sentido como alerta e nunca deveria ter sido
+// oferecido no front — mas a validação real tem que estar aqui, não só na UI.
+const CHAVES_FILTRO = ['q', 'neighborhood', 'min', 'max', 'bedrooms_min', 'status', 'tipo', 'tipologia'];
+function temFiltroMinimo(filtrosQuery: string): boolean {
+  const qs = (filtrosQuery || '').replace(/^\?/, '').trim();
+  if (!qs) return false;
+  const params = new URLSearchParams(qs);
+  return CHAVES_FILTRO.some(k => !!params.get(k));
+}
+
 export async function GET(req: NextRequest) {
   if (!isAuthed(req)) {
     return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
@@ -47,6 +58,9 @@ export async function POST(req: NextRequest) {
     }
     if (!consentimento) {
       return NextResponse.json({ error: 'É necessário aceitar o uso do contato.' }, { status: 400 });
+    }
+    if (!temFiltroMinimo(String(filtrosQuery || ''))) {
+      return NextResponse.json({ error: 'Aplique ao menos um filtro antes de ativar um alerta.' }, { status: 400 });
     }
 
     const busca = await kvAddBuscaSalva({

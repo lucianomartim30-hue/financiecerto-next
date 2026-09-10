@@ -75,6 +75,11 @@ export default function AdminBuscasSalvasPage() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
+  async function revogar(id: string) {
+    setBuscas(prev => prev.map(b => b.id === id ? { ...b, ativa: false, revogadoEm: new Date().toISOString() } : b)); // otimista
+    await fetch(`/api/buscas-salvas/${id}`, { method: 'PATCH' });
+  }
+
   if (authed === null) {
     return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>Carregando…</div>;
   }
@@ -112,16 +117,32 @@ export default function AdminBuscasSalvasPage() {
               <div style={{ flex: 1, minWidth: '200px' }}>
                 <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: '2px' }}>
                   📱 {b.whatsapp}{b.email && <span style={{ fontWeight: '500', color: 'var(--text-muted)' }}> · ✉️ {b.email}</span>}
+                  {' '}
+                  <span style={{ fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '99px', color: b.ativa ? '#16a34a' : '#dc2626', background: b.ativa ? 'rgba(22,163,74,.12)' : 'rgba(220,38,38,.12)' }}>
+                    {b.ativa ? 'Ativa' : 'Revogada'}
+                  </span>
                 </p>
                 <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>{b.descricaoFiltros}</p>
-                <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>{formatData(b.criadoEm)}</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '4px' }}>
+                  {formatData(b.criadoEm)}
+                  {b.versaoConsentimento ? ` · consentimento ${b.versaoConsentimento}` : ''}
+                  {b.revogadoEm ? ` · revogado em ${formatData(b.revogadoEm)}` : ''}
+                </p>
               </div>
-              {b.filtrosQuery && (
-                <a href={`/imoveis${b.filtrosQuery}`} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '12px', fontWeight: '600', color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                  Ver busca no site →
-                </a>
-              )}
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexShrink: 0 }}>
+                {b.filtrosQuery && (
+                  <a href={`/imoveis${b.filtrosQuery}`} target="_blank" rel="noopener noreferrer"
+                    style={{ fontSize: '12px', fontWeight: '600', color: 'var(--primary)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    Ver busca no site →
+                  </a>
+                )}
+                {b.ativa && (
+                  <button onClick={() => revogar(b.id)}
+                    style={{ fontSize: '12px', fontWeight: '600', color: '#dc2626', background: 'transparent', border: '1px solid rgba(220,38,38,.3)', borderRadius: '8px', padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    Revogar
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}

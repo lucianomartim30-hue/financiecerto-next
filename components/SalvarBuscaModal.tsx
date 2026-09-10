@@ -20,6 +20,9 @@ export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClo
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [sucesso, setSucesso] = useState(false);
+  const [buscaId, setBuscaId] = useState<string | null>(null);
+  const [cancelando, setCancelando] = useState(false);
+  const [cancelado, setCancelado] = useState(false);
 
   async function salvar() {
     if (!whatsapp.trim()) { setErro('Informe seu WhatsApp.'); return; }
@@ -35,11 +38,25 @@ export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClo
       const data = await res.json();
       if (!res.ok) { setErro(data.error || 'Não foi possível salvar.'); return; }
       setSucesso(true);
+      setBuscaId(data.busca?.id ?? null);
       import('@/lib/gtag').then(m => m.gtagEvent({ action: 'save_search', category: 'engagement', label: descricaoFiltros }));
     } catch {
       setErro('Erro de conexão. Tente novamente.');
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function cancelar() {
+    if (!buscaId) return;
+    setCancelando(true);
+    try {
+      await fetch(`/api/buscas-salvas/${buscaId}`, { method: 'PATCH' });
+      setCancelado(true);
+    } catch {
+      setErro('Não foi possível cancelar agora. Tente novamente.');
+    } finally {
+      setCancelando(false);
     }
   }
 
@@ -54,12 +71,25 @@ export default function SalvarBuscaModal({ descricaoFiltros, filtrosQuery, onClo
       >
         {sucesso ? (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
-            <p style={{ fontSize: '36px', marginBottom: '10px' }}>🔔</p>
-            <p style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>Alerta ativado!</p>
+            <p style={{ fontSize: '36px', marginBottom: '10px' }}>{cancelado ? '🔕' : '🔔'}</p>
+            <p style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text)', marginBottom: '6px' }}>
+              {cancelado ? 'Alerta cancelado.' : 'Alerta ativado!'}
+            </p>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-              Vamos te avisar quando surgir um imóvel compatível.
+              {cancelado
+                ? 'Você não vai mais receber avisos sobre esta busca.'
+                : 'Vamos te avisar quando surgir um imóvel compatível.'}
             </p>
             <button onClick={onClose} className="btn-primary" style={{ width: '100%' }}>Fechar</button>
+            {!cancelado && buscaId && (
+              <button
+                onClick={cancelar}
+                disabled={cancelando}
+                style={{ width: '100%', marginTop: '10px', padding: '9px', borderRadius: '10px', border: 'none', background: 'transparent', color: 'var(--text-faint)', fontSize: '12px', textDecoration: 'underline', cursor: cancelando ? 'default' : 'pointer', fontFamily: 'inherit' }}
+              >
+                {cancelando ? 'Cancelando…' : 'Errei / cancelar este alerta'}
+              </button>
+            )}
           </div>
         ) : (
           <>

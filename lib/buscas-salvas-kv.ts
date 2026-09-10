@@ -9,6 +9,11 @@
 
 import { randomUUID } from 'crypto';
 
+/** Texto de consentimento vigente no formulário — mudar a versão sempre que o texto mudar (auditoria LGPD). */
+export const VERSAO_CONSENTIMENTO_ATUAL = 'v1-2026-08';
+export const FINALIDADE_CONSENTIMENTO =
+  'notificar o titular por WhatsApp e/ou e-mail sobre imóveis compatíveis com os filtros desta busca';
+
 export interface BuscaSalva {
   id: string;
   whatsapp: string;              // obrigatório — canal que já é usado hoje pra atender
@@ -18,6 +23,13 @@ export interface BuscaSalva {
   consentimento: boolean;       // LGPD — sempre true (bloqueado no form), guardado para auditoria
   criadoEm: string;
   ativa: boolean;                // permite "desativar" sem apagar (ex: pedido de remoção)
+  // LGPD — rastro de auditoria do consentimento (Bloco C, item 10). Sem isso não dá pra
+  // provar o que a pessoa autorizou, quando, nem revogar de forma verificável depois.
+  consentidoEm: string;
+  versaoConsentimento: string;
+  finalidade: string;
+  canalAutorizado: ('whatsapp' | 'email')[];
+  revogadoEm: string | null;
 }
 
 const KV_KEY = 'buscas-salvas:list';
@@ -51,12 +63,18 @@ export async function kvAddBuscaSalva(
   const kv = await getKv();
   if (!kv) return null;
 
+  const agora = new Date().toISOString();
   const busca: BuscaSalva = {
     ...input,
     id: randomUUID(),
     consentimento: true,
-    criadoEm: new Date().toISOString(),
+    criadoEm: agora,
     ativa: true,
+    consentidoEm: agora,
+    versaoConsentimento: VERSAO_CONSENTIMENTO_ATUAL,
+    finalidade: FINALIDADE_CONSENTIMENTO,
+    canalAutorizado: input.email ? ['whatsapp', 'email'] : ['whatsapp'],
+    revogadoEm: null,
   };
 
   try {
@@ -66,6 +84,26 @@ export async function kvAddBuscaSalva(
     return busca;
   } catch (e) {
     console.error('[buscas-salvas-kv] add', e);
+    return null;
+  }
+}
+
+/** Cancela (revoga) uma busca salva pelo próprio id — usado tanto pelo link de
+ * cancelamento enviado ao titular quanto pelo painel admin. Não permite
+ * reativar por essa via (a pessoa que revogou o consentimento tem que pedir
+ * de novo, não é um "desligar/ligar" arbitrário). */
+export async function kvRevogarBuscaSalva(id: string): Promise<BuscaSalva | null> {
+  const kv = await getKv();
+  if (!kv) return null;
+  try {
+    const buscas = await kvGetBuscasSalvas();
+    const idx = buscas.findIndex(b => b.id === id);
+    if (idx === -1) return null;
+    buscas[idx] = { ...buscas[idx], ativa: false, revogadoEm: new Date().toISOString() };
+    await kv.set(KV_KEY, buscas);
+    return buscas[idx];
+  } catch (e) {
+    console.error('[buscas-salvas-kv] revogar', e);
     return null;
   }
 }
