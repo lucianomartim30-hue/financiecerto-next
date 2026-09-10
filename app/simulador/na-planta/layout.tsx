@@ -15,6 +15,9 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
     url: `${SITE_CONFIG.domain}/simulador/na-planta`,
+    siteName: 'FinancieCerto',
+    locale: 'pt_BR',
+    type: 'website',
   },
 };
 
