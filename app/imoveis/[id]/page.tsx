@@ -101,7 +101,10 @@ export async function generateMetadata(
   const description = descParts.join('. ');
 
   const url   = `${BASE}/imoveis/${id}`;
-  const image = b.photo ?? `${BASE}/og-default.png`;
+  // og-default.png nunca existiu em public/ — apontava pra uma imagem quebrada
+  // sempre que o imóvel não tem foto própria (photo: null). Usa a logo (já
+  // existe, 512x512) até haver uma imagem 1200x630 dedicada.
+  const image = b.photo ?? `${BASE}/icons/icon-512.png`;
 
   return {
     title,
