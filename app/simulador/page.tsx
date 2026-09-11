@@ -14,6 +14,14 @@ import { HisHmpHint } from '@/components/HisHmpHint';
 import { FAQ_SIMULADOR } from './faq-data';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+// "mmm/aaaa" do mês atual — antes era texto fixo ("jul/2026") e ficava
+// desatualizado a cada mês que passava sem alguém lembrar de editar aqui.
+const MESES_PT_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+function mesAnoAtual(): string {
+  const agora = new Date();
+  return `${MESES_PT_ABREV[agora.getMonth()]}/${agora.getFullYear()}`;
+}
+
 function fmtInput(v: string): string {
   const n = v.replace(/\D/g, '');
   return n ? Number(n).toLocaleString('pt-BR') : '';
@@ -595,7 +603,7 @@ function SimuladorInner() {
       </div>
       <BtnPrimario label="Começar — leva 2 minutos" onClick={avancar} />
       <p style={{ fontSize: 12, color: 'var(--text-faint)', textAlign: 'center', marginTop: 14 }}>
-        🔓 Grátis e sem cadastro · Regras SFH/MCMV vigentes · jul/2026 · TR {TR_MENSAL}%/mês
+        🔓 Grátis e sem cadastro · Regras SFH/MCMV vigentes · {mesAnoAtual()} · TR {TR_MENSAL}%/mês
       </p>
 
       {/* Conteúdo explicativo + FAQ — abaixo do CTA, nunca antes (auditoria de

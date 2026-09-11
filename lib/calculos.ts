@@ -81,27 +81,48 @@ export const TR_MENSAL        = 0.17;
 export const TETO_MCMV     = 350000;
 export const TAXA_MCMV_ANUAL = 7.91; // fallback F3 médio cotista/sem-FGTS (7,66+8,16)/2
 
-// ─── TR histórica — últimos 36 meses (Ago/2023 → Jul/2026) ───────────────────
-// Fonte: Banco Central do Brasil — Série 226 | Atualizado: Jul/2026
+// ─── TR histórica — últimos 36 meses (Out/2023 → Set/2026) ───────────────────
+// Fonte: Banco Central do Brasil — Série 226 | Atualizado: Set/2026
+// Valor de cada mês = entrada diária publicada no 1º dia útil do mês (não a
+// entrada especial "1º ao último dia do mesmo mês" que a série também traz —
+// ver scripts/update-tr.js para o motivo dessa escolha).
 export const TR_HISTORICO_36M: { label: string; tr: number }[] = [
-  { label: 'Ago/23', tr: 0.2160 }, { label: 'Set/23', tr: 0.1130 },
-  { label: 'Out/23', tr: 0.1056 }, { label: 'Nov/23', tr: 0.0775 },
-  { label: 'Dez/23', tr: 0.0690 }, { label: 'Jan/24', tr: 0.0875 },
-  { label: 'Fev/24', tr: 0.0079 }, { label: 'Mar/24', tr: 0.0331 },
-  { label: 'Abr/24', tr: 0.1023 }, { label: 'Mai/24', tr: 0.0870 },
-  { label: 'Jun/24', tr: 0.0365 }, { label: 'Jul/24', tr: 0.0739 },
-  { label: 'Ago/24', tr: 0.0707 }, { label: 'Set/24', tr: 0.0675 },
-  { label: 'Out/24', tr: 0.0977 }, { label: 'Nov/24', tr: 0.0649 },
-  { label: 'Dez/24', tr: 0.0822 }, { label: 'Jan/25', tr: 0.1690 },
-  { label: 'Fev/25', tr: 0.1324 }, { label: 'Mar/25', tr: 0.1092 },
-  { label: 'Abr/25', tr: 0.1689 }, { label: 'Mai/25', tr: 0.1712 },
-  { label: 'Jun/25', tr: 0.1699 }, { label: 'Jul/25', tr: 0.1758 },
-  { label: 'Ago/25', tr: 0.1722 }, { label: 'Set/25', tr: 0.1742 },
-  { label: 'Out/25', tr: 0.1758 }, { label: 'Nov/25', tr: 0.1634 },
-  { label: 'Dez/25', tr: 0.1742 }, { label: 'Jan/26', tr: 0.1718 },
-  { label: 'Fev/26', tr: 0.1207 }, { label: 'Mar/26', tr: 0.1735 },
-  { label: 'Abr/26', tr: 0.1679 }, { label: 'Mai/26', tr: 0.1687 },
-  { label: 'Jun/26', tr: 0.1709 }, { label: 'Jul/26', tr: 0.1729 },
+  { label: 'Out/23', tr: 0.1056 },
+  { label: 'Nov/23', tr: 0.0775 },
+  { label: 'Dez/23', tr: 0.0690 },
+  { label: 'Jan/24', tr: 0.0875 },
+  { label: 'Fev/24', tr: 0.0079 },
+  { label: 'Mar/24', tr: 0.0331 },
+  { label: 'Abr/24', tr: 0.1023 },
+  { label: 'Mai/24', tr: 0.0870 },
+  { label: 'Jun/24', tr: 0.0365 },
+  { label: 'Jul/24', tr: 0.0739 },
+  { label: 'Ago/24', tr: 0.0707 },
+  { label: 'Set/24', tr: 0.0675 },
+  { label: 'Out/24', tr: 0.0977 },
+  { label: 'Nov/24', tr: 0.0649 },
+  { label: 'Dez/24', tr: 0.0822 },
+  { label: 'Jan/25', tr: 0.1690 },
+  { label: 'Fev/25', tr: 0.1324 },
+  { label: 'Mar/25', tr: 0.1092 },
+  { label: 'Abr/25', tr: 0.1689 },
+  { label: 'Mai/25', tr: 0.1712 },
+  { label: 'Jun/25', tr: 0.1699 },
+  { label: 'Jul/25', tr: 0.1758 },
+  { label: 'Ago/25', tr: 0.1722 },
+  { label: 'Set/25', tr: 0.1742 },
+  { label: 'Out/25', tr: 0.1758 },
+  { label: 'Nov/25', tr: 0.1634 },
+  { label: 'Dez/25', tr: 0.1742 },
+  { label: 'Jan/26', tr: 0.1718 },
+  { label: 'Fev/26', tr: 0.1207 },
+  { label: 'Mar/26', tr: 0.1735 },
+  { label: 'Abr/26', tr: 0.1679 },
+  { label: 'Mai/26', tr: 0.1687 },
+  { label: 'Jun/26', tr: 0.1709 },
+  { label: 'Jul/26', tr: 0.1729 },
+  { label: 'Ago/26', tr: 0.1693 },
+  { label: 'Set/26', tr: 0.1690 }
 ];
 
 export interface MesHistoricoTR {

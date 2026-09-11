@@ -5,6 +5,18 @@
  * Busca os últimos 36 meses de TR na API do Banco Central (Série 226)
  * e atualiza o array TR_HISTORICO_36M em lib/calculos.ts.
  *
+ * A série 226 do BCB é publicada diariamente (não um valor por mês) — pra
+ * cada dia normalmente saem DUAS entradas com a mesma data inicial: uma com
+ * `dataFim` no último dia do MESMO mês (TR acumulada só daquele mês corrido)
+ * e outra com `dataFim` ~30 dias à frente (uso em acúmulo diário de contrato).
+ * O valor "de cada mês" historicamente usado aqui é o da 2ª entrada do dia 1º
+ * útil do mês (a de janela ~30 dias) — por isso o filtro abaixo descarta a
+ * entrada cujo dataFim cai no mesmo mês da data.
+ *
+ * Desde 2026-09 o endpoint `ultimos/N` passou a limitar N a 20, então este
+ * script usa o endpoint por intervalo de datas (`dataInicial`/`dataFinal`),
+ * que não tem esse teto.
+ *
  * Uso:
  *   node scripts/update-tr.js           # atualiza o arquivo
  *   node scripts/update-tr.js --dry-run  # mostra o que seria feito, sem gravar
@@ -18,17 +30,21 @@ const path  = require('path');
 
 // ─── Configuração ─────────────────────────────────────────────────────────────
 const CALCULOS_PATH = path.join(__dirname, '..', 'lib', 'calculos.ts');
-const BCB_URL = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.226/dados/ultimos/36?formato=json';
 const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const DRY_RUN  = process.argv.includes('--dry-run');
+
+function bcbUrl(dataInicial, dataFinal) {
+  return `https://api.bcb.gov.br/dados/serie/bcdata.sgs.226/dados?formato=json&dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
     https.get(url, { headers: { 'User-Agent': 'financiecerto-update-tr/1.0' } }, (res) => {
       if (res.statusCode !== 200) {
-        reject(new Error(`BCB retornou HTTP ${res.statusCode}`));
-        res.resume();
+        let raw = '';
+        res.on('data', chunk => { raw += chunk; });
+        res.on('end', () => reject(new Error(`BCB retornou HTTP ${res.statusCode}: ${raw}`)));
         return;
       }
       let raw = '';
@@ -39,6 +55,12 @@ function fetchJSON(url) {
       });
     }).on('error', reject);
   });
+}
+
+function toDDMMYYYY(d) {
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
 }
 
 /** "01/06/2023" → "Jun/23" */
@@ -53,49 +75,82 @@ function toMesAno(dataStr) {
   return `${MESES_PT[parseInt(mm, 10) - 1]}/${yyyy}`;
 }
 
+function mesDe(dataStr) {
+  return dataStr.split('/')[1];
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log(`🔍 Buscando últimos 36 meses de TR no BCB...`);
-  console.log(`   URL: ${BCB_URL}\n`);
+  // Janela generosa (38 meses) pra garantir que sobrem pelo menos 36 meses
+  // completos mesmo com feriados/fins de semana deslocando o dia 1º útil.
+  const hoje = new Date();
+  const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 38, 1);
+  const dataInicial = toDDMMYYYY(inicio);
+  const dataFinal   = toDDMMYYYY(hoje);
+  const url = bcbUrl(dataInicial, dataFinal);
 
-  const dados = await fetchJSON(BCB_URL);
+  console.log(`🔍 Buscando TR no BCB de ${dataInicial} até ${dataFinal}...`);
+  console.log(`   URL: ${url}\n`);
+
+  const dados = await fetchJSON(url);
 
   if (!Array.isArray(dados) || dados.length === 0) {
     throw new Error('BCB retornou resposta vazia ou inválida');
   }
 
-  console.log(`✅ Recebidos ${dados.length} registros\n`);
+  console.log(`✅ Recebidos ${dados.length} registros diários\n`);
 
-  // Preview dos últimos 3 meses recebidos
-  console.log('Últimos 3 meses:');
-  dados.slice(-3).forEach(({ data, valor }) => {
-    console.log(`  ${data}  →  TR ${parseFloat(valor).toFixed(4)}%`);
+  // Pra cada dia 1º (data começando em "01/"), a série traz duas entradas:
+  // a de janela ~30 dias (dataFim no mês seguinte) é a que usamos como "TR
+  // do mês" — descarta a de dataFim no mesmo mês (TR acumulada só do mês).
+  const porMes = new Map(); // "MM/YYYY" → {data, valor}
+  for (const { data, dataFim, valor } of dados) {
+    if (!data.startsWith('01/')) continue;
+    if (mesDe(dataFim) === mesDe(data)) continue; // descarta a janela "mesmo mês"
+    const chave = data.slice(3); // "MM/YYYY"
+    porMes.set(chave, { data, valor: parseFloat(valor) });
+  }
+
+  const meses = [...porMes.entries()]
+    .sort(([a], [b]) => {
+      const [ma, ya] = a.split('/').map(Number);
+      const [mb, yb] = b.split('/').map(Number);
+      return ya - yb || ma - mb;
+    })
+    .slice(-36);
+
+  if (meses.length < 36) {
+    console.warn(`⚠️  Só encontrei ${meses.length} meses completos (esperado 36) — a janela de busca pode precisar ser maior.`);
+  }
+
+  console.log('Últimos 3 meses encontrados:');
+  meses.slice(-3).forEach(([, { data, valor }]) => {
+    console.log(`  ${toMesAno(data)}  →  TR ${valor.toFixed(4)}%`);
   });
   console.log('');
 
-  // Monta as entradas do array TypeScript
-  const entries = dados.map(({ data, valor }) =>
-    `  { label: '${toLabel(data)}', tr: ${parseFloat(valor).toFixed(4)} }`,
+  const entries = meses.map(([, { data, valor }]) =>
+    `  { label: '${toLabel(data)}', tr: ${valor.toFixed(4)} }`,
   );
 
-  // Cabeçalho do bloco
-  const hoje     = new Date();
-  const mesAtual = `${MESES_PT[hoje.getMonth()]}/${hoje.getFullYear()}`;
-  const primeiro = toMesAno(dados[0].data);
-  const ultimo   = toMesAno(dados[dados.length - 1].data);
+  const agora     = new Date();
+  const mesAtual  = `${MESES_PT[agora.getMonth()]}/${agora.getFullYear()}`;
+  const primeiro  = toMesAno(meses[0][1].data);
+  const ultimo    = toMesAno(meses[meses.length - 1][1].data);
 
   const novoBloco = [
     `// ─── TR histórica — últimos 36 meses (${primeiro} → ${ultimo}) ───────────────────`,
     `// Fonte: Banco Central do Brasil — Série 226 | Atualizado: ${mesAtual}`,
+    `// Valor de cada mês = entrada diária publicada no 1º dia útil do mês (não a`,
+    `// entrada especial "1º ao último dia do mesmo mês" que a série também traz —`,
+    `// ver scripts/update-tr.js para o motivo dessa escolha).`,
     `export const TR_HISTORICO_36M: { label: string; tr: number }[] = [`,
     entries.join(',\n'),
     `];`,
   ].join('\n');
 
-  // Lê o arquivo atual
   const conteudoAtual = fs.readFileSync(CALCULOS_PATH, 'utf8');
 
-  // Regex que captura o bloco inteiro (comentário + export const ... ];)
   const regex = /\/\/ ─── TR histórica[\s\S]*?^export const TR_HISTORICO_36M[\s\S]*?^\];/m;
 
   if (!regex.test(conteudoAtual)) {
