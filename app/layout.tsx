@@ -13,6 +13,7 @@ const inter = Inter({
 import Header from "@/components/Header";
 import NudgeSalvarBusca from "@/components/NudgeSalvarBusca";
 import AtribuicaoTracker from "@/components/AtribuicaoTracker";
+import GtagPageview from "@/components/GtagPageview";
 import FavoritosSync from "@/components/FavoritosSync";
 import ChatFab from "@/components/ChatFab";
 import FooterWrapper from "@/components/FooterWrapper";
@@ -72,9 +73,10 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-5FCF1KE9XP');
+            gtag('config', 'G-5FCF1KE9XP', { send_page_view: false });
           `}
         </Script>
+        <GtagPageview />
         <Header />
         <main style={{ flex: 1 }}>
           {children}
