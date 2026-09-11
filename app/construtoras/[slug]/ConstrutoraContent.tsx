@@ -49,17 +49,55 @@ export default function ConstrutoraContent({ nome, imoveis, cidades }: { nome: s
         {filtrados.slice(0, limite).map(imovel => {
           const status = getStatusCfg(imovel.status_norm || imovel.status, imovel.min_price);
           const specs = [faixa(imovel.bedrooms_min, imovel.bedrooms_max, 'qts'), imovel.area_min ? `${imovel.area_min}m²` : null, faixa(imovel.vagas_min, imovel.vagas_max, 'vaga')].filter(Boolean);
+          const promos = imovel.promocoes_destaque;
+          const temPromo = promos.length > 0;
           return (
             <Link key={imovel.id} href={`/imoveis/${imovel.id}`} style={{ textDecoration: 'none', display: 'block' }}>
               <article style={{ height: '100%', overflow: 'hidden', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '13px', boxShadow: '0 2px 10px rgba(15,23,42,.04)' }}>
                 <div style={{ height: '160px', background: '#e2e8f0', position: 'relative', overflow: 'hidden' }}>
-                  {imovel.photo ? <img src={imovel.photo} alt={`${imovel.name}, imóvel da ${nome}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ height: '100%', display: 'grid', placeItems: 'center', fontSize: '34px' }}>🏢</div>}
+                  {imovel.photo
+                    ? <img src={imovel.photo} alt={`${imovel.name}, imóvel da ${nome}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={e => { const t = e.currentTarget; t.style.display = 'none'; const p = t.parentElement; if (p) { p.style.display = 'flex'; p.style.alignItems = 'center'; p.style.justifyContent = 'center'; p.innerHTML = '<span style="font-size:34px">🏢</span>'; } }} />
+                    : <div style={{ height: '100%', display: 'grid', placeItems: 'center', fontSize: '34px' }}>🏢</div>}
                   <span style={{ position: 'absolute', left: '9px', top: '9px', borderRadius: '6px', padding: '4px 7px', color: '#fff', background: status.cor, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }}>{status.label || 'Disponível'}</span>
+                  {temPromo && (
+                    <span style={{ position: 'absolute', top: '9px', right: '9px', background: '#dc2626', color: '#fff', fontSize: '9px', fontWeight: 800, padding: '4px 7px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                      🔥 Promoção
+                    </span>
+                  )}
                 </div>
                 <div style={{ padding: '13px' }}>
                   <h3 style={{ fontSize: '15px', color: 'var(--text)', lineHeight: 1.35, marginBottom: '5px' }}>{imovel.name}</h3>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '9px' }}>📍 {[imovel.neighborhood, imovel.city].filter(Boolean).join(' · ')}</p>
-                  <p style={{ fontSize: '17px', color: 'var(--primary)', fontWeight: 900, marginBottom: specs.length ? '8px' : 0 }}>{imovel.min_price && imovel.min_price >= 100 ? `A partir de ${moeda.format(imovel.min_price)}` : 'Consulte o preço'}</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '9px' }}>📍 {[imovel.neighborhood, imovel.city, imovel.street].filter(Boolean).join(' · ')}</p>
+
+                  {temPromo ? (
+                    <div style={{ padding: '7px 9px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', marginBottom: specs.length ? '8px' : 0 }}>
+                      <p style={{ fontSize: '9px', fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '.3px', marginBottom: '3px' }}>
+                        {promos.length > 1 ? `🔥 ${promos.length} unidades em promoção` : '🔥 Unidade em promoção'}
+                      </p>
+                      {promos.length > 1 ? (
+                        <p style={{ fontSize: '15px', fontWeight: 900, color: '#dc2626' }}>
+                          A partir de {moeda.format(Math.min(...promos.map(p => p.precoPromocional)))}
+                        </p>
+                      ) : (() => {
+                        const p = promos[0];
+                        const temDesconto = !!(p.precoOriginal && p.precoOriginal > p.precoPromocional);
+                        return (
+                          <>
+                            <p style={{ fontSize: '15px', fontWeight: 900, color: '#dc2626' }}>
+                              {temDesconto && <span style={{ fontSize: '11px', fontWeight: 600, color: '#991b1b', textDecoration: 'line-through', marginRight: '5px' }}>{moeda.format(p.precoOriginal!)}</span>}
+                              {moeda.format(p.precoPromocional)}
+                            </p>
+                            {p.beneficio && <p style={{ fontSize: '10px', color: '#b91c1c', fontWeight: 600, marginTop: '2px' }}>🎁 {p.beneficio}</p>}
+                            {p.ultimaUnidade && <p style={{ fontSize: '10px', color: '#b91c1c', fontWeight: 700, marginTop: '2px' }}>🏁 Última unidade disponível dessa característica!</p>}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '17px', color: 'var(--primary)', fontWeight: 900, marginBottom: specs.length ? '8px' : 0 }}>{imovel.min_price && imovel.min_price >= 100 ? `A partir de ${moeda.format(imovel.min_price)}` : 'Consultar'}</p>
+                  )}
+
                   {specs.length > 0 && <p style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{specs.join(' · ')}</p>}
                 </div>
               </article>

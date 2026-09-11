@@ -4,8 +4,15 @@ import { filterLotesForaSP } from '@/lib/filtro-lotes-fora-sp';
 import { construtoraToSlug, nomePublicoConstrutora } from '@/lib/construtora-nomes';
 import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
 import { LOGOS_MANUAIS } from '@/lib/construtora-logos-manuais';
+import { kvGetTodasPromocoesPublicas, type Promocao } from '@/lib/promocoes-kv';
 
 export const MIN_IMOVEIS_CONSTRUTORA_INDEXAVEL = 3;
+
+// A mesma entrada do catálogo usada por app/api/orulo/route.ts pro portal,
+// só que aqui com a promoção manual (lib/promocoes-kv.ts) já mesclada — sem
+// isso, o card da página de construtora nunca sabia de promoção nenhuma,
+// porque esse mesclamento só acontecia dentro da rota de API do portal.
+type CatalogEntryComPromo = CatalogEntry & { promocoes_destaque?: Promocao[] };
 
 export interface ImovelConstrutora {
   id: string;
@@ -22,11 +29,13 @@ export interface ImovelConstrutora {
   neighborhood: string;
   city: string;
   state: string;
+  street: string;
   photo: string | null;
   status: string;
   status_norm: string;
   delivery_date: string | null;
   updated_at: string | null;
+  promocoes_destaque: Promocao[];
 }
 export interface GrupoConstrutora {
   slug: string;
@@ -49,7 +58,7 @@ export interface GrupoConstrutora {
 // reconhecimento de marca aqui pesa mais que quantidade.
 const DESTAQUE_TIER2_FORCADO = new Set(['lindenberg', 'rfm-incorporadora']);
 
-function catalogoPublico(catalogo: CatalogEntry[]): CatalogEntry[] {
+function catalogoPublico(catalogo: CatalogEntryComPromo[]): CatalogEntryComPromo[] {
   let filtrado = catalogo.filter(b =>
     !!b.developer?.trim()
     && CIDADES_LIBERADAS.has((b.city || '').toLowerCase().trim())
@@ -61,7 +70,7 @@ function catalogoPublico(catalogo: CatalogEntry[]): CatalogEntry[] {
   return filterLotesForaSP(filtrado);
 }
 
-function toImovel(b: CatalogEntry): ImovelConstrutora {
+function toImovel(b: CatalogEntryComPromo): ImovelConstrutora {
   return {
     id: b.id,
     name: b.name,
@@ -77,16 +86,18 @@ function toImovel(b: CatalogEntry): ImovelConstrutora {
     neighborhood: b.neighborhood,
     city: b.city,
     state: b.state,
+    street: b.street,
     photo: b.photo,
     status: b.status,
     status_norm: b.status_norm,
     delivery_date: b.delivery_date,
     updated_at: b.updated_at,
+    promocoes_destaque: b.promocoes_destaque ?? [],
   };
 }
 
-export function agruparConstrutoras(catalogo: CatalogEntry[]): GrupoConstrutora[] {
-  const grupos = new Map<string, { nome: string; aliases: Set<string>; entradas: CatalogEntry[] }>();
+export function agruparConstrutoras(catalogo: CatalogEntryComPromo[]): GrupoConstrutora[] {
+  const grupos = new Map<string, { nome: string; aliases: Set<string>; entradas: CatalogEntryComPromo[] }>();
 
   for (const entrada of catalogoPublico(catalogo)) {
     const slug = construtoraToSlug(entrada.developer);
@@ -164,7 +175,12 @@ export function agruparConstrutoras(catalogo: CatalogEntry[]): GrupoConstrutora[
 }
 
 export async function getConstrutoras(): Promise<GrupoConstrutora[]> {
-  return agruparConstrutoras((await kvGetCatalog()) ?? []);
+  const catalogo = (await kvGetCatalog()) ?? [];
+  const promocoes = await kvGetTodasPromocoesPublicas();
+  const comPromo: CatalogEntryComPromo[] = Object.keys(promocoes).length === 0
+    ? catalogo
+    : catalogo.map(b => promocoes[b.id] ? { ...b, promocoes_destaque: promocoes[b.id] } : b);
+  return agruparConstrutoras(comPromo);
 }
 
 export async function getConstrutora(slug: string): Promise<GrupoConstrutora | null> {
