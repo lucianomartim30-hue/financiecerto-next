@@ -67,7 +67,8 @@ export const LOGOS_MANUAIS: Record<string, string> = {
   'sdi':              '/logos/sdi.svg',
   'tarjab':           '/logos/tarjab.png',
   'think':            '/logos/think.png',
-  'vinx':             '/logos/vinx.gif',
+  // 'vinx' sem logo confiável — o site só tem assets de campanha sazonal
+  // (ex.: uma versão verde-Spotify de "parceria musical"), nunca a marca fixa.
 
   // Posições 57-66
   'yuny':                                 '/logos/yuny.png',
@@ -86,7 +87,7 @@ export const LOGOS_MANUAIS: Record<string, string> = {
   'ideale':               '/logos/ideale.svg',
   'livus-inc':            '/logos/livus-inc.svg',
   'zuckhan':              '/logos/zuckhan.png',
-  'magik-jc':             '/logos/magik-jc.jpeg',
+  'magik-jc':             '/logos/magik-jc.svg',
   'piemonte':             '/logos/piemonte.png',
   'tecnisa':              '/logos/tecnisa.png',
   'vanguard':             '/logos/vanguard.svg',
@@ -105,7 +106,7 @@ export const LOGOS_MANUAIS: Record<string, string> = {
 
   // Posições 87-100 (Verticall, VIEWCO, ABC Empreendimentos, AW Realty,
   // Habitram, HM Engenharia e M.Santos ficaram sem logo confiável)
-  'wds-construtora':                 '/logos/wds-construtora.png',
+  'wds-construtora':                 '/logos/wds-construtora.svg',
   'brix':                             '/logos/brix.webp',
   'coral-engenharia':                 '/logos/coral-engenharia.png',
   'hsantos-empreendimentos':          '/logos/hsantos-empreendimentos.png',
