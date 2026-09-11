@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   descobrir, simular, formatBRL, motivoSBPE, parcelaPrice, calcularSeguros,
   detectarFaixaMCMV, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH,
-  BANCOS_SBPE,
+  BANCOS_SBPE, mesAnoAtual,
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
@@ -14,14 +14,6 @@ import { HisHmpHint } from '@/components/HisHmpHint';
 import { FAQ_SIMULADOR } from './faq-data';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-// "mmm/aaaa" do mês atual — antes era texto fixo ("jul/2026") e ficava
-// desatualizado a cada mês que passava sem alguém lembrar de editar aqui.
-const MESES_PT_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-function mesAnoAtual(): string {
-  const agora = new Date();
-  return `${MESES_PT_ABREV[agora.getMonth()]}/${agora.getFullYear()}`;
-}
-
 function fmtInput(v: string): string {
   const n = v.replace(/\D/g, '');
   return n ? Number(n).toLocaleString('pt-BR') : '';
@@ -226,7 +218,7 @@ function ComparativoBancosSBPE({ financiado, prazoMeses }: { financiado: number;
   return (
     <div style={{ marginTop: 20, padding: '16px', background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: 14 }}>
       <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 12 }}>
-        🏦 Comparativo SBPE — Principais bancos (referência jul/2026 · + TR)
+        🏦 Comparativo SBPE — Principais bancos (referência {mesAnoAtual()} · + TR)
       </div>
       <div style={{ display: 'grid', gap: 6 }}>
         {BANCOS_SBPE.map((b, i) => {
@@ -1429,7 +1421,7 @@ function SimuladorInner() {
 
         {/* Nota legal */}
         <p style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.5, marginBottom: 24, marginTop: 16 }}>
-          Simulação educativa — regras SFH/MCMV vigentes · jul/2026. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Taxas SBPE: referência de mercado — variam por banco, perfil e LTV. Valores exatos confirmados em cada instituição financeira. Não constitui proposta de crédito.
+          Simulação educativa — regras SFH/MCMV vigentes · {mesAnoAtual()}. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Taxas SBPE: referência de mercado — variam por banco, perfil e LTV. Valores exatos confirmados em cada instituição financeira. Não constitui proposta de crédito.
         </p>
 
         {sim.isMCMV && sim.faixa && sim.faixa.numero <= 2 && <HisHmpHint />}

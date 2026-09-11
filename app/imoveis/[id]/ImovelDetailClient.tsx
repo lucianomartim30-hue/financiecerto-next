@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, type FaixaMCMV } from '@/lib/calculos';
+import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { getStatusCfg, isNaPlanta } from '@/lib/status';
 import { buildSimuladorLink } from '@/lib/simulador-link';
@@ -694,7 +694,7 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
     <div style={{ background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: '14px', padding: '14px', marginTop: '16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
         <span style={{ fontSize: '14px' }}>🏦</span>
-        <p style={{ fontSize: '11px', fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Comparativo SBPE · jul/2026</p>
+        <p style={{ fontSize: '11px', fontWeight: '800', color: '#1E40AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Comparativo SBPE · {mesAnoAtual()}</p>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {BANCOS_SBPE.map((b, i) => {

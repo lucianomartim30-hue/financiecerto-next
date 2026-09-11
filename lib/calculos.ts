@@ -1,3 +1,13 @@
+// "mmm/aaaa" do mês atual — usado nos textos que mostram a data de referência
+// das taxas (SBPE, TR) pra pessoa que visita o site. Antes cada tela tinha
+// esse mês escrito à mão (ex.: "jul/2026"), e cada uma ficava desatualizada
+// no seu próprio ritmo — ninguém lembrava de editar todas juntas.
+const MESES_PT_ABREV = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+export function mesAnoAtual(): string {
+  const agora = new Date();
+  return `${MESES_PT_ABREV[agora.getMonth()]}/${agora.getFullYear()}`;
+}
+
 // ─── Faixas MCMV (referência São Paulo — Portaria MCID nº 333/2026) ──────────
 // Fonte: Portaria MCID nº 333, de 30/03/2026 (vigente desde 22/04/2026) e Caixa Econômica Federal
 // F1: até R$ 3.200 | F2: R$ 3.200 – R$ 5.000 | F3: até R$ 9.600 | F4: até R$ 13.000

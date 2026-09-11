@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { descobrir, simular, formatBRL } from '@/lib/calculos';
+import { descobrir, simular, formatBRL, TR_MENSAL, mesAnoAtual } from '@/lib/calculos';
 import { fatosArtigoParaContexto, detectarArtigosRelevantes } from '@/lib/artigos';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -448,12 +448,12 @@ Exemplo de como interpretar o resultado para o usuário:
 - SFI: imóveis acima de R$ 2,25 milhões — sem FGTS, taxas livres de mercado (~12,5% a.a.)
 - LTV máximo SFH: geralmente 70% (Price) ou 80% (SAC)
 
-**TR — Taxa Referencial (julho/2026)**
-- TR ATUAL: ~0,17% ao mês (jul/2026 = 0,17%) ≈ 2% ao ano — VARIA todo mês, NÃO está zerada
+**TR — Taxa Referencial (${mesAnoAtual()})**
+- TR ATUAL: ~${TR_MENSAL}% ao mês (${mesAnoAtual()}) ≈ ${(TR_MENSAL * 12).toFixed(1)}% ao ano — VARIA todo mês, NÃO está zerada
 - MITO COMUM: "a TR está zerada" — ERRADO. A TR ficou zero de 2012 a 2022 (ciclo de juros baixos), mas voltou a ser positiva em agosto/2022 com a alta da Selic e permanece assim.
 - Todos os financiamentos SFH (MCMV + SBPE) são corrigidos pela TR sobre o saldo devedor
 - Impacto real: em 35 anos, a TR acumula e pode elevar consideravelmente o custo total — nunca ignore nas simulações
-- Se alguém disser "TR está zerada hoje", corrija: é positiva desde ago/2022 e MUDA todo mês — em jun/2026 está ~0,17%/mês (no período já variou de ~0,01% a ~0,22%)
+- Se alguém disser "TR está zerada hoje", corrija: é positiva desde ago/2022 e MUDA todo mês — em ${mesAnoAtual()} está ~${TR_MENSAL}%/mês (historicamente já variou de ~0,01% a ~0,22%)
 
 **SAC vs Price (Tabela Price)**
 - SAC: amortização constante → parcelas decrescentes → menor custo total → 1ª parcela mais alta
