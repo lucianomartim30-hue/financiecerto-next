@@ -3,6 +3,7 @@ import { filterBreveLancamento, temPrecoReal } from '@/lib/filtro-breve-lancamen
 import { filterLotesForaSP } from '@/lib/filtro-lotes-fora-sp';
 import { construtoraToSlug, nomePublicoConstrutora } from '@/lib/construtora-nomes';
 import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
+import { LOGOS_MANUAIS } from '@/lib/construtora-logos-manuais';
 
 export const MIN_IMOVEIS_CONSTRUTORA_INDEXAVEL = 3;
 
@@ -110,10 +111,11 @@ export function agruparConstrutoras(catalogo: CatalogEntry[]): GrupoConstrutora[
     const bairros = [...new Set(entradas.map(b => b.neighborhood).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const precos = entradas.filter(temPrecoReal).map(b => b.min_price!);
     const atualizacoes = entradas.map(b => b.updated_at).filter((v): v is string => !!v).sort().reverse();
-    // Nem todo imóvel da construtora tem developer_logo preenchido (depende do
-    // que a Orulo cadastrou naquele building específico) — usa a primeira que
-    // aparecer no grupo, já que é a mesma marca pra todos os aliases.
-    const logo = entradas.find(b => b.developer_logo)?.developer_logo ?? null;
+    // A Orulo não manda developer_logo pra nenhuma construtora (campo sempre
+    // null na API, confirmado em 2026-09-10) — prioriza a logo baixada
+    // manualmente do site oficial; o campo da Orulo fica como fallback caso
+    // ela passe a preencher isso no futuro.
+    const logo = LOGOS_MANUAIS[slug] ?? entradas.find(b => b.developer_logo)?.developer_logo ?? null;
     return {
       slug,
       nome: grupo.nome,
