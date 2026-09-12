@@ -21,6 +21,8 @@
  */
 
 import type { CatalogEntry } from './orulo-kv';
+import { LOGOS_MANUAIS } from './construtora-logos-manuais';
+import { construtoraToSlug } from './construtora-nomes';
 
 export interface LancamentoManual {
   id: string;
@@ -56,8 +58,11 @@ export interface LancamentoManual {
     area: number;
     bathrooms: number;
     suites: number;
+    description: string;
   }[];
-  blueprints: { name: string; url: string }[];
+  blueprints: { name: string; url: string; area: number }[];
+  numberOfTowers: number | null;
+  numberOfFloors: number | null;
 }
 
 export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
@@ -86,9 +91,23 @@ export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
     updatedAt: '2026-09-11',
     oruloUrl: 'https://www.orulo.com.br/buildings/85509',
     heroPhoto: '/lancamentos-manuais/elev-saude/fachada.webp',
+    // Galeria ampliada (auditoria 2026-09, a pedido do usuário) — antes só
+    // tinha 2 fotos; agora reflete a mesma variedade de área comum que o
+    // site oficial da Trisul mostra (piscina, rooftop, salão, fitness etc.),
+    // todas baixadas do CDN público da Trisul (api.trisul-sa.com.br/cms),
+    // não da área logada da Orulo.
     photos: [
       '/lancamentos-manuais/elev-saude/fachada.webp',
+      '/lancamentos-manuais/elev-saude/portaria.webp',
+      '/lancamentos-manuais/elev-saude/voo-piscinas.webp',
       '/lancamentos-manuais/elev-saude/lazer-piscina.webp',
+      '/lancamentos-manuais/elev-saude/churrasqueira-rooftop.webp',
+      '/lancamentos-manuais/elev-saude/salao-festas.webp',
+      '/lancamentos-manuais/elev-saude/fitness.webp',
+      '/lancamentos-manuais/elev-saude/quadra-gramada.webp',
+      '/lancamentos-manuais/elev-saude/playground-redario.webp',
+      '/lancamentos-manuais/elev-saude/espaco-pet-pomar.webp',
+      '/lancamentos-manuais/elev-saude/coworking.webp',
     ],
     description: 'O Elev Saúde nasce em um endereço onde a mobilidade aproxima muito mais do que destinos — a 1 minuto do Metrô Saúde, com acesso a avenidas importantes e toda a infraestrutura da região (escolas, universidades, mercados e farmácias). Empreendimento com 2 torres, 17 andares e lazer completo.',
     amenities: [
@@ -98,16 +117,33 @@ export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
       'Pomar', 'Quadra Gramada', 'Playground', 'Praça Coworking',
       'Churrasqueira', 'Terraço Descoberto (Rooftop)',
     ],
+    // As 3 plantas reais do Elev Saúde, confirmadas direto na base da Trisul
+    // (auditoria 2026-09) — o usuário achou uma "planta de 40m²" olhando o
+    // site, mas essa é de um empreendimento parecido e vizinho na lista de
+    // "similares" (Elev Ipiranga), não deste aqui. 25m²: unidade-suíte (o
+    // único dormitório é a própria suíte, sem cômodo "quarto" separado).
     typologies: [
-      { type: 'Apartamento', bedrooms: 1, area: 25, bathrooms: 1, suites: 0 },
-      { type: 'Apartamento', bedrooms: 2, area: 34, bathrooms: 1, suites: 0 },
-      { type: 'Apartamento', bedrooms: 2, area: 37, bathrooms: 2, suites: 1 },
+      { type: 'Apartamento', bedrooms: 1, area: 25, bathrooms: 1, suites: 1, description: '1 suíte com varanda' },
+      { type: 'Apartamento', bedrooms: 2, area: 34, bathrooms: 1, suites: 0, description: '2 dorms. com varanda' },
+      { type: 'Apartamento', bedrooms: 2, area: 37, bathrooms: 2, suites: 1, description: '2 dorms com suíte e varanda' },
     ],
     blueprints: [
-      { name: 'Planta 02 — 2 dorm 34m²', url: '/lancamentos-manuais/elev-saude/planta-2dorm.webp' },
+      { name: 'Planta 01 — 25m² (1 suíte)', url: '/lancamentos-manuais/elev-saude/planta-25m2.webp', area: 25 },
+      { name: 'Planta 02 — 34m² (2 dorms)', url: '/lancamentos-manuais/elev-saude/planta-34m2.webp', area: 34 },
+      { name: 'Planta 03 — 37m² (2 dorms + suíte)', url: '/lancamentos-manuais/elev-saude/planta-37m2.webp', area: 37 },
     ],
+    numberOfTowers: 2,
+    numberOfFloors: 17,
   },
 ];
+
+// Logo da CONSTRUTORA (Trisul), não do produto/linha (Elev) — mesmo lookup
+// já usado em construtoras-catalogo.ts. Erro corrigido: a primeira versão
+// usava o logo "elev" (marca do empreendimento) como se fosse o logo da
+// Trisul (auditoria 2026-09, apontado pelo usuário).
+function logoDaConstrutora(nomeDeveloper: string): string | null {
+  return LOGOS_MANUAIS[construtoraToSlug(nomeDeveloper)] ?? null;
+}
 
 export function getLancamentoManual(id: string): LancamentoManual | undefined {
   return LANCAMENTOS_MANUAIS.find(l => l.id === id);
@@ -119,7 +155,7 @@ export function lancamentoParaCatalogo(l: LancamentoManual): CatalogEntry {
     id: l.id,
     name: l.name,
     developer: l.developer,
-    developer_logo: null,
+    developer_logo: logoDaConstrutora(l.developer),
     developer_website: l.developerWebsite,
     // CatalogEntry.min_price/max_price são tipados como `number` (não
     // `number | null`) por um detalhe de inferência em normalizeBuilding()
@@ -177,7 +213,7 @@ export function lancamentoParaDetalhe(l: LancamentoManual) {
     id: l.id,
     name: l.name,
     developer: l.developer,
-    developer_logo: '/lancamentos-manuais/elev-saude/logo.webp',
+    developer_logo: logoDaConstrutora(l.developer),
     developer_website: l.developerWebsite,
     min_price: null,
     max_price: null,
@@ -201,8 +237,8 @@ export function lancamentoParaDetalhe(l: LancamentoManual) {
     launch_date: l.launchDate,
     total_units: l.totalUnits,
     stock: l.totalUnits,
-    number_of_floors: null,
-    number_of_towers: null,
+    number_of_floors: l.numberOfFloors,
+    number_of_towers: l.numberOfTowers,
     virtual_tour: null,
     finality: 'Residencial',
     description: l.description,
@@ -222,7 +258,9 @@ export function lancamentoParaDetalhe(l: LancamentoManual) {
       stock: null,
       total_units: null,
       photo: null,
-      blueprint: l.blueprints.find(bp => bp.name.includes(`${t.area}`))?.url ?? null,
+      // Match exato pela área (cada planta tem a área certa cadastrada) —
+      // antes usava .includes() no nome, frágil se o texto do nome mudasse.
+      blueprint: l.blueprints.find(bp => bp.area === t.area)?.url ?? null,
     })),
     sharing_url: l.oruloUrl,
     promocoes: [],
