@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   formatBRL, parcelaPrice, calcularSeguros,
   TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, calcSubsidioEstimado,
-  FAIXAS_MCMV, LTV_SBPE_PRICE, type FaixaMCMV,
+  FAIXAS_MCMV, LTV_SBPE_PRICE, taxaEfetivaMCMV, prazoMaximoMeses, type FaixaMCMV,
 } from '@/lib/calculos';
 import Link from 'next/link';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
@@ -251,17 +251,18 @@ function CampoValor({ label, hint, value, onChange, placeholder }: {
   );
 }
 
-function CampoCompacto({ value, onChange, placeholder }: {
-  value: string; onChange: (v: string) => void; placeholder: string;
+function CampoCompacto({ value, onChange, placeholder, prefix = 'R$', suffix }: {
+  value: string; onChange: (v: string) => void; placeholder: string; prefix?: string; suffix?: string;
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
-      <span style={{ padding: '9px 11px', fontSize: '13px', color: 'var(--text-muted)', background: 'var(--bg)', borderRight: '1px solid var(--border)', flexShrink: 0 }}>R$</span>
+      {prefix && <span style={{ padding: '9px 11px', fontSize: '13px', color: 'var(--text-muted)', background: 'var(--bg)', borderRight: '1px solid var(--border)', flexShrink: 0 }}>{prefix}</span>}
       <input
         type="text" inputMode="numeric" value={value}
         onChange={e => onChange(e.target.value)} placeholder={placeholder}
         style={{ flex: 1, padding: '9px 12px', border: 'none', outline: 'none', fontSize: '14px', color: 'var(--text)', background: 'transparent' }}
       />
+      {suffix && <span style={{ padding: '9px 11px', fontSize: '13px', color: 'var(--text-muted)', background: 'var(--bg)', borderLeft: '1px solid var(--border)', flexShrink: 0 }}>{suffix}</span>}
     </div>
   );
 }
@@ -376,6 +377,19 @@ function NaPlantaContent() {
   const rendaDigitada = p(rendaRaw);
   const renda = rendaUrl > 0 ? rendaUrl : rendaDigitada;
 
+  // Idade e prazo — pré-preenchidos com o padrão de 35 (mesmo valor que já
+  // era fixo no código antes desta correção), mas agora ajustáveis. Sem
+  // isso, o prazo real informado no simulador geral era descartado ao vir
+  // pra cá, e o teto de 80 anos e 6 meses da Caixa nunca era aplicado aqui.
+  const [idadeRaw, setIdadeRaw] = useState('35');
+  const idade = Number(idadeRaw) || 35;
+  const [prazoAnosRaw, setPrazoAnosRaw] = useState('35');
+  const prazoAnosDesejado = Number(prazoAnosRaw) || 35;
+
+  // Cotista do FGTS há 3+ anos — muda a taxa MCMV (Portaria 333/2026 distingue
+  // cotista/não-cotista em quase todas as faixas). Antes sempre assumia "sim".
+  const [cotista, setCotista] = useState(true);
+
   // Tipo de imóvel
   const [tipoImovel, setTipoImovel] = useState<'residencial' | 'comercial'>('residencial');
   // VALIDAÇÃO: Comercial não é elegível a MCMV/FGTS/subsídio (benefícios exclusivos de habitação)
@@ -470,9 +484,11 @@ function NaPlantaContent() {
   })();
 
   const isMCMV = faixaEfetiva !== null;
-  // Simulator na-planta assume cotista=true (não coletamos essa info aqui) → usa taxaMin
-  const taxa   = isMCMV && faixaEfetiva ? faixaEfetiva.taxaMin : TAXA_SBPE_ANUAL;
+  const taxa   = isMCMV && faixaEfetiva ? taxaEfetivaMCMV(faixaEfetiva, renda, cotista) : TAXA_SBPE_ANUAL;
   const motivo = (!isMCMV && renda > 0 && valor > 0) ? motivoSBPE(renda, valor) : null;
+  // Prazo real (escolhido pelo usuário, com o teto de 80 anos e 6 meses da
+  // Caixa aplicado pela idade) — mesma regra de descobrir()/simular().
+  const prazoMeses = prazoMaximoMeses(prazoAnosDesejado, idade);
 
   const maxFinPerfil = isMCMV ? maxFinMcmv : maxFinSbpe;
   const ltvPct       = isMCMV ? (faixaEfetiva?.ltvMax ?? 0.80) : LTV_SBPE_PRICE; // SBPE Price: 70% (consistente com simulador principal)
@@ -535,7 +551,7 @@ function NaPlantaContent() {
   //   MIP R$50,86 + DFI R$24,85 + TX ADM R$25,00 = R$100,71/mês constante (36 meses de obra).
   //   Encargo real: mês 1 R$480,96 → mês 36 R$1.738,85 → pós-entrega R$1.966,27
   const seguros      = calcularSeguros(valorAFinanciar);                       // seguros FIXOS no valor a financiar (obra + pós-entrega)
-  const parcelaFin   = parcelaPrice(valorAFinanciar, taxa, 35 * 12);
+  const parcelaFin   = parcelaPrice(valorAFinanciar, taxa, prazoMeses);
   const jurosEvo1    = isMCMV && valorAFinanciar > 0 && siopiInicial > 0     // encargo inicial: juros sobre valor liberado + seguros fixos totais
     ? calcJurosEvo(valorAFinanciar, taxa, siopiInicial) + seguros.total
     : 0;
@@ -635,8 +651,8 @@ function NaPlantaContent() {
       parcelaPrice:     parcela,
       parcelaSAC:       0,
       taxaAnual:        taxa,
-      prazoAnos:        35,
-      comprometimento:  renda > 0 ? (parcela / renda) * 100 : 0,
+      prazoAnos:        Math.round(prazoMeses / 12),
+      comprometimento:  renda > 0 ? Math.round(((parcela / renda) * 100) * 10) / 10 : 0,
     };
     const assinatura = JSON.stringify(payload);
     if (assinatura === ultimoNaPlantaSalvo.current) return;
@@ -724,6 +740,35 @@ function NaPlantaContent() {
               )}
             </div>
           )}
+
+          {/* Idade, prazo e cotista — antes fixos em 35 anos/cotista, ignorando
+              o que a pessoa realmente informou no simulador geral. */}
+          <div style={{ marginBottom: '20px' }}>
+            <div className="fc-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+              <div>
+                <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Idade do proponente</p>
+                <CampoCompacto value={idadeRaw} onChange={setIdadeRaw} placeholder="35" prefix="" suffix="anos" />
+              </div>
+              <div>
+                <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Prazo desejado</p>
+                <CampoCompacto value={prazoAnosRaw} onChange={setPrazoAnosRaw} placeholder="35" prefix="" suffix="anos" />
+              </div>
+            </div>
+            {prazoMeses < prazoAnosDesejado * 12 && (
+              <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '-8px', marginBottom: '10px' }}>
+                Prazo ajustado para {Math.round(prazoMeses / 12)} anos — limite de 80 anos e 6 meses de idade na quitação (regra da Caixa).
+              </p>
+            )}
+            <p style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Cotista do FGTS há 3+ anos?</p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {[{ v: true, l: 'Sim' }, { v: false, l: 'Não' }].map(({ v, l }) => (
+                <button key={l} onClick={() => setCotista(v)} style={{ flex: 1, padding: '9px 8px', borderRadius: '10px', cursor: 'pointer', border: `1.5px solid ${cotista === v ? 'var(--primary)' : 'var(--border)'}`, background: cotista === v ? 'var(--primary)12' : 'var(--bg)', color: cotista === v ? 'var(--primary)' : 'var(--text)', fontSize: '13px', fontWeight: '700' }}>
+                  {l}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--text-faint)', marginTop: '6px' }}>Muda a taxa MCMV — quem não é cotista paga um pouco mais.</p>
+          </div>
 
           {/* Valor do imóvel */}
           <CampoValor label="Valor do imóvel (tabela da construtora)" placeholder="350.000" value={valorRaw} onChange={v => setValorRaw(fi(v))} />

@@ -851,6 +851,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   const [entrada, setEntrada] = useState('');
   const [fgts, setFgts]     = useState('');
   const [prazo, setPrazo]   = useState('30');
+  const [idade, setIdade]   = useState('35');
   const [naPlanta, setNaPlanta] = useState(isNaPlanta(imovel.status || ''));
   const [resultado, setResultado] = useState<ReturnType<typeof simular> | null>(null);
   const [poder, setPoder]   = useState<ReturnType<typeof descobrir> | null>(null);
@@ -866,6 +867,11 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
       if (ctx.renda)   setRenda(fmtInput(String(ctx.renda)));
       if (ctx.fgts)    setFgts(fmtInput(String(ctx.fgts)));
       if (ctx.entrada) setEntrada(fmtInput(String(ctx.entrada)));
+      // idade/prazo já eram salvos pelo simulador geral (fc_sim_context), mas
+      // esta tela nunca lia de volta — sempre assumia 35 anos/30 anos fixos,
+      // mesmo quando a pessoa tinha acabado de informar outro valor real.
+      if (ctx.idade)   setIdade(String(ctx.idade));
+      if (ctx.prazo)   setPrazo(String(ctx.prazo));
       if (ctx.renda || ctx.fgts || ctx.entrada) setCtxLoaded(true);
     } catch { /* ignore */ }
   }, []);
@@ -874,9 +880,10 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
     const r = parseMoeda(renda);
     const f = parseMoeda(fgts);
     const e = parseMoeda(entrada);
-    if (r >= 800) setPoder(descobrir(r, f, e, parseInt(prazo), 35, true, true, false, 0, false, isComercial ? 'comercial' : 'residencial'));
+    const idadeNum = parseInt(idade) || 35;
+    if (r >= 800) setPoder(descobrir(r, f, e, parseInt(prazo), idadeNum, true, true, false, 0, false, isComercial ? 'comercial' : 'residencial'));
     else setPoder(null);
-  }, [renda, fgts, entrada, prazo]);
+  }, [renda, fgts, entrada, prazo, idade]);
 
   function calcular() {
     const r  = parseMoeda(renda);
@@ -886,7 +893,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
     if (!valorRef)     { setErro('Valor do imóvel não disponível.'); return; }
     if (en + fg >= valorRef) { setErro('Entrada + FGTS não pode ser maior que o imóvel.'); return; }
     setErro('');
-    const r2 = simular({ rendaBruta: r, entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: 35, tipoImovel: isComercial ? 'comercial' : 'residencial' });
+    const r2 = simular({ rendaBruta: r, entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: parseInt(idade) || 35, tipoImovel: isComercial ? 'comercial' : 'residencial' });
     setResultado(r2);
     // Contexto pro lead (Fase 4) — lido por registrarLead() se o usuário
     // clicar no WhatsApp em seguida, mesmo que o clique não seja neste card.
@@ -1095,6 +1102,18 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
                   <button key={v} onClick={() => setPrazo(v)} style={{ flex: 1, padding: '8px 0', borderRadius: '8px', fontSize: '12px', fontWeight: prazo === v ? '800' : '500', border: `2px solid ${prazo === v ? 'var(--primary)' : 'var(--border)'}`, background: prazo === v ? 'var(--primary-light)' : 'var(--bg)', color: prazo === v ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer' }}>{v}a</button>
                 ))}
               </div>
+            </div>
+
+            {/* Idade — antes fixa em 35 anos pra todo mundo; muda o prazo
+                máximo permitido (limite de 80 anos e 6 meses na quitação) */}
+            <div>
+              <p style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Sua idade</p>
+              <input
+                type="text" inputMode="numeric" value={idade}
+                onChange={e => setIdade(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                placeholder="35"
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', fontSize: '13px', border: '2px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              />
             </div>
 
             {/* Na planta toggle */}

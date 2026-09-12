@@ -85,6 +85,15 @@ export const BANCOS_SBPE: BancoSBPE[] = [
 export const LTV_SBPE_PRICE   = 0.70;
 export const LTV_SBPE_SAC     = 0.80;
 export const PRAZO_MAX_MESES  = 420;
+
+// Prazo máximo permitido: o menor entre o prazo escolhido, o limite por idade
+// (regra da Caixa: quitação até 80 anos e 6 meses) e o teto geral do sistema.
+// Fonte única usada por descobrir(), simular() e pelo simulador na planta —
+// antes cada um tinha sua própria cópia desta conta (auditoria 2026-09).
+export function prazoMaximoMeses(prazoAnosDesejado: number, idadeProponente: number): number {
+  const prazoMaxPorIdade = Math.max(60, Math.floor((80.5 - idadeProponente) * 12));
+  return Math.min(prazoAnosDesejado * 12, prazoMaxPorIdade, PRAZO_MAX_MESES);
+}
 export const TR_MENSAL        = 0.17;
 
 // Legado
@@ -519,8 +528,7 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   // VALIDAÇÃO: Imóvel comercial NÃO pode usar benefícios residenciais
   const isComercial = tipoImovel === 'comercial';
 
-  const prazoMaxPorIdade = Math.max(60, Math.floor((80.5 - idadeProponente) * 12));
-  const prazoMeses       = Math.min(prazoAnos * 12, Math.min(prazoMaxPorIdade, PRAZO_MAX_MESES));
+  const prazoMeses       = prazoMaximoMeses(prazoAnos, idadeProponente);
   const prazoObraMeses   = prazoObraAnos * 12;
 
   // Faixa baseada apenas na renda (menor faixa onde renda ≤ rendaMax)
@@ -731,8 +739,7 @@ export function descobrir(
   // VALIDAÇÃO: Comercial não é elegível a MCMV/FGTS (benefícios exclusivos de habitação)
   const isComercial = tipoImovel === 'comercial';
 
-  const prazoMaxPorIdade = Math.max(60, Math.floor((80.5 - idadeProponente) * 12));
-  const prazoMeses = Math.min(prazoAnos * 12, Math.min(prazoMaxPorIdade, PRAZO_MAX_MESES));
+  const prazoMeses = prazoMaximoMeses(prazoAnos, idadeProponente);
   const fgtsElegivel = !isComercial && cotista && primeiroImovel && !temImovelMunicipio;
   const fgtsUsado = fgtsElegivel ? fgts : 0;
   const entradaTotal = entrada + fgtsUsado;
