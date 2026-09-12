@@ -15,6 +15,7 @@ import { filterBreveLancamento } from '@/lib/filtro-breve-lancamento';
 import { filterLotesForaSP } from '@/lib/filtro-lotes-fora-sp';
 import { ZONA_SUL_OESTE, normalize } from '@/lib/imoveis-destaque';
 import { agruparConstrutoras } from '@/lib/construtoras-catalogo';
+import { CATALOGO_LANCAMENTOS_MANUAIS } from '@/lib/lancamentos-manuais';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -69,7 +70,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const bairroPages: MetadataRoute.Sitemap = [];
   let construtoraPages: MetadataRoute.Sitemap = [];
   try {
-    const rawCatalog = await kvGetCatalog();
+    const kvCatalog = await kvGetCatalog();
+    // Empreendimentos cadastrados manualmente (ver lib/lancamentos-manuais.ts)
+    // entram no sitemap pelas mesmas regras de qualquer imóvel — inclusive o
+    // filtro de conteúdo indexável logo abaixo.
+    const rawCatalog = kvCatalog
+      ? [...kvCatalog, ...CATALOGO_LANCAMENTOS_MANUAIS]
+      : CATALOGO_LANCAMENTOS_MANUAIS;
     if (rawCatalog) {
       construtoraPages = agruparConstrutoras(rawCatalog)
         .filter(construtora => construtora.indexavel)
