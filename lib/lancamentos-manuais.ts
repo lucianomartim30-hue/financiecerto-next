@@ -29,6 +29,9 @@ export interface LancamentoManual {
   name: string;
   developer: string;
   developerWebsite: string;
+  /** Logo da submarca do empreendimento (ex.: "Elev"), quando existir — mostrado
+   * em destaque na ficha, com o logo da construtora em segundo plano. */
+  productLogo?: string;
   neighborhood: string;
   street: string;
   number: string;
@@ -71,6 +74,10 @@ export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
     name: 'Elev Saúde',
     developer: 'Trisul',
     developerWebsite: 'https://www.trisul-sa.com.br/apartamentos/sao-paulo/conceicao/elev-saude',
+    // Logo real da submarca "Elev Saúde" (baixado do CDN público da Trisul) —
+    // pedido do usuário: mostrar essa marca em destaque, igual ao site
+    // oficial, com o logo da Trisul menor ao lado (auditoria 2026-09).
+    productLogo: '/lancamentos-manuais/elev-saude/logo.webp',
     neighborhood: 'Vila da Saúde',
     street: 'Avenida Miguel Estefno',
     number: '72',
@@ -214,6 +221,10 @@ export function lancamentoParaDetalhe(l: LancamentoManual) {
     name: l.name,
     developer: l.developer,
     developer_logo: logoDaConstrutora(l.developer),
+    // Logo da submarca (ex.: "Elev"), quando existir — ImovelDetailClient.tsx
+    // mostra essa em destaque e o developer_logo pequeno ao lado, igual ao
+    // site oficial da incorporadora.
+    product_logo: l.productLogo ?? null,
     developer_website: l.developerWebsite,
     min_price: null,
     max_price: null,

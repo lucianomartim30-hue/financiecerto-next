@@ -39,6 +39,11 @@ interface ImovelDetalhe {
   name: string;
   developer: string;
   developer_logo: string | null;
+  // Logo do PRODUTO (ex.: a marca "Elev" da Trisul) — só populado em
+  // lançamentos cadastrados manualmente, quando a incorporadora vende o
+  // empreendimento sob uma submarca própria. Ausente/null em qualquer imóvel
+  // vindo da Orulo, então não muda nada no visual deles.
+  product_logo?: string | null;
   developer_website: string | null;
   min_price: number | null;
   max_price: number | null;
@@ -1970,12 +1975,28 @@ export default function ImovelDetailClient({ id }: { id: string }) {
             </div>
             {/* Nome */}
             <h1 style={{ fontSize: 'clamp(20px, 4vw, 28px)', fontWeight: '900', color: 'var(--text)', marginBottom: '8px', lineHeight: 1.2 }}>{imovel.name}</h1>
-            {/* Construtora */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              {imovel.developer_logo && (
-                <img src={imovel.developer_logo} alt={imovel.developer} style={{ height: '24px', objectFit: 'contain' }} />
+            {/* Construtora — quando o empreendimento tem marca própria (ex.:
+                "Elev" da Trisul), ela vem em destaque aqui, igual ao site da
+                incorporadora, com a construtora em segundo plano, menor. Sem
+                product_logo (todo imóvel vindo da Orulo), continua exatamente
+                como antes: só o logo da construtora. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: imovel.product_logo ? '10px' : '8px', marginBottom: '16px' }}>
+              {imovel.product_logo ? (
+                <>
+                  <img src={imovel.product_logo} alt={imovel.name} style={{ height: '34px', objectFit: 'contain' }} />
+                  {imovel.developer_logo && (
+                    <img src={imovel.developer_logo} alt={imovel.developer} style={{ height: '15px', objectFit: 'contain', opacity: 0.65 }} />
+                  )}
+                  <span style={{ fontSize: '11px', color: 'var(--text-faint)', fontWeight: '600' }}>{imovel.developer}</span>
+                </>
+              ) : (
+                <>
+                  {imovel.developer_logo && (
+                    <img src={imovel.developer_logo} alt={imovel.developer} style={{ height: '24px', objectFit: 'contain' }} />
+                  )}
+                  <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>{imovel.developer}</span>
+                </>
               )}
-              <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>{imovel.developer}</span>
             </div>
             {/* Specs row */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
