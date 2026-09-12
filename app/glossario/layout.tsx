@@ -1,6 +1,8 @@
 // app/glossario/layout.tsx
+import type { Metadata } from 'next';
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { faqPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
+import { mesAnoAtual, TR_MENSAL } from '@/lib/calculos';
 
 const GLOSSARY_TERMS = [
   { term: 'MCMV', answer: 'Programa habitacional do governo federal que oferece subsídios, taxas reduzidas e condições especiais para famílias de baixa e média renda adquirirem imóvel próprio. Dividido em faixas por renda familiar bruta: Faixa 1 (até R$ 3.200), Faixa 2 (até R$ 5.000), Faixa 3 (até R$ 9.600) e Faixa 4 (até R$ 13.000). O financiamento é feito pela Caixa Econômica Federal e banco parceiros, com prazo de até 35 anos.' },
@@ -8,7 +10,7 @@ const GLOSSARY_TERMS = [
   { term: 'SFH', answer: 'Enquadramento legal para financiamentos habitacionais com imóveis de até R$ 2,25 milhões (valor de avaliação) — teto atualizado em outubro/2025. Permite uso do FGTS, limita a taxa nominal a 12% a.a. e exige que o imóvel seja residencial. É o enquadramento padrão do MCMV e de parte do SBPE. A Caixa Econômica Federal financia até 80% do valor do imóvel dentro do SFH.' },
   { term: 'SFI', answer: 'Usado para imóveis acima de R$ 2,25 milhões ou operações com taxas acima de 12% a.a. Não permite uso do FGTS. Inclui instrumentos como CRI (Certificado de Recebíveis Imobiliários). Oferece mais flexibilidade para o credor definir condições contratuais — taxas de mercado, sem vinculação ao SBPE.' },
   { term: 'Crédito Associativo', answer: 'Modalidade em que a Caixa Econômica Federal (ou banco parceiro) contrata o financiamento do comprador ainda na fase de construção. O banco libera recursos diretamente para a construtora conforme o avanço da obra. O comprador paga juros sobre o saldo contratado durante a obra (fase de evolução) e, após o habite-se, inicia as parcelas definitivas de amortização. É a forma mais comum de compra na planta via MCMV.' },
-  { term: 'TR', answer: 'A TR (Taxa Referencial) é calculada mensalmente pelo Banco Central a partir da TBF (Taxa Básica Financeira) e aplicada como correção monetária sobre o saldo devedor dos contratos SFH — tanto MCMV quanto SBPE. Atenção: a TR ficou zerada por cerca de 10 anos (2012–2022) devido ao ciclo de juros baixos, o que levou muita gente a acreditar que ela "não existe mais". Isso está errado. Com a alta da Selic, a TR voltou a ser positiva em agosto de 2022 e permanece assim. Em maio de 2026, a TR mensal é de aproximadamente 0,1679%, o que equivale a cerca de 2,06% ao ano. Ao longo de 35 anos, essa correção acumula e pode elevar o saldo devedor significativamente se não for considerada nas simulações.' },
+  { term: 'TR', answer: `A TR (Taxa Referencial) é calculada mensalmente pelo Banco Central a partir da TBF (Taxa Básica Financeira) e aplicada como correção monetária sobre o saldo devedor dos contratos SFH — tanto MCMV quanto SBPE. Atenção: a TR ficou zerada por cerca de 10 anos (2012–2022) devido ao ciclo de juros baixos, o que levou muita gente a acreditar que ela "não existe mais". Isso está errado. Com a alta da Selic, a TR voltou a ser positiva em agosto de 2022 e permanece assim. Em ${mesAnoAtual()}, a TR mensal é de aproximadamente ${TR_MENSAL}%, o que equivale a cerca de ${(Math.pow(1 + TR_MENSAL / 100, 12) * 100 - 100).toFixed(2).replace('.', ',')}% ao ano. Ao longo de 35 anos, essa correção acumula e pode elevar o saldo devedor significativamente se não for considerada nas simulações.` },
   { term: 'INCC', answer: 'Índice calculado pela FGV que mede a variação do custo de construção civil no Brasil. As parcelas pagas durante a obra (antes do habite-se) são corrigidas mensalmente pelo INCC, o que pode elevar o saldo devedor se a inflação da construção for alta. Após a entrega das chaves, a correção passa a ser pela TR (nos contratos SFH) ou pelo IPCA (em contratos alternativos).' },
   { term: 'CET', answer: 'O CET expressa o custo real anual do crédito imobiliário, incorporando não apenas a taxa de juros nominal mas também seguros obrigatórios (MIP e DFI), tarifa de avaliação do imóvel, TAC e demais encargos. É o número correto para comparar propostas de diferentes bancos. Por lei, os bancos são obrigados a informar o CET antes da assinatura do contrato.' },
   { term: 'LTV', answer: 'Razão entre o valor financiado e o valor de avaliação do imóvel. Por exemplo, um imóvel de R$ 300.000 com financiamento de R$ 240.000 tem LTV de 80%. Cada banco tem limites de LTV por modalidade: MCMV Faixa 1–3 pode chegar a 90%, SBPE geralmente permite até 80%. Quanto menor o LTV, menor o risco para o banco — o que pode resultar em taxas melhores.' },
@@ -36,6 +38,26 @@ const GLOSSARY_TERMS = [
   { term: 'Interveniente Quitante', answer: 'Quando o comprador comprou diretamente da construtora (sem crédito associativo) e depois quer financiar pelo banco, o banco atua como interveniente quitante: paga o saldo devido à construtora e assume a posição de credor. Permite regularizar contratos de gaveta ou financiamentos próprios da incorporadora.' },
   { term: 'Distrato', answer: 'O distrato é o cancelamento do contrato de compra de imóvel na planta. A Lei do Distrato (13.786/2018) regulamenta o processo: se o comprador desistir, a incorporadora pode reter entre 25% e 50% dos valores pagos (dependendo do regime patrimonial do empreendimento) e devolver o restante em até 180 dias após o distrato. Se a construtora atrasar a entrega, o comprador pode pedir o distrato e receber de volta tudo que pagou com correção.' },
 ];
+
+// Antes sem metadata nenhuma — a página herdava título/descrição genéricos
+// da home (auditoria 2026-09).
+const TITLE = 'Glossário de Financiamento Imobiliário | FinancieCerto';
+const DESCRIPTION = '32 termos do financiamento imobiliário explicados de forma clara: MCMV, SBPE, TR, CET, LTV, SAC, Price e mais.';
+const URL = `${SITE_CONFIG.domain}/glossario`;
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: URL },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: URL,
+    siteName: 'FinancieCerto',
+    locale: 'pt_BR',
+    type: 'website',
+  },
+};
 
 export default function GlossarioLayout({
   children,

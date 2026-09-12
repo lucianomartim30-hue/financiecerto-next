@@ -2,13 +2,17 @@
 import type { Metadata } from 'next';
 import { SITE_CONFIG } from '@/lib/schema';
 
+// Título/descrição antes diziam "em SP", mas o catálogo já cobre SP, RS, PR,
+// SC e RJ (auditoria 2026-09) — corrigido pra não prometer um escopo que o
+// conteúdo real não tem.
 export const metadata: Metadata = {
-  title: 'Imóveis e Empreendimentos à Venda em SP — com Simulação de Financiamento | FinancieCerto',
-  description: 'Busque imóveis e empreendimentos à venda em São Paulo — na planta, em obras e prontos. Cada imóvel já vem com a simulação de financiamento (MCMV, SBPE, SFI) compatível com sua renda.',
-  keywords: 'portal de imóveis, empreendimentos São Paulo, lançamentos imobiliários, apartamentos à venda SP, imóveis na planta, imóveis prontos, financiamento imobiliário',
+  title: 'Imóveis e Empreendimentos à Venda — com Simulação de Financiamento | FinancieCerto',
+  description: 'Busque imóveis e empreendimentos à venda — na planta, em obras e prontos, em várias cidades do Brasil. Cada imóvel já vem com a simulação de financiamento (MCMV, SBPE, SFI) compatível com sua renda.',
+  keywords: 'portal de imóveis, empreendimentos à venda, lançamentos imobiliários, apartamentos à venda, imóveis na planta, imóveis prontos, financiamento imobiliário',
+  alternates: { canonical: `${SITE_CONFIG.domain}/imoveis` },
   openGraph: {
-    title: 'Imóveis e Empreendimentos à Venda em SP | FinancieCerto',
-    description: 'Milhares de imóveis em São Paulo, já filtrados pela sua capacidade de financiamento.',
+    title: 'Imóveis e Empreendimentos à Venda | FinancieCerto',
+    description: 'Milhares de imóveis em várias cidades do Brasil, já filtrados pela sua capacidade de financiamento.',
     url: `${SITE_CONFIG.domain}/imoveis`,
     siteName: 'FinancieCerto',
     locale: 'pt_BR',

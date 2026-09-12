@@ -125,7 +125,10 @@ export const REGIONS: Region[] = [
     article: 'em',
     city: 'Curitiba',
     state: 'PR',
-    neighborhoods: [],
+    // Antes vazio — a description gerada em generateMetadata() ficava
+    // "Encontre apartamentos e lançamentos em Curitiba —  e mais." (lista
+    // vazia). Bairros reais do catálogo atual (auditoria 2026-09).
+    neighborhoods: ['Centro', 'Cabral', 'Ecoville', 'Bacacheri', 'Novo Mundo', 'Água Verde'],
   },
   {
     slug: 'rio-grande-do-sul',
@@ -142,7 +145,9 @@ export const REGIONS: Region[] = [
     article: 'no',
     city: 'Rio de Janeiro',
     state: 'RJ',
-    neighborhoods: [],
+    // Mesmo caso de Curitiba acima — bairros reais do catálogo atual
+    // (auditoria 2026-09).
+    neighborhoods: ['Recreio dos Bandeirantes', 'Tijuca', 'Barra da Tijuca', 'Lagoa', 'Vila Isabel', 'Campo Grande'],
   },
 ];
 

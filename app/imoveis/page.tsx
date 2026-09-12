@@ -949,6 +949,13 @@ function ImoveisContent() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: `calc(100vh - var(--header-h))`, background: 'var(--bg)', overflow: 'hidden' }}>
 
+      {/* H1 real pro Google e leitores de tela — o catálogo não tinha nenhum
+          (o cabeçalho visual é busca/filtros, não título de página).
+          Visualmente oculto pra não interferir no layout (auditoria 2026-09). */}
+      <h1 style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>
+        Imóveis e empreendimentos à venda com simulação de financiamento
+      </h1>
+
       {/* ── Modal de busca full-screen (mobile) ─────────────────────────────── */}
       {showMobileSearch && (
         <div style={{

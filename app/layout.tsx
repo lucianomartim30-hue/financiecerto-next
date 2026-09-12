@@ -26,6 +26,12 @@ export const metadata: Metadata = {
   title: "FinancieCerto — Plataforma Inteligente de Descoberta Imobiliária",
   description: "Simule seu financiamento e encontre o imóvel certo — do econômico ao médio e alto padrão. Descubra sua faixa, taxa real e os imóveis compatíveis com sua renda. MCMV, SBPE, SFI e FGTS.",
   keywords: "financiamento imobiliário, imóveis São Paulo, MCMV, SBPE, SFI, alto padrão, médio padrão, simulador de financiamento, FGTS, Caixa Econômica",
+  // Canonical da home — pega toda página que NÃO define o próprio `alternates`
+  // (metadata do Next não faz merge profundo: um `alternates` no filho
+  // substitui este por inteiro, então isso só afeta quem não tem o próprio).
+  // Auditoria 2026-09 confirmou home, /sobre, /contato, /guia e /glossario
+  // sem canonical nenhum — corrigidos aqui e nos próprios arquivos.
+  alternates: { canonical: '/' },
   verification: {
     google: 'l34uBI3ef56FcK3A9RXJPN4eiOXmRx-gJDTxcbQ_zNc',
   },

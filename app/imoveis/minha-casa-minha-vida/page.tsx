@@ -12,7 +12,10 @@ export const revalidate = 3600;
 // app/imoveis/layout.tsx pai não é herdado aqui: metadata do Next.js não faz
 // merge profundo, um openGraph definido no filho substitui o do pai inteiro
 // (auditoria de SEO, 2026-09-04).
-const MCMV_TITLE = 'Imóveis Minha Casa Minha Vida em SP | FinancieCerto';
+// "em SP" removido do título — a página lista empreendimentos MCMV de várias
+// cidades (Porto Alegre, Curitiba, Rio de Janeiro etc.), não só São Paulo
+// (auditoria 2026-09).
+const MCMV_TITLE = 'Imóveis Minha Casa Minha Vida | FinancieCerto';
 const MCMV_DESCRIPTION = 'Empreendimentos dentro do teto de preço do Minha Casa Minha Vida (MCMV), das Faixas 1 a 4. Simule seu financiamento e descubra se você tem perfil MCMV.';
 const MCMV_URL = `${SITE_CONFIG.domain}/imoveis/minha-casa-minha-vida`;
 

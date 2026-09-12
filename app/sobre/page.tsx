@@ -1,10 +1,24 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { SITE_CONFIG } from '@/lib/schema';
 import { SobreTracker } from './SobreTracker';
 
+const TITLE = 'Sobre nós — FinancieCerto';
+const DESCRIPTION = 'O FinancieCerto é a plataforma que coloca seu perfil financeiro antes do imóvel. Simulação, portal de imóveis, educação e IA — tudo integrado para a jornada completa do comprador.';
+const URL = `${SITE_CONFIG.domain}/sobre`;
+
 export const metadata: Metadata = {
-  title: 'Sobre nós — FinancieCerto',
-  description: 'O FinancieCerto é a plataforma que coloca seu perfil financeiro antes do imóvel. Simulação, portal de imóveis, educação e IA — tudo integrado para a jornada completa do comprador.',
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: URL },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: URL,
+    siteName: 'FinancieCerto',
+    locale: 'pt_BR',
+    type: 'website',
+  },
 };
 
 export default function SobrePage() {

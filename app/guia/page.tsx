@@ -1,10 +1,24 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { SITE_CONFIG } from '@/lib/schema';
 import { GuiaTracker } from './GuiaTracker';
 
+const TITLE = 'Guia Completo de Financiamento Imobiliário | FinancieCerto';
+const DESCRIPTION = 'Tudo sobre MCMV, SBPE, crédito associativo, documentação, custos e o processo real da compra imobiliária no Brasil.';
+const URL = `${SITE_CONFIG.domain}/guia`;
+
 export const metadata: Metadata = {
-  title: 'Guia Completo de Financiamento Imobiliário | FinancieCerto',
-  description: 'Tudo sobre MCMV, SBPE, crédito associativo, documentação, custos e o processo real da compra imobiliária no Brasil.',
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: URL },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: URL,
+    siteName: 'FinancieCerto',
+    locale: 'pt_BR',
+    type: 'website',
+  },
 };
 
 // Capítulos em ORDEM DE JORNADA — etapa 1 (descobrir modalidade) até etapa 7 (FGTS),
