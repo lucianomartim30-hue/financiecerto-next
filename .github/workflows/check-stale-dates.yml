@@ -1,0 +1,91 @@
+name: 📅 Verificar Datas Travadas no Código
+
+# Roda no dia 6 de cada mês às 12h UTC (09h Brasília) — um dia depois do
+# robô da TR (dia 5), pra dar tempo dele atualizar lib/calculos.ts primeiro.
+# Detecta mês/ano escrito à mão (ex.: "jul/2026") no conhecimento do
+# chatbot João e nos simuladores — o bug que já aconteceu 2 vezes.
+on:
+  schedule:
+    - cron: '0 12 6 * *'
+  workflow_dispatch:
+
+jobs:
+  check-stale-dates:
+    name: Escanear datas hardcoded fora do mês atual
+    runs-on: ubuntu-latest
+
+    permissions:
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Rodar scanner
+        id: scan
+        run: node scripts/check-stale-dates.js --json > /tmp/stale-dates.json
+
+      - name: Criar alerta se houver datas suspeitas
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const { mesAtual, anoAtual, suspeitos } = JSON.parse(fs.readFileSync('/tmp/stale-dates.json', 'utf8'));
+
+            // Fecha issues antigas do mesmo tipo antes de decidir se cria uma nova
+            const { data: openIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              labels: 'datas-travadas',
+              state: 'open',
+            });
+            for (const issue of openIssues) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo:  context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+              });
+            }
+
+            if (suspeitos.length === 0) {
+              console.log('✅ Nenhuma data suspeita — nada a reportar.');
+              return;
+            }
+
+            const linhas = suspeitos
+              .map(s => `- **${s.arquivo}:${s.linha}** — \`${s.valor}\`\n  \`${s.trecho}\``)
+              .join('\n');
+
+            const body = [
+              `## ${suspeitos.length} data(s) hardcoded fora do mês atual (${mesAtual}/${anoAtual})`,
+              '',
+              'O scanner `scripts/check-stale-dates.js` achou mês/ano escrito à mão em',
+              'arquivos sensíveis (conhecimento do chatbot João, simuladores) que não',
+              'batem com o mês de hoje.',
+              '',
+              linhas,
+              '',
+              '**O que fazer:**',
+              '- Se for um "hoje" ou "atual" esquecido (o bug real): troque pelo cálculo',
+              '  dinâmico — `mesAnoAtual()` / `TR_MENSAL`, importados de `lib/calculos.ts`.',
+              '- Se for uma referência histórica legítima (data de troca de regra, exemplo',
+              '  de contrato, comentário de código): adicione o achado em',
+              '  `scripts/stale-dates-allowlist.json` pra ele parar de ser reportado.',
+              '',
+              '_Gerado automaticamente pelo workflow `check-stale-dates.yml`_',
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              title: `📅 ${suspeitos.length} data(s) travada(s) encontrada(s) — revisão mensal`,
+              body,
+              labels: ['manutenção', 'datas-travadas'],
+            });
+            console.log(`Issue criada: ${suspeitos.length} data(s) suspeita(s).`);

@@ -1,0 +1,44 @@
+[
+  {
+    "arquivo": "app/api/chat/route.ts",
+    "valor": "abr/2026",
+    "trecho": "NUNCA use 7,66% para Faixa 2 — essa era a taxa da antiga Faixa 3 (antes de abr/2026).",
+    "motivo": "Data de troca de regra (Faixa 3 antiga), não é 'hoje' — referência histórica fixa."
+  },
+  {
+    "arquivo": "app/api/chat/route.ts",
+    "valor": "out/2025",
+    "trecho": "- SFH: imóveis até R$ 2,25 milhões (teto atualizado out/2025) — permite uso do FGTS, taxa máxima 12% a.a.",
+    "motivo": "Data em que o teto do SFH mudou pela última vez — referência histórica fixa."
+  },
+  {
+    "arquivo": "app/api/chat/route.ts",
+    "valor": "ago/2022",
+    "trecho": "- Se alguém disser \"TR está zerada hoje\", corrija: é positiva desde ago/2022 e MUDA todo mês — em ${mesAnoAtual()} está ~${TR_MENSAL}%/mês (historicamente já va",
+    "motivo": "Marco histórico (TR deixou de ser zero) — a parte 'atual' já usa mesAnoAtual()/TR_MENSAL dinâmico."
+  },
+  {
+    "arquivo": "app/api/chat/route.ts",
+    "valor": "out/2025",
+    "trecho": "- Requisitos: imóvel SFH (até R$ 2,25M — teto atualizado out/2025), sem outro imóvel financiado no SFH, mínimo 3 anos de carteira assinada",
+    "motivo": "Mesmo marco do teto SFH citado em outro trecho — referência histórica fixa."
+  },
+  {
+    "arquivo": "app/api/chat/route.ts",
+    "valor": "dez/2025",
+    "trecho": "Exemplo real (contrato Mundo Apto Estação Conceição, São Paulo, dez/2025):",
+    "motivo": "Data de um contrato-exemplo específico usado pra ensinar o cálculo — não muda."
+  },
+  {
+    "arquivo": "app/simulador/historico-tr/page.tsx",
+    "valor": "Jul/26",
+    "trecho": "// \"Jul/26\" → \"Jul/2026\" — usado para exibir o período coberto pela série histórica",
+    "motivo": "Comentário de código explicando o formato de conversão, não um dado real."
+  },
+  {
+    "arquivo": "app/simulador/historico-tr/page.tsx",
+    "valor": "Jul/2026",
+    "trecho": "// \"Jul/26\" → \"Jul/2026\" — usado para exibir o período coberto pela série histórica",
+    "motivo": "Mesmo comentário de código acima."
+  }
+]

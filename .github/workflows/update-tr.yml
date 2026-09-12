@@ -15,6 +15,7 @@ jobs:
 
     permissions:
       contents: write   # necessário para fazer commit e push
+      issues: write     # para criar issue de alerta se necessário
 
     steps:
       # 1. Checkout do repositório
@@ -29,10 +30,13 @@ jobs:
 
       # 3. Executa o script de atualização
       - name: Atualizar TR
+        id: update
         run: node scripts/update-tr.js
+        continue-on-error: true
 
       # 4. Faz commit apenas se o arquivo foi alterado
       - name: Commit e push (se houver alterações)
+        if: steps.update.outcome == 'success'
         run: |
           git config user.name  "tr-bot[bot]"
           git config user.email "tr-bot@financiecerto.com.br"
@@ -46,3 +50,37 @@ jobs:
             git push
             echo "✅ Commit realizado e push enviado."
           fi
+
+      # 5. Cria GitHub Issue se o script falhou (TR não pôde ser atualizada)
+      - name: Criar alerta se a TR não pôde ser atualizada
+        if: steps.update.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toLocaleDateString('pt-BR');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo:  context.repo.repo,
+              title: `⚠️ TR (BCB Série 226) precisa de atualização manual — ${today}`,
+              body: [
+                '## A atualização automática da TR falhou',
+                '',
+                'O workflow `update-tr.yml` não conseguiu buscar ou processar os dados',
+                'da Taxa Referencial no Banco Central (Série 226). Isso pode ter acontecido',
+                'porque a API do BCB mudou de novo (já aconteceu antes: o endpoint `ultimos/N`',
+                'passou a limitar a 20 valores em 2026) ou por instabilidade temporária.',
+                '',
+                '**Verifique manualmente:**',
+                '- [ ] Rode `node scripts/update-tr.js --dry-run` localmente e veja o erro.',
+                '- [ ] Confira a API do BCB: https://api.bcb.gov.br/dados/serie/bcdata.sgs.226/dados/ultimos/5?formato=json',
+                '- [ ] Se a API mudou de novo, ajuste `scripts/update-tr.js`.',
+                '- [ ] Se necessário, atualize `TR_MENSAL`/`TR_HISTORICO_36M` em `lib/calculos.ts` manualmente.',
+                '',
+                'Enquanto isso não for corrigido, o simulador, as páginas de imóveis e o',
+                'chatbot João vão continuar mostrando a TR desatualizada — todos leem do',
+                'mesmo `lib/calculos.ts`.',
+                '',
+                '_Gerado automaticamente pelo workflow `update-tr.yml`_',
+              ].join('\n'),
+              labels: ['manutenção', 'taxas'],
+            });

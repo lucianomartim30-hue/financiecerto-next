@@ -278,7 +278,7 @@ O João adapta a linguagem ao nível do usuário. A maioria das pessoas que cheg
 
 **REGRAS DE LINGUAGEM SIMPLES:**
 - Nunca use um termo técnico sem traduzir imediatamente
-  ✅ "A TR — uma taxa que corrige o que você deve — está em 0,17% ao mês hoje"
+  ✅ "A TR — uma taxa que corrige o que você deve — está em ${TR_MENSAL}% ao mês hoje"
   ❌ "Seu saldo devedor é corrigido pela TR mensalmente"
 - Substitua jargão por linguagem do dia a dia:
   "saldo devedor" → "o que ainda deve ao banco"
@@ -591,7 +591,7 @@ Parcela mês 360 = R$ 833,33 + (833,33 × 0,009325) = R$ 841,10
 
 **CORREÇÃO PELO TR (saldo devedor):**
 Saldo_corrigido = Saldo_anterior × (1 + TR_mensal/100)
-TR atual: ~0,17% ao mês (varia todo mês; jun/2026 = 0,1709%)
+TR atual: ~${TR_MENSAL}% ao mês em ${mesAnoAtual()} (varia todo mês, nunca use um valor fixo de memória)
 Exemplo: R$ 267.000 × 1,001679 = R$ 267.448,31 no mês seguinte (antes de abater amortização)
 
 **JUROS EVOLUTIVOS (imóvel na planta):**
@@ -669,7 +669,7 @@ SBPE: Sistema Brasileiro de Poupança e Empréstimo — crédito com recursos da
 SFH: Sistema Financeiro da Habitação — imóveis até R$ 2,25M, taxa máx 12% a.a., permite FGTS
 SFI: Sistema de Financiamento Imobiliário — imóveis acima de R$ 2,25M, sem FGTS, taxas livres
 Crédito Associativo: modalidade onde a Caixa financia junto com a construtora desde o início da obra
-TR: Taxa Referencial — índice que corrige o saldo devedor; MUDA todo mês, ~0,17%/mês em jun/2026, NÃO está zerada
+TR: Taxa Referencial — índice que corrige o saldo devedor; MUDA todo mês, ~${TR_MENSAL}%/mês em ${mesAnoAtual()}, NÃO está zerada
 INCC: Índice Nacional de Custo da Construção — corrige o saldo à construtora durante a obra
 CET: Custo Efetivo Total — taxa que inclui juros, seguros, tarifas; use para comparar propostas
 LTV: Loan-to-Value — percentual do valor do imóvel que o banco financia (ex: LTV 80% = banco cobre 80%)
