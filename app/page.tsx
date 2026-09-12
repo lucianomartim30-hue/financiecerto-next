@@ -5,6 +5,7 @@ import { HomeEngagement } from './HomeEngagement';
 import { getImoveisDestaque, getImoveisDestaqueLesteNorte, type ImovelDestaque } from '@/lib/imoveis-destaque';
 import { formatPlantaPreco } from '@/lib/calculos';
 import { getStatusCfg } from '@/lib/status';
+import { LANCAMENTOS_MANUAIS } from '@/lib/lancamentos-manuais';
 
 // Sem isso a home fica presa no snapshot do catálogo do último deploy —
 // imóvel vendido, preço mudado ou erro de cadastro corrigido na Orulo só
@@ -98,6 +99,61 @@ const FEATURES = [
     textColor: '#6d28d9',
   },
 ];
+
+// ── Spotlight de breve lançamento cadastrado manualmente ──────────────────────
+// Ver lib/lancamentos-manuais.ts: empreendimento confirmado direto no site da
+// incorporadora, mas que a integração da Orulo ainda não devolve pra essa
+// conta — cadastro manual pra não perder a fase de captação de interesse
+// (auditoria 2026-09). Fica logo abaixo do hero, acima até das vitrines
+// normais — é a única seção de destaque com um único imóvel só.
+function LancamentoManualSpotlight() {
+  const l = LANCAMENTOS_MANUAIS[0];
+  if (!l) return null;
+  return (
+    <section style={{ padding: '48px 24px', background: '#ffffff', borderBottom: '1px solid var(--border)' }}>
+      <div className="container">
+        <Link
+          href={`/imoveis/${l.id}`}
+          className="card card-hover"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(240px, 380px) 1fr',
+            overflow: 'hidden',
+            textDecoration: 'none',
+            color: 'inherit',
+          }}
+        >
+          <div style={{ position: 'relative', minHeight: '220px', background: '#0f2744' }}>
+            <img src={l.heroPhoto} alt={l.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+            <span style={{
+              position: 'absolute', top: '14px', left: '14px',
+              background: 'linear-gradient(135deg, #f59e0b, #ea580c)', color: '#fff',
+              fontSize: '11px', fontWeight: '800', padding: '5px 12px', borderRadius: '99px',
+              textTransform: 'uppercase', letterSpacing: '0.4px', boxShadow: '0 2px 10px rgba(234,88,12,.35)',
+            }}>
+              🚀 Breve Lançamento
+            </span>
+          </div>
+          <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '10px' }}>
+            <p className="section-label" style={{ margin: 0 }}>Acabou de chegar</p>
+            <h3 style={{ fontSize: 'clamp(20px, 2.5vw, 28px)', fontWeight: '800', margin: 0, letterSpacing: '-0.4px' }}>
+              {l.name} — {l.developer}
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
+              📍 {l.neighborhood}, {l.city} · {l.areaMin}–{l.areaMax} m² · {l.bedroomsMin}–{l.bedroomsMax} quartos
+            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
+              🚀 Lançamento previsto: {l.launchDate} · Preço ainda não divulgado — garanta sua posição na fila antes de todo mundo.
+            </p>
+            <span className="btn-primary" style={{ display: 'inline-flex', width: 'fit-content', marginTop: '6px', fontSize: '14px', padding: '10px 22px' }}>
+              Conhecer o lançamento →
+            </span>
+          </div>
+        </Link>
+      </div>
+    </section>
+  );
+}
 
 // ── Vitrine de imóveis em destaque — reaproveitada pra Zona Sul/Oeste/Centro
 // (foco principal) e Zona Leste/Norte (segunda vitrine) ───────────────────────
@@ -292,6 +348,9 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── Breve lançamento em destaque (cadastro manual) ────────────────────── */}
+      <LancamentoManualSpotlight />
 
       {/* ── Imóveis em destaque (Zona Sul/Oeste/Centro) ───────────────────────── */}
       <DestaqueSection

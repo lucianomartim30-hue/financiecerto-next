@@ -16,6 +16,7 @@ import { notFound } from 'next/navigation';
 import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
 import { getToken, fetchBuildingDetail } from '@/lib/orulo-api';
 import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
+import { getLancamentoManual, lancamentoParaCatalogo } from '@/lib/lancamentos-manuais';
 import ImovelDetailClient from './ImovelDetailClient';
 
 const BASE = 'https://www.financiecerto.com.br';
@@ -31,6 +32,11 @@ function fmtBRL(v: number | null | undefined): string {
 // esteve no catálogo (imóvel genuinamente novo, sync ainda não pegou) — não é
 // consultado a cada acesso, só nesse caso raro de cache miss total.
 const getBuildingData = cache(async (id: string): Promise<CatalogEntry | null> => {
+  // Empreendimento cadastrado manualmente (ver lib/lancamentos-manuais.ts) —
+  // nunca está no KV nem na Orulo pra essa integração, então intercepta antes.
+  const lancamentoManual = getLancamentoManual(id);
+  if (lancamentoManual) return lancamentoParaCatalogo(lancamentoManual);
+
   try {
     const catalog = await kvGetCatalog();
     const cached = catalog?.find(b => b.id === id);

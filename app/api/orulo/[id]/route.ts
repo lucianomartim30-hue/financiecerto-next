@@ -4,6 +4,7 @@ import { kvGetFotosOcultas } from '@/lib/fotos-ocultas-kv';
 import { kvGetPromocoes, kvGetPromocoesAdmin } from '@/lib/promocoes-kv';
 import { kvGetOruloEndUserToken } from '@/lib/orulo-enduser-kv';
 import { getPlantasManuais, getExcluirBlueprintsOrulo } from '@/lib/plantas-manuais';
+import { getLancamentoManual, lancamentoParaDetalhe } from '@/lib/lancamentos-manuais';
 import { sessionToken } from '../../admin-auth/route';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
@@ -261,6 +262,14 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
+
+  // Empreendimento cadastrado manualmente (ver lib/lancamentos-manuais.ts) —
+  // intercepta antes de qualquer chamada à Orulo, já que esses IDs nunca
+  // existem lá pra essa integração.
+  const lancamentoManual = getLancamentoManual(id);
+  if (lancamentoManual) {
+    return NextResponse.json(lancamentoParaDetalhe(lancamentoManual));
+  }
 
   try {
     // Mock local
