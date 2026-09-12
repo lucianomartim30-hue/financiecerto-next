@@ -40,5 +40,17 @@
     "valor": "Jul/2026",
     "trecho": "// \"Jul/26\" → \"Jul/2026\" — usado para exibir o período coberto pela série histórica",
     "motivo": "Mesmo comentário de código acima."
+  },
+  {
+    "arquivo": "app/glossario/layout.tsx",
+    "valor": "agosto de 2022",
+    "trecho": "{ term: 'TR', answer: `A TR (Taxa Referencial) é calculada mensalmente pelo Banco Central a partir da TBF (Taxa Básica Financeira) e aplicada como correção mone",
+    "motivo": "Marco histórico (TR deixou de ser zero) — mesmo caso do 'ago/2022' já allowlistado em app/api/chat/route.ts. A parte 'atual' desse verbete já usa mesAnoAtual()/TR_MENSAL dinâmico."
+  },
+  {
+    "arquivo": "app/glossario/layout.tsx",
+    "valor": "out/2025",
+    "trecho": "{ term: 'FGTS', answer: 'Fundo constituído por depósitos mensais do empregador (8% do salário bruto). O saldo pode ser usado na compra de imóvel residencial (SF",
+    "motivo": "Mesmo marco do teto SFH já allowlistado em app/api/chat/route.ts — referência histórica fixa."
   }
 ]

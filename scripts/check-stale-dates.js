@@ -46,10 +46,20 @@ const ALVOS = [
   'app/simulador/page.tsx',
   'app/simulador/historico-tr/page.tsx',
   'app/imoveis/[id]/ImovelDetailClient.tsx',
+  // Achado numa varredura de SEO (não pelo scanner — ele só olhava abreviado
+  // com barra, "mai/2026"; "maio de 2026" por extenso escapava): auditoria 2026-09.
+  'app/glossario/layout.tsx',
 ];
 
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const MESES_EXTENSO = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
 const REGEX_MES_ANO = new RegExp(`\\b(${MESES.join('|')})\\/(\\d{2}|\\d{4})\\b`, 'gi');
+// "maio de 2026" — mesmo bug, formato por extenso (achado no glossário,
+// escapou da primeira versão do scanner por só cobrir "mai/2026").
+const REGEX_MES_EXTENSO = new RegExp(`\\b(${MESES_EXTENSO.join('|')})\\s+de\\s+(\\d{4})\\b`, 'gi');
 
 function mesAnoAtual() {
   const agora = new Date();
@@ -74,6 +84,20 @@ function escanear() {
       REGEX_MES_ANO.lastIndex = 0;
       while ((m = REGEX_MES_ANO.exec(linha)) !== null) {
         const mesEncontrado = m[1].toLowerCase();
+        const anoEncontrado = normalizaAno(m[2]);
+        const ehMesAtual = mesEncontrado === mesAtual && anoEncontrado === anoAtual;
+        achados.push({
+          arquivo: rel,
+          linha: i + 1,
+          trecho: linha.trim().slice(0, 160),
+          valor: m[0],
+          ehMesAtual,
+        });
+      }
+      REGEX_MES_EXTENSO.lastIndex = 0;
+      while ((m = REGEX_MES_EXTENSO.exec(linha)) !== null) {
+        const idx = MESES_EXTENSO.indexOf(m[1].toLowerCase());
+        const mesEncontrado = MESES[idx];
         const anoEncontrado = normalizaAno(m[2]);
         const ehMesAtual = mesEncontrado === mesAtual && anoEncontrado === anoAtual;
         achados.push({
