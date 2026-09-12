@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
+import { SITE_CONFIG } from '@/lib/schema';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { getStatusCfg, isNaPlanta } from '@/lib/status';
 import { buildSimuladorLink } from '@/lib/simulador-link';
@@ -914,7 +915,12 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   const dentroAlcance = poderTotal > 0 && poderTotal >= valorRef;
   const diffPoder = poderTotal - valorRef;
 
-  const urlImovel = typeof window !== 'undefined' ? window.location.href : '';
+  // Domínio fixo (não window.location.href) pra sair igual no servidor e no
+  // cliente — a versão com `window` gerava a mensagem de WhatsApp diferente
+  // entre SSR e a primeira renderização do cliente, o que dispara o erro de
+  // hidratação #418 do React (mesma causa raiz encontrada em
+  // simulador/na-planta — auditoria 2026-09).
+  const urlImovel = `${SITE_CONFIG.domain}/imoveis/${imovel.id}`;
   const atendeVisita = ofereceAgendarVisita(imovel.city, imovel.min_price);
   const foraDoEstadoSP = precisaFormularioContato(imovel.state);
   const waMsg = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovel}`);
@@ -1851,7 +1857,7 @@ export default function ImovelDetailClient({ id }: { id: string }) {
     </div>
   );
 
-  const urlImovelTopo = typeof window !== 'undefined' ? window.location.href : '';
+  const urlImovelTopo = `${SITE_CONFIG.domain}/imoveis/${imovel.id}`;
   const atendeVisitaTopo = ofereceAgendarVisita(imovel.city, imovel.min_price);
   const foraDoEstadoSPTopo = precisaFormularioContato(imovel.state);
   const waMsgTopo = encodeURIComponent(`Olá! Vi o imóvel *${imovel.name}* no FinancieCerto e gostaria de mais informações.\n${urlImovelTopo}`);

@@ -7,6 +7,7 @@ import {
   TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, calcSubsidioEstimado,
   FAIXAS_MCMV, LTV_SBPE_PRICE, taxaEfetivaMCMV, prazoMaximoMeses, type FaixaMCMV,
 } from '@/lib/calculos';
+import { SITE_CONFIG } from '@/lib/schema';
 import Link from 'next/link';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
 import { HisHmpHint } from '@/components/HisHmpHint';
@@ -130,9 +131,13 @@ function CTAConsultorCenario({
 
   // Só existe página real de imóvel quando há um imovelId de catálogo de
   // verdade — simulação avulsa (idLead === 'simulacao-na-planta') não tem
-  // link nenhum pra oferecer.
-  const urlImovel = typeof window !== 'undefined' && imovelId
-    ? `${window.location.origin}/imoveis/${imovelId}`
+  // link nenhum pra oferecer. Usa o domínio fixo (não window.location.origin)
+  // pra sair igual no servidor e no cliente — a versão com `typeof window`
+  // gerava o texto do link de WhatsApp diferente entre SSR e a primeira
+  // renderização do cliente, disparando o erro de hidratação #418 do React
+  // (auditoria 2026-09).
+  const urlImovel = imovelId
+    ? `${SITE_CONFIG.domain}/imoveis/${imovelId}`
     : '';
   const msg = encodeURIComponent(
     `Olá! Montei um cenário de pagamento no simulador na planta do FinancieCerto para um imóvel de ${formatBRL(valor)} (${modalidade}${faixa ? ` ${faixa}` : ''}) e gostaria de conversar com um consultor sobre esta proposta.${urlImovel ? `\n${urlImovel}` : ''}`
@@ -200,9 +205,7 @@ function CTAFalarDireto({ imovelId, imovelName }: { imovelId: string; imovelName
     registrar();
   }
 
-  const urlImovel = typeof window !== 'undefined'
-    ? `${window.location.origin}/imoveis/${imovelId}`
-    : '';
+  const urlImovel = `${SITE_CONFIG.domain}/imoveis/${imovelId}`;
   const msg = encodeURIComponent(
     `Olá! Estou vendo o imóvel *${nomeLead}* no simulador na planta do FinancieCerto e gostaria de falar com um consultor.\n${urlImovel}`
   );
