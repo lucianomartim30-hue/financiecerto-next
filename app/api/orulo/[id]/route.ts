@@ -413,6 +413,16 @@ export async function GET(
         photo:        null as string | null,
         blueprint:    null as string | null,
       };
+    }).map(t => {
+      // A Orulo às vezes manda, pra uma mesma tipologia, "disponíveis" maior
+      // que "total" (dado contraditório na origem — não é conta nossa, é a
+      // API deles). Em vez de publicar um número impossível, escondemos só o
+      // total nesse caso; "disponíveis" continua aparecendo normalmente
+      // (auditoria 2026-09 — ex.: Mundo Park Alvorada, tipologia 31,9m²).
+      if (t.stock !== null && t.total_units !== null && t.stock > t.total_units) {
+        return { ...t, total_units: null };
+      }
+      return t;
     });
 
     // Preenche o botão "Ver planta" de cada tipologia sem blueprint com a
@@ -451,6 +461,14 @@ export async function GET(
     // ── CEP ────────────────────────────────────────────────────────────────────
     const zipcode = (address.zipcode ?? address.zip ?? address.postal_code ?? '') as string;
 
+    // Mesma proteção contra "disponíveis > total" aplicada às tipologias
+    // acima, agora no nível do empreendimento inteiro (auditoria 2026-09).
+    const buildingStock = (b.stock as number) ?? null;
+    const buildingTotalUnitsRaw = (b.total_units as number) ?? null;
+    const buildingTotalUnits = (buildingStock !== null && buildingTotalUnitsRaw !== null && buildingStock > buildingTotalUnitsRaw)
+      ? null
+      : buildingTotalUnitsRaw;
+
     return NextResponse.json({
       id: String(b.id),
       name: (b.name as string) || 'Empreendimento',
@@ -477,8 +495,8 @@ export async function GET(
       status:        (b.stage  as string) || (b.status as string) || '',
       delivery_date,
       launch_date,
-      total_units:      (b.total_units      as number) ?? null,
-      stock:            (b.stock            as number) ?? null,   // unidades disponíveis (total)
+      total_units:      buildingTotalUnits,
+      stock:            buildingStock,   // unidades disponíveis (total)
       number_of_floors: (b.number_of_floors as number) ?? null,
       number_of_towers: (b.number_of_towers as number) ?? null,
       virtual_tour:     (b.virtual_tour     as string) || null,
