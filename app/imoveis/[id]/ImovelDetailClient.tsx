@@ -1441,7 +1441,7 @@ function SecaoEmpreendimento({ imovel }: { imovel: ImovelDetalhe }) {
           {imovel.developer_logo && (
             <img
               src={imovel.developer_logo} alt={imovel.developer}
-              style={{ height: '40px', objectFit: 'contain', flexShrink: 0 }}
+              style={{ height: '28px', objectFit: 'contain', flexShrink: 0 }}
               onError={e => { e.currentTarget.style.display = 'none'; }}
             />
           )}
@@ -1449,26 +1449,23 @@ function SecaoEmpreendimento({ imovel }: { imovel: ImovelDetalhe }) {
             <p style={{ fontSize: '10px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '3px' }}>
               Construtora / Incorporadora
             </p>
-            <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: imovel.developer_website ? '4px' : 0 }}>
+            <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: '4px' }}>
               {imovel.developer}
             </p>
+            {/* Só link interno (pra outras páginas do próprio site) — link pro
+                site da construtora foi removido: mandava o usuário embora do
+                FinancieCerto bem no meio do funil de lead (pedido do usuário). */}
             <Link href={`/construtoras/${construtoraToSlug(imovel.developer)}`}
               style={{ display: 'inline-block', fontSize: '11px', color: 'var(--primary)', fontWeight: '700', textDecoration: 'none', marginRight: '12px', marginBottom: '3px' }}>
               Ver imóveis desta construtora →
             </Link>
-            {imovel.developer_website && (
-              <a href={imovel.developer_website} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>
-                🌐 Site da construtora →
-              </a>
-            )}
             {/* virtual_tour que não é tour 360° → mostra como link de apresentação,
                 evitando expor como "Tour Virtual" (armadilha para o usuário) */}
             {imovel.virtual_tour
               && classifyTourUrl(imovel.virtual_tour) === 'site'
               && imovel.virtual_tour !== imovel.developer_website && (
               <a href={imovel.virtual_tour} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '600', textDecoration: 'none', marginLeft: imovel.developer_website ? '12px' : 0 }}>
+                style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '600', textDecoration: 'none' }}>
                 📋 Ver apresentação →
               </a>
             )}
