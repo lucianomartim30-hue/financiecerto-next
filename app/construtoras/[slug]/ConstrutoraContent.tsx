@@ -48,7 +48,9 @@ export default function ConstrutoraContent({ nome, imoveis, cidades }: { nome: s
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(245px, 1fr))', gap: '15px' }}>
         {filtrados.slice(0, limite).map(imovel => {
           const status = getStatusCfg(imovel.status_norm || imovel.status, imovel.min_price);
-          const specs = [faixa(imovel.bedrooms_min, imovel.bedrooms_max, 'qts'), imovel.area_min ? `${imovel.area_min}m²` : null, faixa(imovel.vagas_min, imovel.vagas_max, 'vaga')].filter(Boolean);
+          // Antes só mostrava area_min — o card indicava "25m²" pra um
+          // empreendimento com plantas de até 37m², como se só houvesse a menor.
+          const specs = [faixa(imovel.bedrooms_min, imovel.bedrooms_max, 'qts'), faixa(imovel.area_min, imovel.area_max, 'm²'), faixa(imovel.vagas_min, imovel.vagas_max, 'vaga')].filter(Boolean);
           const promos = imovel.promocoes_destaque;
           const temPromo = promos.length > 0;
           return (

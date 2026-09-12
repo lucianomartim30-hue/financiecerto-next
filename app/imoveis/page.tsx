@@ -123,7 +123,10 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
   const precoExibido   = faixaTipologia?.price_min    ?? im.min_price;
   const quartosMin     = faixaTipologia?.bedrooms_min ?? im.bedrooms_min;
   const quartosMax     = faixaTipologia?.bedrooms_max ?? im.bedrooms_max;
-  const areaExibida    = faixaTipologia?.area_min     ?? im.area_min;
+  // Antes só pegava area_min — o card mostrava "25m²" pra um empreendimento
+  // com plantas de 25 a 37m², como se só existisse a menor planta.
+  const areaMinExibida = faixaTipologia?.area_min     ?? im.area_min;
+  const areaMaxExibida = faixaTipologia?.area_max     ?? im.area_max;
   return (
     <Link href={`/imoveis/${im.id}`} style={{ textDecoration: 'none', display: 'block' }}
       onClick={() => { import('@/lib/gtag').then(m => m.trackImovelView({ imovel: im.name, bairro: im.neighborhood, preco: precoExibido ?? undefined })); }}
@@ -212,7 +215,7 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
           <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap', marginTop: '2px' }}>
             {tipologiaAtiva && <span style={{ fontSize: '9px', color: 'var(--primary)', background: 'var(--primary-light)', border: '1px solid rgba(37,99,235,.25)', borderRadius: '5px', padding: '1px 4px', fontWeight: 700 }}>{tipologiaAtiva}</span>}
             {fmtRange(quartosMin, quartosMax, 'qts') && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>🛏 {fmtRange(quartosMin, quartosMax, 'qts')}</span>}
-            {areaExibida && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>▦ {areaExibida}m²</span>}
+            {fmtRange(areaMinExibida, areaMaxExibida, 'm²') && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>▦ {fmtRange(areaMinExibida, areaMaxExibida, 'm²')}</span>}
             {fmtRange(im.vagas_min, im.vagas_max, 'vg') && <span style={{ fontSize: '9px', color: 'var(--text-muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '5px', padding: '1px 4px' }}>🅿 {fmtRange(im.vagas_min, im.vagas_max, 'vg')}</span>}
           </div>
         </div>
