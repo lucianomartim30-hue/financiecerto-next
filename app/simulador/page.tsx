@@ -11,7 +11,14 @@ import {
 } from '@/lib/calculos';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
 import { HisHmpHint } from '@/components/HisHmpHint';
+import SchemaMarkup from '@/components/SchemaMarkup';
+import { webApplication, breadcrumb, faqPage, SITE_CONFIG } from '@/lib/schema';
 import { FAQ_SIMULADOR } from './faq-data';
+
+// Título/descrição espelham os de app/simulador/layout.tsx (export `metadata`)
+// — mantidos como constantes aqui só pro schema, não pra metadata em si.
+const SIMULADOR_TITLE = 'Simulador Minha Casa Minha Vida | FinancieCerto';
+const SIMULADOR_URL = `${SITE_CONFIG.domain}/simulador`;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtInput(v: string): string {
@@ -1461,9 +1468,35 @@ function SimuladorInner() {
 }
 
 export default function SimuladorPage() {
+  // Movido de app/simulador/layout.tsx pra cá: o layout envolve TODAS as
+  // rotas filhas (/simulador/na-planta, /simulador/historico-tr também), então
+  // emitir o schema lá duplicava WebApplication/BreadcrumbList/FAQPage em
+  // toda página do simulador — aqui só renderiza quando a rota é exatamente
+  // /simulador (auditoria 2026-09).
+  const schemas = [
+    webApplication({
+      url: SIMULADOR_URL,
+      title: SIMULADOR_TITLE,
+      description: 'Simule seu financiamento imobiliário gratuitamente. Identifica Minha Casa Minha Vida (MCMV), SBPE ou SFI com taxas reais de 2026.',
+    }),
+    breadcrumb([
+      { name: 'Início', url: SITE_CONFIG.domain },
+      { name: 'Simulador', url: SIMULADOR_URL },
+    ]),
+    faqPage({
+      url: SIMULADOR_URL,
+      title: SIMULADOR_TITLE,
+      description: 'Simule seu financiamento imobiliário grátis e descubra se você se enquadra no Minha Casa Minha Vida, SBPE ou SFI, com parcela, taxa e poder de compra.',
+      questions: FAQ_SIMULADOR,
+    }),
+  ];
+
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
-      <SimuladorInner />
-    </Suspense>
+    <>
+      <SchemaMarkup schemas={schemas} />
+      <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+        <SimuladorInner />
+      </Suspense>
+    </>
   );
 }

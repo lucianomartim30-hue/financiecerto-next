@@ -1,35 +1,17 @@
 // app/aprenda/layout.tsx
-import SchemaMarkup from '@/components/SchemaMarkup';
-import { collectionPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
-import { getArtigos } from '@/lib/artigos';
+//
+// O schema (CollectionPage + BreadcrumbList) de /aprenda morava aqui, mas
+// este layout envolve TODO artigo individual (/aprenda/[slug]) também — o
+// CollectionPage (que descreve a lista de artigos) e o breadcrumb de 2 níveis
+// apareciam duplicados em cada artigo, empilhados com o schema próprio dele
+// (BreadcrumbList de 3 níveis + Article/FAQPage). Movido para
+// app/aprenda/page.tsx, que só renderiza na rota exata /aprenda
+// (auditoria 2026-09).
 
 export default function AprendaLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const artigos = getArtigos();
-
-  const schemas = [
-    collectionPage({
-      url: `${SITE_CONFIG.domain}/aprenda`,
-      title: 'Aprenda — Guia de Financiamento Imobiliário',
-      description: 'Artigos sobre MCMV, imóvel na planta, FGTS, SAC, Price e tudo sobre financiamento imobiliário.',
-      items: artigos.map(a => ({
-        url: `${SITE_CONFIG.domain}/aprenda/${a.slug}`,
-        headline: a.titulo,
-      })),
-    }),
-    breadcrumb([
-      { name: 'Início', url: SITE_CONFIG.domain },
-      { name: 'Aprenda', url: `${SITE_CONFIG.domain}/aprenda` },
-    ]),
-  ];
-
-  return (
-    <>
-      <SchemaMarkup schemas={schemas} />
-      {children}
-    </>
-  );
+  return children;
 }

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getArtigos } from '@/lib/artigos';
+import SchemaMarkup from '@/components/SchemaMarkup';
+import { collectionPage, breadcrumb, SITE_CONFIG } from '@/lib/schema';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -42,8 +44,29 @@ export default function AprendaIndex() {
   const artigosAmplo   = artigos.filter(a => a.categoria === 'amplo');
   const artigosNichado = artigos.filter(a => a.categoria === 'nichado');
 
+  // Movido de app/aprenda/layout.tsx pra cá: o layout envolve TODO artigo
+  // individual também (/aprenda/[slug]), então o CollectionPage (que descreve
+  // a LISTA de artigos) e este BreadcrumbList apareciam duplicados em cada
+  // artigo, empilhados com o próprio schema do artigo (auditoria 2026-09).
+  const schemas = [
+    collectionPage({
+      url: `${SITE_CONFIG.domain}/aprenda`,
+      title: 'Aprenda — Guia de Financiamento Imobiliário',
+      description: 'Artigos sobre MCMV, imóvel na planta, FGTS, SAC, Price e tudo sobre financiamento imobiliário.',
+      items: artigos.map(a => ({
+        url: `${SITE_CONFIG.domain}/aprenda/${a.slug}`,
+        headline: a.titulo,
+      })),
+    }),
+    breadcrumb([
+      { name: 'Início', url: SITE_CONFIG.domain },
+      { name: 'Aprenda', url: `${SITE_CONFIG.domain}/aprenda` },
+    ]),
+  ];
+
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+      <SchemaMarkup schemas={schemas} />
       {/* Hero */}
       <section style={{
         background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1d4ed8 100%)',
