@@ -98,31 +98,44 @@ export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
     updatedAt: '2026-09-11',
     oruloUrl: 'https://www.orulo.com.br/buildings/85509',
     heroPhoto: '/lancamentos-manuais/elev-saude/fachada.webp',
-    // Galeria ampliada (auditoria 2026-09, a pedido do usuário) — antes só
-    // tinha 2 fotos; agora reflete a mesma variedade de área comum que o
-    // site oficial da Trisul mostra (piscina, rooftop, salão, fitness etc.),
-    // todas baixadas do CDN público da Trisul (api.trisul-sa.com.br/cms),
-    // não da área logada da Orulo.
+    // Galeria completa (auditoria 2026-09) — usuário notou 1 foto duplicada
+    // (voo-piscinas/lazer-piscina eram o mesmo arquivo, removido) e reportou
+    // que a Orulo mostra 19 fotos contra as 11 daqui. Conferindo direto no
+    // hotsite oficial (meuelev.com.br/apartamentos/elev-saude, o mesmo link
+    // que "Acesse o Hotsite" leva a partir do site institucional da Trisul)
+    // a galeria "Áreas Comuns" tem 18 fotos + fachada + portaria = 20 únicas.
+    // Baixadas do CDN público da Trisul (trisul-elev-prod-back.s3...), não
+    // da área logada da Orulo.
     photos: [
       '/lancamentos-manuais/elev-saude/fachada.webp',
       '/lancamentos-manuais/elev-saude/portaria.webp',
+      '/lancamentos-manuais/elev-saude/hall.webp',
       '/lancamentos-manuais/elev-saude/voo-piscinas.webp',
-      '/lancamentos-manuais/elev-saude/lazer-piscina.webp',
+      '/lancamentos-manuais/elev-saude/piscina-interna.webp',
       '/lancamentos-manuais/elev-saude/churrasqueira-rooftop.webp',
       '/lancamentos-manuais/elev-saude/salao-festas.webp',
       '/lancamentos-manuais/elev-saude/fitness.webp',
+      '/lancamentos-manuais/elev-saude/pista-corrida.webp',
       '/lancamentos-manuais/elev-saude/quadra-gramada.webp',
       '/lancamentos-manuais/elev-saude/playground-redario.webp',
       '/lancamentos-manuais/elev-saude/espaco-pet-pomar.webp',
+      '/lancamentos-manuais/elev-saude/pet-care.webp',
+      '/lancamentos-manuais/elev-saude/brinquedoteca.webp',
       '/lancamentos-manuais/elev-saude/coworking.webp',
+      '/lancamentos-manuais/elev-saude/praca-coworking.webp',
+      '/lancamentos-manuais/elev-saude/lavanderia.webp',
+      '/lancamentos-manuais/elev-saude/mini-mercado.webp',
+      '/lancamentos-manuais/elev-saude/delivery.webp',
+      '/lancamentos-manuais/elev-saude/bicicletario.webp',
     ],
     description: 'O Elev Saúde nasce em um endereço onde a mobilidade aproxima muito mais do que destinos — a 1 minuto do Metrô Saúde, com acesso a avenidas importantes e toda a infraestrutura da região (escolas, universidades, mercados e farmácias). Empreendimento com 2 torres, 17 andares e lazer completo.',
     amenities: [
       'Delivery', 'Fitness', 'Pet Care', 'Lavanderia Coletiva', 'Coworking',
-      'Minimercado', 'Brinquedoteca', 'Salão de Festas', 'Piscina Adulto',
-      'Piscina Infantil', 'Solário', 'Boulevard', 'Redário', 'Espaço Pet',
-      'Pomar', 'Quadra Gramada', 'Playground', 'Praça Coworking',
-      'Churrasqueira', 'Terraço Descoberto (Rooftop)',
+      'Praça Coworking', 'Minimercado', 'Brinquedoteca', 'Salão de Festas',
+      'Piscina Adulto', 'Piscina Coberta', 'Piscina Infantil', 'Solário',
+      'Boulevard', 'Redário', 'Espaço Pet', 'Pomar', 'Quadra Gramada',
+      'Pista de Corrida', 'Playground', 'Bicicletário', 'Churrasqueira',
+      'Terraço Descoberto (Rooftop)',
     ],
     // As 3 plantas reais do Elev Saúde, confirmadas direto na base da Trisul
     // (auditoria 2026-09) — o usuário achou uma "planta de 40m²" olhando o
