@@ -680,18 +680,12 @@ export interface ResultadoDescobrir {
     comprometimento: number;
     elegivel: boolean;
     taxa: number;
-    /** true quando a entrada informada — não a renda — é o fator que está limitando o valor do imóvel */
-    limitadoPorEntrada: boolean;
-    /** entrada necessária para alcançar o valor máximo permitido só pela renda, sem ser travado pelo LTV */
-    entradaIdealParaValorMax: number;
   };
   sbpe: {
     valorMaxImovel: number;
     valorFinanciado: number;
     parcela: number;
     comprometimento: number;
-    limitadoPorEntrada: boolean;
-    entradaIdealParaValorMax: number;
   };
   sfi: {
     // Sistema de Financiamento Imobiliário — imóveis acima do teto SFH (R$ 2,25M)
@@ -701,26 +695,10 @@ export interface ResultadoDescobrir {
     parcela: number;
     comprometimento: number;
     taxa: number;
-    limitadoPorEntrada: boolean;
-    entradaIdealParaValorMax: number;
   };
   prazoMaxMeses: number;
   oruloMinPrice: number;
   oruloMaxPrice: number;
-}
-
-// Entrada mínima para que o teto por LTV deixe de ser mais restritivo que o
-// teto por renda (ou o teto de valor da faixa/sistema) — resolve o ponto de
-// equilíbrio de V = min(capacidadeRenda + entrada, tetoValor) junto com
-// entrada = V×(1-ltvMax). Usado só para a MENSAGEM explicativa ao usuário
-// ("com uma entrada de X você chegaria a Y") — a checagem de LTV em si (acima)
-// já usa a entrada real informada, não este valor projetado.
-function entradaParaLiberarLTV(capacidadeRenda: number, tetoValor: number, ltvMax: number): number {
-  if (ltvMax >= 1) return 0;
-  const valorSemTeto = capacidadeRenda / ltvMax;
-  return valorSemTeto <= tetoValor
-    ? capacidadeRenda * (1 - ltvMax) / ltvMax
-    : tetoValor * (1 - ltvMax);
 }
 
 export function descobrir(
@@ -753,25 +731,17 @@ export function descobrir(
     : TAXA_MCMV_ANUAL;
   const tetoMCMV = faixa?.teto   ?? 275000;
 
+  // Financiamento vem só da capacidade de renda (30% de comprometimento) —
+  // igual a qualquer simulador de banco real (validado contra o simulador
+  // oficial da Caixa, auditoria 2026-09: o financiamento não muda nem um
+  // centavo se a pessoa informa entrada de R$0 ou de R$500 mil; entrada e
+  // FGTS só se SOMAM ao financiamento pra formar o poder de compra total,
+  // nunca o reduzem). A checagem de "essa entrada é suficiente pra esse
+  // preço" é responsabilidade exclusiva de simular() (ficha do imóvel),
+  // quando já existe um preço real pra avaliar — nunca desta função, que
+  // não conhece nenhum imóvel específico ainda.
   const capacMCMV     = elegivel ? capacidadeComSeguros(rendaBruta, taxaMCMV, prazoMeses, 0.30, idadeProponente) : 0;
-  // "Poder de compra" tem DOIS tetos independentes, não só a renda: a capacidade
-  // de pagar a parcela (capacMCMV+entradaTotal) E o quanto a entrada informada
-  // permite financiar dentro do LTV máximo da faixa (entradaTotal/(1-ltvMax)).
-  // Sem o segundo teto, descobrir() prometia valores que simular() (ficha do
-  // imóvel) recusava minutos depois por falta de entrada — auditoria 2026-09.
-  // Simplificação aceita: o teto por LTV usa só `entradaTotal` (sem o subsídio,
-  // calculado logo abaixo, que dependeria deste mesmo valor) — no pior caso deixa
-  // o teto um pouco mais generoso só nas Faixas 1/2, onde o LTV já é 90-95% e o
-  // efeito é pequeno; nas Faixas 3/4 (sem subsídio) o teto já sai exato.
-  const imovelMaxViaLTVMCMV = elegivel && faixa && faixa.ltvMax < 1
-    ? entradaTotal / (1 - faixa.ltvMax)
-    : Infinity;
-  const imovelMaxPorRendaMCMV = elegivel ? Math.min(capacMCMV + entradaTotal, tetoMCMV) : 0;
-  const imovelMaxMCMVRaw = Math.min(imovelMaxPorRendaMCMV, imovelMaxViaLTVMCMV);
-  // Tolerância de R$50 pra não oscilar por causa do arredondamento do valor
-  // sugerido em entradaIdealParaValorMax — sem isso, alimentar de volta o
-  // valor "ideal" arredondado podia ainda cair como "limitado" por centavos.
-  const mcmvLimitadoPorEntrada = elegivel && imovelMaxViaLTVMCMV < imovelMaxPorRendaMCMV - 50;
+  const imovelMaxMCMVRaw = elegivel ? Math.min(capacMCMV + entradaTotal, tetoMCMV) : 0;
 
   // Subsídio estimado (para descoberta usa o teto da faixa como proxy)
   const subsidioEstimado = elegivel && faixa && cotista && primeiroImovel && !jaRecebeuBeneficio
@@ -794,10 +764,7 @@ export function descobrir(
   const comprMCMV      = financiadoMCMV > 0 ? Math.round((((parcelaMCMV + segurosMCMV.total) / rendaBruta) * 100) * 10) / 10 : 0;
 
   const capacSBPE     = capacidadeComSeguros(rendaBruta, TAXA_SBPE_ANUAL, prazoMeses, 0.30, idadeProponente);
-  const imovelMaxViaLTVSBPE   = entradaTotal / (1 - LTV_SBPE_PRICE);
-  const imovelMaxPorRendaSBPE = Math.min(capacSBPE + entradaTotal, TETO_SFH);
-  const imovelMaxSBPE  = Math.min(imovelMaxPorRendaSBPE, imovelMaxViaLTVSBPE);
-  const sbpeLimitadoPorEntrada = imovelMaxViaLTVSBPE < imovelMaxPorRendaSBPE - 50;
+  const imovelMaxSBPE = Math.min(capacSBPE + entradaTotal, TETO_SFH);
   const financiadoSBPE = Math.max(0, imovelMaxSBPE - entradaTotal);
   const parcelaSBPE    = parcelaPrice(financiadoSBPE, TAXA_SBPE_ANUAL, prazoMeses);
   const segurosSBPE    = calcularSeguros(financiadoSBPE, idadeProponente);
@@ -806,14 +773,8 @@ export function descobrir(
   // ── SFI (Sistema de Financiamento Imobiliário) ───────────────────────────
   // Opera em paralelo ao SFH/SBPE para imóveis acima de R$2,25M (teto SFH)
   // Sem uso de FGTS, sem limite de valor, taxa livre (~12,5% a.a.)
-  // SFI não tem LTV regulatório fixo (é definido banco a banco) — usamos a mesma
-  // convenção do SBPE-Price (70%) que o resto do site já usa como estimativa
-  // educativa nesse caso, não como teto oficial do SFI.
   const capacSFI      = capacidadeComSeguros(rendaBruta, TAXA_SFI_ANUAL, prazoMeses, 0.30, idadeProponente);
-  const imovelMaxViaLTVSFI   = entradaTotal / (1 - LTV_SBPE_PRICE);
-  const imovelMaxPorRendaSFI = capacSFI + entradaTotal; // sem teto de valor
-  const imovelMaxSFI   = Math.min(imovelMaxPorRendaSFI, imovelMaxViaLTVSFI);
-  const sfiLimitadoPorEntrada = imovelMaxViaLTVSFI < imovelMaxPorRendaSFI - 50;
+  const imovelMaxSFI  = capacSFI + entradaTotal; // sem teto
   const financiadoSFI = Math.max(0, imovelMaxSFI - entradaTotal);
   const parcelaSFI    = parcelaPrice(financiadoSFI, TAXA_SFI_ANUAL, prazoMeses);
   const segurosSFI    = calcularSeguros(financiadoSFI, idadeProponente);
@@ -848,16 +809,12 @@ export function descobrir(
       comprometimento: comprMCMV,
       elegivel:        elegMCMV,
       taxa:            taxaMCMV,
-      limitadoPorEntrada:       mcmvLimitadoPorEntrada,
-      entradaIdealParaValorMax: faixa ? Math.round(entradaParaLiberarLTV(capacMCMV, tetoMCMV, faixa.ltvMax)) : 0,
     },
     sbpe: {
       valorMaxImovel:  Math.round(imovelMaxSBPE),
       valorFinanciado: Math.round(financiadoSBPE),
       parcela:         Math.round(parcelaSBPE + segurosSBPE.total),
       comprometimento: comprSBPE,
-      limitadoPorEntrada:       sbpeLimitadoPorEntrada,
-      entradaIdealParaValorMax: Math.round(entradaParaLiberarLTV(capacSBPE, TETO_SFH, LTV_SBPE_PRICE)),
     },
     sfi: {
       valorMaxImovel:  Math.round(imovelMaxSFI),
@@ -865,8 +822,6 @@ export function descobrir(
       parcela:         Math.round(parcelaSFI + segurosSFI.total),
       comprometimento: comprSFI,
       taxa:            TAXA_SFI_ANUAL,
-      limitadoPorEntrada:       sfiLimitadoPorEntrada,
-      entradaIdealParaValorMax: Math.round(entradaParaLiberarLTV(capacSFI, Infinity, LTV_SBPE_PRICE)),
     },
     prazoMaxMeses: prazoMeses,
     oruloMinPrice: oruloMin,

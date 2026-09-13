@@ -798,8 +798,8 @@ function SimuladorInner() {
     // Dados do painel ativo
     const dados = {
       mcmv: { ...mcmv, label: faixa ? `${faixa.label} MCMV` : 'MCMV', taxa: mcmv.taxa, cor: '#0F6E56', bg: '#E1F5EE', txt: '#085041', teto: faixa?.teto ?? 0, habilitado: mcmv.elegivel },
-      sbpe: { valorMaxImovel: sbpe.valorMaxImovel, parcela: sbpe.parcela, comprometimento: sbpe.comprometimento, label: 'SBPE (SFH)', taxa: TAXA_SBPE_ANUAL, cor: '#185FA5', bg: '#E6F1FB', txt: '#0C447C', teto: TETO_SFH, habilitado: true, limitadoPorEntrada: sbpe.limitadoPorEntrada, entradaIdealParaValorMax: sbpe.entradaIdealParaValorMax },
-      sfi:  { valorMaxImovel: sfi.valorMaxImovel,  parcela: sfi.parcela,  comprometimento: sfi.comprometimento,  label: 'SFI', taxa: TAXA_SFI_ANUAL, cor: '#854F0B', bg: '#FAEEDA', txt: '#633806', teto: 0, habilitado: true, limitadoPorEntrada: sfi.limitadoPorEntrada, entradaIdealParaValorMax: sfi.entradaIdealParaValorMax },
+      sbpe: { valorMaxImovel: sbpe.valorMaxImovel, parcela: sbpe.parcela, comprometimento: sbpe.comprometimento, label: 'SBPE (SFH)', taxa: TAXA_SBPE_ANUAL, cor: '#185FA5', bg: '#E6F1FB', txt: '#0C447C', teto: TETO_SFH, habilitado: true },
+      sfi:  { valorMaxImovel: sfi.valorMaxImovel,  parcela: sfi.parcela,  comprometimento: sfi.comprometimento,  label: 'SFI', taxa: TAXA_SFI_ANUAL, cor: '#854F0B', bg: '#FAEEDA', txt: '#633806', teto: 0, habilitado: true },
     }[painelAtivo];
 
     const compr = dados.comprometimento;
@@ -912,15 +912,6 @@ function SimuladorInner() {
               </div>
             </div>
           </div>
-
-          {dados.limitadoPorEntrada && (
-            <div style={{ padding: '14px 20px', background: '#FAEEDA', borderTop: '1px solid #F0DBAE' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#854F0B' }}>💡 Sua renda permitiria mais — a entrada é o que está limitando</div>
-              <div style={{ fontSize: 12, color: '#854F0B', marginTop: 3 }}>
-                Pela sua renda, você pagaria uma parcela maior sem problema. Mas o banco também exige uma entrada mínima proporcional ao valor do imóvel — com o que você informou, o valor máximo fica em {formatBRL(dados.valorMaxImovel)}. Com uma entrada de {formatBRL(dados.entradaIdealParaValorMax)}, você chegaria ao valor máximo que sua renda permite.
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Nota explicativa por modalidade */}

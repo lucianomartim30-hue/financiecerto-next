@@ -59,26 +59,31 @@ check('descobrir() comercial → FGTS não usado', r6.fgts === 0);
 const r6b = descobrir(4000, 10000, 0, 35, 35, true, true, false, 0, false, 'residencial');
 check('descobrir() residencial → FGTS usado normalmente', r6b.fgts === 10000);
 
-// 7. descobrir() respeita o LTV da faixa MCMV, não só a capacidade de renda
-//    (auditoria 2026-09 — antes o "poder de compra" ignorava a entrada mínima
-//    e prometia valores que simular() recusava por LTV insuficiente)
+// 7. Financiamento vem só da capacidade de renda — igual ao simulador oficial
+//    da Caixa (validado ao vivo, auditoria 2026-09: financiamento pela renda
+//    não muda nem com entrada R$0 nem com entrada de centenas de milhares).
+//    Reverte a regra de "LTV trava o poder de compra" de 12/09 (240db8d),
+//    que o próprio dono do site não pediu e não é como a Caixa opera.
 const r7 = descobrir(6000, 0, 0, 35, 35, true, true, false); // Faixa 3, R$0 de entrada
-check('MCMV Faixa 3, entrada R$0 → limitadoPorEntrada = true', r7.mcmv.limitadoPorEntrada === true);
-check('MCMV Faixa 3, entrada R$0 → poder de compra ~R$0 (não financia nada sem entrada)', r7.mcmv.valorFinanciado === 0 && r7.mcmv.valorMaxImovel === 0);
+check('MCMV Faixa 3, entrada R$0 → financiamento vem da renda, não é zerado', r7.mcmv.valorFinanciado > 0);
 
-// 8. Com entrada suficiente (20% da Faixa 3), deixa de ser limitado pela entrada
-const entradaFaixa3 = r7.mcmv.entradaIdealParaValorMax;
-const r8 = descobrir(6000, 0, entradaFaixa3, 35, 35, true, true, false);
-check('MCMV Faixa 3, entrada ideal → limitadoPorEntrada = false', r8.mcmv.limitadoPorEntrada === false);
-check('MCMV Faixa 3, entrada ideal → poder de compra bem maior que com entrada R$0', r8.mcmv.valorMaxImovel > r7.mcmv.valorMaxImovel);
+// 8. Aumentar a entrada nunca muda o financiamento (só soma ao poder de
+//    compra total) — é exatamente o que a calculadora da Caixa faz: testei
+//    o mesmo imóvel (R$744.000) com e sem informar o preço e o financiamento
+//    saiu idêntico (R$383.646,67) nos dois casos.
+const r8 = descobrir(6000, 0, 100000, 35, 35, true, true, false);
+check('MCMV Faixa 3, entrada R$100k → financiamento IDÊNTICO ao de entrada R$0', r8.mcmv.valorFinanciado === r7.mcmv.valorFinanciado);
+check('MCMV Faixa 3, entrada R$100k → poder de compra total aumenta exatamente pela entrada', r8.mcmv.valorMaxImovel === r7.mcmv.valorMaxImovel + 100000);
 
-// 9. O que simular() bloqueia por LTV, descobrir() já não deveria mais oferecer
-//    como "poder de compra" limpo — os dois têm que concordar.
+// 9. Mesmo com o financiamento agora "livre" de LTV em descobrir(), a ficha
+//    de um imóvel específico (simular()) continua checando LTV de verdade —
+//    essa é a única camada onde a entrada real é confrontada com um preço
+//    real, exatamente como a Caixa faz na "Simulação Completa".
 const r9sim = simular({
-  rendaBruta: 6000, fgts: 0, entrada: 0, valorImovel: r7.mcmv.valorMaxImovel || 252000,
+  rendaBruta: 6000, fgts: 0, entrada: 0, valorImovel: r7.mcmv.valorMaxImovel,
   prazoAnos: 35, naPlanta: false, prazoObraAnos: 3, idadeProponente: 35,
 });
-check('Ficha do imóvel: mesmo cenário (renda 6k, Faixa 3, entrada R$0) continua bloqueando por LTV', r9sim.bloqueado === true);
+check('Ficha do imóvel: preço = financiamento pela renda, mas entrada R$0 → bloqueia por LTV (correto, é a checagem que deve existir)', r9sim.bloqueado === true);
 
 // 10. Comprometimento exibido (1 casa decimal) nunca contradiz a classificação —
 //     a causa raiz do "30,0% = RISCO" relatado na auditoria.
@@ -88,62 +93,38 @@ for (const renda of [4000, 6000, 8000, 9500]) {
   check(`Renda R$${renda}: rótulo de saúde bate com o comprometimento exibido (${r.comprometimento.toFixed(1)}% → ${r.saudeLabel})`, consistente);
 }
 
-// 11. Card "Seu Poder de Compra" (ficha do imóvel) vs "Calcular parcelas" —
-//     os dois têm que escolher a MESMA modalidade (MCMV/SBPE/SFI) pra um
-//     imóvel específico, senão um mostra "cabe" e o outro bloqueia (3 casos
-//     reportados numa auditoria externa 2026-09: Max Villa Lobos, Invite
-//     Klabin, Dueto Morumbi — resolvido usando simular() pra decidir a
-//     modalidade do card, não só a elegibilidade de renda de descobrir()).
-function modalidadeConsistente(renda: number, fgts: number, entrada: number, valorImovel: number, prazoAnos = 35, idade = 35) {
-  const s = simular({ rendaBruta: renda, fgts, entrada, valorImovel, prazoAnos, naPlanta: false, prazoObraAnos: 0, idadeProponente: idade });
-  const d = descobrir(renda, fgts, entrada, prazoAnos, idade);
-  const modalidade = s.isMCMV ? d.mcmv : (s.isSFI ? d.sfi : d.sbpe);
-  const cabePeloCard = modalidade.valorMaxImovel >= valorImovel;
-  return { bloqueadoPelaFicha: s.bloqueado, cabePeloCard, motivoBloqueio: s.motivoBloqueio };
-}
+// 11. simular() (ficha de um imóvel específico) é quem decide se uma compra
+//     real cabe — reproduz os 3 casos de uma auditoria externa (2026-09) que
+//     motivaram a criação da regra de LTV em descobrir() no dia 12/09
+//     (commit 240db8d). Essa regra foi revertida a pedido do dono do site:
+//     ele nunca pediu que a ENTRADA reduzisse o financiamento calculado pela
+//     RENDA — confirmado ao vivo no simulador oficial da Caixa (financiamento
+//     idêntico com entrada R$0 ou R$500 mil; a Caixa só informa "falta R$X",
+//     nunca bloqueia nem reduz o financiamento). A checagem real de "essa
+//     entrada é suficiente pra esse preço" continua existindo — só que
+//     exclusivamente aqui, em simular(), nunca em descobrir().
+const s1 = simular({ rendaBruta: 4000, fgts: 20000, entrada: 20000, valorImovel: 301682, prazoAnos: 35, naPlanta: false, prazoObraAnos: 0, idadeProponente: 35 }); // Max Villa Lobos
+check('Max Villa Lobos: ficha bloqueia por LTV (entrada insuficiente pra esse preço)', s1.bloqueado === true);
 
-const c1 = modalidadeConsistente(4000, 20000, 20000, 301682); // Max Villa Lobos
-check('Max Villa Lobos: card e ficha concordam (ambos bloqueiam)', c1.bloqueadoPelaFicha === true && c1.cabePeloCard === false);
+const s2 = simular({ rendaBruta: 15000, fgts: 0, entrada: 200000, valorImovel: 744000, prazoAnos: 35, naPlanta: false, prazoObraAnos: 0, idadeProponente: 35 }); // Invite Klabin
+check('Invite Klabin: ficha bloqueia por LTV (entrada insuficiente pra esse preço)', s2.bloqueado === true);
 
-const c2 = modalidadeConsistente(15000, 0, 200000, 744000); // Invite Klabin
-check('Invite Klabin: card e ficha concordam (ambos bloqueiam)', c2.bloqueadoPelaFicha === true && c2.cabePeloCard === false);
+const s3 = simular({ rendaBruta: 15000, fgts: 0, entrada: 200000, valorImovel: 539500, prazoAnos: 35, naPlanta: false, prazoObraAnos: 0, idadeProponente: 35 }); // Dueto Morumbi
+check('Dueto Morumbi: ficha aprova (entrada suficiente pra esse preço)', s3.bloqueado === false);
 
-const c3 = modalidadeConsistente(15000, 0, 200000, 539500); // Dueto Morumbi
-check('Dueto Morumbi: card e ficha concordam (ambos aprovam)', c3.bloqueadoPelaFicha === false && c3.cabePeloCard === true);
-
-// 12. Propriedade geral: pra qualquer combinação razoável de renda/entrada/FGTS/
-//     preço, "cabe pelo card" e "não bloqueado pela ficha" nunca podem divergir.
-//     Não é um caso fixo — varre uma grade pra pegar combinações não previstas.
-//     entrada=0 fica de fora do laço abaixo por um motivo documentado no
-//     teste 13 logo adiante — não é uma lacuna esquecida.
-let divergencias = 0;
-for (const renda of [2500, 4000, 6000, 9000, 15000, 30000]) {
-  for (const entrada of [20000, 100000, 200000]) {
-    for (const valorImovel of [200000, 300000, 500000, 750000, 1200000]) {
-      const { bloqueadoPelaFicha, cabePeloCard } = modalidadeConsistente(renda, 0, entrada, valorImovel);
-      // bloqueadoPelaFicha e cabePeloCard são opostos por definição — "os dois
-      // true" (ficha bloqueia, card diz que cabe) ou "os dois false" (ficha
-      // libera, card diz que não cabe) são exatamente as duas formas de divergir.
-      if (bloqueadoPelaFicha === cabePeloCard) divergencias++;
-    }
-  }
-}
-check(`Varredura renda×entrada×preço (90 combinações, entrada>0): 0 divergências entre card e ficha (achou ${divergencias})`, divergencias === 0);
-
-// 13. Lacuna conhecida e aceita (não um bug novo): com entrada E FGTS
-// EXATAMENTE zero num perfil MCMV, o teto por LTV de descobrir() (linha
-// "imovelMaxViaLTVMCMV") deliberadamente ignora o subsídio pra evitar uma
-// dependência circular (comentário original: "o teto por LTV usa só
-// entradaTotal, sem o subsídio, que dependeria deste mesmo valor") — então o
-// "poder de compra" pode ficar mais conservador que simular() bem no caso
-// zero-entrada, que passa só por causa do subsídio contar como um tipo de
-// entrada dentro de simular(). Documentado aqui pra não ser reintroduzido
-// como se fosse novidade — a tela protege esse caso com uma trava que nunca
-// deixa o texto "sobra/acima" contradizer o veredito real (ImovelDetailClient.tsx).
-const gap = modalidadeConsistente(4000, 0, 0, 200000);
+// 12. O "poder de compra" (descobrir()) pode legitimamente APROVAR um preço
+//     que a ficha de um imóvel real (simular()) reprova pro mesmo perfil —
+//     isso não é bug, é o desenho de duas etapas que o dono do site descreveu
+//     (a descoberta de perfil não conhece nenhum imóvel específico ainda; só
+//     quando existe um preço real é que a entrada é confrontada com o LTV).
+//     A mesma calculadora "Pela renda" da Caixa funciona assim: nunca conhece
+//     a entrada real do usuário, só estima. Documentado aqui pra não ser
+//     "corrigido" de novo como se fosse uma divergência indevida.
+const perfilRenda6k = descobrir(6000, 0, 0, 35, 35, true, true, false); // Faixa 3, entrada R$0
+const simPeloTetoRenda = simular({ rendaBruta: 6000, fgts: 0, entrada: 0, valorImovel: perfilRenda6k.mcmv.valorMaxImovel, prazoAnos: 35, naPlanta: false, prazoObraAnos: 0, idadeProponente: 35 });
 check(
-  'Lacuna conhecida (entrada=0, subsídio cobre o LTV): ficha aprova, card fica mais conservador — comportamento esperado, coberto por trava de UI',
-  gap.bloqueadoPelaFicha === false && gap.cabePeloCard === false,
+  'Descobrir() aprova um teto pela renda que a ficha de um imóvel real naquele preço reprova (com entrada R$0) — esperado, não é bug',
+  perfilRenda6k.mcmv.valorFinanciado > 0 && simPeloTetoRenda.bloqueado === true,
 );
 
 console.log(`\n${pass} passaram, ${fail} falharam`);
