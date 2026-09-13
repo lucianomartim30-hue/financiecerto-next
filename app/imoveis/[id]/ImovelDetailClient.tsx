@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
+import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, calcularSeguros, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
 import { SITE_CONFIG } from '@/lib/schema';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { getStatusCfg, isNaPlanta } from '@/lib/status';
@@ -275,10 +275,16 @@ function calcEstimate(valorImovel: number, isComercial = false): {
   const entrada = Math.round(valorImovel * 0.20);
   const financiado = valorImovel - entrada;
   const n = 360;
+  // Usa a mesma fórmula de Price + seguros de lib/calculos.ts (sem idade —
+  // estimativa "sem perfil" usa o coeficiente MIP padrão) em vez de uma
+  // aproximação própria — antes essa conta tinha juros calculados igual, mas
+  // um seguro aproximado (financiado*0,00003+25) diferente do usado no resto
+  // da ficha, o que fazia a "parcela estimada" do topo (sem perfil) não bater
+  // com o comparativo de bancos logo abaixo, mesmo simulando o mesmo cenário
+  // de referência (auditoria 2026-09).
   const pmt = (taxaAnual: number) => {
-    const i = (taxaAnual / 100) / 12;
-    const base = financiado * (i * Math.pow(1 + i, n)) / (Math.pow(1 + i, n) - 1);
-    return Math.round(base + financiado * 0.00003 + 25); // + seguro aprox. + tx. adm.
+    const seguros = calcularSeguros(financiado);
+    return Math.round(parcelaPrice(financiado, taxaAnual, n) + seguros.total);
   };
 
   // Imóvel comercial não é elegível a MCMV (benefício exclusivo de habitação) —
@@ -722,7 +728,7 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
         })}
       </div>
       <p style={{ fontSize: '9px', color: '#94A3B8', marginTop: '8px', lineHeight: '1.4' }}>
-        Parcela Price estimada · + TR mensal · variam por perfil e LTV
+        Referência com entrada de 20% (sem seguros) · não usa sua entrada/FGTS informados acima — para isso, veja "Calcular parcelas" logo abaixo
       </p>
     </div>
   );
