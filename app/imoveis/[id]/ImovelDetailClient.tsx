@@ -1085,10 +1085,18 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
             ))}
 
             {/* Poder de compra preview */}
-            {poderTotal > 0 && (
+            {poderTotal > 0 && (() => {
+              // MCMV pode incluir subsídio (Faixas 1/2) — um 4º componente do
+              // poder de compra além de financiamento/FGTS/entrada. Sem essa
+              // tile, o total exibido não batia com a soma das 3 caixinhas
+              // visíveis (auditoria 2026-09, mesmo bug de contagem do
+              // financiamento — dessa vez por FALTAR uma parcela, não repetir).
+              const mostrarSubsidio = !!(poder?.mcmv.elegivel && poder.subsidioEstimado > 0);
+              const subsidio = mostrarSubsidio ? poder!.subsidioEstimado : 0;
+              return (
               <div style={{ background: dentroAlcance ? '#E1F5EE' : '#FEF3C7', border: `1px solid ${dentroAlcance ? '#A7F3D0' : '#FCD34D'}`, borderRadius: '12px', padding: '12px 14px' }}>
                 <p style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '8px' }}>Seu Poder de Compra</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px', textAlign: 'center' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: mostrarSubsidio ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: '6px', marginBottom: '8px', textAlign: 'center' }}>
                   <div>
                     <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Financiamento</p>
                     <p style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary)' }}>{formatBRL(poder ? (poder.mcmv.elegivel ? poder.mcmv.valorFinanciado : poder.sbpe.valorFinanciado) : 0)}</p>
@@ -1101,6 +1109,12 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
                     <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Entrada</p>
                     <p style={{ fontSize: '12px', fontWeight: '800', color: '#7C3AED' }}>{formatBRL(en)}</p>
                   </div>
+                  {mostrarSubsidio && (
+                    <div>
+                      <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Subsídio</p>
+                      <p style={{ fontSize: '12px', fontWeight: '800', color: '#d97706' }}>{formatBRL(subsidio)}</p>
+                    </div>
+                  )}
                 </div>
                 <div style={{ borderTop: `1px solid ${dentroAlcance ? '#A7F3D0' : '#FCD34D'}`, paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', fontWeight: '700', color: dentroAlcance ? '#085041' : '#854F0B' }}>
@@ -1111,7 +1125,8 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
                   </span>
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             {/* SBPE multi-banco preview — aparece quando renda preenche perfil SBPE */}
             {poder && !poder.mcmv.elegivel && valorRef > 0 && (
