@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, calcularSeguros, TAXA_SBPE_ANUAL, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
+import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, calcularSeguros, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TETO_SFH, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
 import { SITE_CONFIG } from '@/lib/schema';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { getStatusCfg, isNaPlanta } from '@/lib/status';
@@ -310,8 +310,11 @@ function calcEstimate(valorImovel: number, isComercial = false): {
     }
   }
 
-  // Acima das faixas MCMV (renda alta ou imóvel acima do teto) → SBPE
-  const taxa = TAXA_SBPE_ANUAL;
+  // Acima das faixas MCMV (renda alta) → SBPE dentro do teto do SFH
+  // (R$2,25M), SFI acima disso — mesma regra de simular()/descobrir(). Usar
+  // sempre a taxa do SBPE mesmo para imóveis de alto padrão subestimava a
+  // parcela (SFI tem taxa livre, mais alta, sem teto de valor).
+  const taxa = valorImovel > TETO_SFH ? TAXA_SFI_ANUAL : TAXA_SBPE_ANUAL;
   const parcela = pmt(taxa);
   const rendaSugerida = Math.ceil(parcela / 0.30 / 100) * 100;
   return { entrada, parcela, rendaSugerida, faixaMCMV: null, taxa };
@@ -928,11 +931,19 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
 
   const fg = parseMoeda(fgts);
   const en = parseMoeda(entrada);
+  // Mesma escolha de modalidade que simular() usa pra este imóvel: MCMV (se
+  // elegível), senão SFI quando o valor passa do teto do SFH, senão SBPE.
+  // Antes só existia a escolha MCMV/SBPE — qualquer imóvel acima de R$2,25M
+  // ficava travado no teto do SBPE (poder de compra "insuficiente" mesmo pra
+  // quem teria renda de sobra via SFI, que não tem teto de valor).
+  const modalidadePoder = poder
+    ? (poder.mcmv.elegivel ? poder.mcmv : (valorRef > TETO_SFH ? poder.sfi : poder.sbpe))
+    : null;
   // valorMaxImovel (de descobrir()) já é o preço TOTAL do imóvel — financiado
   // + entrada + FGTS somados. Somar fg/en de novo aqui contava a entrada e o
   // FGTS duas vezes, inflando o "poder de compra" mostrado (ex.: R$2.430.828
   // em vez de R$1.830.828 — usuário percebeu o valor estranho).
-  const poderTotal = poder ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) : 0;
+  const poderTotal = modalidadePoder ? modalidadePoder.valorMaxImovel : 0;
   const dentroAlcance = poderTotal > 0 && poderTotal >= valorRef;
   const diffPoder = poderTotal - valorRef;
 
@@ -1018,7 +1029,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
                 { label: 'Renda sugerida', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.rendaSugerida) + '/mês' : '—'), icon: '💼', color: '#2563eb' },
                 { label: 'Entrada (referência 20%)', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.entrada) : '—'), icon: '🏦', color: '#7c3aed' },
                 { label: 'Parcela estimada', value: isBreveLancamento ? 'A Definir' : (est ? formatBRL(est.parcela) + '/mês' : '—'), icon: '📅', color: '#0f6e56' },
-                { label: est?.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : 'SBPE / SFI', value: isBreveLancamento ? 'A Definir' : (est?.faixaMCMV ? `até R$ ${est.faixaMCMV.rendaMax.toLocaleString('pt-BR')}` : 'Renda livre'), icon: est?.faixaMCMV ? '🏠' : '🏛️', color: est?.faixaMCMV ? '#16a34a' : '#d97706' },
+                { label: est?.faixaMCMV ? `${est.faixaMCMV.label} MCMV` : (valorRef > TETO_SFH ? 'SFI' : 'SBPE'), value: isBreveLancamento ? 'A Definir' : (est?.faixaMCMV ? `até R$ ${est.faixaMCMV.rendaMax.toLocaleString('pt-BR')}` : 'Renda livre'), icon: est?.faixaMCMV ? '🏠' : '🏛️', color: est?.faixaMCMV ? '#16a34a' : '#d97706' },
               ].map(({ label, value, icon, color }) => (
                 <div key={label} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px', opacity: isBreveLancamento ? 0.6 : 1 }}>
                   <div style={{ fontSize: '16px', marginBottom: '4px' }}>{icon}</div>
@@ -1032,7 +1043,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
                 ? '* Valores serão definidos quando os preços forem lançados'
                 : est?.faixaMCMV
                   ? `* Estimativa via MCMV ${est.faixaMCMV.label} (${est.taxa.toFixed(2).replace('.', ',')}% a.a. + TR), 30 anos. Simule para valores precisos.`
-                  : `* Estimativa SBPE ${TAXA_SBPE_ANUAL}%+TR, 30 anos. Simule para valores precisos.`}
+                  : `* Estimativa ${valorRef > TETO_SFH ? 'SFI' : 'SBPE'} ${est?.taxa.toFixed(2).replace('.', ',')}%+TR, 30 anos. Simule para valores precisos.`}
             </p>
           </div>
         ) : null}
@@ -1099,7 +1110,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
                 <div style={{ display: 'grid', gridTemplateColumns: mostrarSubsidio ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr', gap: '6px', marginBottom: '8px', textAlign: 'center' }}>
                   <div>
                     <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Financiamento</p>
-                    <p style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary)' }}>{formatBRL(poder ? (poder.mcmv.elegivel ? poder.mcmv.valorFinanciado : poder.sbpe.valorFinanciado) : 0)}</p>
+                    <p style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary)' }}>{formatBRL(modalidadePoder ? modalidadePoder.valorFinanciado : 0)}</p>
                   </div>
                   <div>
                     <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>FGTS</p>
@@ -1128,8 +1139,11 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
               );
             })()}
 
-            {/* SBPE multi-banco preview — aparece quando renda preenche perfil SBPE */}
-            {poder && !poder.mcmv.elegivel && valorRef > 0 && (
+            {/* SBPE multi-banco preview — aparece quando renda preenche perfil SBPE.
+                Fora do SFH (imóvel > R$2,25M) as taxas listadas (BANCOS_SBPE) não
+                se aplicam — SFI opera com taxas livres, negociadas banco a banco —
+                então esse comparativo fica escondido nesse caso. */}
+            {poder && !poder.mcmv.elegivel && valorRef > 0 && valorRef <= TETO_SFH && (
               <ComparativoBancosCard
                 financiado={Math.round(valorRef * 0.80)}
                 prazoMeses={parseInt(prazo) * 12}
