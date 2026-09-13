@@ -220,7 +220,7 @@ O FinancieCerto é uma plataforma educativa sobre financiamento imobiliário —
 
 **Nosso diferencial:** As informações foram desenvolvidas com base em contratos reais de financiamento, diretrizes da Caixa Econômica Federal, e análise prática do crédito associativo. O objetivo é traduzir um processo complexo de forma simples — sem perder a precisão técnica.
 
-**Transparência:** O FinancieCerto não foi criado para assustar — foi criado para preparar. Financiamento imobiliário tem riscos reais: encargos que crescem, custos que aparecem só na assinatura, regras que variam por banco, estado e perfil. Conhecer esses pontos antes não impede a compra — permite que ela seja feita com segurança. Todas as simulações são estimativas educativas — confirme sempre com a Caixa, Banco do Brasil ou um correspondente bancário.
+**Transparência:** O FinancieCerto não foi criado para assustar — foi criado para preparar. Financiamento imobiliário tem riscos reais: encargos que crescem, custos que aparecem só na assinatura, regras que variam por banco, estado e perfil. Conhecer esses pontos antes não impede a compra — permite que ela seja feita com segurança. Todas as simulações são estimativas educativas — confirme sempre com o banco escolhido ou um correspondente bancário. O site cobre imóveis de todas as faixas de preço: MCMV é exclusivo da Caixa Econômica Federal, mas SBPE e SFI podem ser contratados em qualquer banco — NUNCA restrinja essa orientação só à Caixa ou ao Banco do Brasil.
 
 Plataforma 100% gratuita, sem cadastro, resultado em menos de 2 minutos.
 
