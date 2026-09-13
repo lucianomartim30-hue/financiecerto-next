@@ -873,7 +873,13 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const raw = sessionStorage.getItem('joao_sim_context') || sessionStorage.getItem('fc_sim_context');
+      // fc_sim_context (rica, com idade/prazo) tem prioridade sobre
+      // joao_sim_context (legada, só renda/fgts/entrada) — antes a ordem
+      // era invertida, e como o /simulador sempre grava as duas juntas, a
+      // chave legada "vencia" e idade/prazo nunca eram restaurados aqui,
+      // mesmo já lidos abaixo (auditoria 2026-09, achado ao investigar
+      // divergência de parcela entre o /simulador geral e a ficha do imóvel).
+      const raw = sessionStorage.getItem('fc_sim_context') || sessionStorage.getItem('joao_sim_context');
       if (!raw) return;
       const ctx = JSON.parse(raw) as Record<string, unknown>;
       if (ctx.renda)   setRenda(fmtInput(String(ctx.renda)));
