@@ -778,7 +778,14 @@ export function descobrir(
     ? calcSubsidioEstimado(faixa, rendaBruta, imovelMaxMCMVRaw, cotista, primeiroImovel, jaRecebeuBeneficio, dependentes)
     : 0;
 
-  const imovelMaxMCMV  = elegivel ? Math.min(imovelMaxMCMVRaw + subsidioEstimado, tetoMCMV) : 0;
+  // imovelMaxMCMVRaw já é ≤ tetoMCMV (por construção, linha acima) — recapar em
+  // tetoMCMV aqui de novo descartava o subsídio inteiro sempre que a renda+
+  // entrada já alcançava o teto sozinha (comum com entrada alta), mesmo
+  // simular() aceitando um preço acima do teto exatamente quando o subsídio
+  // cobre a diferença (`valorImovel - subsidio <= teto`, mais abaixo nesta
+  // mesma função). Sem isso, o "poder de compra" ficava menor que o preço de
+  // um imóvel que simular() já aprovava pro mesmo perfil (auditoria 2026-09).
+  const imovelMaxMCMV  = elegivel ? imovelMaxMCMVRaw + subsidioEstimado : 0;
   const financiadoMCMV = elegivel ? Math.max(0, imovelMaxMCMV - entradaTotal - subsidioEstimado) : 0;
   const parcelaMCMV    = parcelaPrice(financiadoMCMV, taxaMCMV, prazoMeses);
   const segurosMCMV    = calcularSeguros(financiadoMCMV, idadeProponente);

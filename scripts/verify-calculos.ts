@@ -88,5 +88,63 @@ for (const renda of [4000, 6000, 8000, 9500]) {
   check(`Renda R$${renda}: rótulo de saúde bate com o comprometimento exibido (${r.comprometimento.toFixed(1)}% → ${r.saudeLabel})`, consistente);
 }
 
+// 11. Card "Seu Poder de Compra" (ficha do imóvel) vs "Calcular parcelas" —
+//     os dois têm que escolher a MESMA modalidade (MCMV/SBPE/SFI) pra um
+//     imóvel específico, senão um mostra "cabe" e o outro bloqueia (3 casos
+//     reportados numa auditoria externa 2026-09: Max Villa Lobos, Invite
+//     Klabin, Dueto Morumbi — resolvido usando simular() pra decidir a
+//     modalidade do card, não só a elegibilidade de renda de descobrir()).
+function modalidadeConsistente(renda: number, fgts: number, entrada: number, valorImovel: number, prazoAnos = 35, idade = 35) {
+  const s = simular({ rendaBruta: renda, fgts, entrada, valorImovel, prazoAnos, naPlanta: false, prazoObraAnos: 0, idadeProponente: idade });
+  const d = descobrir(renda, fgts, entrada, prazoAnos, idade);
+  const modalidade = s.isMCMV ? d.mcmv : (s.isSFI ? d.sfi : d.sbpe);
+  const cabePeloCard = modalidade.valorMaxImovel >= valorImovel;
+  return { bloqueadoPelaFicha: s.bloqueado, cabePeloCard, motivoBloqueio: s.motivoBloqueio };
+}
+
+const c1 = modalidadeConsistente(4000, 20000, 20000, 301682); // Max Villa Lobos
+check('Max Villa Lobos: card e ficha concordam (ambos bloqueiam)', c1.bloqueadoPelaFicha === true && c1.cabePeloCard === false);
+
+const c2 = modalidadeConsistente(15000, 0, 200000, 744000); // Invite Klabin
+check('Invite Klabin: card e ficha concordam (ambos bloqueiam)', c2.bloqueadoPelaFicha === true && c2.cabePeloCard === false);
+
+const c3 = modalidadeConsistente(15000, 0, 200000, 539500); // Dueto Morumbi
+check('Dueto Morumbi: card e ficha concordam (ambos aprovam)', c3.bloqueadoPelaFicha === false && c3.cabePeloCard === true);
+
+// 12. Propriedade geral: pra qualquer combinação razoável de renda/entrada/FGTS/
+//     preço, "cabe pelo card" e "não bloqueado pela ficha" nunca podem divergir.
+//     Não é um caso fixo — varre uma grade pra pegar combinações não previstas.
+//     entrada=0 fica de fora do laço abaixo por um motivo documentado no
+//     teste 13 logo adiante — não é uma lacuna esquecida.
+let divergencias = 0;
+for (const renda of [2500, 4000, 6000, 9000, 15000, 30000]) {
+  for (const entrada of [20000, 100000, 200000]) {
+    for (const valorImovel of [200000, 300000, 500000, 750000, 1200000]) {
+      const { bloqueadoPelaFicha, cabePeloCard } = modalidadeConsistente(renda, 0, entrada, valorImovel);
+      // bloqueadoPelaFicha e cabePeloCard são opostos por definição — "os dois
+      // true" (ficha bloqueia, card diz que cabe) ou "os dois false" (ficha
+      // libera, card diz que não cabe) são exatamente as duas formas de divergir.
+      if (bloqueadoPelaFicha === cabePeloCard) divergencias++;
+    }
+  }
+}
+check(`Varredura renda×entrada×preço (90 combinações, entrada>0): 0 divergências entre card e ficha (achou ${divergencias})`, divergencias === 0);
+
+// 13. Lacuna conhecida e aceita (não um bug novo): com entrada E FGTS
+// EXATAMENTE zero num perfil MCMV, o teto por LTV de descobrir() (linha
+// "imovelMaxViaLTVMCMV") deliberadamente ignora o subsídio pra evitar uma
+// dependência circular (comentário original: "o teto por LTV usa só
+// entradaTotal, sem o subsídio, que dependeria deste mesmo valor") — então o
+// "poder de compra" pode ficar mais conservador que simular() bem no caso
+// zero-entrada, que passa só por causa do subsídio contar como um tipo de
+// entrada dentro de simular(). Documentado aqui pra não ser reintroduzido
+// como se fosse novidade — a tela protege esse caso com uma trava que nunca
+// deixa o texto "sobra/acima" contradizer o veredito real (ImovelDetailClient.tsx).
+const gap = modalidadeConsistente(4000, 0, 0, 200000);
+check(
+  'Lacuna conhecida (entrada=0, subsídio cobre o LTV): ficha aprova, card fica mais conservador — comportamento esperado, coberto por trava de UI',
+  gap.bloqueadoPelaFicha === false && gap.cabePeloCard === false,
+);
+
 console.log(`\n${pass} passaram, ${fail} falharam`);
 process.exit(fail > 0 ? 1 : 0);

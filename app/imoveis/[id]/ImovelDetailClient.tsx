@@ -931,21 +931,42 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
 
   const fg = parseMoeda(fgts);
   const en = parseMoeda(entrada);
-  // Mesma escolha de modalidade que simular() usa pra este imóvel: MCMV (se
-  // elegível), senão SFI quando o valor passa do teto do SFH, senão SBPE.
-  // Antes só existia a escolha MCMV/SBPE — qualquer imóvel acima de R$2,25M
-  // ficava travado no teto do SBPE (poder de compra "insuficiente" mesmo pra
-  // quem teria renda de sobra via SFI, que não tem teto de valor).
+  // "Prévia" de simular() pra ESTE imóvel específico — roda a cada mudança de
+  // campo (não só no clique de "Calcular parcelas"). Existe uma única razão
+  // pra isso: descobrir() (poder de compra) e simular() (ficha do imóvel)
+  // decidiam a modalidade (MCMV/SBPE/SFI) por caminhos diferentes — descobrir()
+  // só olha a elegibilidade por RENDA, sem saber se ESTE preço cabe no teto da
+  // faixa (mesmo com subsídio). Isso já causou o card mostrar "dentro do
+  // alcance" num imóvel que "Calcular parcelas" bloqueava logo em seguida
+  // (auditoria 2026-09 — 3 casos reproduzidos: imóvel acima do teto MCMV da
+  // faixa, mesmo com renda "elegível", cai pra SBPE, com teto bem menor).
+  // Usar simular() aqui garante que as duas telas NUNCA mais decidam diferente
+  // — são literalmente a mesma chamada, só que uma roda antes do clique.
+  const simRef = (poder && valorRef > 0)
+    ? simular({ rendaBruta: parseMoeda(renda), entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: parseInt(idade) || 35, tipoImovel: isComercial ? 'comercial' : 'residencial' })
+    : null;
+  const ehMCMVAqui = simRef ? simRef.isMCMV : !!poder?.mcmv.elegivel;
+  const ehSFIAqui  = simRef ? simRef.isSFI  : valorRef > TETO_SFH;
   const modalidadePoder = poder
-    ? (poder.mcmv.elegivel ? poder.mcmv : (valorRef > TETO_SFH ? poder.sfi : poder.sbpe))
+    ? (ehMCMVAqui ? poder.mcmv : (ehSFIAqui ? poder.sfi : poder.sbpe))
     : null;
   // valorMaxImovel (de descobrir()) já é o preço TOTAL do imóvel — financiado
   // + entrada + FGTS somados. Somar fg/en de novo aqui contava a entrada e o
   // FGTS duas vezes, inflando o "poder de compra" mostrado (ex.: R$2.430.828
   // em vez de R$1.830.828 — usuário percebeu o valor estranho).
   const poderTotal = modalidadePoder ? modalidadePoder.valorMaxImovel : 0;
-  const dentroAlcance = poderTotal > 0 && poderTotal >= valorRef;
-  const diffPoder = poderTotal - valorRef;
+  // O veredito "cabe ou não cabe" vem direto de simular() quando há preço —
+  // não de comparar poderTotal contra valorRef. Evita qualquer divergência
+  // residual entre os dois (ex.: arredondamento, ou teto por LTV que o
+  // "poder de compra" não modela igual a simular()).
+  const dentroAlcance = simRef ? !simRef.bloqueado : (poderTotal > 0 && poderTotal >= valorRef);
+  // Trava de segurança: o texto "R$X de sobra/acima" nunca pode contradizer o
+  // ✅/⚠️ de dentroAlcance (que já reflete a verdade de simular()) — mesmo que
+  // poderTotal, vindo de uma fórmula independente (descobrir()), erre a
+  // margem exata num caso-limite ainda não coberto. Sem isso, dava pra ver
+  // "✅" ao lado de "R$25.000 acima" (auditoria 2026-09).
+  const diffPoderCru = poderTotal - valorRef;
+  const diffPoder = dentroAlcance ? Math.max(0, diffPoderCru) : Math.min(0, diffPoderCru);
 
   // Domínio fixo (não window.location.href) pra sair igual no servidor e no
   // cliente — a versão com `window` gerava a mensagem de WhatsApp diferente
@@ -1102,7 +1123,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
               // tile, o total exibido não batia com a soma das 3 caixinhas
               // visíveis (auditoria 2026-09, mesmo bug de contagem do
               // financiamento — dessa vez por FALTAR uma parcela, não repetir).
-              const mostrarSubsidio = !!(poder?.mcmv.elegivel && poder.subsidioEstimado > 0);
+              const mostrarSubsidio = !!(ehMCMVAqui && poder && poder.subsidioEstimado > 0);
               const subsidio = mostrarSubsidio ? poder!.subsidioEstimado : 0;
               return (
               <div style={{ background: dentroAlcance ? '#E1F5EE' : '#FEF3C7', border: `1px solid ${dentroAlcance ? '#A7F3D0' : '#FCD34D'}`, borderRadius: '12px', padding: '12px 14px' }}>
@@ -1198,8 +1219,16 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
               const parcela = resultado.parcelaPrimeiro;
               const comprometimento = Math.round(resultado.comprometimento);
               const bloqueado = resultado.bloqueado;
-              const minFiltro = Math.round(valorRef * 0.75);
-              const maxFiltro = Math.round(valorRef * 1.25);
+              // Faixa sugerida usa o teto real do perfil (poderTotal) quando ele
+              // existe — mesma faixa (50%–100% do teto) que o /simulador geral já
+              // usa no CTA equivalente ("Ver empreendimentos compatíveis"). Antes
+              // era sempre ±25% do preço DESTE imóvel, mesmo quando ele já tinha
+              // acabado de ser reprovado: pra alguém barrado por LTV/renda, mais
+              // da metade dessa faixa também estava fora do alcance (auditoria
+              // 2026-09). Sem perfil carregado, mantém o comportamento antigo (só
+              // o que se pode inferir do preço olhado).
+              const minFiltro = poderTotal > 0 ? Math.round(poderTotal * 0.5) : Math.round(valorRef * 0.75);
+              const maxFiltro = poderTotal > 0 ? poderTotal : Math.round(valorRef * 1.25);
               const naPlantaImovel = isNaPlanta(imovel.status || '');
               const ctaLink = `/imoveis?min=${minFiltro}&max=${maxFiltro}${naPlantaImovel ? '&status=na planta' : ''}`;
               const simuladorLink = buildSimuladorLink(
@@ -1208,10 +1237,20 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
               );
               return (
                 <>
+                  {/* Alertas de simular() (ex.: subsídio "sujeito à confirmação",
+                      FGTS inelegível) — já existiam no /simulador geral, nunca
+                      apareciam aqui (auditoria 2026-09). Mostra mesmo quando não
+                      bloqueado: um alerta não é sinônimo de reprovação. */}
+                  {resultado.alertas.length > 0 && (
+                    <div style={{ marginBottom: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {resultado.alertas.map((a, i) => (
+                        <p key={i} style={{ fontSize: '11px', color: '#854F0B', background: '#FAEEDA', borderLeft: '3px solid #EF9F27', borderRadius: '0 8px 8px 0', padding: '8px 10px', margin: 0 }}>{a}</p>
+                      ))}
+                    </div>
+                  )}
                   {bloqueado ? (
                     <div style={{ background: 'rgba(239,68,68,.06)', border: '1.5px solid rgba(239,68,68,.3)', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-                      <p style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626', marginBottom: '6px' }}>🚫 Simulação não viável nestas condições</p>
-                      <p style={{ fontSize: '12px', color: '#7f1d1d', marginBottom: '10px' }}>{resultado.motivoBloqueio}</p>
+                      <p style={{ fontSize: '13px', fontWeight: '800', color: '#dc2626', marginBottom: '6px' }}>🚫 {resultado.motivoBloqueio}</p>
                       <p style={{ fontSize: '11px', color: 'var(--text-faint)' }}>Comprometimento calculado: {comprometimento}% da renda (limite: 30%)</p>
                     </div>
                   ) : (
