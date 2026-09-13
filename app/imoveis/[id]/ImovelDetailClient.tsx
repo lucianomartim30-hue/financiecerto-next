@@ -928,7 +928,11 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
 
   const fg = parseMoeda(fgts);
   const en = parseMoeda(entrada);
-  const poderTotal = poder ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) + fg + en : 0;
+  // valorMaxImovel (de descobrir()) já é o preço TOTAL do imóvel — financiado
+  // + entrada + FGTS somados. Somar fg/en de novo aqui contava a entrada e o
+  // FGTS duas vezes, inflando o "poder de compra" mostrado (ex.: R$2.430.828
+  // em vez de R$1.830.828 — usuário percebeu o valor estranho).
+  const poderTotal = poder ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) : 0;
   const dentroAlcance = poderTotal > 0 && poderTotal >= valorRef;
   const diffPoder = poderTotal - valorRef;
 
@@ -1087,7 +1091,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginBottom: '8px', textAlign: 'center' }}>
                   <div>
                     <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>Financiamento</p>
-                    <p style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary)' }}>{formatBRL(poder ? (poder.mcmv.elegivel ? poder.mcmv.valorMaxImovel : poder.sbpe.valorMaxImovel) : 0)}</p>
+                    <p style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary)' }}>{formatBRL(poder ? (poder.mcmv.elegivel ? poder.mcmv.valorFinanciado : poder.sbpe.valorFinanciado) : 0)}</p>
                   </div>
                   <div>
                     <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginBottom: '2px' }}>FGTS</p>
