@@ -1157,7 +1157,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
                   </span>
                 </div>
                 <p style={{ fontSize: '10px', color: 'var(--text-faint)', marginTop: '8px', marginBottom: 0, lineHeight: 1.4 }}>
-                  Estimativa educativa, não é uma aprovação bancária real — valores exatos dependem de análise de crédito no banco.
+                  Estimativa educativa, não é uma aprovação bancária real — valores exatos dependem de análise de crédito no banco. Para um número exato, peça uma análise de crédito real com o correspondente bancário parceiro da construtora — fale com nosso consultor abaixo.
                 </p>
               </div>
               );

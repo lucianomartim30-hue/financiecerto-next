@@ -914,7 +914,7 @@ function SimuladorInner() {
           </div>
 
           <p style={{ fontSize: 11, color: 'var(--text-faint)', lineHeight: 1.5, padding: '10px 20px', margin: 0, borderTop: '1px solid var(--border)' }}>
-            Estimativa educativa — não é uma aprovação bancária real. Valores exatos (taxa, prazo, entrada mínima) dependem de análise de crédito na Caixa Econômica Federal ou outro banco.
+            Estimativa educativa — não é uma aprovação bancária real. Valores exatos (taxa, prazo, entrada mínima) dependem de análise de crédito na Caixa Econômica Federal ou outro banco. Ao escolher um imóvel, peça uma análise de crédito real com o correspondente bancário parceiro da construtora — nosso consultor te conecta.
           </p>
         </div>
 
