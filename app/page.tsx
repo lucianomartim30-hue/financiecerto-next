@@ -142,6 +142,24 @@ function LancamentoManualSpotlight() {
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
               📍 {l.neighborhood}, {l.city} · {l.areaMin}–{l.areaMax} m² · {l.bedroomsMin}–{l.bedroomsMax} quartos
             </p>
+            {(l.nearbyMetro || l.typologies.some(t => t.program)) && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '2px 0' }}>
+                {l.nearbyMetro && (
+                  <span style={{ background: '#ecfdf5', color: '#0f6e56', fontSize: '12px', fontWeight: '800', padding: '5px 12px', borderRadius: '99px', border: '1px solid #a7f3d0' }}>
+                    🚇 A {l.nearbyMetro.distanceMeters}m do Metrô {l.nearbyMetro.name}
+                  </span>
+                )}
+                {Array.from(new Set(l.typologies.filter(t => t.program).map(t => t.program))).map(program => {
+                  const areas = l.typologies.filter(t => t.program === program).map(t => t.area);
+                  const min = Math.min(...areas), max = Math.max(...areas);
+                  return (
+                    <span key={program} style={{ background: '#eff6ff', color: '#1d4ed8', fontSize: '12px', fontWeight: '800', padding: '5px 12px', borderRadius: '99px', border: '1px solid #bfdbfe' }}>
+                      {min === max ? `${min}m²` : `${min}–${max}m²`} · {program}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
               🚀 Lançamento previsto: {l.launchDate} · Preço ainda não divulgado — garanta sua posição na fila antes de todo mundo.
             </p>
