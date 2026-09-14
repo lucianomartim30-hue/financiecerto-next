@@ -314,6 +314,13 @@ button, input, select, textarea { font-family: inherit; }
   .financeiro-mobile  { display: block !important; }
 }
 
+/* ── Card de breve lançamento (homepage) responsive — coluna fixa de imagem
+   (240–380px) + texto espremia o texto contra o overflow:hidden do card e
+   cortava conteúdo no mobile (auditoria 2026-09). */
+@media (max-width: 640px) {
+  .lancamento-spotlight { grid-template-columns: 1fr !important; }
+}
+
 /* ── Mobile responsive — Simuladores e Homepage ───────────────────────────── */
 @media (max-width: 540px) {
   /* BRL input: font grande demais em tela pequena */

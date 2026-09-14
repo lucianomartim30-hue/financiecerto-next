@@ -114,7 +114,7 @@ function LancamentoManualSpotlight() {
       <div className="container">
         <Link
           href={`/imoveis/${l.id}`}
-          className="card card-hover"
+          className="card card-hover lancamento-spotlight"
           style={{
             display: 'grid',
             gridTemplateColumns: 'minmax(240px, 380px) 1fr',
