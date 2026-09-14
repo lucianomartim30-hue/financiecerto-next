@@ -82,7 +82,7 @@ export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
     // pedido do usuário: mostrar essa marca em destaque, igual ao site
     // oficial, com o logo da Trisul menor ao lado (auditoria 2026-09).
     productLogo: '/lancamentos-manuais/elev-saude/logo.webp',
-    neighborhood: 'Vila da Saúde',
+    neighborhood: 'Saúde',
     street: 'Avenida Miguel Estefno',
     number: '72',
     city: 'São Paulo',
