@@ -64,8 +64,8 @@ export interface LancamentoManual {
     bathrooms: number;
     suites: number;
     description: string;
-    /** Programa habitacional da unidade (ex.: "HIS", "R2V"), quando aplicável — muda faixa/regra de financiamento. */
-    program?: string;
+    /** Programa(s) habitacional(is) da unidade (ex.: ["HIS 2", "R2V"]), quando aplicável — uma unidade pode se enquadrar em mais de um, muda faixa/regra de financiamento. */
+    programs?: string[];
   }[];
   blueprints: { name: string; url: string; area: number }[];
   numberOfTowers: number | null;
@@ -148,9 +148,9 @@ export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
     // "similares" (Elev Ipiranga), não deste aqui. 25m²: unidade-suíte (o
     // único dormitório é a própria suíte, sem cômodo "quarto" separado).
     typologies: [
-      { type: 'Apartamento', bedrooms: 1, area: 25, bathrooms: 1, suites: 1, description: '1 suíte com varanda', program: 'HIS' },
-      { type: 'Apartamento', bedrooms: 2, area: 34, bathrooms: 1, suites: 0, description: '2 dorms. com varanda', program: 'R2V' },
-      { type: 'Apartamento', bedrooms: 2, area: 37, bathrooms: 2, suites: 1, description: '2 dorms com suíte e varanda', program: 'R2V' },
+      { type: 'Apartamento', bedrooms: 1, area: 25, bathrooms: 1, suites: 1, description: '1 suíte com varanda', programs: ['HIS 2', 'R2V'] },
+      { type: 'Apartamento', bedrooms: 2, area: 34, bathrooms: 1, suites: 0, description: '2 dorms. com varanda', programs: ['R2V'] },
+      { type: 'Apartamento', bedrooms: 2, area: 37, bathrooms: 2, suites: 1, description: '2 dorms com suíte e varanda', programs: ['R2V'] },
     ],
     blueprints: [
       { name: 'Planta 01 — 25m² (1 suíte)', url: '/lancamentos-manuais/elev-saude/planta-25m2.webp', area: 25 },
