@@ -131,8 +131,10 @@ function applyFilters(
     all = all.filter(b => normalize(b.neighborhood || '').includes(nb));
   }
   if (q && !neighborhood) {
-    const lq = q.toLowerCase();
-    all = all.filter(b => [b.name, b.neighborhood, b.city, b.developer].join(' ').toLowerCase().includes(lq));
+    // Sem acento nos dois lados — "california" precisa achar "Califórnia"
+    // (auditoria 2026-09: lead do Califórnia/Tegra não era achado na busca).
+    const lq = normalize(q);
+    all = all.filter(b => normalize([b.name, b.neighborhood, b.city, b.developer, b.street].join(' ')).includes(lq));
   }
   // min_price sentinela (0.1, 1.05...) da Orulo — "sem tabela publicada" —
   // passava em QUALQUER filtro de faixa de preço (0.1 <= qualquer teto),

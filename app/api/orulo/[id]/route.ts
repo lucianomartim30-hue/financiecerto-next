@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { kvGetCatalog } from '@/lib/orulo-kv';
 import { kvGetFotosOcultas } from '@/lib/fotos-ocultas-kv';
+import { comFotosExtras } from '@/lib/fotos-extras-manuais';
 import { kvGetPromocoes, kvGetPromocoesAdmin } from '@/lib/promocoes-kv';
 import { kvGetOruloEndUserToken } from '@/lib/orulo-enduser-kv';
 import { getPlantasManuais, getExcluirBlueprintsOrulo } from '@/lib/plantas-manuais';
@@ -74,7 +75,7 @@ async function fallbackFromCache(id: string) {
       virtual_tour: null,
       finality: cached.finality || null,
       description: '',
-      photos: cached.photo ? [cached.photo] : [],
+      photos: comFotosExtras(id, cached.photo ? [cached.photo] : []),
       blueprints: [],
       amenities: [],
       typologies: [],
@@ -511,7 +512,7 @@ export async function GET(
       virtual_tour:     (b.virtual_tour     as string) || null,
       finality:         (b.finality         as string) || null,   // Residencial / Comercial
       description: (b.description as string) || '',
-      photos: photosVisiveis,
+      photos: comFotosExtras(id, photosVisiveis),
       blueprints: blueprintsFiltrados,
       amenities,
       typologies,
