@@ -33,6 +33,7 @@ import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
 import { kvGetTodasPromocoesPublicas } from '@/lib/promocoes-kv';
 import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 import { CATALOGO_LANCAMENTOS_MANUAIS } from '@/lib/lancamentos-manuais';
+import { FOTOS_EXTRAS_MANUAIS } from '@/lib/fotos-extras-manuais';
 
 // O fallback ao vivo (cache KV vazio/frio) pode varrer o estado inteiro em lotes
 // pequenos e pausados — mais lento que os 10s padrão da Vercel, mas evita
@@ -233,9 +234,12 @@ export async function GET(req: NextRequest) {
     // mesmos filtros de cidade/status/preço que qualquer imóvel da Orulo,
     // em vez de precisar de um caminho especial em cada consumidor.
     const cachedOrulo = await kvGetCatalog();
-    const cached = cachedOrulo
+    // Capa dos cards também usa a arte manual quando existir (ver
+    // lib/fotos-extras-manuais.ts) — a foto da Orulo pode ser só um logo.
+    const cached = (cachedOrulo
       ? [...cachedOrulo, ...CATALOGO_LANCAMENTOS_MANUAIS]
-      : CATALOGO_LANCAMENTOS_MANUAIS;
+      : CATALOGO_LANCAMENTOS_MANUAIS
+    ).map(b => FOTOS_EXTRAS_MANUAIS[b.id]?.[0] ? { ...b, photo: FOTOS_EXTRAS_MANUAIS[b.id][0] } : b);
 
     // Lookup direto por IDs (ex: "vistos recentemente" no detalhe do imóvel) —
     // evita baixar o catálogo inteiro (alguns MB) só pra resolver 6 IDs;
