@@ -9,8 +9,12 @@ export function mesAnoAtual(): string {
 }
 
 // ─── Faixas MCMV (referência São Paulo — Portaria MCID nº 333/2026) ──────────
-// Fonte: Portaria MCID nº 333, de 30/03/2026 (vigente desde 22/04/2026) e Caixa Econômica Federal
+// Fonte: TABELA DE FINANCIAMENTO 2026 da Caixa (abr/2026, Price, 35 anos, proponente
+// de 25 anos — conferida linha a linha em 2026-09). Taxas NOMINAIS a.a.
 // F1: até R$ 3.200 | F2: R$ 3.200 – R$ 5.000 | F3: até R$ 9.600 | F4: até R$ 13.000
+// taxaMin/taxaMax = extremos da faixa (com/sem "redutor" de cotista FGTS); a taxa
+// exata por renda vem de taxaEfetivaMCMV() (degraus da tabela, não interpolação).
+// ltvMax F2 = 80%: a Caixa trava o financiamento em R$ 220.000 (80% × R$ 275.000).
 export interface FaixaMCMV {
   numero: number;
   rendaMax: number;
@@ -26,42 +30,43 @@ export interface FaixaMCMV {
 
 export const FAIXAS_MCMV: FaixaMCMV[] = [
   {
-    // Faixa 1 — subsídio até R$ 55.000 · juros 4,00–5,00% a.a.
+    // Faixa 1 — subsídio até R$ 55.000 · nominal 4,25–5,25% (4,75/5,00/5,25 sem redutor)
     numero: 1, rendaMax: 3200,
-    taxaRef: 4.50, taxaMin: 4.00, taxaMax: 5.00,
+    taxaRef: 4.75, taxaMin: 4.25, taxaMax: 5.25,
     teto: 275000, ltvMax: 0.95, ltvSAC: 0.95, subsidioMax: 55000,
     label: 'Faixa 1',
   },
   {
-    // Faixa 2 — subsídio decrescente · escala deslizante por renda (Portaria MCID 333/2026)
-    // SP/Sul/Sudeste: cotista 5,00% (renda R$3.200) → 6,50% (renda R$5.000)
-    //                 sem FGTS  5,50% (renda R$3.200) → 7,00% (renda R$5.000)
-    // taxaRef = referência visual (topo cotista SP) | taxaMin/taxaMax = extremos da faixa
+    // Faixa 2 — subsídio decrescente até renda R$ 4.000 · nominal 5,00–7,00%
+    // (5,50 → 6,00 → 7,00 sem redutor, em degraus por renda)
     numero: 2, rendaMax: 5000,
-    taxaRef: 6.50, taxaMin: 5.00, taxaMax: 7.00,
-    teto: 275000, ltvMax: 0.90, ltvSAC: 0.90, subsidioMax: 55000,
+    taxaRef: 7.00, taxaMin: 5.00, taxaMax: 7.00,
+    teto: 275000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 55000,
     label: 'Faixa 2',
   },
   {
-    // Faixa 3 — sem subsídio · cotista 7,66% | sem FGTS 8,16% (Portaria MCID 333/2026)
-    // A distinção cotista/não-cotista persiste na F3 (diferença de 0,5 p.p.)
+    // Faixa 3 — sem subsídio · nominal 7,66% cotista | 8,16% sem redutor · financia até R$ 320.000 (80% × 400 mil)
     numero: 3, rendaMax: 9600,
     taxaRef: 8.16, taxaMin: 7.66, taxaMax: 8.16,
     teto: 400000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 0,
     label: 'Faixa 3',
   },
   {
-    // Faixa 4 — sem subsídio · 10,50% a.a. flat (sem distinção cotista — Portaria 333/2026)
+    // Faixa 4 — sem subsídio · nominal 10,00% (efetiva 10,47%) sem distinção cotista
     numero: 4, rendaMax: 13000,
-    taxaRef: 10.50, taxaMin: 10.50, taxaMax: 10.50,
+    taxaRef: 10.00, taxaMin: 10.00, taxaMax: 10.00,
     teto: 600000, ltvMax: 0.80, ltvSAC: 0.80, subsidioMax: 0,
     label: 'Faixa 4',
   },
 ];
 
 // ─── Constantes gerais ────────────────────────────────────────────────────────
-export const TAXA_SBPE_ANUAL  = 11.19;  // Caixa — correntista (referência 2026)
-export const TAXA_SBPE_BALCAO = 11.49;  // Caixa — balcão
+// SBPE Caixa (tabela abr/2026): taxa NOMINAL 10,92% a.a. = EFETIVA 11,49% a.a. + TR.
+// O cálculo de parcela usa a nominal (÷12). Antes o site usava 11,19 (efetiva de
+// "correntista") como se fosse nominal, e 30% da renda — a Caixa usa 25% no SBPE.
+export const TAXA_SBPE_ANUAL     = 10.92;
+export const TAXA_SBPE_EFETIVA   = 11.49;
+export const COMPROMETIMENTO_SBPE = 0.25;  // Caixa SBPE: 1ª parcela = 25% da renda (MCMV: 30%)
 export const TAXA_SFI_ANUAL   = 12.5;
 export const TETO_SFH         = 2_250_000;
 
@@ -82,6 +87,11 @@ export const BANCOS_SBPE: BancoSBPE[] = [
   { banco: 'Itaú',                    taxa: 11.89 },
   { banco: 'Banco do Brasil',         taxa: 11.97, obs: 'Correntista BB' },
 ];
+// Os bancos divulgam a taxa EFETIVA a.a. (ex.: Caixa 11,49%); a parcela é calculada
+// com a NOMINAL ÷ 12 (Caixa: nominal 10,92% = efetiva 11,49%, tabela abr/2026).
+export function taxaNominalDeEfetiva(efetivaAnualPct: number): number {
+  return 12 * (Math.pow(1 + efetivaAnualPct / 100, 1 / 12) - 1) * 100;
+}
 export const LTV_SBPE_PRICE   = 0.70;
 export const LTV_SBPE_SAC     = 0.80;
 export const PRAZO_MAX_MESES  = 420;
@@ -226,25 +236,27 @@ export function simularHistoricoTR(
   };
 }
 
-// ─── Taxa efetiva MCMV (escala deslizante F2 + taxa flat F3/F4) ──────────────
-// Portaria MCID 333/2026 — São Paulo / Sul / Sudeste / Centro-Oeste
-// F2: escala linear por renda (5,00%→6,50% cotista | 5,50%→7,00% sem FGTS)
-// F3: 8,16% flat (sem distinção cotista)  |  F4: 10,50% flat
+// ─── Taxa MCMV por renda (degraus da tabela da Caixa, abr/2026) ──────────────
+// Nominal a.a. SEM redutor:  F1: 4,75 (≤2.160) · 5,00 (≤2.850) · 5,25 (≤3.200)
+//                            F2: 5,50 (≤3.500) · 6,00 (≤4.000) · 7,00 (≤5.000)
+//                            F3: 8,16 · F4: 10,00
+// COM redutor (cotista FGTS): −0,50 p.p. nas Faixas 1, 2 e 3; Faixa 4 não tem redutor.
 export function taxaEfetivaMCMV(
   faixa: FaixaMCMV,
   rendaBruta: number,
   cotista: boolean,
 ): number {
-  if (faixa.numero === 2) {
-    // Interpolação linear dentro da Faixa 2
-    const t = Math.min(1, Math.max(0, (rendaBruta - 3200) / (5000 - 3200)));
-    const taxa = cotista
-      ? 5.00 + t * 1.50  // 5,00% (R$3.200) → 6,50% (R$5.000)
-      : 5.50 + t * 1.50; // 5,50% (R$3.200) → 7,00% (R$5.000)
-    return Math.round(taxa * 1000) / 1000; // arredonda para 3 casas
+  let semRedutor: number;
+  if (faixa.numero === 1) {
+    semRedutor = rendaBruta <= 2160 ? 4.75 : rendaBruta <= 2850 ? 5.00 : 5.25;
+  } else if (faixa.numero === 2) {
+    semRedutor = rendaBruta <= 3500 ? 5.50 : rendaBruta <= 4000 ? 6.00 : 7.00;
+  } else if (faixa.numero === 3) {
+    semRedutor = 8.16;
+  } else {
+    return 10.00; // F4: sem redutor
   }
-  // F1, F3, F4: taxa única por cotista/não-cotista
-  return cotista ? faixa.taxaMin : faixa.taxaMax;
+  return Math.round((cotista ? semRedutor - 0.50 : semRedutor) * 1000) / 1000;
 }
 
 // ─── Detectar faixa MCMV ─────────────────────────────────────────────────────
@@ -341,41 +353,53 @@ export function totalPagoSAC(pv: number, taxaAnual: number, meses: number): numb
   return total;
 }
 
-// ─── Subsídio estimado (portado do contrato SIOPI/Caixa) ─────────────────────
-// F1/F2 elegíveis; requer cotista + primeiroImovel + sem benefício anterior
+// ─── Subsídio estimado — coluna "Subsídio com/sem dependente" da tabela Caixa ─
+// Âncoras [renda, subsídio COM dependente]; entre âncoras, interpolação linear.
+// Até R$ 1.900 = teto de R$ 55.000; acima de R$ 4.000 = não contempla.
+// SEM dependente = 30% do valor (R$ 16.500 de R$ 55.000, R$ 1.803 de R$ 6.011...) e só
+// vai até renda R$ 3.200 (a partir de R$ 3.300 a tabela diz "NÃO CONTEMPLA").
+// Não depende de cotista FGTS: a tabela não liga o subsídio ao redutor de taxa.
+const SUBSIDIO_COM_DEPENDENTE: [number, number][] = [
+  [1900, 55000], [2000, 50777], [2100, 44812], [2160.01, 41729], [2200, 39562],
+  [2300, 34440], [2400, 29735], [2500, 25438], [2600, 21538], [2700, 18026],
+  [2800, 14893], [2850.01, 13589], [2900, 12242], [3000, 9818], [3100, 7744],
+  [3200, 6011], [3200.01, 6072], [3300, 4659], [3400, 3571], [3500, 2799],
+  [3500.01, 2858], [3600, 2384], [3700, 2214], [3800, 2192], [3900, 2171], [4000, 2149],
+];
+const SUBSIDIO_RENDA_MAX_SEM_DEPENDENTE = 3200.01;
+
 export function calcSubsidioEstimado(
   faixa: FaixaMCMV,
   rendaBruta: number,
   valorImovel: number,
-  cotista: boolean,
+  _cotista: boolean, // mantido na assinatura; a tabela não liga subsídio a cotista
   primeiroImovel: boolean,
   jaRecebeuBeneficio: boolean,
   dependentes = 0,
 ): number {
-  if (!cotista || !primeiroImovel || jaRecebeuBeneficio) return 0;
+  if (!primeiroImovel || jaRecebeuBeneficio) return 0;
   if (faixa.numero >= 3) return 0;
 
-  // Portaria MCID nº 333/2026 — curva contínua F1→F2
-  // F1 (renda ≤ 3.200): de 1,0 (renda→0) até 0,618 (renda=3.200) → R$55.000 → R$33.990
-  // F2 (3.200–5.000):   de 0,618 até 0,018 (renda=5.000)          → R$33.990 → R$990
-  const F1_TETO = 3200;
-  const F2_TETO = 5000;
-  let fator: number;
-  if (faixa.numero === 1) {
-    fator = 1.0 - (rendaBruta / F1_TETO) * 0.382;
-  } else {
-    fator = 0.618 - ((rendaBruta - F1_TETO) / (F2_TETO - F1_TETO)) * 0.600;
+  const pts = SUBSIDIO_COM_DEPENDENTE;
+  let comDep: number;
+  if (rendaBruta <= pts[0][0]) comDep = faixa.subsidioMax;
+  else if (rendaBruta > pts[pts.length - 1][0]) comDep = 0;
+  else {
+    comDep = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [r0, v0] = pts[i], [r1, v1] = pts[i + 1];
+      if (rendaBruta >= r0 && rendaBruta <= r1) {
+        comDep = r1 === r0 ? v1 : v0 + (v1 - v0) * ((rendaBruta - r0) / (r1 - r0));
+        break;
+      }
+    }
   }
 
-  const numDep = Math.max(0, dependentes);
-  if (numDep > 0) fator = fator * (1 + Math.min(0.10, numDep * 0.03));
-  fator = Math.max(0.05, Math.min(1, fator));
+  let subCalc: number;
+  if (dependentes > 0) subCalc = comDep;
+  else subCalc = rendaBruta <= SUBSIDIO_RENDA_MAX_SEM_DEPENDENTE ? comDep * 0.30 : 0;
 
-  const subCalc = faixa.subsidioMax * fator;
   // Limite real: subsídio não pode superar o valor financiável (LTV × preço).
-  // Não usar % arbitrário do valor do imóvel — isso quebrava a monotonia:
-  // imóveis baratos (renda baixa) recebiam teto menor e, paradoxalmente, subsídio
-  // menor do que imóveis mais caros (renda maior).
   return Math.round(Math.min(subCalc, valorImovel * faixa.ltvMax));
 }
 
@@ -605,10 +629,15 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   }
 
   // BLOQUEIO 1: Comprometimento > 30%
+  // Bloqueio duro em 30% (máximo aceito por qualquer banco). O SBPE da Caixa é mais
+  // restrito (25% — tabela abr/2026), mas outros bancos aceitam até 30%: entre 25% e
+  // 30% só alertamos, sem bloquear, pra não travar quem financia fora da Caixa.
   if (comprometimento > 30) {
     bloqueado = true;
     motivoBloqueio = `Comprometimento de ${comprometimento.toFixed(1)}% ultrapassa o limite de 30% — banco reprova créditos acima disso.`;
     alertas.push('Comprometimento acima de 30% — simulação BLOQUEADA.');
+  } else if (!isMCMV && !isSFI && comprometimento > COMPROMETIMENTO_SBPE * 100) {
+    alertas.push(`Comprometimento de ${comprometimento.toFixed(1)}%: a Caixa limita a 1ª parcela do SBPE a 25% da renda; outros bancos aceitam até 30% — confirme com o banco escolhido.`);
   }
 
   // BLOQUEIO 2: LTV acima do limite
@@ -735,11 +764,15 @@ export function descobrir(
   // preço" é responsabilidade exclusiva de simular() (ficha do imóvel),
   // quando já existe um preço real pra avaliar — nunca desta função, que
   // não conhece nenhum imóvel específico ainda.
-  const capacMCMV     = elegivel ? capacidadeComSeguros(rendaBruta, taxaMCMV, prazoMeses, 0.30, idadeProponente) : 0;
+  // A Caixa também trava o financiamento em LTV × teto da faixa (tabela abr/2026:
+  // F2 para em R$ 220.000, F3 em R$ 320.000) — a partir dessa renda a parcela
+  // deixa de crescer e o que passa disso só se resolve com entrada.
+  const capacMCMVRenda = elegivel ? capacidadeComSeguros(rendaBruta, taxaMCMV, prazoMeses, 0.30, idadeProponente) : 0;
+  const capacMCMV     = elegivel && faixa ? Math.min(capacMCMVRenda, faixa.ltvMax * tetoMCMV) : 0;
   const imovelMaxMCMVRaw = elegivel ? Math.min(capacMCMV + entradaTotal, tetoMCMV) : 0;
 
   // Subsídio estimado (para descoberta usa o teto da faixa como proxy)
-  const subsidioEstimado = elegivel && faixa && cotista && primeiroImovel && !jaRecebeuBeneficio
+  const subsidioEstimado = elegivel && faixa && primeiroImovel && !jaRecebeuBeneficio
     ? calcSubsidioEstimado(faixa, rendaBruta, imovelMaxMCMVRaw, cotista, primeiroImovel, jaRecebeuBeneficio, dependentes)
     : 0;
 
@@ -757,7 +790,8 @@ export function descobrir(
   // classificar "risco" num número que a interface exibe como exatamente 30,0%.
   const comprMCMV      = financiadoMCMV > 0 ? Math.round((((parcelaMCMV + segurosMCMV.total) / rendaBruta) * 100) * 10) / 10 : 0;
 
-  const capacSBPE     = capacidadeComSeguros(rendaBruta, TAXA_SBPE_ANUAL, prazoMeses, 0.30, idadeProponente);
+  // SBPE Caixa: 1ª parcela = 25% da renda (tabela abr/2026) — MCMV é que usa 30%.
+  const capacSBPE     = capacidadeComSeguros(rendaBruta, TAXA_SBPE_ANUAL, prazoMeses, COMPROMETIMENTO_SBPE, idadeProponente);
   const imovelMaxSBPE = Math.min(capacSBPE + entradaTotal, TETO_SFH);
   const financiadoSBPE = Math.max(0, imovelMaxSBPE - entradaTotal);
   const parcelaSBPE    = parcelaPrice(financiadoSBPE, TAXA_SBPE_ANUAL, prazoMeses);

@@ -117,14 +117,14 @@ function HistoricoTRContent() {
     const pv = params.get('pv');
     return pv ? Number(pv).toLocaleString('pt-BR') : '350.000';
   });
-  const [taxaInput, setTaxaInput] = useState(() => params.get('taxa') || '11,19');
+  const [taxaInput, setTaxaInput] = useState(() => params.get('taxa') || '10,92');
   const [prazoInput, setPrazoInput] = useState(() => params.get('prazo') || '360');
   const [calculado, setCalculado] = useState(false);
   const [resultado, setResultado] = useState<ReturnType<typeof simularHistoricoTR> | null>(null);
 
   function calcular() {
     const pv    = parseMoeda(valorInput);
-    const taxa  = parseFloat(taxaInput.replace(',', '.')) || 11.19;
+    const taxa  = parseFloat(taxaInput.replace(',', '.')) || 10.92;
     const prazo = parseInt(prazoInput) || 360;
     if (pv < 50000 || pv > 10_000_000) return;
     setResultado(simularHistoricoTR(pv, taxa, prazo));
@@ -146,7 +146,7 @@ function HistoricoTRContent() {
   // dessincronizado dos parâmetros que o usuário está vendo no formulário.
   const exemplo = useMemo(() => {
     const pv    = parseMoeda(valorInput) || 350000;
-    const taxa  = parseFloat(taxaInput.replace(',', '.')) || 11.19;
+    const taxa  = parseFloat(taxaInput.replace(',', '.')) || 10.92;
     const prazo = parseInt(prazoInput) || 360;
     const trRef = TR_HISTORICO_36M[TR_HISTORICO_36M.length - 1]; // mês mais recente da série
     const taxaMensal     = (1 + taxa / 100) ** (1 / 12) - 1;
@@ -200,7 +200,7 @@ function HistoricoTRContent() {
             <input
               value={taxaInput}
               onChange={e => setTaxaInput(e.target.value)}
-              placeholder="11,19"
+              placeholder="10,92"
               style={{ width: '100%', boxSizing: 'border-box', height: 44, border: '1.5px solid #d1d5db', borderRadius: 10, padding: '0 12px', fontSize: 14, fontFamily: 'inherit', outline: 'none' }}
             />
           </div>

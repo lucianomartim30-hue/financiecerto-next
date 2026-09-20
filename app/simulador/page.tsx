@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   descobrir, simular, formatBRL, motivoSBPE, parcelaPrice, calcularSeguros,
   detectarFaixaMCMV, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH,
-  BANCOS_SBPE, mesAnoAtual, classificarSaudeFinanceira,
+  BANCOS_SBPE, taxaNominalDeEfetiva, mesAnoAtual, classificarSaudeFinanceira,
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
@@ -229,7 +229,7 @@ function ComparativoBancosSBPE({ financiado, prazoMeses }: { financiado: number;
       </div>
       <div style={{ display: 'grid', gap: 6 }}>
         {BANCOS_SBPE.map((b, i) => {
-          const aj      = parcelaPrice(financiado, b.taxa, prazoMeses > 0 ? prazoMeses : 420);
+          const aj      = parcelaPrice(financiado, taxaNominalDeEfetiva(b.taxa), prazoMeses > 0 ? prazoMeses : 420);
           const seguros = calcularSeguros(financiado);
           const total   = aj + seguros.total;
           return (
@@ -590,7 +590,7 @@ function SimuladorInner() {
       <div style={{ display: 'grid', gap: 10, marginBottom: 32 }}>
         {[
           { ico: '📊', txt: 'Renda define seu perfil: MCMV (F1–F4), SBPE ou SFI — detectados automaticamente', cor: '#2563eb', bg: '#EFF6FF' },
-          { ico: '🏦', txt: 'Taxa real: SBPE 11,19% + TR (Caixa), MCMV subsidiado ou SFI — nunca estimativa genérica', cor: '#0F6E56', bg: '#F0FDF9' },
+          { ico: '🏦', txt: 'Taxa real: SBPE Caixa 10,92% nominal (11,49% efetiva) + TR, MCMV subsidiado ou SFI — nunca estimativa genérica', cor: '#0F6E56', bg: '#F0FDF9' },
           { ico: '🏗️', txt: 'Simule imóvel pronto, em obras ou na planta — para qualquer faixa de renda', cor: '#7C3AED', bg: '#F5F3FF' },
           { ico: '🏠', txt: 'Imóveis compatíveis com seu poder de compra real ao final da simulação', cor: '#B45309', bg: '#FFFBEB' },
         ].map(({ ico, txt, cor, bg }) => (
@@ -708,7 +708,7 @@ function SimuladorInner() {
               <Chip key={n} label={n === 4 ? '4+' : String(n)} ativo={e.dependentes === n} onClick={() => upd({ dependentes: n })} />
             ))}
           </div>
-          <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>Dependentes aumentam o subsídio estimado no MCMV</p>
+          <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>Ter ao menos 1 dependente aumenta o subsídio estimado no MCMV (Faixas 1 e 2)</p>
         </div>
 
         <BtnPrimario label="Próximo →" onClick={avancar} disabled={!e.idade || idadeInvalida} />
@@ -935,7 +935,7 @@ function SimuladorInner() {
         {painelAtivo === 'sbpe' && (
           <>
             <div style={{ padding: '12px 14px', background: '#E6F1FB', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#0C447C' }}>
-              <strong>SBPE</strong> (Sistema Brasileiro de Poupança e Empréstimo) — recursos da poupança, opera dentro do <strong>SFH</strong>. Teto do sistema: {formatBRL(TETO_SFH)} (não é o seu limite pessoal — <strong>seu poder de compra real está no card acima</strong>). Permite FGTS. Qualquer banco oferece SBPE — compare abaixo.
+              <strong>SBPE</strong> (Sistema Brasileiro de Poupança e Empréstimo) — recursos da poupança, opera dentro do <strong>SFH</strong>. Teto do sistema: {formatBRL(TETO_SFH)} (não é o seu limite pessoal — <strong>seu poder de compra real está no card acima</strong>). Permite FGTS. Qualquer banco oferece SBPE — compare abaixo. <strong>O cálculo usa as regras da Caixa</strong> (1ª parcela até 25% da renda, taxa nominal {TAXA_SBPE_ANUAL.toFixed(2).replace('.', ',')}% a.a. = 11,49% efetiva); outros bancos têm regras próprias e vários aceitam até 30% da renda.
             </div>
             <ComparativoBancosSBPE financiado={perfil?.sbpe.valorFinanciado ?? 0} prazoMeses={perfil?.prazoMaxMeses ?? 420} />
           </>

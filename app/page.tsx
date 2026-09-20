@@ -50,7 +50,7 @@ const FEATURES = [
   {
     icon: '🏠',
     title: 'Simulador de Financiamento 2026',
-    desc: 'Do MCMV (Faixas 1–4 · taxas subsidiadas) ao SBPE (11,19% + TR) e SFI — para todos os perfis.',
+    desc: 'Do MCMV (Faixas 1–4 · taxas subsidiadas) ao SBPE (Caixa 11,49% a.a. + TR) e SFI — para todos os perfis.',
     color: 'var(--primary-light)',
     textColor: 'var(--primary)',
   },
@@ -522,7 +522,7 @@ export default async function Home() {
               {
                 icon: '🎯',
                 title: 'Baseado na realidade',
-                desc: 'Taxas reais: MCMV 2026 (subsidiadas), SBPE Caixa (11,19% a.a. + TR) e SFI — não estimativas genéricas.',
+                desc: 'Taxas reais: MCMV 2026 (subsidiadas), SBPE Caixa (11,49% a.a. efetiva + TR) e SFI — não estimativas genéricas.',
               },
               {
                 icon: '🏗️',

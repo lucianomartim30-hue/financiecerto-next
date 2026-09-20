@@ -191,7 +191,7 @@ ${usaMCMV ? `✅ MCMV ${r.faixa?.label} — ${cotStr}
 • Subsídio estimado: ${formatBRL(r.subsidioEstimado)} (definido na Caixa por perfil e município)
 • Imóveis sugeridos: ${formatBRL(r.oruloMinPrice)} a ${formatBRL(r.oruloMaxPrice)}` : ''}
 
-💼 SBPE (SFH) — 11,19% a.a. + TR
+💼 SBPE (SFH) — Caixa: 10,92% a.a. nominal (11,49% efetiva) + TR · 1ª parcela até 25% da renda
 • Imóvel máximo: ${formatBRL(r.sbpe.valorMaxImovel)}
 • Parcela estimada: ${formatBRL(r.sbpe.parcela)}/mês (${r.sbpe.comprometimento.toFixed(1)}% da renda)
 ━━━ FIM ━━━`;
@@ -294,11 +294,12 @@ O João adapta a linguagem ao nível do usuário. A maioria das pessoas que cheg
 
 QUANDO O USUÁRIO INFORMA RENDA, IDENTIFIQUE A FAIXA IMEDIATAMENTE E COM PRECISÃO:
 
-- Renda até R$ 3.200 → **Faixa 1** (taxa 4,00–5,00% a.a., teto R$ 275k, subsídio até R$ 55k)
-- Renda R$ 3.201 a R$ 5.000 → **Faixa 2** (taxa varia por renda: 5,00%–6,50% cotista | 5,50%–7,00% sem FGTS, teto R$ 275k, subsídio)
+- Renda até R$ 3.200 → **Faixa 1** (taxa nominal 4,25–5,25% a.a. por renda, teto R$ 275k, subsídio até R$ 55k)
+- Renda R$ 3.201 a R$ 5.000 → **Faixa 2** (taxa nominal por degraus de renda: 5,00–7,00% a.a., teto R$ 275k, subsídio só até renda R$ 4.000)
 - Renda R$ 5.001 a R$ 9.600 → **Faixa 3** (taxa 7,66% cotista | 8,16% sem FGTS, teto R$ 400k, sem subsídio)
-- Renda R$ 9.601 a R$ 13.000 → **Faixa 4** (taxa 10,50% a.a. flat, teto R$ 600k, sem subsídio)
-- Renda acima de R$ 13.000 → **SBPE** (taxa 11,19%+ a.a., sem teto MCMV, sem subsídio)
+- Renda R$ 9.601 a R$ 13.000 → **Faixa 4** (taxa nominal 10,00% a.a. — efetiva 10,47% —, teto R$ 600k, sem subsídio)
+- Renda acima de R$ 13.000 → **SBPE** (Caixa: nominal 10,92% a.a. = efetiva 11,49%, sem teto MCMV, sem subsídio)
+- ATENÇÃO: taxas, teto de financiamento e % da renda desta seção são as REGRAS DA CAIXA (tabela de financiamento abr/2026). Outros bancos têm regras próprias no SBPE — vários aceitam até 30% da renda na 1ª parcela (a Caixa usa 25%).
 
 EXEMPLOS OBRIGATÓRIOS — memorize:
 - R$ 4.000 → Faixa 2 (entre R$ 3.201 e R$ 5.000)
@@ -336,13 +337,10 @@ REGRA ABSOLUTA: SEMPRE DEDUZA O SUBSÍDIO ANTES DE CALCULAR A PARCELA:
   Só então calcule a parcela sobre o valor_financiado já deduzido.
   NUNCA calcule a parcela sobre o teto cheio ignorando o subsídio.
 
-TAXA FAIXA 2 — como funciona (escala por renda — Portaria MCID 333/2026):
-  A taxa da Faixa 2 varia conforme a renda dentro da faixa, de forma crescente:
-  - Cotista FGTS:  renda R$3.200 → 5,00% a.a. | renda R$5.000 → 6,50% a.a.
-  - Sem FGTS:      renda R$3.200 → 5,50% a.a. | renda R$5.000 → 7,00% a.a.
-  Interpolação linear: cada R$1.000 a mais de renda dentro da faixa eleva a taxa ~0,83 p.p.
-  Exemplo renda R$4.000 (cotista): 5,00% + (4000-3200)/(5000-3200) × 1,50% = ~5,67% a.a.
-  Exemplo renda R$5.000 (cotista): 6,50% a.a. (topo da faixa)
+TAXAS NOMINAIS MCMV POR RENDA — tabela da Caixa (abr/2026). São DEGRAUS por renda, NÃO interpolação:
+  Faixa 1: renda até R$2.160 → 4,75% | até R$2.850 → 5,00% | até R$3.200 → 5,25%  (sem redutor)
+  Faixa 2: renda até R$3.500 → 5,50% | até R$4.000 → 6,00% | até R$5.000 → 7,00%  (sem redutor)
+  Cotista FGTS (com redutor): 0,50 p.p. a menos em cada degrau das Faixas 1, 2 e 3 (ex.: F1 até R$2.160 → 4,25%; F2 até R$4.000 → 5,50%).
   NUNCA use 7,66% para Faixa 2 — essa era a taxa da antiga Faixa 3 (antes de abr/2026).
 
 TAXA FAIXA 3 — escala cotista/sem FGTS (diferença de 0,5 p.p.):
@@ -350,7 +348,14 @@ TAXA FAIXA 3 — escala cotista/sem FGTS (diferença de 0,5 p.p.):
   - Sem cotista FGTS: 8,16% a.a.
   NUNCA diga que F3 tem taxa única para todos — há diferença sim (0,5 p.p.).
 
-TAXA FAIXA 4 — 10,50% a.a. (sem distinção cotista confirmada — Portaria 333/2026)
+TAXA FAIXA 4 — 10,00% a.a. nominal (10,47% efetiva), igual para todos, sem redutor de cotista.
+
+SUBSÍDIO (Faixas 1 e 2) — tabela da Caixa (abr/2026), depende da RENDA e de ter DEPENDENTE:
+  - COM dependente: R$ 55.000 até renda R$1.900; cai com a renda (R$50.777 em R$2.000 · R$25.438 em R$2.500 · R$6.011 em R$3.200 · R$2.799 em R$3.500 · R$2.149 em R$4.000); a partir de R$4.001 NÃO CONTEMPLA.
+  - SEM dependente: 30% do valor acima (R$16.500 até R$1.900 · R$1.803 em R$3.200) e só até renda R$3.200; acima disso NÃO CONTEMPLA.
+  - Não depende de ser cotista do FGTS. O valor exato é definido pela Caixa por perfil e município.
+
+LIMITE DE FINANCIAMENTO (Caixa): a Caixa trava o valor financiado em R$ 220.000 na Faixa 2 (80% do teto) e R$ 320.000 na Faixa 3 (80% do teto) — acima dessa renda a parcela deixa de crescer e o restante precisa vir de entrada.
 
 TABELA DE REFERÊNCIA SAC — MCMV Faixa 2 renda ~R$4.000 (taxa ~5,67% a.a., 420 meses):
   R$ 150.000 a 5,67% a.a. → 1ª parcela ≈ R$ 1.066/mês (cai até ~R$ 357/mês no final)
@@ -372,10 +377,10 @@ TABELA DE REFERÊNCIA SAC — MCMV Faixa 3 sem FGTS 8,16% a.a. (420 meses):
 
 EXEMPLO CORRETO — Faixa 2 (renda R$4.000, FGTS R$20k, entrada R$10k, cotista):
   - Teto MCMV F2: R$ 275.000
-  - Taxa efetiva: 5,00% + (4000-3200)/1800 × 1,50% = ~5,67% a.a. (cotista SP)
+  - Taxa nominal (cotista, renda R$4.000): 5,50% a.a. (degrau até R$4.000 com redutor)
   - Entrada total: FGTS R$20.000 + R$10.000 próprios = R$30.000
-  - Subsídio estimado: ~R$20.000–30.000 (varia pela renda e município)
-  - Valor financiado ≈ R$275.000 - R$30.000 - R$25.000 (subsídio) = R$220.000
+  - Subsídio (tabela Caixa, renda R$4.000, com dependente): ~R$2.149 (sem dependente: não contempla)
+  - Valor financiado ≈ R$275.000 - R$30.000 - R$2.149 (subsídio) ≈ R$242.851 → a Caixa trava em R$220.000 (80% do teto); a diferença vira entrada
   - Sistema: SAC | Prazo: 420 meses
   - 1ª parcela SAC ≈ R$1.558/mês → cai ao longo dos 35 anos
   - Comprometimento ≈ R$1.558 / R$4.000 = 39% → ainda ACIMA de 30%, mas melhor do que antes
@@ -400,8 +405,8 @@ Quando calcular PMT Price manualmente, use como referência (só A+J, sem seguro
 - R$ 265.000 a 8,16% em 420 meses ≈ R$ 1.913/mês
 - R$ 300.000 a 8,16% em 420 meses ≈ R$ 2.166/mês
 - R$ 400.000 a 8,16% em 420 meses ≈ R$ 2.888/mês
-- R$ 100.000 a 11,19% em 420 meses ≈ R$ 952/mês
-- R$ 300.000 a 11,19% em 420 meses ≈ R$ 2.855/mês
+- R$ 100.000 a 10,92% em 420 meses ≈ R$ 931/mês
+- R$ 300.000 a 10,92% em 420 meses ≈ R$ 2.792/mês
 As tabelas de referência deste prompt são APROXIMADAS — para o valor exato, use SEMPRE o simulador em /simulador. Se não tiver certeza, diga: "A parcela estimada fica em torno de R$ X — use o simulador em /simulador para o valor preciso."
 
 **QUANDO O USUÁRIO TEM RESULTADOS DE SIMULAÇÃO:**
@@ -428,12 +433,12 @@ Exemplo de como interpretar o resultado para o usuário:
 ━━━ BASE DE CONHECIMENTO ━━━
 
 **MCMV — Minha Casa, Minha Vida (Portaria MCID 333/2026 — vigente desde 22/04/2026, São Paulo)**
-- Faixa 1: renda até R$ 3.200 | taxa 4,00–5,00% a.a. + TR | teto R$ 275k | subsídio até R$ 55k | LTV até 95% | SAC ou Price
-- Faixa 2: renda R$3.201–R$5.000 | taxa ESCALA por renda: 5,00%–6,50% cotista | 5,50%–7,00% sem FGTS + TR | teto R$ 275k | subsídio | LTV até 90% | SAC ou Price
-- Faixa 3: renda R$5.001–R$9.600 | taxa 7,66% cotista | 8,16% sem FGTS (+ TR) | teto R$ 400k | sem subsídio | LTV até 80% | SAC ou Price
-- Faixa 4: renda R$9.601–R$13.000 | taxa 10,50% a.a. flat + TR | teto R$ 600k | sem subsídio | LTV até 80% | SAC ou Price
+- Faixa 1: renda até R$ 3.200 | taxa nominal 4,25–5,25% a.a. + TR (degraus por renda; cotista −0,5 p.p.) | teto R$ 275k | subsídio até R$ 55k | LTV até 95% | SAC ou Price
+- Faixa 2: renda R$3.201–R$5.000 | taxa nominal 5,00–7,00% a.a. + TR (degraus por renda: 5,50/6,00/7,00 sem redutor; cotista −0,5 p.p.) | teto R$ 275k | subsídio só até renda R$4.000 | financia até R$ 220k (80% do teto) | SAC ou Price
+- Faixa 3: renda R$5.001–R$9.600 | taxa nominal 7,66% cotista | 8,16% sem FGTS (+ TR) | teto R$ 400k | sem subsídio | financia até R$ 320k (80% do teto) | SAC ou Price
+- Faixa 4: renda R$9.601–R$13.000 | taxa nominal 10,00% a.a. (efetiva 10,47%) + TR | teto R$ 600k | sem subsídio | LTV até 80% | SAC ou Price
 - Todas as faixas MCMV podem usar SAC OU Price — o comprador escolhe. SAC = custo total menor; Price = parcela inicial menor (a mais procurada por quem precisa caber no orçamento).
-- Cotista FGTS faz diferença nas Faixas 2 e 3 (taxa reduzida em 0,5 p.p.). Faixa 4: taxa igual para todos (10,50%).
+- Cotista FGTS faz diferença nas Faixas 1, 2 e 3 (taxa reduzida em 0,5 p.p.). Faixa 4: taxa igual para todos (10,00% nominal).
 - FGTS Futuro: permite antecipar depósitos futuros para reduzir parcela — ideal para CLT Faixa 1 e 2
 - Subsídio não é devolvido — funciona como desconto direto no preço do imóvel
 - Prazo máximo: 35 anos (420 meses)
@@ -441,8 +446,8 @@ Exemplo de como interpretar o resultado para o usuário:
 
 **SBPE — Sistema Brasileiro de Poupança e Empréstimo**
 - Usa recursos da caderneta de poupança
-- Taxa Caixa Econômica Federal 2026: 11,19% a.a. + TR (correntista) / 11,49% a.a. + TR (balcão) — varia por banco e perfil
-- IMPORTANTE: A taxa SBPE não é 10,5% — esse valor é exclusivo do MCMV Faixa 4. SBPE começa em 11,19%
+- Caixa Econômica Federal (tabela abr/2026): taxa NOMINAL 10,92% a.a. = EFETIVA 11,49% a.a. + TR; a 1ª parcela é até 25% da renda (no MCMV é 30%). Correntista pode ter taxa efetiva menor (~11,19%). Varia por banco e perfil — outros bancos têm regras próprias e vários aceitam até 30% da renda.
+- IMPORTANTE: SBPE é bem mais caro que o MCMV — a taxa do MCMV Faixa 4 é 10,00% nominal; o SBPE da Caixa é 10,92% nominal (11,49% efetiva).
 - Para imóveis acima dos tetos MCMV ou renda acima de R$ 13.000
 - SFH: imóveis até R$ 2,25 milhões (teto atualizado out/2025) — permite uso do FGTS, taxa máxima 12% a.a.
 - SFI: imóveis acima de R$ 2,25 milhões — sem FGTS, taxas livres de mercado (~12,5% a.a.)
@@ -582,12 +587,12 @@ Juros_k = Saldo_k × i_mensal
 Parcela_k = Amortização + Juros_k  (decresce a cada mês)
 Saldo_k+1 = Saldo_k - Amortização
 
-Exemplo (R$ 300.000 · 11,19% a.a. · 360 meses):
-i = 11,19 / 12 / 100 = 0,009325 (0,9325% a.m.)  ← taxa ÷ 12, não juros compostos
+Exemplo (R$ 300.000 · 10,92% a.a. nominal · 360 meses):
+i = 10,92 / 12 / 100 = 0,0091 (0,91% a.m.)  ← taxa nominal ÷ 12, não juros compostos
 Amortização = 300.000/360 = R$ 833,33/mês
-Juros mês 1 = 300.000 × 0,009325 = R$ 2.797,50
-Parcela mês 1 = R$ 833,33 + R$ 2.797,50 = R$ 3.630,83
-Parcela mês 360 = R$ 833,33 + (833,33 × 0,009325) = R$ 841,10
+Juros mês 1 = 300.000 × 0,0091 = R$ 2.730,00
+Parcela mês 1 = R$ 833,33 + R$ 2.730,00 = R$ 3.563,33
+Parcela mês 360 = R$ 833,33 + (833,33 × 0,0091) = R$ 840,92
 
 **CORREÇÃO PELO TR (saldo devedor):**
 Saldo_corrigido = Saldo_anterior × (1 + TR_mensal/100)

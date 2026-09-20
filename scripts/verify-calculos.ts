@@ -1,6 +1,6 @@
 // Sanity check das regras críticas de lib/calculos.ts — sem framework de testes.
 // Roda com: npm run verify
-import { simular, descobrir, detectarFaixaMCMV, classificarSaudeFinanceira } from '../lib/calculos';
+import { simular, descobrir, detectarFaixaMCMV, classificarSaudeFinanceira, calcSubsidioEstimado, taxaEfetivaMCMV, FAIXAS_MCMV } from '../lib/calculos';
 
 let pass = 0, fail = 0;
 function check(desc: string, cond: boolean) {
@@ -39,11 +39,11 @@ const r3 = simular({
 check('Residencial → isMCMV = true (imóvel dentro do teto)', r3.isMCMV === true);
 check('Residencial → fgtsUsado > 0', r3.fgtsUsado > 0);
 
-// 4. Capacidade SBPE respeita 30% mesmo com seguros (entrada alta o bastante
+// 4. Capacidade SBPE respeita 25% da renda (Caixa, tabela abr/2026) mesmo com seguros (entrada alta o bastante
 //    pra não esbarrar no teto de LTV — ver testes 7/8 abaixo pra esse caso)
 const r4 = descobrir(50000, 0, 700000, 35, 35, true, true, false);
-check('SBPE renda R$50k → comprometimento ≤ 30,1%', r4.sbpe.comprometimento <= 30.1);
-check('SBPE renda R$50k → parcela entre R$14.500 e R$15.100', r4.sbpe.parcela >= 14500 && r4.sbpe.parcela <= 15100);
+check('SBPE renda R$50k → comprometimento ≤ 25,1% (Caixa usa 25% no SBPE)', r4.sbpe.comprometimento <= 25.1);
+check('SBPE renda R$50k → parcela entre R$12.100 e R$12.600 (25% da renda)', r4.sbpe.parcela >= 12100 && r4.sbpe.parcela <= 12600);
 
 // 5. SFI só acima do teto SFH
 const r5a = simular({ rendaBruta: 30000, fgts: 0, entrada: 100000, valorImovel: 1500000, prazoAnos: 35, naPlanta: false, prazoObraAnos: 3, idadeProponente: 35 });
@@ -157,6 +157,72 @@ check(
   check('Faixa 2 + imóvel R$290 mil (acima do teto R$275 mil) → não é MCMV', f2.isMCMV === false);
   const f1ok = simular({ rendaBruta: 3200, fgts: 0, entrada: 100000, valorImovel: 275000, prazoAnos: 35, naPlanta: false, prazoObraAnos: 0, idadeProponente: 35 });
   check('Faixa 1 + imóvel exatamente no teto (R$275 mil) → continua MCMV', f1ok.isMCMV === true);
+}
+
+// 15. REGRESSÃO CONTRA A TABELA DE FINANCIAMENTO 2026 DA CAIXA (abr/2026 — Price, 35 anos,
+//     proponente de 25 anos), transcrita linha a linha do PDF em 2026-09. Colunas:
+//     [renda, taxa nominal SEM redutor, financiamento SEM redutor, taxa COM redutor, financiamento COM redutor]
+//     F4: a coluna "sem redutor" da Caixa tem uma quebra estranha acima de R$11.800 (400.000 →
+//     308.620 → 332.155) — nessas linhas só a coluna "com redutor" (F4 não tem redutor) é usada.
+const TABELA_CAIXA: [number, number, number, number, number][] = [
+  [1700, 4.75, 98674.91, 4.25, 105229.95], [1900, 4.75, 110745.99, 4.25, 118102.91], [2000, 4.75, 116781.53, 4.25, 124539.39],
+  [2100, 4.75, 122817.07, 4.25, 130975.87], [2160.01, 5.00, 122748.26, 4.50, 130761.49], [2500, 5.00, 142423.15, 4.50, 151720.80],
+  [2800, 5.00, 159970.87, 4.50, 170414.07], [2850.01, 5.25, 153225.01, 4.75, 163054.53], [3000, 5.25, 161731.98, 4.75, 172107.22],
+  [3200, 5.25, 173075.36, 4.75, 184178.28], [3200.01, 5.50, 167909.60, 5.00, 178493.47], [3500, 5.50, 184416.83, 5.00, 196041.19],
+  [3500.01, 6.00, 173840.05, 5.50, 184417.36], [4000, 6.00, 199773.59, 5.50, 211928.86], [4000.01, 7.00, 178573.87, 6.50, 188693.72],
+  [4500, 7.00, 201755.35, 6.50, 213188.88], [4600, 7.00, 206391.74, 6.50, 218088.01], [4700, 7.00, 211028.13, 6.50, 220000],
+  [4863, 7.00, 220000, 6.50, 220000], [5000, 7.00, 220000, 6.50, 220000],
+  [5000.01, 8.16, 198620.26, 7.66, 208984.89], [5500, 8.16, 219165.06, 7.66, 230601.79], [6000, 8.16, 239709.86, 7.66, 252218.69],
+  [6500, 8.16, 260254.66, 7.66, 273835.59], [7000, 8.16, 280799.46, 7.66, 295452.49], [7500, 8.16, 301344.26, 7.66, 317069.39],
+  [7600, 8.16, 305453.22, 7.66, 320000], [8000, 8.16, 320000, 7.66, 320000], [9000, 8.16, 320000, 7.66, 320000], [9600, 8.16, 320000, 7.66, 320000],
+  [9600.01, 10.00, 324875.05, 10.00, 324875.40], [10000, 10.00, 338701.97, 10.00, 338701.98], [11000, 10.00, 373269.27, 10.00, 373269.28],
+  [12000, 10.00, 400000, 10.00, 407836.58], [13000, 10.00, 442403.88, 10.00, 442403.88],
+];
+{
+  let maxDif = 0, pior = '', taxasErradas = 0;
+  for (const [renda, tSem, fSem, tCom, fCom] of TABELA_CAIXA) {
+    const faixa = detectarFaixaMCMV(renda)!;
+    const f4 = faixa.numero === 4;
+    for (const [cotista, tab, fin] of [[false, tSem, fSem], [true, tCom, fCom]] as [boolean, number, number][]) {
+      if (f4 && !cotista && renda >= 11800) continue;
+      if (Math.abs(taxaEfetivaMCMV(faixa, renda, cotista) - tab) > 0.001) taxasErradas++;
+      const d = descobrir(renda, 0, 0, 35, 25, cotista, true, false, 1);
+      const dif = Math.abs(d.mcmv.valorFinanciado / fin - 1) * 100;
+      if (dif > maxDif) { maxDif = dif; pior = `renda ${renda} ${cotista ? 'com' : 'sem'} redutor: nosso ${d.mcmv.valorFinanciado} × Caixa ${fin}`; }
+    }
+  }
+  check('Tabela Caixa: taxa nominal MCMV por renda (F1–F4, com e sem redutor) bate em TODAS as linhas', taxasErradas === 0);
+  check(`Tabela Caixa: financiamento MCMV dentro de ±3% em todas as linhas (pior ${maxDif.toFixed(1)}% — ${pior})`, maxDif <= 3);
+}
+
+// SBPE/HMP/R2V da tabela: taxa nominal 10,92% e 1ª parcela = 25% da renda
+{
+  let maxDif = 0;
+  for (const [renda, fin] of [[13000.01, 332155.55], [14000, 358305.35], [15000, 384455.15], [16000, 410604.95], [17000, 436755.08], [20000, 515204.66], [23000, 593654.24]] as [number, number][]) {
+    const d = descobrir(renda, 0, 0, 35, 25, true, true, false);
+    maxDif = Math.max(maxDif, Math.abs(d.sbpe.valorFinanciado / fin - 1) * 100);
+  }
+  check(`Tabela Caixa: financiamento SBPE dentro de ±4% (pior ${maxDif.toFixed(1)}%) — antes o site dava ~20% a mais (11,19% a 30% da renda)`, maxDif <= 4);
+  // teste real no simulador oficial da Caixa feito pelo dono do site em 2026-09: renda R$15.000, idade 30 → R$383.646,67
+  const d15 = descobrir(15000, 0, 0, 35, 30, true, true, false);
+  check(`Renda R$15.000 idade 30 → SBPE perto do simulador oficial da Caixa (R$383.647), nosso ${d15.sbpe.valorFinanciado}`, Math.abs(d15.sbpe.valorFinanciado / 383646.67 - 1) <= 0.04);
+}
+
+// Subsídio da tabela (COM dependente / SEM dependente) — exato nas linhas com valor
+{
+  const f1 = FAIXAS_MCMV[0], f2 = FAIXAS_MCMV[1];
+  const sub = (f: typeof f1, renda: number, dep: number) => calcSubsidioEstimado(f, renda, 275000, true, true, false, dep);
+  const casos: [typeof f1, number, number, number][] = [
+    [f1, 1200, 1, 55000], [f1, 1700, 1, 55000], [f1, 1900, 1, 55000], [f1, 2000, 1, 50777], [f1, 2100, 1, 44812],
+    [f1, 2500, 1, 25438], [f1, 3000, 1, 9818], [f1, 3200, 1, 6011],
+    [f1, 1700, 0, 16500], [f1, 2000, 0, 15233], [f1, 3200, 0, 1803],
+    [f2, 3300, 1, 4659], [f2, 3500, 1, 2799], [f2, 3800, 1, 2192], [f2, 4000, 1, 2149],
+    [f2, 3300, 0, 0], [f2, 4100, 1, 0], [f2, 5000, 1, 0],
+  ];
+  let erros = 0;
+  for (const [f, renda, dep, esperado] of casos) if (Math.abs(sub(f, renda, dep) - esperado) > 1) erros++;
+  check('Tabela Caixa: subsídio COM/SEM dependente bate nas linhas (R$55.000 até renda R$1.900; some acima de R$4.000)', erros === 0);
+  check('Subsídio não depende de ser cotista do FGTS (a tabela não liga um ao outro)', calcSubsidioEstimado(f1, 2000, 275000, false, true, false, 1) === 50777);
 }
 
 console.log(`\n${pass} passaram, ${fail} falharam`);

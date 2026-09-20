@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   formatBRL, parcelaPrice, calcularSeguros,
   TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, calcSubsidioEstimado,
-  FAIXAS_MCMV, LTV_SBPE_PRICE, taxaEfetivaMCMV, prazoMaximoMeses, type FaixaMCMV,
+  LTV_SBPE_PRICE, taxaEfetivaMCMV, prazoMaximoMeses, type FaixaMCMV,
 } from '@/lib/calculos';
 import { SITE_CONFIG } from '@/lib/schema';
 import Link from 'next/link';
@@ -473,17 +473,13 @@ function NaPlantaContent() {
 
   // Tenta todas as faixas elegíveis pela renda (igual ao simulador principal)
   // Renda de R$4k pode usar F2 (teto 275k), F3 (teto 400k) ou F4 (teto 600k)
+  // A faixa é definida pela RENDA (nunca pelo preço do imóvel) e o teto da faixa é
+  // limite do VALOR do imóvel — subsídio não o estende. Acima do teto → SBPE.
+  // Mesma regra de simular()/descobrir() (antes esta tela "subia" de faixa conforme
+  // o preço e deixava o subsídio cobrir a diferença do teto; auditoria 2026-09).
   const faixaEfetiva: FaixaMCMV | null = (() => {
     if (isComercial || renda <= 0 || valor <= 0) return null;
-    for (const f of FAIXAS_MCMV) {
-      if (renda > f.rendaMax) continue;
-      if (valor <= f.teto) return f;
-      if (f.subsidioMax > 0) {
-        const sub = calcSubsidioEstimado(f, renda, valor, true, true, false, 0);
-        if (sub > 0 && valor - sub <= f.teto) return f;
-      }
-    }
-    return null;
+    return faixaRenda && valor <= faixaRenda.teto ? faixaRenda : null;
   })();
 
   const isMCMV = faixaEfetiva !== null;

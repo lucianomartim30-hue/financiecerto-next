@@ -35,7 +35,7 @@ const CAPITULOS = [
     topicos: [
       {
         pergunta: 'MCMV, SBPE ou SFI: qual a diferença?',
-        resposta: `As três modalidades se dividem por renda e valor do imóvel: **MCMV** (renda até R$ 13.000, 4 faixas, taxas de 4% a 10,5% a.a., subsídio nas Faixas 1 e 2), **SBPE/SFH** (qualquer renda, imóvel até R$ 2,25 milhões, taxa a partir de 11,19% a.a.) e **SFI** (imóvel acima de R$ 2,25 milhões, taxa de mercado, sem FGTS).\n\nVeja o [comparativo completo, com taxas e tetos por faixa](/aprenda/mcmv-sbpe-sfi-qual-modalidade-escolher).`,
+        resposta: `As três modalidades se dividem por renda e valor do imóvel: **MCMV** (renda até R$ 13.000, 4 faixas, taxas nominais de 4,25% a 10,00% a.a., subsídio nas Faixas 1 e 2), **SBPE/SFH** (qualquer renda, imóvel até R$ 2,25 milhões, taxa a partir de 11,19% a.a.) e **SFI** (imóvel acima de R$ 2,25 milhões, taxa de mercado, sem FGTS).\n\nVeja o [comparativo completo, com taxas e tetos por faixa](/aprenda/mcmv-sbpe-sfi-qual-modalidade-escolher).`,
       },
     ],
   },

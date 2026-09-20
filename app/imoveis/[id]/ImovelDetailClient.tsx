@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import Link from 'next/link';
-import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, parcelaPrice, calcularSeguros, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TETO_SFH, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
+import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, taxaNominalDeEfetiva, parcelaPrice, calcularSeguros, TAXA_SBPE_ANUAL, COMPROMETIMENTO_SBPE, TAXA_SFI_ANUAL, TETO_SFH, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
 import { SITE_CONFIG } from '@/lib/schema';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { getStatusCfg, isNaPlanta } from '@/lib/status';
@@ -297,8 +297,8 @@ function calcEstimate(valorImovel: number, isComercial = false): {
     let taxa = f.taxaMin;
     let parcela = pmt(taxa);
     let rendaSugerida = Math.ceil(parcela / 0.30 / 100) * 100;
-    if (f.numero === 2) {
-      // Faixa 2 tem taxa deslizante por renda — converge em poucas iterações
+    if (f.numero <= 2) {
+      // Faixas 1 e 2 têm taxa em degraus por renda — converge em poucas iterações
       for (let k = 0; k < 4; k++) {
         taxa = taxaEfetivaMCMV(f, rendaSugerida, true);
         parcela = pmt(taxa);
@@ -314,9 +314,11 @@ function calcEstimate(valorImovel: number, isComercial = false): {
   // (R$2,25M), SFI acima disso — mesma regra de simular()/descobrir(). Usar
   // sempre a taxa do SBPE mesmo para imóveis de alto padrão subestimava a
   // parcela (SFI tem taxa livre, mais alta, sem teto de valor).
-  const taxa = valorImovel > TETO_SFH ? TAXA_SFI_ANUAL : TAXA_SBPE_ANUAL;
+  const sfi = valorImovel > TETO_SFH;
+  const taxa = sfi ? TAXA_SFI_ANUAL : TAXA_SBPE_ANUAL;
   const parcela = pmt(taxa);
-  const rendaSugerida = Math.ceil(parcela / 0.30 / 100) * 100;
+  // SBPE da Caixa: 1ª parcela até 25% da renda (tabela abr/2026); SFI: 30%
+  const rendaSugerida = Math.ceil(parcela / (sfi ? 0.30 : COMPROMETIMENTO_SBPE) / 100) * 100;
   return { entrada, parcela, rendaSugerida, faixaMCMV: null, taxa };
 }
 
@@ -713,7 +715,7 @@ function ComparativoBancosCard({ financiado, prazoMeses }: { financiado: number;
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         {BANCOS_SBPE.map((b, i) => {
-          const parcela = parcelaPrice(financiado, b.taxa, prazoMeses > 0 ? prazoMeses : 360);
+          const parcela = parcelaPrice(financiado, taxaNominalDeEfetiva(b.taxa), prazoMeses > 0 ? prazoMeses : 360);
           const isMenor = b.taxa === menorTaxa && i === 0;
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: isMenor ? 'rgba(37,99,235,.07)' : 'rgba(255,255,255,.8)', border: `1px solid ${isMenor ? 'rgba(37,99,235,.25)' : 'rgba(0,0,0,.06)'}`, borderRadius: '10px', padding: '8px 10px' }}>
