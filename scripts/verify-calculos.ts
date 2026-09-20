@@ -127,5 +127,37 @@ check(
   perfilRenda6k.mcmv.valorFinanciado > 0 && simPeloTetoRenda.bloqueado === true,
 );
 
+// 13. O teto da faixa é limite de VALOR DO IMÓVEL — poder de compra nunca o ultrapassa,
+//     nem somando entrada + subsídio (auditoria externa 2026-09: F1 renda 3.200 com
+//     R$100 mil de entrada dava R$308.990 contra teto de R$275 mil), e a composição
+//     financiamento + entrada + subsídio tem que fechar com o valor máximo.
+{
+  let acimaDoTeto = 0, composicaoQuebrada = 0, combinacoes = 0;
+  for (const renda of [1200, 1621, 2500, 3200, 3201, 4000, 5000, 5001, 7000, 9600, 9601, 12000, 13000]) {
+    for (const entrada of [0, 20000, 60000, 100000, 200000]) {
+      const r = descobrir(renda, 0, entrada, 35, 35, true, true, false);
+      if (!r.faixa || !r.mcmv.elegivel) continue;
+      combinacoes++;
+      if (r.mcmv.valorMaxImovel > r.faixa.teto) acimaDoTeto++;
+      const soma = r.mcmv.valorFinanciado + r.entrada + r.subsidioEstimado;
+      // só confere a composição quando a entrada sozinha não estoura o teto
+      if (r.entrada + r.subsidioEstimado <= r.mcmv.valorMaxImovel && Math.abs(soma - r.mcmv.valorMaxImovel) > 2) composicaoQuebrada++;
+    }
+  }
+  check(`descobrir(): poder de compra MCMV nunca passa do teto da faixa (${combinacoes} combinações renda × entrada)`, acimaDoTeto === 0);
+  check('descobrir(): financiamento + entrada + subsídio = valor máximo do imóvel (composição fecha)', composicaoQuebrada === 0);
+}
+
+// 14. Na ficha, imóvel acima do teto da faixa NÃO vira MCMV por causa do subsídio — F1 e F2 se
+//     comportam igual (antes F1 aceitava R$300 mil como MCMV e F2 rejeitava R$290 mil).
+{
+  const f1 = simular({ rendaBruta: 3200, fgts: 0, entrada: 100000, valorImovel: 300000, prazoAnos: 35, naPlanta: false, prazoObraAnos: 0, idadeProponente: 35 });
+  check('Faixa 1 + imóvel R$300 mil (acima do teto R$275 mil) → não é MCMV', f1.isMCMV === false);
+  const f2 = simular({ rendaBruta: 5000, fgts: 0, entrada: 100000, valorImovel: 290000, prazoAnos: 35, naPlanta: false, prazoObraAnos: 0, idadeProponente: 35 });
+  check('Faixa 2 + imóvel R$290 mil (acima do teto R$275 mil) → não é MCMV', f2.isMCMV === false);
+  const f1ok = simular({ rendaBruta: 3200, fgts: 0, entrada: 100000, valorImovel: 275000, prazoAnos: 35, naPlanta: false, prazoObraAnos: 0, idadeProponente: 35 });
+  check('Faixa 1 + imóvel exatamente no teto (R$275 mil) → continua MCMV', f1ok.isMCMV === true);
+}
+
 console.log(`\n${pass} passaram, ${fail} falharam`);
 process.exit(fail > 0 ? 1 : 0);

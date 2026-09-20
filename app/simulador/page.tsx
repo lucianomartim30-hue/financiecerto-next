@@ -669,6 +669,9 @@ function SimuladorInner() {
   // ═══════════════ ETAPA 2 — COMPOSIÇÃO FAMILIAR ════════════════════════════
   if (etapa === 2) {
     const idade = Number(e.idade) || 0;
+    // Caixa só financia proponente maior de idade e com quitação até 80a6m —
+    // antes aceitava idade 16 (aprovava como F2) e 90 (virava SBPE de 5 anos).
+    const idadeInvalida = idade > 0 && (idade < 18 || idade > 80);
     const prazoMax = idade > 0 ? Math.min(35, Math.floor(80.5 - idade)) : 35;
     return (
       <Etapa etapa={etapa}>
@@ -681,7 +684,17 @@ function SimuladorInner() {
           onChange={v => upd({ idade: v.replace(/\D/g, '') })}
           prefix="🎂" placeholder="35" hint="Define o prazo máximo do financiamento" />
 
-        {idade > 0 && (
+        {idadeInvalida && (
+          <div style={{ padding: '12px 16px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, marginBottom: 24 }}>
+            <span style={{ fontSize: 14, color: '#991B1B', fontWeight: 600 }}>
+              {idade < 18
+                ? 'O proponente precisa ter 18 anos ou mais para financiar.'
+                : 'A Caixa exige quitação até os 80 anos e 6 meses — informe uma idade até 80.'}
+            </span>
+          </div>
+        )}
+
+        {idade > 0 && !idadeInvalida && (
           <div style={{ padding: '12px 16px', background: '#E6F1FB', borderRadius: 10, marginBottom: 24 }}>
             <span style={{ fontSize: 14, color: '#185FA5', fontWeight: 600 }}>Prazo máximo: {prazoMax} anos</span>
             {prazoMax < 35 && <span style={{ fontSize: 13, color: '#185FA5', marginLeft: 8 }}>(limitado pela idade)</span>}
@@ -698,7 +711,7 @@ function SimuladorInner() {
           <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>Dependentes aumentam o subsídio estimado no MCMV</p>
         </div>
 
-        <BtnPrimario label="Próximo →" onClick={avancar} disabled={!e.idade} />
+        <BtnPrimario label="Próximo →" onClick={avancar} disabled={!e.idade || idadeInvalida} />
       </Etapa>
     );
   }
@@ -1010,7 +1023,7 @@ function SimuladorInner() {
                   </div>
                   <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
                     <span style={{ color: dados.cor }}>•</span>
-                    <span>Financiamento aprovado: <strong>{formatBRL(valorFinanciadoAtivo5)}</strong></span>
+                    <span>Financiamento estimado: <strong>{formatBRL(valorFinanciadoAtivo5)}</strong></span>
                   </div>
                   {(entradaEmDinheiro5 > 0 || fgtsAtivo5 > 0 || subsidioAtivo5 > 0) && (
                     <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
@@ -1222,7 +1235,9 @@ function SimuladorInner() {
   if (etapa === 7) {
     if (!sim) { calcularSim(); return <Etapa etapa={etapa}><p>Calculando...</p></Etapa>; }
 
-    const sc = SAUDE[sim.saudeLabel];
+    // Bloqueado (LTV/comprometimento) → tom "risco", mesmo que o comprometimento
+    // sozinho seja saudável (ex.: LTV 100% com parcela de 22% da renda).
+    const sc = SAUDE[sim.bloqueado ? 'risco' : sim.saudeLabel];
     const economiasSAC = Math.max(0, sim.totalPagoPrice - sim.totalPagoSAC);
     // Usa sim.faixa (faixa real do imóvel — pode ser superior à faixa base da renda)
     const modalLabel = sim.isMCMV ? (sim.faixa ? `${sim.faixa.label} MCMV` : 'MCMV') : sim.isSFI ? 'SFI' : 'SBPE (SFH)';
@@ -1249,7 +1264,7 @@ function SimuladorInner() {
           {!sim.isMCMV && !sim.isSFI && (
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 10, lineHeight: 1.5 }}>
               ℹ️ {sim.faixaRenda
-                ? `Imóvel (${formatBRL(sim.valorImovel)}) acima do teto máximo MCMV para sua renda — Faixa 4 cobre até ${formatBRL(600000)}`
+                ? `Imóvel (${formatBRL(sim.valorImovel)}) acima do teto da ${sim.faixaRenda.label} do MCMV (até ${formatBRL(sim.faixaRenda.teto)}) — o MCMV não se aplica a esse valor`
                 : `Renda acima do limite MCMV (máx. ${formatBRL(13000)}/mês)`}
               {' '}— financiamento SBPE
             </div>
@@ -1257,6 +1272,17 @@ function SimuladorInner() {
           <div style={{ fontSize: 42, fontWeight: 800, color: '#fff', lineHeight: 1 }}>{formatBRL(sim.parcelaPrimeiro)}</div>
           <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 8 }}>parcela inicial (Price) · {sim.comprometimento.toFixed(1)}% da renda</div>
         </div>
+
+        {/* Bloqueio — o motor de cálculo já rejeita o cenário (comprometimento >30% ou
+            LTV acima do limite); a tela precisa dizer isso, não mostrar como aprovado. */}
+        {sim.bloqueado && (
+          <div style={{ padding: '14px 16px', marginBottom: 20, background: '#FEF2F2', border: '1.5px solid #FCA5A5', borderRadius: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#991B1B', marginBottom: 4 }}>🚫 {sim.motivoBloqueio}</div>
+            <div style={{ fontSize: 12.5, color: '#7F1D1D', lineHeight: 1.5 }}>
+              Nesse cenário o banco provavelmente não aprovaria. Aumente a entrada ou o prazo, ou escolha um imóvel de valor menor — os números abaixo mostram só o que aconteceria se fosse aprovado.
+            </div>
+          </div>
+        )}
 
         {/* Price vs SAC */}
         <div className="fc-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
@@ -1336,7 +1362,7 @@ function SimuladorInner() {
                   </div>
                   <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
                     <span style={{ color: sc.cor }}>•</span>
-                    <span>Financiamento aprovado: <strong>{formatBRL(sim.valorFinanciado)}</strong> à taxa de <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong></span>
+                    <span>Financiamento estimado: <strong>{formatBRL(sim.valorFinanciado)}</strong> à taxa de <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong></span>
                   </div>
                 </div>
               )}

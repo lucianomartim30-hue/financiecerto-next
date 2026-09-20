@@ -540,18 +540,13 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   // Se o imóvel ultrapassar o teto da faixa, a simulação é BLOQUEADA (não reclassificada).
   // A pessoa recebe a orientação: "Este imóvel está fora do teto MCMV da sua faixa. Use SBPE ou aumente entrada."
   let faixa: FaixaMCMV | null = mcmvElegivel ? faixaRenda : null; // ← só existe se elegível (residencial, sem restrições)
-  let imvelAcimaTetoComSubsidio = false;
 
+  // O teto da faixa é limite do VALOR DO IMÓVEL — subsídio não estende esse teto.
+  // (Antes "o subsídio cobre a diferença" aceitava F1 com imóvel de R$300 mil como
+  // MCMV mas rejeitava F2 com R$290 mil — inconsistente e sem base na regra da
+  // Caixa; apontado por auditoria externa em 2026-09.) Acima do teto → SBPE.
   if (mcmvElegivel && valorImovel > faixa!.teto) {
-    // Verificar se subsídio "bridga" a diferença
-    const subsidioEstimado = calcSubsidioEstimado(faixa!, rendaBruta, valorImovel, cotista, primeiroImovel, jaRecebeuBeneficio, dependentes);
-    if (subsidioEstimado > 0 && valorImovel - subsidioEstimado <= faixa!.teto) {
-      // Subsídio salva → faixa fica como está (F2, por exemplo)
-      imvelAcimaTetoComSubsidio = true;
-    } else {
-      // Imóvel não cabe mesmo com subsídio → será tratado como SBPE
-      faixa = null;
-    }
+    faixa = null;
   }
   const isMCMV = faixa !== null;
 
@@ -748,14 +743,13 @@ export function descobrir(
     ? calcSubsidioEstimado(faixa, rendaBruta, imovelMaxMCMVRaw, cotista, primeiroImovel, jaRecebeuBeneficio, dependentes)
     : 0;
 
-  // imovelMaxMCMVRaw já é ≤ tetoMCMV (por construção, linha acima) — recapar em
-  // tetoMCMV aqui de novo descartava o subsídio inteiro sempre que a renda+
-  // entrada já alcançava o teto sozinha (comum com entrada alta), mesmo
-  // simular() aceitando um preço acima do teto exatamente quando o subsídio
-  // cobre a diferença (`valorImovel - subsidio <= teto`, mais abaixo nesta
-  // mesma função). Sem isso, o "poder de compra" ficava menor que o preço de
-  // um imóvel que simular() já aprovava pro mesmo perfil (auditoria 2026-09).
-  const imovelMaxMCMV  = elegivel ? imovelMaxMCMVRaw + subsidioEstimado : 0;
+  // Poder de compra = financiamento + entrada + subsídio, MAS o imóvel em si não
+  // pode passar do teto da faixa (é limite de valor do imóvel, o subsídio não o
+  // estende). Uma versão anterior somava o subsídio por cima do teto (F1 com
+  // R$100 mil de entrada dava R$308.990 contra teto de R$275 mil — auditoria
+  // externa 2026-09). Quando o teto corta, o financiamento exibido encolhe junto,
+  // pra composição fechar: financiamento + entrada + subsídio = valor máximo.
+  const imovelMaxMCMV  = elegivel ? Math.min(imovelMaxMCMVRaw + subsidioEstimado, tetoMCMV) : 0;
   const financiadoMCMV = elegivel ? Math.max(0, imovelMaxMCMV - entradaTotal - subsidioEstimado) : 0;
   const parcelaMCMV    = parcelaPrice(financiadoMCMV, taxaMCMV, prazoMeses);
   const segurosMCMV    = calcularSeguros(financiadoMCMV, idadeProponente);
