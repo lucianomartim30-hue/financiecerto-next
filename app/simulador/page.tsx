@@ -220,7 +220,7 @@ function BadgeModalidade({ renda }: { renda: number }) {
 }
 
 // ─── Comparativo de bancos SBPE ───────────────────────────────────────────────
-function ComparativoBancosSBPE({ financiado, prazoMeses }: { financiado: number; prazoMeses: number }) {
+function ComparativoBancosSBPE({ financiado, prazoMeses, idade = 35 }: { financiado: number; prazoMeses: number; idade?: number }) {
   if (financiado <= 0) return null;
   return (
     <div style={{ marginTop: 20, padding: '16px', background: '#F8FAFF', border: '1.5px solid #BFDBFE', borderRadius: 14 }}>
@@ -230,7 +230,7 @@ function ComparativoBancosSBPE({ financiado, prazoMeses }: { financiado: number;
       <div style={{ display: 'grid', gap: 6 }}>
         {BANCOS_SBPE.map((b, i) => {
           const aj      = parcelaPrice(financiado, taxaNominalDeEfetiva(b.taxa), prazoMeses > 0 ? prazoMeses : 420);
-          const seguros = calcularSeguros(financiado);
+          const seguros = calcularSeguros(financiado, idade);
           const total   = aj + seguros.total;
           return (
             <div key={i} style={{
@@ -937,7 +937,7 @@ function SimuladorInner() {
             <div style={{ padding: '12px 14px', background: '#E6F1FB', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#0C447C' }}>
               <strong>SBPE</strong> (Sistema Brasileiro de Poupança e Empréstimo) — recursos da poupança, opera dentro do <strong>SFH</strong>. Teto do sistema: {formatBRL(TETO_SFH)} (não é o seu limite pessoal — <strong>seu poder de compra real está no card acima</strong>). Permite FGTS. Qualquer banco oferece SBPE — compare abaixo. <strong>O cálculo usa as regras da Caixa</strong> (1ª parcela até 25% da renda, taxa nominal {TAXA_SBPE_ANUAL.toFixed(2).replace('.', ',')}% a.a. = 11,49% efetiva); outros bancos têm regras próprias e vários aceitam até 30% da renda.
             </div>
-            <ComparativoBancosSBPE financiado={perfil?.sbpe.valorFinanciado ?? 0} prazoMeses={perfil?.prazoMaxMeses ?? 420} />
+            <ComparativoBancosSBPE financiado={perfil?.sbpe.valorFinanciado ?? 0} prazoMeses={perfil?.prazoMaxMeses ?? 420} idade={Number(e.idade) || 35} />
           </>
         )}
         {painelAtivo === 'sfi' && (
@@ -1416,7 +1416,7 @@ function SimuladorInner() {
 
         {/* Comparativo bancos SBPE */}
         {!sim.isMCMV && !sim.isSFI && (
-          <ComparativoBancosSBPE financiado={sim.valorFinanciado} prazoMeses={sim.prazoMeses} />
+          <ComparativoBancosSBPE financiado={sim.valorFinanciado} prazoMeses={sim.prazoMeses} idade={Number(e.idade) || 35} />
         )}
 
         {/* CTA: Histórico TR — só para SFH/MCMV (não SFI, que não usa TR) */}
