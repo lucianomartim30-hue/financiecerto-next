@@ -103,13 +103,16 @@ export default function BuscaImoveisInteligente({
   valorImovel,
   naPlanta = false,
   faixaLabel,
+  cidadeInicial,
 }: {
   valorImovel: number;
   naPlanta?: boolean;
+  /** Cidade já informada no simulador — pré-seleciona a busca (a pessoa ainda pode trocar). */
+  cidadeInicial?: string;
   /** Faixa/modalidade já calculada pelo simulador (ex.: "Faixa 2 MCMV", "SBPE (SFH)") — mostrada como contexto, sem alterar a busca. */
   faixaLabel?: string;
 }) {
-  const [cidade,  setCidade]  = useState('São Paulo');
+  const [cidade,  setCidade]  = useState(cidadeInicial && CIDADES_BUSCA.includes(cidadeInicial) ? cidadeInicial : 'São Paulo');
   const [quartos, setQuartos] = useState<number | null>(null);
   const [vagas,   setVagas]   = useState<number | null>(null);
   const [bairro,  setBairro]  = useState('');

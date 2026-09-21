@@ -10,6 +10,7 @@ import {
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
+import { CIDADES_BUSCA } from '@/lib/localizacao';
 import { HisHmpHint } from '@/components/HisHmpHint';
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { webApplication, breadcrumb, faqPage, SITE_CONFIG } from '@/lib/schema';
@@ -384,13 +385,14 @@ function ExplicacaoSFI() {
 type Estado = {
   renda: string; idade: string; dependentes: number;
   modoPrestacao: boolean; prestacao: string;
+  cidade: string;
   fgts: string; cotista: boolean; primeiroImovel: boolean;
   jaRecebeuBeneficio: boolean; temImovelMunicipio: boolean;
   entrada: string; valorImovel: string; prazoAnos: number; naPlanta: boolean;
 };
 const E0: Estado = {
   renda: '', idade: '', dependentes: 0,
-  modoPrestacao: false, prestacao: '',
+  modoPrestacao: false, prestacao: '', cidade: 'São Paulo',
   // cotista começa DESLIGADO: a calculadora da Caixa assume "sem redutor" (taxa mais alta)
   // até a pessoa dizer que tem 3+ anos de FGTS — antes vinha ligado e dava ~6% a mais na F3.
   fgts: '', cotista: false, primeiroImovel: true,
@@ -758,6 +760,18 @@ function SimuladorInner() {
         <Titulo>FGTS e elegibilidade</Titulo>
         <Sub>O FGTS pode ser usado como entrada, reduzindo o valor financiado. É liberado pela Caixa Econômica Federal para cotistas.</Sub>
 
+        <div style={{ marginBottom: 28 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.8px' }}>Cidade onde pretende comprar</label>
+          <select
+            value={e.cidade}
+            onChange={ev => upd({ cidade: ev.target.value })}
+            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 10, fontSize: 15, fontFamily: 'inherit', outline: 'none', background: 'var(--bg)', color: 'var(--text)', boxSizing: 'border-box', cursor: 'pointer' }}
+          >
+            {CIDADES_BUSCA.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8, lineHeight: 1.5 }}>Como na Caixa, o teto do imóvel e o subsídio do MCMV dependem do município. Usamos a cidade para orientar a busca de imóveis e avisar quando o teto pode ser diferente.</p>
+        </div>
+
         <InputBRL label="Saldo do FGTS disponível" value={e.fgts} onChange={v => upd({ fgts: v })}
           hint="Saldo atual da sua conta FGTS. Deixe em branco se não tiver ou não quiser usar." />
 
@@ -1027,6 +1041,11 @@ function SimuladorInner() {
                 <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap' }}>{v}</span>
               </div>
             ))}
+            {painelAtivo === 'mcmv' && faixa && faixa.numero <= 2 && e.cidade !== 'São Paulo' && (
+              <p style={{ fontSize: 12, color: '#92400E', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 12px', marginTop: 8, lineHeight: 1.5 }}>
+                ⚠️ O teto de {formatBRL(faixa.teto)} das Faixas 1 e 2 é o de São Paulo — no MCMV ele varia por município (de R$ 210 mil a R$ 275 mil). Confirme o teto de <strong>{e.cidade}</strong> na Caixa antes de escolher o imóvel.
+              </p>
+            )}
             <p style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 8, lineHeight: 1.5 }}>Estimativa com parâmetros médios (mesma lógica da calculadora rápida da Caixa) — não considera a entrada que você informou.</p>
           </div>
         )}
@@ -1185,7 +1204,7 @@ function SimuladorInner() {
 
         {/* CTAs */}
         <div style={{ display: 'grid', gap: 12, marginBottom: 12 }}>
-          <Link href={`/imoveis?min=${Math.round(dados.valorMaxImovel * 0.5)}&max=${dados.valorMaxImovel}&tipo=${tipoImovel}`}
+          <Link href={`/imoveis?min=${Math.round(dados.valorMaxImovel * 0.5)}&max=${dados.valorMaxImovel}&tipo=${tipoImovel}&city=${encodeURIComponent(e.cidade)}`}
             style={{ display: 'block', padding: '16px 0', borderRadius: 12, background: 'var(--primary)', color: '#fff', textAlign: 'center', fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
             🏠 Ver empreendimentos compatíveis — {dados.label}
           </Link>
@@ -1530,7 +1549,7 @@ function SimuladorInner() {
         {sim.isMCMV && sim.faixa && sim.faixa.numero <= 2 && <HisHmpHint />}
 
         {/* Busca inteligente de imóveis com filtro por quartos, vagas e bairro */}
-        <BuscaImoveisInteligente valorImovel={sim.valorImovel} naPlanta={sim.naPlanta} faixaLabel={modalLabel} />
+        <BuscaImoveisInteligente valorImovel={sim.valorImovel} naPlanta={sim.naPlanta} faixaLabel={modalLabel} cidadeInicial={e.cidade} />
 
         <ReceberResultadoEmail resumo={{
           modalidade: modalLabel,
