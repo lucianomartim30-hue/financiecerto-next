@@ -225,5 +225,22 @@ const TABELA_CAIXA: [number, number, number, number, number][] = [
   check('Subsídio não depende de ser cotista do FGTS (a tabela não liga um ao outro)', calcSubsidioEstimado(f1, 2000, 275000, false, true, false, 1) === 50777);
 }
 
+// 16. Calculadora rápida da CAIXA (simuladorhabitacao.caixa.gov.br, testada ao vivo em 2026-09, nascimento
+//     15/03/1996 → 30 anos): usa taxa "sem redutor" (= coluna "sem redutor" da tabela) e Price, e nunca bloqueia —
+//     só informa a entrada mínima (preço − financiamento).
+{
+  // Renda R$6.000 (Faixa 3, 8,16% nominal / 8,47% efetiva) → Caixa financia R$239.942,26
+  const d6 = descobrir(6000, 0, 0, 35, 30, false, true, false);
+  check(`Caixa rápida: renda R$6.000 sem redutor → financiamento perto de R$239.942 (nosso ${d6.mcmv.valorFinanciado})`, Math.abs(d6.mcmv.valorFinanciado / 239942.26 - 1) <= 0.01);
+  check('Caixa rápida: renda R$6.000 → taxa nominal 8,16% (efetiva 8,47%)', d6.mcmv.taxa === 8.16);
+  // Prestação R$3.000 ⇒ renda R$10.000 (Faixa 4, 10,00% nominal / 10,47% efetiva) → financia R$339.057,95
+  const d10 = descobrir(10000, 0, 0, 35, 30, false, true, false);
+  check(`Caixa rápida: renda R$10.000 (Faixa 4) → financiamento perto de R$339.058 (nosso ${d10.mcmv.valorFinanciado})`, Math.abs(d10.mcmv.valorFinanciado / 339057.95 - 1) <= 0.01);
+  check('Caixa rápida: Faixa 4 → taxa nominal 10,00%', d10.mcmv.taxa === 10);
+  // "cotista" só melhora a taxa (padrão conservador do site agora é NÃO cotista)
+  const d6c = descobrir(6000, 0, 0, 35, 30, true, true, false);
+  check('Cotista FGTS (7,66%) financia mais que o padrão sem redutor (8,16%)', d6c.mcmv.valorFinanciado > d6.mcmv.valorFinanciado);
+}
+
 console.log(`\n${pass} passaram, ${fail} falharam`);
 process.exit(fail > 0 ? 1 : 0);

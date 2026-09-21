@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   descobrir, simular, formatBRL, motivoSBPE, parcelaPrice, calcularSeguros,
-  detectarFaixaMCMV, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH,
+  detectarFaixaMCMV, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH, LTV_SBPE_PRICE,
   BANCOS_SBPE, taxaNominalDeEfetiva, mesAnoAtual, classificarSaudeFinanceira,
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
@@ -384,7 +384,9 @@ type Estado = {
 };
 const E0: Estado = {
   renda: '', idade: '', dependentes: 0,
-  fgts: '', cotista: true, primeiroImovel: true,
+  // cotista começa DESLIGADO: a calculadora da Caixa assume "sem redutor" (taxa mais alta)
+  // até a pessoa dizer que tem 3+ anos de FGTS — antes vinha ligado e dava ~6% a mais na F3.
+  fgts: '', cotista: false, primeiroImovel: true,
   jaRecebeuBeneficio: false, temImovelMunicipio: false,
   entrada: '', valorImovel: '', prazoAnos: 35, naPlanta: false,
 };
@@ -491,7 +493,7 @@ function SimuladorInner() {
     setE(novoEstado);
 
     // Calcula perfil mínimo para mostrar painel
-    const p = descobrir(rendaNum, 0, entradaNum, prazoNum, idadeNum);
+    const p = descobrir(rendaNum, 0, entradaNum, prazoNum, idadeNum, false);
     setPerfil(p);
     if (p.mcmv.elegivel) setPainelAtivo('mcmv');
     else setPainelAtivo('sbpe');
@@ -702,13 +704,12 @@ function SimuladorInner() {
         )}
 
         <div style={{ marginBottom: 28 }}>
-          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '.8px' }}>Dependentes (filhos)</label>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '.8px' }}>Há outro comprador e/ou dependente na proposta?</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {[0, 1, 2, 3, 4].map(n => (
-              <Chip key={n} label={n === 4 ? '4+' : String(n)} ativo={e.dependentes === n} onClick={() => upd({ dependentes: n })} />
-            ))}
+            <Chip label="Sim, tenho" ativo={e.dependentes > 0} onClick={() => upd({ dependentes: 1 })} />
+            <Chip label="Não, só eu" ativo={e.dependentes === 0} onClick={() => upd({ dependentes: 0 })} />
           </div>
-          <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>Ter ao menos 1 dependente aumenta o subsídio estimado no MCMV (Faixas 1 e 2)</p>
+          <p style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>Mesma pergunta da Caixa: com outro comprador ou dependente o subsídio estimado do MCMV (Faixas 1 e 2) é bem maior — sem dependente é cerca de 30% do valor.</p>
         </div>
 
         <BtnPrimario label="Próximo →" onClick={avancar} disabled={!e.idade || idadeInvalida} />
@@ -733,6 +734,11 @@ function SimuladorInner() {
           <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.8px' }}>Condições de uso do FGTS</label>
           <Toggle label="Cotista FGTS há pelo menos 3 anos" value={e.cotista} onChange={v => upd({ cotista: v })} />
           <Toggle label="Será o meu primeiro imóvel financiado" value={e.primeiroImovel} onChange={v => upd({ primeiroImovel: v })} />
+          {parseMoeda(e.fgts) > 0 && !e.cotista && (
+            <p style={{ fontSize: 12.5, color: '#92400E', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 10, padding: '10px 12px', marginTop: 8, lineHeight: 1.5 }}>
+              ⚠️ Sem 3 anos de FGTS o saldo <strong>não entra na entrada</strong> e a taxa é a mais alta (sem o redutor de 0,5 p.p.). Se você é cotista há 3 anos ou mais, ative a opção acima.
+            </p>
+          )}
         </div>
 
         {faixa && (
@@ -841,6 +847,15 @@ function SimuladorInner() {
     const valorFinanciadoAtivo5 = perfil[painelAtivo].valorFinanciado;
     const subsidioAtivo5     = painelAtivo === 'mcmv' ? subsidioEstimado : 0;
     const totalPoderCompra5  = valorFinanciadoAtivo5 + entradaEmDinheiro5 + fgtsAtivo5 + subsidioAtivo5;
+
+    // Estilo calculadora rápida da Caixa (sem considerar a entrada informada): o imóvel que o
+    // financiamento pela renda sustenta = financiamento ÷ LTV (respeitando o teto), a entrada
+    // mínima é a diferença e o ITBI/despesas ficam em ~5% do valor (mesmo número da Caixa).
+    const ltvAtivo5    = painelAtivo === 'mcmv' ? (faixa?.ltvMax ?? 0.80) : LTV_SBPE_PRICE;
+    const tetoAtivo5   = painelAtivo === 'mcmv' ? (faixa?.teto ?? Infinity) : painelAtivo === 'sbpe' ? TETO_SFH : Infinity;
+    const imovelPelaRenda5 = valorFinanciadoAtivo5 > 0 ? Math.min(valorFinanciadoAtivo5 / ltvAtivo5, tetoAtivo5) : 0;
+    const entradaMinima5   = Math.max(0, Math.round(imovelPelaRenda5 - valorFinanciadoAtivo5 - subsidioAtivo5));
+    const despesasCompra5  = Math.round(imovelPelaRenda5 * 0.05);
 
     return (
       <Etapa etapa={etapa}>
@@ -962,6 +977,26 @@ function SimuladorInner() {
         {sim && sim.isMCMV && sim.faixa && sim.faixa.numero >= 3 && sim.faixaRenda && sim.faixaRenda.numero <= 2 && (
           <div style={{ padding: '12px 14px', background: '#FAEEDA', borderLeft: '3px solid #EF9F27', borderRadius: '0 8px 8px 0', marginBottom: 14, fontSize: 13, color: '#633806' }}>
             💡 Sua renda se enquadra na <strong>{sim.faixaRenda.label}</strong> (subsídio até {formatBRL(sim.faixaRenda.subsidioMax)}), mas o imóvel de {formatBRL(sim.valorImovel)} supera o teto {sim.faixaRenda.label} ({formatBRL(sim.faixaRenda.teto)}) — mesmo descontando o subsídio estimado. Por isso aplica-se a <strong>{sim.faixa.label} MCMV</strong> (sem subsídio, taxa {sim.taxaAnual.toFixed(2).replace('.', ',')}% a.a.). Para ter acesso ao subsídio, busque imóveis até {formatBRL(sim.faixaRenda.teto)}.
+          </div>
+        )}
+
+        {/* ── Entrada mínima e custos (mesma lógica da calculadora rápida da Caixa) ── */}
+        {imovelPelaRenda5 > 0 && (
+          <div style={{ marginBottom: 20, padding: '14px 16px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: dados.cor, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 10 }}>
+              🏷️ O que sua renda sustenta — {dados.label}
+            </div>
+            {[
+              { l: 'Imóvel que o financiamento comporta', v: formatBRL(Math.round(imovelPelaRenda5)), d: '' },
+              { l: 'Entrada mínima necessária', v: formatBRL(entradaMinima5), d: 'seu FGTS ou o subsídio podem compor a entrada' },
+              { l: 'ITBI e outras despesas', v: `~${formatBRL(despesasCompra5)}`, d: 'aproximadamente 5% do valor do imóvel' },
+            ].map(({ l, v, d }) => (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, padding: '8px 0', borderBottom: '1px dashed var(--border)' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{l}{d && <span style={{ display: 'block', fontSize: 11, color: 'var(--text-faint)' }}>{d}</span>}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', whiteSpace: 'nowrap' }}>{v}</span>
+              </div>
+            ))}
+            <p style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 8, lineHeight: 1.5 }}>Estimativa com parâmetros médios (mesma lógica da calculadora rápida da Caixa) — não considera a entrada que você informou.</p>
           </div>
         )}
 

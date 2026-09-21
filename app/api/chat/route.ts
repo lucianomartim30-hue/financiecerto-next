@@ -74,7 +74,7 @@ Retorne JSON com os campos encontrados (omita os não mencionados):
 - idade: número em anos (padrão 35)
 - valorImovel: número (valor do imóvel, null se não informado)
 - naPlanta: boolean (true se mencionou na planta/em obras)
-- cotista: boolean (true se cotista FGTS há 3+ anos, padrão true)
+- cotista: boolean (true se cotista FGTS há 3+ anos; padrão: só se informou FGTS — sem isso a Caixa aplica a taxa mais alta, sem redutor)
 - dependentes: número (filhos, padrão 0)
 
 Conversão obrigatória: "4 mil"→4000, "20k"→20000, "R$10.000"→10000, "10 de entrada"→10000.
@@ -108,7 +108,7 @@ function buildSimBloco(params: SimParams): string {
   const idade       = Number(params.idade)       || 35;
   const valorImovel = params.valorImovel ? Number(params.valorImovel) : 0;
   const naPlanta    = Boolean(params.naPlanta);
-  const cotista     = params.cotista !== false;
+  const cotista     = params.cotista === true || (params.cotista !== false && (Number(params.fgts) || 0) > 0);
   const dependentes = Number(params.dependentes) || 0;
 
   if (valorImovel > 10000) {

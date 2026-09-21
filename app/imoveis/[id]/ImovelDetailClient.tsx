@@ -904,7 +904,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
     const f = parseMoeda(fgts);
     const e = parseMoeda(entrada);
     const idadeNum = parseInt(idade) || 35;
-    if (r >= 800) setPoder(descobrir(r, f, e, parseInt(prazo), idadeNum, true, true, false, 0, false, isComercial ? 'comercial' : 'residencial'));
+    if (r >= 800) setPoder(descobrir(r, f, e, parseInt(prazo), idadeNum, f > 0, true, false, 0, false, isComercial ? 'comercial' : 'residencial'));
     else setPoder(null);
   }, [renda, fgts, entrada, prazo, idade]);
 
@@ -916,7 +916,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
     if (!valorRef)     { setErro('Valor do imóvel não disponível.'); return; }
     if (en + fg >= valorRef) { setErro('Entrada + FGTS não pode ser maior que o imóvel.'); return; }
     setErro('');
-    const r2 = simular({ rendaBruta: r, entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: parseInt(idade) || 35, tipoImovel: isComercial ? 'comercial' : 'residencial' });
+    const r2 = simular({ rendaBruta: r, entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: parseInt(idade) || 35, cotista: fg > 0, tipoImovel: isComercial ? 'comercial' : 'residencial' });
     setResultado(r2);
     // Contexto pro lead (Fase 4) — lido por registrarLead() se o usuário
     // clicar no WhatsApp em seguida, mesmo que o clique não seja neste card.
@@ -945,7 +945,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   // Usar simular() aqui garante que as duas telas NUNCA mais decidam diferente
   // — são literalmente a mesma chamada, só que uma roda antes do clique.
   const simRef = (poder && valorRef > 0)
-    ? simular({ rendaBruta: parseMoeda(renda), entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: parseInt(idade) || 35, tipoImovel: isComercial ? 'comercial' : 'residencial' })
+    ? simular({ rendaBruta: parseMoeda(renda), entrada: en, fgts: fg, valorImovel: valorRef, prazoAnos: parseInt(prazo), naPlanta, prazoObraAnos: naPlanta ? 3 : 0, idadeProponente: parseInt(idade) || 35, cotista: fg > 0, tipoImovel: isComercial ? 'comercial' : 'residencial' })
     : null;
   const ehMCMVAqui = simRef ? simRef.isMCMV : !!poder?.mcmv.elegivel;
   const ehSFIAqui  = simRef ? simRef.isSFI  : valorRef > TETO_SFH;
