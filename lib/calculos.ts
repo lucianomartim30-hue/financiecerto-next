@@ -92,6 +92,18 @@ export const BANCOS_SBPE: BancoSBPE[] = [
 export function taxaNominalDeEfetiva(efetivaAnualPct: number): number {
   return 12 * (Math.pow(1 + efetivaAnualPct / 100, 1 / 12) - 1) * 100;
 }
+// Taxa efetiva a.a. equivalente a uma nominal (÷12 capitalizada): 10,92 → 11,49; 7,66 → 7,93 (tabela Caixa).
+export function taxaEfetivaDeNominal(nominalAnualPct: number): number {
+  // A Caixa divulga o SBPE como nominal 10,92 / efetiva 11,49 (a nominal real é ~10,9245, arredondada) —
+  // usa o par publicado por ela em vez de recalcular (que daria 11,48).
+  if (Math.abs(nominalAnualPct - TAXA_SBPE_ANUAL) < 1e-9) return TAXA_SBPE_EFETIVA;
+  return (Math.pow(1 + nominalAnualPct / 100 / 12, 12) - 1) * 100;
+}
+const fmtPct = (n: number) => n.toFixed(2).replace('.', ',');
+/** "10,92% a.a. nominal (11,49% efetiva)" — formato da Caixa, que divulga a efetiva mas calcula com a nominal. */
+export function formatTaxaNominalEfetiva(nominalAnualPct: number): string {
+  return `${fmtPct(nominalAnualPct)}% a.a. nominal (${fmtPct(taxaEfetivaDeNominal(nominalAnualPct))}% efetiva)`;
+}
 export const LTV_SBPE_PRICE   = 0.70;
 export const LTV_SBPE_SAC     = 0.80;
 export const PRAZO_MAX_MESES  = 420;

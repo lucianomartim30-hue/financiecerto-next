@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   descobrir, simular, formatBRL, motivoSBPE, parcelaPrice, calcularSeguros,
   detectarFaixaMCMV, rendaNecessariaPelaPrestacao, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH, LTV_SBPE_PRICE,
-  BANCOS_SBPE, taxaNominalDeEfetiva, mesAnoAtual, classificarSaudeFinanceira,
+  BANCOS_SBPE, taxaNominalDeEfetiva, taxaEfetivaDeNominal, formatTaxaNominalEfetiva, mesAnoAtual, classificarSaudeFinanceira,
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
@@ -200,12 +200,12 @@ function BadgeModalidade({ renda }: { renda: number }) {
     const c = cores[faixa.numero];
     // Mostra faixa de taxa (cotista vs sem FGTS) quando houver diferença
     const taxaDisplay = faixa.taxaMin === faixa.taxaMax
-      ? `${faixa.taxaMin.toFixed(2).replace('.', ',')}%`
-      : `${faixa.taxaMin.toFixed(2).replace('.', ',')}%–${faixa.taxaMax.toFixed(2).replace('.', ',')}%`;
+      ? formatTaxaNominalEfetiva(faixa.taxaMin)
+      : `${faixa.taxaMin.toFixed(2).replace('.', ',')}%–${faixa.taxaMax.toFixed(2).replace('.', ',')}% a.a. nominal`;
     return (
       <div style={{ marginBottom: 20 }}>
         <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 99, background: c.bg, color: c.txt, fontSize: 14, fontWeight: 800, marginBottom: 8, border: `1.5px solid ${c.cor}44` }}>
-          {faixa.label} MCMV · {taxaDisplay} a.a. + TR
+          {faixa.label} MCMV · {taxaDisplay} + TR
         </span>
         <p style={{ fontSize: 12, color: 'var(--text-faint)', margin: 0 }}>
           Teto: {formatBRL(faixa.teto)} · Subsídio máx: {formatBRL(faixa.subsidioMax)}
@@ -216,7 +216,7 @@ function BadgeModalidade({ renda }: { renda: number }) {
   return (
     <div style={{ marginBottom: 20 }}>
       <span style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 99, background: '#E6F1FB', color: '#185FA5', fontSize: 14, fontWeight: 800, marginBottom: 8, border: '1.5px solid #185FA544' }}>
-        💼 Perfil SBPE · {TAXA_SBPE_ANUAL}% a.a. + TR
+        💼 Perfil SBPE · {formatTaxaNominalEfetiva(TAXA_SBPE_ANUAL)} + TR
       </span>
       <p style={{ fontSize: 12, color: 'var(--text-faint)', margin: 0 }}>
         Financiamento bancário convencional · imóveis SFH até {formatBRL(TETO_SFH)} · FGTS permitido · também opera no SFI acima desse valor
@@ -364,7 +364,7 @@ function ExplicacaoSFI() {
           },
           {
             tag: 'SBPE / SFH', tagBg: '#E6F1FB', tagTxt: '#185FA5', cor: '#185FA5',
-            desc: 'SBPE é a fonte de captação (poupança). Opera dentro do SFH — regras para imóveis até R$ 2,25M. Taxa CEF: ' + TAXA_SBPE_ANUAL + '% a.a. + TR. Permite FGTS.',
+            desc: 'SBPE é a fonte de captação (poupança). Opera dentro do SFH — regras para imóveis até R$ 2,25M. Taxa CEF: ' + formatTaxaNominalEfetiva(TAXA_SBPE_ANUAL) + ' + TR. Permite FGTS.',
           },
           {
             tag: 'SFI', tagBg: '#FAEEDA', tagTxt: '#854F0B', cor: '#D97706',
@@ -946,7 +946,7 @@ function SimuladorInner() {
                   })()}
             </div>
             <div style={{ display: 'inline-block', marginTop: 14, padding: '5px 16px', background: 'rgba(255,255,255,.2)', borderRadius: 99, fontSize: 13, color: '#fff', fontWeight: 700 }}>
-              {dados.taxa}% a.a. + {painelAtivo === 'sfi' ? 'taxa livre' : 'TR'}
+              {painelAtivo === 'sfi' ? `${dados.taxa}% a.a. + taxa livre` : `${formatTaxaNominalEfetiva(dados.taxa)} + TR`}
             </div>
           </div>
 
@@ -1447,7 +1447,7 @@ function SimuladorInner() {
                   </div>
                   <div style={{ display: 'flex', gap: 8, padding: '5px 0' }}>
                     <span style={{ color: sc.cor }}>•</span>
-                    <span>Financiamento estimado: <strong>{formatBRL(sim.valorFinanciado)}</strong> à taxa de <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong></span>
+                    <span>Financiamento estimado: <strong>{formatBRL(sim.valorFinanciado)}</strong> à taxa de <strong>{formatTaxaNominalEfetiva(sim.taxaAnual)}</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong></span>
                   </div>
                 </div>
               )}
@@ -1464,7 +1464,8 @@ function SimuladorInner() {
             sim.subsidioEstimado > 0 ? { l: '  ↳ 🎁 Subsídio MCMV (estimado)', v: formatBRL(sim.subsidioEstimado), destaque: true } : null,
             { l: '  = Total entrada', v: formatBRL(sim.entrada) },
             { l: '🏛️ Valor financiado (banco)', v: formatBRL(sim.valorFinanciado) },
-            { l: 'Taxa de juros nominal', v: `${sim.taxaAnual}% a.a. + ${sim.isSFI ? 'taxa livre' : 'TR'}` },
+            { l: 'Taxa de juros nominal', v: `${sim.taxaAnual.toFixed(2).replace('.', ',')}% a.a. + ${sim.isSFI ? 'taxa livre' : 'TR'}` },
+            { l: 'Taxa de juros efetiva', v: `${taxaEfetivaDeNominal(sim.taxaAnual).toFixed(2).replace('.', ',')}% a.a.` },
             { l: 'Prazo', v: `${Math.round(sim.prazoMeses / 12)} anos (${sim.prazoMeses} meses)` },
             { l: 'Parcela A+J (amort. + juros)', v: formatBRL(sim.parcelaPrimeiro - sim.seguros.total) },
             { l: `MIP — seguro vida (idade ${Number(e.idade) || 35} anos)`, v: formatBRL(sim.seguros.mip) },
@@ -1528,7 +1529,7 @@ function SimuladorInner() {
                 <div style={{ fontSize: 12, color: '#78350F', lineHeight: 1.65, marginBottom: 10 }}>
                   Veja mês a mês como a TR corrigiu o saldo devedor e elevou as parcelas
                   de <strong>{formatBRL(sim.valorFinanciado)}</strong> financiado
-                  a <strong>{sim.taxaAnual}% a.a.</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong>.
+                  a <strong>{formatTaxaNominalEfetiva(sim.taxaAnual)}</strong> em <strong>{Math.round(sim.prazoMeses / 12)} anos</strong>.
                 </div>
                 <div style={{
                   display: 'inline-block', background: '#F59E0B', color: '#fff',

@@ -1,6 +1,6 @@
 // Sanity check das regras críticas de lib/calculos.ts — sem framework de testes.
 // Roda com: npm run verify
-import { simular, descobrir, detectarFaixaMCMV, classificarSaudeFinanceira, calcSubsidioEstimado, taxaEfetivaMCMV, rendaNecessariaPelaPrestacao, FAIXAS_MCMV } from '../lib/calculos';
+import { simular, descobrir, detectarFaixaMCMV, classificarSaudeFinanceira, calcSubsidioEstimado, taxaEfetivaMCMV, rendaNecessariaPelaPrestacao, taxaEfetivaDeNominal, formatTaxaNominalEfetiva, FAIXAS_MCMV } from '../lib/calculos';
 
 let pass = 0, fail = 0;
 function check(desc: string, cond: boolean) {
@@ -257,6 +257,14 @@ check('Pela prestação: valor inválido → 0', rendaNecessariaPelaPrestacao(0)
   }
   const d4 = descobrir(rendaNecessariaPelaPrestacao(4000), 0, 0, 35, 30, false, true, false);
   check(`Pela prestação R$4.000 (SBPE): parcela do perfil volta perto de R$4.000 (${d4.sbpe.parcela})`, Math.abs(d4.sbpe.parcela / 4000 - 1) <= 0.02);
+}
+
+// 18. Taxa efetiva equivalente à nominal — colunas "nominal" e "efetiva" da tabela da Caixa.
+{
+  const pares: [number, number][] = [[4.75, 4.85], [4.25, 4.33], [5.25, 5.37], [6.00, 6.16], [7.66, 7.93], [8.16, 8.47], [10.00, 10.47], [10.92, 11.49]];
+  const erro = pares.filter(([n, e]) => Math.abs(taxaEfetivaDeNominal(n) - e) > 0.01).length;
+  check('Tabela Caixa: taxa efetiva calculada a partir da nominal bate em todas as taxas (4,75→4,85 … 10,92→11,49)', erro === 0);
+  check('Rótulo da taxa no formato da Caixa: "10,92% a.a. nominal (11,49% efetiva)"', formatTaxaNominalEfetiva(10.92) === '10,92% a.a. nominal (11,49% efetiva)');
 }
 
 console.log(`\n${pass} passaram, ${fail} falharam`);
