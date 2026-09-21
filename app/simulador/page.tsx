@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
   descobrir, simular, formatBRL, motivoSBPE, parcelaPrice, calcularSeguros,
-  detectarFaixaMCMV, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH, LTV_SBPE_PRICE,
+  detectarFaixaMCMV, rendaNecessariaPelaPrestacao, TAXA_SBPE_ANUAL, TAXA_SFI_ANUAL, TR_MENSAL, TETO_SFH, LTV_SBPE_PRICE,
   BANCOS_SBPE, taxaNominalDeEfetiva, mesAnoAtual, classificarSaudeFinanceira,
   type ResultadoDescobrir, type ResultadoSimulacao,
 } from '@/lib/calculos';
@@ -26,6 +26,11 @@ function fmtInput(v: string): string {
   return n ? Number(n).toLocaleString('pt-BR') : '';
 }
 function parseMoeda(v: string): number { return Number(v.replace(/\D/g, '')) || 0; }
+// Prestação digitada → renda necessária (string formatada), igual à calculadora "pela prestação" da Caixa
+function renda0(prestacaoStr: string): string {
+  const r = rendaNecessariaPelaPrestacao(parseMoeda(prestacaoStr));
+  return r > 0 ? fmtInput(String(r)) : '';
+}
 function salvarCtx(ctx: Record<string, unknown>) {
   try {
     sessionStorage.setItem('joao_sim_context', JSON.stringify(ctx));
@@ -378,12 +383,14 @@ function ExplicacaoSFI() {
 // ─── Estado ───────────────────────────────────────────────────────────────────
 type Estado = {
   renda: string; idade: string; dependentes: number;
+  modoPrestacao: boolean; prestacao: string;
   fgts: string; cotista: boolean; primeiroImovel: boolean;
   jaRecebeuBeneficio: boolean; temImovelMunicipio: boolean;
   entrada: string; valorImovel: string; prazoAnos: number; naPlanta: boolean;
 };
 const E0: Estado = {
   renda: '', idade: '', dependentes: 0,
+  modoPrestacao: false, prestacao: '',
   // cotista começa DESLIGADO: a calculadora da Caixa assume "sem redutor" (taxa mais alta)
   // até a pessoa dizer que tem 3+ anos de FGTS — antes vinha ligado e dava ~6% a mais na F3.
   fgts: '', cotista: false, primeiroImovel: true,
@@ -651,11 +658,35 @@ function SimuladorInner() {
           </div>
         )}
         <Barra etapa={0} total={4} />
-        <Titulo>Qual é a renda familiar mensal?</Titulo>
-        <Sub>Some a renda bruta de todos que vão participar do financiamento — casal, pais, filhos.</Sub>
+        <Titulo>{e.modoPrestacao ? 'Quanto cabe no seu bolso por mês?' : 'Qual é a renda familiar mensal?'}</Titulo>
+        <Sub>{e.modoPrestacao
+          ? 'Informe a prestação que você pretende assumir — calculamos a renda necessária e o imóvel que cabe nela.'
+          : 'Some a renda bruta de todos que vão participar do financiamento — casal, pais, filhos.'}</Sub>
 
-        <InputBRL label="Renda total bruta" value={e.renda} onChange={v => upd({ renda: v })}
-          hint="Renda antes de descontos. Inclua todos os participantes." />
+        {/* Como simular (igual à calculadora rápida da Caixa): pela renda ou pela prestação */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+          <Chip label="Sei minha renda" ativo={!e.modoPrestacao} onClick={() => upd({ modoPrestacao: false })} />
+          <Chip label="Sei quanto posso pagar por mês" ativo={e.modoPrestacao} onClick={() => upd({ modoPrestacao: true })} />
+        </div>
+
+        {e.modoPrestacao ? (
+          <>
+            <InputBRL label="Prestação desejada" value={e.prestacao}
+              onChange={v => upd({ prestacao: v, renda: renda0(v) })}
+              hint="Quanto você gostaria de pagar por mês?" />
+            {renda > 0 && (
+              <div style={{ padding: '12px 16px', background: '#E6F1FB', borderRadius: 10, marginBottom: 20 }}>
+                <span style={{ fontSize: 14, color: '#185FA5', fontWeight: 600 }}>Renda estimada necessária: {formatBRL(renda)}/mês</span>
+                <span style={{ display: 'block', fontSize: 12, color: '#185FA5', marginTop: 4, lineHeight: 1.5 }}>
+                  A 1ª parcela costuma ser de até 30% da renda no MCMV (renda até R$ 13.000) e 25% no SBPE da Caixa — mesma lógica da calculadora da Caixa.
+                </span>
+              </div>
+            )}
+          </>
+        ) : (
+          <InputBRL label="Renda total bruta" value={e.renda} onChange={v => upd({ renda: v })}
+            hint="Renda antes de descontos. Inclua todos os participantes." />
+        )}
 
         {renda > 0 && <BadgeModalidade renda={renda} />}
 

@@ -690,6 +690,18 @@ export function simular(input: InputSimulacao): ResultadoSimulacao {
   };
 }
 
+// ─── Prestação → renda necessária ("pela prestação" da calculadora da Caixa) ───
+// Caixa (testado ao vivo, 2026-09): prestação R$3.000 → renda estimada R$10.000, ou seja, a
+// 1ª parcela é 30% da renda no MCMV (renda até R$13.000). Acima disso vale o SBPE, em que a
+// Caixa limita a 1ª parcela a 25% da renda (tabela abr/2026).
+export function rendaNecessariaPelaPrestacao(prestacao: number): number {
+  if (!(prestacao > 0)) return 0;
+  const rendaMax = FAIXAS_MCMV[FAIXAS_MCMV.length - 1].rendaMax;
+  const rendaMcmv = prestacao / 0.30;
+  const renda = rendaMcmv <= rendaMax + 1e-6 ? rendaMcmv : prestacao / COMPROMETIMENTO_SBPE;
+  return Math.ceil(renda - 1e-6);
+}
+
 // ─── Descobrir: renda → perfil de compra ──────────────────────────────────────
 export interface ResultadoDescobrir {
   rendaBruta: number;

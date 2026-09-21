@@ -1,6 +1,6 @@
 // Sanity check das regras críticas de lib/calculos.ts — sem framework de testes.
 // Roda com: npm run verify
-import { simular, descobrir, detectarFaixaMCMV, classificarSaudeFinanceira, calcSubsidioEstimado, taxaEfetivaMCMV, FAIXAS_MCMV } from '../lib/calculos';
+import { simular, descobrir, detectarFaixaMCMV, classificarSaudeFinanceira, calcSubsidioEstimado, taxaEfetivaMCMV, rendaNecessariaPelaPrestacao, FAIXAS_MCMV } from '../lib/calculos';
 
 let pass = 0, fail = 0;
 function check(desc: string, cond: boolean) {
@@ -240,6 +240,23 @@ const TABELA_CAIXA: [number, number, number, number, number][] = [
   // "cotista" só melhora a taxa (padrão conservador do site agora é NÃO cotista)
   const d6c = descobrir(6000, 0, 0, 35, 30, true, true, false);
   check('Cotista FGTS (7,66%) financia mais que o padrão sem redutor (8,16%)', d6c.mcmv.valorFinanciado > d6.mcmv.valorFinanciado);
+}
+
+// 17. Modo "pela prestação" da Caixa (testado ao vivo, 2026-09): prestação R$3.000 → renda estimada R$10.000 (30%).
+//     Acima do teto de renda do MCMV (R$13.000) vale o SBPE da Caixa, com 1ª parcela de 25% da renda.
+check('Pela prestação: R$3.000 → renda R$10.000 (igual à Caixa)', rendaNecessariaPelaPrestacao(3000) === 10000);
+check('Pela prestação: R$1.500 → renda R$5.000', rendaNecessariaPelaPrestacao(1500) === 5000);
+check('Pela prestação: R$3.900 → renda R$13.000 (limite do MCMV)', rendaNecessariaPelaPrestacao(3900) === 13000);
+check('Pela prestação: R$4.000 → SBPE a 25% da renda = R$16.000', rendaNecessariaPelaPrestacao(4000) === 16000);
+check('Pela prestação: valor inválido → 0', rendaNecessariaPelaPrestacao(0) === 0 && rendaNecessariaPelaPrestacao(-5) === 0);
+{
+  // A renda derivada, passada pelo motor, reproduz a prestação pedida (ida e volta)
+  for (const p of [1200, 2000, 3000, 3800]) {
+    const d = descobrir(rendaNecessariaPelaPrestacao(p), 0, 0, 35, 30, false, true, false);
+    check(`Pela prestação R$${p}: a parcela do perfil volta perto do pedido (${d.mcmv.parcela})`, Math.abs(d.mcmv.parcela / p - 1) <= 0.02);
+  }
+  const d4 = descobrir(rendaNecessariaPelaPrestacao(4000), 0, 0, 35, 30, false, true, false);
+  check(`Pela prestação R$4.000 (SBPE): parcela do perfil volta perto de R$4.000 (${d4.sbpe.parcela})`, Math.abs(d4.sbpe.parcela / 4000 - 1) <= 0.02);
 }
 
 console.log(`\n${pass} passaram, ${fail} falharam`);
