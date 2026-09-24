@@ -1320,7 +1320,7 @@ function NaPlantaContent() {
         />}
 
         {/* ── Busca inteligente de imóveis ─────────────────────────────── */}
-        {valido && isMCMV && faixaEfetiva && faixaEfetiva.numero <= 2 && <HisHmpHint />}
+        {valido && !isComercial && <HisHmpHint />}
         {valido && <BuscaImoveisInteligente valorImovel={valor} naPlanta={true} />}
 
         {/* ── FAQ — sempre visível, independe de ter preenchido o simulador ── */}

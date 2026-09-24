@@ -170,6 +170,11 @@ export default function BuscaImoveisInteligente({
       // Achou pelo menos 3 no bairro desejado → mostra direto
       if (r1.length >= 3 || !bairro.trim()) {
         setResultados(r1.slice(0, 6));
+        // Sem bairro informado, esta já é a busca na cidade inteira (não passa
+        // pela Busca 2 abaixo) — se vier vazia, precisa sinalizar "sem resultado"
+        // explicitamente, senão a tela não mostra nem cards nem aviso nenhum
+        // (bug real: perfis de renda baixa em SP zeram aqui — auditoria 2026-09).
+        setSemResultado(r1.length === 0);
         setBuscado(true);
         return;
       }
@@ -334,7 +339,7 @@ export default function BuscaImoveisInteligente({
                   😕 Nenhum imóvel encontrado
                 </p>
                 <p style={{ fontSize: 12, color: '#854F0B' }}>
-                  Tente ampliar o perfil (mais quartos, sem filtro de vaga) ou ajuste o valor na simulação.
+                  Tente outra cidade, ajuste o número de quartos ou remova o filtro de vaga — {cidade} não tem estoque nesse orçamento agora.
                 </p>
               </div>
             )}

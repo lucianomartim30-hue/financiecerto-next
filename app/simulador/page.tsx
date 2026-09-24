@@ -1185,8 +1185,10 @@ function SimuladorInner() {
           </div>
         </div>
 
+        {painelAtivo !== 'sfi' && <HisHmpHint />}
+
         {/* Tipo de imóvel */}
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, marginTop: 16 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '.8px', marginBottom: 10 }}>Tipo de imóvel que busca</p>
           <div style={{ display: 'flex', gap: 8 }}>
             {([
@@ -1380,7 +1382,7 @@ function SimuladorInner() {
           <div style={{ padding: '18px', background: 'linear-gradient(135deg, #F0FDF9, #D1FAE5)', borderRadius: 14, border: '2px solid #0F6E56' }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: '#0F6E56', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>SAC</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: '#111827' }}>{formatBRL(sim.parcelaSACPrimeiro)}</div>
-            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 3 }}>1ª parcela · decresce</div>
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 3 }}>1ª parcela · decresce até {formatBRL(sim.parcelaSACUltimo)}</div>
             <div style={{ fontSize: 12, color: '#065F46', marginTop: 8, fontWeight: 700 }}>Economiza {formatBRL(economiasSAC)}</div>
           </div>
         </div>
@@ -1547,7 +1549,7 @@ function SimuladorInner() {
           Simulação educativa — regras SFH/MCMV vigentes · {mesAnoAtual()}. MIP calculado pelo coeficiente etário real do contrato SIOPI/Caixa. Taxas SBPE: referência de mercado — variam por banco, perfil e LTV. Valores exatos confirmados em cada instituição financeira. Não constitui proposta de crédito.
         </p>
 
-        {sim.isMCMV && sim.faixa && sim.faixa.numero <= 2 && <HisHmpHint />}
+        {!sim.isSFI && <HisHmpHint />}
 
         {/* Busca inteligente de imóveis com filtro por quartos, vagas e bairro */}
         <BuscaImoveisInteligente valorImovel={sim.valorImovel} naPlanta={sim.naPlanta} faixaLabel={modalLabel} cidadeInicial={e.cidade} />

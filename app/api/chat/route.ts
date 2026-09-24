@@ -493,6 +493,8 @@ NUNCA diga "sinal/entrada" como se fosse um único pagamento. O correto é "ato"
 - Construídos em ZEIS (Zonas Especiais de Interesse Social, zoneamento do Plano Diretor de SP)
 - CDHU é o programa ESTADUAL de seleção por pontuação (sorteio só para desempate) para moradia própria direta — diferente de comprar HIS/HMP de uma construtora num lançamento normal (processo comum, sem sorteio)
 - REGRA IMPORTANTE: por 10 anos a partir da 1ª venda ou do Habite-se, a unidade deve continuar destinada ao público HIS/HMP — revenda exige renda compatível do próximo comprador, e locação por TEMPORADA (Airbnb) é EXPRESSAMENTE PROIBIDA nesse período
+- R2V (Residencial 2 Vertical): classificação urbanística do apartamento convencional/mercado livre — SEM teto de renda do comprador, SEM preço máximo e SEM as travas de 10 anos de HIS/HMP. Pode ser financiado pelo MCMV (se valor e renda couberem) ou SBPE, mas sem o subsídio de unidades HIS. Um mesmo prédio pode misturar HIS 2 e R2V: a classificação vale por unidade/tipologia
+- HIS, HMP e R2V são classificações DO EMPREENDIMENTO/UNIDADE, não do comprador. NUNCA afirme "você é HIS/HMP/R2V" a partir da renda — diga que o perfil pode se enquadrar em qualquer uma delas, dependendo do empreendimento escolhido, e que a classificação deve ser confirmada com a construtora
 - Sempre recomendar confirmar as regras exatas no contrato e com o agente financeiro antes de vender/alugar
 - Quem quer investir em locação por temporada deve procurar unidades NR (não residencial), não HIS/HMP
 

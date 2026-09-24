@@ -52,6 +52,18 @@ const TERMS: Term[] = [
     short: 'Financiamento direto com a construtora via Caixa Econômica Federal — indicado para imóvel na planta.',
     full: 'Modalidade em que a Caixa Econômica Federal (ou banco parceiro) contrata o financiamento do comprador ainda na fase de construção. O banco libera recursos diretamente para a construtora conforme o avanço da obra. O comprador paga juros sobre o saldo contratado durante a obra (fase de evolução) e, após o habite-se, inicia as parcelas definitivas de amortização. É a forma mais comum de compra na planta via MCMV.',
   },
+  {
+    term: 'HIS / HMP',
+    category: 'modalidades',
+    short: 'Classificações da Prefeitura de SP para empreendimentos de habitação popular — com teto de renda e de preço.',
+    full: 'HIS (Habitação de Interesse Social, subdividida em HIS 1 e HIS 2) e HMP (Habitação de Mercado Popular) são classificações urbanísticas do empreendimento, definidas pela Prefeitura de São Paulo — não são programas de financiamento nem faixas do MCMV, embora costumem se sobrepor a elas. Cada categoria tem renda familiar máxima e valor máximo de venda (Decreto 64.895/2026), e a unidade deve permanecer destinada a esse público por 10 anos, com revenda condicionada à renda do próximo comprador e locação por temporada proibida. A classificação é do imóvel, não do comprador: a mesma renda pode se enquadrar em categorias diferentes conforme o empreendimento escolhido.',
+  },
+  {
+    term: 'R2V',
+    category: 'modalidades',
+    short: 'Residencial 2 Vertical — classificação do apartamento convencional de mercado, sem teto de renda nem de preço.',
+    full: 'R2V é a classificação urbanística do apartamento comum em São Paulo (prédio residencial vertical de mercado livre). Diferente de HIS e HMP, não tem renda máxima do comprador, preço máximo de venda nem a destinação social de 10 anos. Pode ser financiado pelo MCMV (se valor e renda couberem numa faixa) ou pelo SBPE, mas sem o subsídio de unidades HIS. Um mesmo empreendimento pode misturar unidades HIS 2 e R2V — a classificação vale por unidade.',
+  },
 
   /* ── Índices e Taxas ──────────────────────────────────────────── */
   {

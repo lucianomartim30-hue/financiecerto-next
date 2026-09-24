@@ -115,7 +115,7 @@ export default function AprendaIndex() {
         </div>
       </div>
 
-      {/* Temas específicos — público mais restrito (SCP, estrangeiro, HIS/HMP...) */}
+      {/* Temas específicos — público mais restrito (SCP, estrangeiro, HIS/HMP/R2V...) */}
       {artigosNichado.length > 0 && (
         <div className="container" style={{ maxWidth: 820, padding: '48px 24px 80px' }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 16 }}>

@@ -782,17 +782,17 @@ export const ARTIGOS: Artigo[] = [
     slug: 'his-hmp-o-que-sao-quem-pode-comprar',
     categoria: 'nichado',
     ordem: 1,
-    keyword: 'HIS e HMP o que são',
-    triggers: ['o que é his', 'o que é hmp', 'his hmp'],
-    titulo: 'HIS e HMP: O Que São, Quem Pode Comprar e Regras de Revenda e Aluguel',
-    tituloSEO: 'HIS e HMP: Quem Pode Comprar e Regras de Revenda/Aluguel (2026)',
+    keyword: 'HIS HMP R2V o que são',
+    triggers: ['o que é his', 'o que é hmp', 'his hmp', 'o que é r2v', 'r2v', 'his hmp r2v', 'diferença his hmp r2v'],
+    titulo: 'HIS, HMP e R2V: O Que São, Quem Pode Comprar e Regras de Revenda e Aluguel',
+    tituloSEO: 'HIS, HMP e R2V: Diferenças, Quem Pode Comprar e Regras (2026)',
     metaDescription:
-      'Entenda HIS 1, HIS 2 e HMP: faixas de renda, valores máximos em São Paulo, quem pode comprar, e as regras de revenda e aluguel — incluindo a proibição de locação por temporada.',
+      'Entenda HIS 1, HIS 2, HMP e R2V: faixas de renda, valores máximos em São Paulo, quem pode comprar, como saber a classificação do empreendimento e as regras de revenda e aluguel — incluindo a proibição de locação por temporada.',
     resumo:
-      'HIS e HMP são categorias de habitação popular que aparecem direto no nome de muitos lançamentos em São Paulo — mas poucos compradores sabem exatamente o que muda entre elas, quem pode comprar, e o que acontece se quiser vender ou alugar depois. Aqui você vê as faixas de renda, os valores atualizados de 2026 e as regras reais de revenda e locação.',
+      'HIS, HMP e R2V aparecem direto no nome e na tabela de muitos lançamentos em São Paulo — mas poucos compradores sabem exatamente o que muda entre elas, quem pode comprar, e o que acontece se quiser vender ou alugar depois. Aqui você vê as três lado a lado, os valores atualizados de 2026, como descobrir a classificação do imóvel que você está olhando e as regras reais de revenda e locação.',
     publicado: '2026-08-02',
-    atualizado: '2026-08-02',
-    leituraMin: 8,
+    atualizado: '2026-09-23',
+    leituraMin: 9,
     secoes: [
       {
         titulo: 'HIS e MCMV não são a mesma coisa — entenda com um exemplo simples',
@@ -819,6 +819,47 @@ export const ARTIGOS: Artigo[] = [
           },
           { tipo: 'p', texto: 'Esses valores em reais equivalem, aproximadamente, a 3, 6 e 10 salários mínimos de 2026 — por isso o mercado costuma descrever as faixas dessa forma no dia a dia, mas o enquadramento oficial usa os valores exatos em reais acima (ou a renda per capita, o que for mais favorável à família).' },
           { tipo: 'p', texto: 'Na prática, HIS 1 costuma corresponder à Faixa 1 do MCMV, HIS 2 à Faixa 2, e HMP funciona como uma ponte entre a habitação social e o mercado convencional — muitas vezes financiada pela Faixa 3 do MCMV ou pelo SBPE, dependendo da renda exata do comprador.' },
+        ],
+      },
+      {
+        titulo: 'E o R2V? O apartamento "comum" do mercado',
+        blocos: [
+          { tipo: 'p', texto: '**R2V** (Residencial 2 Vertical) é a classificação urbanística do apartamento convencional em São Paulo: prédio residencial vertical, de mercado livre. Ao contrário de HIS e HMP, **o R2V não tem teto de renda do comprador nem preço máximo de venda**, e não tem as travas de revenda e aluguel dos 10 anos.' },
+          { tipo: 'p', texto: 'Um mesmo lançamento pode misturar categorias — por exemplo, algumas unidades HIS 2 e outras R2V no mesmo prédio. Por isso a classificação vale **por unidade/tipologia**, e é ela (não só o nome do empreendimento) que define o que muda no preço, no financiamento e nas regras depois da compra.' },
+          { tipo: 'p', texto: 'Um imóvel R2V pode ser financiado normalmente — pelo MCMV, se o valor e a renda couberem em alguma faixa, ou pelo SBPE —, mas sem o subsídio que alguns perfis recebem em unidades HIS.' },
+          { tipo: 'destaque', texto: 'Importante: o simulador do FinancieCerto **não define** se você "é" HIS, HMP ou R2V. Essa classificação é do empreendimento (definida pela Prefeitura), não da sua renda. O que a simulação mostra é o seu perfil de financiamento — e ele pode se encaixar em qualquer uma dessas categorias, dependendo do imóvel que você escolher. Confirme a classificação da unidade com a construtora antes de fechar.' },
+        ],
+      },
+      {
+        titulo: 'HIS 1, HIS 2, HMP e R2V lado a lado',
+        blocos: [
+          { tipo: 'tabela',
+            cabecalho: ['', 'HIS 1', 'HIS 2', 'HMP', 'R2V'],
+            linhas: [
+              ['Quem define', 'Prefeitura de SP', 'Prefeitura de SP', 'Prefeitura de SP', 'Prefeitura de SP (classificação de uso)'],
+              ['Renda familiar máx. do comprador', 'R$ 4.863', 'R$ 9.726', 'R$ 16.210', 'Sem limite'],
+              ['Valor máx. de venda', 'R$ 276.102', 'R$ 383.637', 'R$ 537.673', 'Sem limite'],
+              ['Destinação social de 10 anos', 'Sim', 'Sim', 'Sim', 'Não'],
+              ['Revenda exige renda do próximo comprador', 'Sim, no prazo', 'Sim, no prazo', 'Sim, no prazo', 'Não'],
+              ['Aluguel por temporada (Airbnb)', 'Proibido', 'Proibido', 'Proibido', 'Regra geral do condomínio e do imóvel'],
+              ['Financiamento mais comum', 'MCMV (Faixa 1)', 'MCMV (Faixa 2)', 'MCMV (Faixa 3) ou SBPE', 'MCMV (se couber) ou SBPE'],
+            ],
+          },
+          { tipo: 'p', texto: 'A linha "financiamento mais comum" é uma tendência, não uma regra: o que decide a modalidade é a **renda do comprador e o valor do imóvel**, olhados pelo banco. Já a classificação (HIS, HMP, R2V) é do imóvel. Por isso duas pessoas com rendas diferentes podem comprar a mesma unidade HIS 2 — uma pelo MCMV Faixa 2, outra pela Faixa 3 —, cada uma com a taxa da sua faixa.' },
+        ],
+      },
+      {
+        titulo: 'Como descobrir a classificação do imóvel que você está olhando',
+        blocos: [
+          { tipo: 'p', texto: 'Como a classificação vale **por unidade/tipologia** e não só por empreendimento, não dá para deduzir pelo nome do prédio. O caminho seguro é:' },
+          { tipo: 'lista', itens: [
+            '**Peça a classificação da unidade específica** à construtora ou ao corretor, e peça que conste por escrito (tabela de vendas, proposta ou contrato)',
+            '**Compare o preço com os tetos da tabela acima:** uma unidade vendida por mais que o teto de HIS 2 (R$ 383.637), por exemplo, não pode ser HIS 2',
+            '**Desconfie de "é tudo HIS" ou "é tudo R2V":** num mesmo prédio é comum haver unidades de categorias diferentes, com preços e regras diferentes',
+            '**Leve a classificação para a análise de crédito:** ela pode mudar a modalidade de financiamento e se o subsídio se aplica',
+          ] },
+          { tipo: 'p', texto: 'Aqui no FinancieCerto, quando um empreendimento informa a classificação das unidades (ex.: "HIS 2 · R2V"), ela aparece na ficha do imóvel. Quando não aparece, não significa que seja de mercado livre — só que ainda não temos a informação confirmada.' },
+          { tipo: 'destaque', texto: 'Antes de fechar: se o seu objetivo é revender rápido ou alugar por temporada, a diferença entre HIS/HMP e R2V é decisiva. Se você vai morar, a diferença aparece principalmente no preço e no financiamento.' },
         ],
       },
       {
@@ -870,6 +911,10 @@ export const ARTIGOS: Artigo[] = [
         resposta: 'HIS 1 é para famílias com renda familiar até R$ 4.863,00 (imóvel até R$ 276.102,20, Decreto 64.895/2026). HIS 2 é para renda até R$ 9.726,00 (imóvel até R$ 383.636,74). Em salários mínimos, isso equivale a aproximadamente 3 e 6 salários. HIS 1 costuma corresponder à Faixa 1 do MCMV, e HIS 2 à Faixa 2.' },
       { pergunta: 'HMP é a mesma coisa que MCMV Faixa 3?',
         resposta: 'Não são a mesma classificação — HMP é uma categoria de preço/público definida pela Prefeitura de São Paulo (renda familiar até R$ 16.210,00, imóvel até R$ 537.672,71, Decreto 64.895/2026), enquanto a Faixa 3 do MCMV é uma faixa de financiamento federal. Na prática, costumam se sobrepor, mas o enquadramento é feito separadamente.' },
+      { pergunta: 'O que é R2V? É diferente de HIS e HMP?',
+        resposta: 'R2V (Residencial 2 Vertical) é a classificação do apartamento convencional de mercado em São Paulo. Diferente de HIS e HMP, não tem teto de renda do comprador nem preço máximo, e não tem as regras de 10 anos de revenda e aluguel. Pode ser financiado pelo MCMV ou SBPE, mas sem o subsídio de unidades HIS. Um mesmo prédio pode ter unidades HIS 2 e R2V misturadas.' },
+      { pergunta: 'O simulador diz se eu sou HIS, HMP ou R2V?',
+        resposta: 'Não. Essa classificação é do empreendimento (definida pela Prefeitura de São Paulo), não da sua renda. O simulador mostra seu perfil de financiamento, que pode se encaixar em qualquer uma dessas categorias dependendo do imóvel escolhido — confirme a classificação da unidade com a construtora.' },
       { pergunta: 'Posso alugar um imóvel HIS ou HMP por temporada (Airbnb)?',
         resposta: 'Não. Há proibição expressa de locação de curta temporada em unidades HIS e HMP enquanto durar o prazo de destinação social (10 anos a partir da primeira venda ou do Habite-se).' },
       { pergunta: 'Quanto tempo preciso esperar antes de vender um imóvel HIS?',
@@ -883,6 +928,7 @@ export const ARTIGOS: Artigo[] = [
       'HIS (Habitação de Interesse Social) e HMP (Habitação de Mercado Popular) são classificações urbanísticas da Prefeitura de SP (preço-teto + renda-alvo), DIFERENTES do MCMV (que é o programa federal de financiamento). Um imóvel pode ser HIS E financiado pelo MCMV ao mesmo tempo — são camadas diferentes.',
       'Valores exatos (Decreto 64.895, de 05/01/2026, em vigor desde a publicação): HIS 1 = renda familiar até R$4.863,00 (per capita R$810,50), imóvel até R$276.102,20. HIS 2 = renda até R$9.726,00 (per capita R$1.621,00), imóvel até R$383.636,74. HMP = renda até R$16.210,00 (per capita R$2.431,50), imóvel até R$537.672,71. Equivalem a ~3, 6 e 10 salários mínimos — útil para explicar rápido, mas o enquadramento oficial usa os valores em reais.',
       'HIS/HMP são construídos em ZEIS (Zonas Especiais de Interesse Social) — zoneamento do Plano Diretor que dá incentivo urbanístico em troca do preço controlado.',
+      'R2V (Residencial 2 Vertical) = apartamento convencional de mercado livre: sem teto de renda do comprador, sem preço máximo, sem as travas de 10 anos. Um prédio pode misturar HIS 2 e R2V (vale por unidade). HIS/HMP/R2V são classificações do EMPREENDIMENTO, não do comprador — nunca afirmar que a pessoa "é" uma delas; o perfil pode se enquadrar em qualquer uma conforme o imóvel escolhido.',
       'CDHU é o programa ESTADUAL de seleção com pontuação (sorteio só desempate) para moradia própria — diferente de comprar HIS de uma construtora privada num lançamento normal (processo comum, sem sorteio).',
       'REGRA CRÍTICA: por 10 anos a partir da 1ª venda ou do Habite-se, a unidade HIS/HMP deve continuar destinada ao público da categoria. Revenda exige comprovação de renda do próximo comprador. Locação por temporada (Airbnb) é EXPRESSAMENTE PROIBIDA nesse período.',
       'Isso é MAIS restritivo que a regra geral do MCMV por faixa (Faixa 1 sem vender/alugar até quitar/5-10 anos; Faixas 2/3 podem vender a qualquer momento) — em HIS/HMP a restrição de 10 anos e a exigência de renda do comprador seguinte valem ALÉM das regras do financiamento em si.',
@@ -952,7 +998,7 @@ export const ARTIGOS: Artigo[] = [
       {
         titulo: 'NR e Airbnb: o contraste com HIS/HMP',
         blocos: [
-          { tipo: 'p', texto: 'Vale um contraste direto: unidades **HIS e HMP proíbem expressamente** a locação por temporada durante o prazo de destinação social (veja o [artigo sobre HIS e HMP](/aprenda/his-hmp-o-que-sao-quem-pode-comprar)). Já a unidade **NR é desenhada exatamente para esse uso** — é a categoria correta para quem quer investir com foco em locação de curta duração.' },
+          { tipo: 'p', texto: 'Vale um contraste direto: unidades **HIS e HMP proíbem expressamente** a locação por temporada durante o prazo de destinação social (veja o [artigo sobre HIS, HMP e R2V](/aprenda/his-hmp-o-que-sao-quem-pode-comprar)). Já a unidade **NR é desenhada exatamente para esse uso** — é a categoria correta para quem quer investir com foco em locação de curta duração.' },
         ],
       },
       {
