@@ -1029,11 +1029,14 @@ function SimuladorInner() {
         {imovelPelaRenda5 > 0 && (
           <div style={{ marginBottom: 20, padding: '14px 16px', background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: 14 }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: dados.cor, textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: 10 }}>
-              🏷️ O que sua renda sustenta — {dados.label}
+              🏷️ Só pela sua renda (sem contar entrada) — {dados.label}
             </div>
+            <p style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.55, margin: '0 0 6px' }}>
+              O <strong>{formatBRL(dados.valorMaxImovel)}</strong> do card acima soma o financiamento com a entrada que você informou{fgtsAtivo5 > 0 ? ', o FGTS' : ''}{subsidioAtivo5 > 0 ? ' e o subsídio estimado' : ''}. Aqui é outra conta: o imóvel que <strong>a renda sozinha</strong> consegue financiar, no mesmo formato da calculadora rápida da Caixa.
+            </p>
             {[
-              { l: 'Imóvel que o financiamento comporta', v: formatBRL(Math.round(imovelPelaRenda5)), d: '' },
-              { l: 'Entrada mínima necessária', v: formatBRL(entradaMinima5), d: 'seu FGTS ou o subsídio podem compor a entrada' },
+              { l: 'Imóvel que a renda sozinha comporta', v: formatBRL(Math.round(imovelPelaRenda5)), d: 'financiamento pela renda ÷ percentual financiável' },
+              { l: 'Entrada mínima desse imóvel', v: formatBRL(entradaMinima5), d: entradaMinima5 === 0 && subsidioAtivo5 > 0 ? 'coberta pelo subsídio estimado' : 'seu FGTS ou o subsídio podem compor a entrada' },
               { l: 'ITBI e outras despesas', v: `~${formatBRL(despesasCompra5)}`, d: 'aproximadamente 5% do valor do imóvel' },
             ].map(({ l, v, d }) => (
               <div key={l} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, padding: '8px 0', borderBottom: '1px dashed var(--border)' }}>
@@ -1046,7 +1049,7 @@ function SimuladorInner() {
                 ⚠️ O teto de {formatBRL(faixa.teto)} das Faixas 1 e 2 é o de São Paulo — no MCMV ele varia por município (de R$ 210 mil a R$ 275 mil). Confirme o teto de <strong>{e.cidade}</strong> na Caixa antes de escolher o imóvel.
               </p>
             )}
-            <p style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 8, lineHeight: 1.5 }}>Estimativa com parâmetros médios (mesma lógica da calculadora rápida da Caixa) — não considera a entrada que você informou.</p>
+            <p style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 8, lineHeight: 1.5 }}>Estimativa com parâmetros médios. Para o valor que vale pra você, use o poder de compra do card acima (ele considera a sua entrada) ou simule um imóvel específico.</p>
           </div>
         )}
 
