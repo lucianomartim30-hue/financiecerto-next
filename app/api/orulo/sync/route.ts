@@ -30,7 +30,7 @@ import {
   SITE_BASE,
   _ultimoErroIdsActive, // TESTE TEMPORÁRIO — diagnóstico, remover depois de identificar a causa
 } from '@/lib/orulo-api';
-import { kvGetCatalog, kvSetCatalog, kvSetMeta, type CatalogEntry, type SeoStatus } from '@/lib/orulo-kv';
+import { kvGetCatalog, kvSetCatalog, kvSetMeta, kvAcquireCatalogLock, kvReleaseCatalogLock, type CatalogEntry, type SeoStatus } from '@/lib/orulo-kv';
 
 // Dias de ausência confirmada (em syncs sucessivos) antes de considerar um
 // imóvel definitivamente removido da Orulo. Enquanto abaixo disso, fica
@@ -49,7 +49,22 @@ const BATCH_SIZE      = 20;    // imóveis por lote (paralelo)
 const BATCH_DELAY_MS  = 300;   // ms de respiro entre lotes — essencial anti rate-limit
 const TIMEOUT_MS      = 240_000; // 240s — deixa 60s de buffer para salvar no KV
 
+// Um sync por vez, e nenhum webhook gravando junto (ver kvAcquireCatalogLock em
+// lib/orulo-kv.ts). A chamada encadeada espera o sync anterior soltar o cadeado.
 export async function GET(req: NextRequest) {
+  const encadeada = new URL(req.url).searchParams.get('chained') === '1';
+  const lock = await kvAcquireCatalogLock(330, encadeada ? 20_000 : 0);
+  if (!lock) {
+    return NextResponse.json({ status: 'busy', note: 'Já existe uma sincronização (ou atualização de imóvel) em andamento — aguarde e tente de novo.' }, { status: 202 });
+  }
+  try {
+    return await executarSync(req);
+  } finally {
+    await kvReleaseCatalogLock(lock);
+  }
+}
+
+async function executarSync(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const providedSecret   = searchParams.get('secret') ?? '';
   const forceFull        = searchParams.get('full') === 'true';

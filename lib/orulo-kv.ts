@@ -44,8 +44,10 @@ export const KV_PROGRESS_KEY = 'orulo:progress';   // number (IDs já processado
 export const KV_META_KEY     = 'orulo:meta';        // SyncMeta
 
 // TTLs
-export const KV_TTL_CATALOG  = 86400 * 7;  // 7 dias — catálogo (evita expiração entre runs do cron)
-export const KV_TTL_IDS      = 86400 * 7;  // 7 dias — lista de IDs
+// 30 dias (era 7): o sync diário renova tudo, mas se ele falhar por uma semana o portal
+// NÃO pode virar "1 imóvel" (incidentes de 18/09 e 25/09/2026). Um mês dá folga pra achar e consertar.
+export const KV_TTL_CATALOG  = 86400 * 30;
+export const KV_TTL_IDS      = 86400 * 30;
 
 // Tamanho de cada chunk (imóveis por chave KV)
 const CHUNK_SIZE = 300;
@@ -133,10 +135,14 @@ export async function kvGetCatalog(): Promise<CatalogEntry[] | null> {
 
   // Novo formato: chunks
   if (count && count > 0) {
-    const chunkPromises = Array.from({ length: count }, (_, i) =>
-      kvGet<CatalogEntry[]>(kvChunkKey(i)),
-    );
-    const chunks = await Promise.all(chunkPromises);
+    const lerTodos = () => Promise.all(Array.from({ length: count }, (_, i) => kvGet<CatalogEntry[]>(kvChunkKey(i))));
+    let chunks = await lerTodos();
+    // Falha momentânea de leitura do KV parecia "chunk faltando" — e quem gravava
+    // depois a partir dessa leitura vazia apagava o catálogo. Tenta de novo antes.
+    if (chunks.some(c => !c)) {
+      await new Promise(r => setTimeout(r, 400));
+      chunks = await lerTodos();
+    }
 
     // Se algum chunk estiver faltando, retorna null (forçar re-sync)
     if (chunks.some(c => !c)) {
@@ -198,21 +204,70 @@ export async function kvResetSync(): Promise<void> {
   ]);
 }
 
-// ── Operações individuais (usadas pelo webhook) ───────────────────────────────
+// ── Cadeado de escrita do catálogo ────────────────────────────────────────────
+// O catálogo é um único bloco lido, alterado e regravado por inteiro. Sem exclusão
+// mútua, o webhook da Orulo (que muda 1 imóvel) e o sync (que muda milhares) se
+// atropelavam: quem terminava por último regravava a versão que leu ANTES do outro
+// — e o catálogo encolhia pela metade. Só quem tem o cadeado grava.
+const KV_LOCK_KEY = 'orulo:catalog:lock';
 
-export async function kvUpsertBuilding(building: CatalogEntry): Promise<void> {
-  const catalog = (await kvGetCatalog()) ?? [];
-  const idx = catalog.findIndex(b => b.id === building.id);
-  if (idx >= 0) catalog[idx] = building;
-  else          catalog.push(building);
-  await kvSetCatalog(catalog);
+export async function kvAcquireCatalogLock(ttlSec: number, waitMs = 0): Promise<string | null> {
+  const kv = await getKv();
+  if (!kv) return 'sem-kv';
+  const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const limite = Date.now() + waitMs;
+  for (;;) {
+    try {
+      const ok = await kv.set(KV_LOCK_KEY, token, { nx: true, ex: ttlSec });
+      if (ok) return token;
+    } catch (e) { console.error('[kv.lock]', e); return null; }
+    if (Date.now() >= limite) return null;
+    await new Promise(r => setTimeout(r, 400));
+  }
 }
 
-export async function kvRemoveBuilding(id: string): Promise<void> {
-  const catalog = await kvGetCatalog();
-  if (!catalog) return;
-  const filtered = catalog.filter(b => b.id !== id);
-  if (filtered.length < catalog.length) await kvSetCatalog(filtered);
+export async function kvReleaseCatalogLock(token: string | null): Promise<void> {
+  if (!token || token === 'sem-kv') return;
+  const kv = await getKv();
+  if (!kv) return;
+  try {
+    // Só solta se ainda for o dono (o cadeado expira sozinho e outro pode ter assumido).
+    if ((await kv.get(KV_LOCK_KEY)) === token) await kv.del(KV_LOCK_KEY);
+  } catch { /* expira sozinho */ }
+}
+
+// ── Operações individuais (usadas pelo webhook) ───────────────────────────────
+
+/** Retorna false se não gravou (cadeado ocupado por um sync ou catálogo ilegível) — o próximo sync recupera pela data de atualização. */
+export async function kvUpsertBuilding(building: CatalogEntry): Promise<boolean> {
+  const token = await kvAcquireCatalogLock(30, 8000);
+  if (!token) { console.warn('[kv] upsert ignorado: catálogo em atualização (o sync recupera)'); return false; }
+  try {
+    const catalog = await kvGetCatalog();
+    // NUNCA partir de lista vazia: gravar só este imóvel apagava o catálogo inteiro.
+    if (!catalog) { console.warn('[kv] upsert ignorado: catálogo ilegível — não sobrescrevo'); return false; }
+    const idx = catalog.findIndex(b => b.id === building.id);
+    if (idx >= 0) catalog[idx] = building;
+    else          catalog.push(building);
+    await kvSetCatalog(catalog);
+    return true;
+  } finally {
+    await kvReleaseCatalogLock(token);
+  }
+}
+
+export async function kvRemoveBuilding(id: string): Promise<boolean> {
+  const token = await kvAcquireCatalogLock(30, 8000);
+  if (!token) { console.warn('[kv] remoção ignorada: catálogo em atualização (o sync recupera)'); return false; }
+  try {
+    const catalog = await kvGetCatalog();
+    if (!catalog) return false;
+    const filtered = catalog.filter(b => b.id !== id);
+    if (filtered.length < catalog.length) await kvSetCatalog(filtered);
+    return true;
+  } finally {
+    await kvReleaseCatalogLock(token);
+  }
 }
 
 // ── Verificação de disponibilidade ────────────────────────────────────────────
