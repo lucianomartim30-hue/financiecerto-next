@@ -2,7 +2,7 @@
  * lib/lancamentos-manuais.ts
  *
  * Empreendimentos cadastrados manualmente, fora do fluxo normal da Orulo —
- * usado quando um "breve lançamento" já existe (site da própria incorporadora
+ * usado quando um lançamento (ou "breve lançamento") já existe (site da própria incorporadora
  * confirma) mas a integração da Orulo ainda não devolve os dados pra essa
  * conta (ver auditoria 2026-09: Elev Saúde existe na Orulo com id 85509,
  * dados confirmados por um login pessoal na Orulo, mas `GET /api/v2/buildings/85509`
@@ -64,12 +64,22 @@ export interface LancamentoManual {
     bathrooms: number;
     suites: number;
     description: string;
-    /** Programa(s) habitacional(is) da unidade (ex.: ["HIS 2", "R2V"]), quando aplicável — uma unidade pode se enquadrar em mais de um, muda faixa/regra de financiamento. */
+    /** Enquadramento da unidade (ex.: ["HIS 2"] ou ["R2V"]), quando aplicável — muda faixa/regra de financiamento. */
     programs?: string[];
+    /** Menor preço de venda desta tipologia ("a partir de"), em reais — sem valor de avaliação. */
+    priceFrom?: number;
+    /** Quantidade de unidades desta tipologia na tabela de lançamento. */
+    units?: number;
   }[];
   blueprints: { name: string; url: string; area: number }[];
   numberOfTowers: number | null;
   numberOfFloors: number | null;
+}
+
+/** Menor preço de venda ("a partir de") entre as tipologias com preço publicado, ou null se ainda não há tabela. */
+export function precoAPartirDe(l: LancamentoManual): number | null {
+  const precos = l.typologies.map(t => t.priceFrom).filter((p): p is number => !!p && p >= 100);
+  return precos.length ? Math.min(...precos) : null;
 }
 
 export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
@@ -92,7 +102,7 @@ export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
     nearbyMetro: { name: 'Saúde', distanceMeters: 50 },
     deliveryDate: '30/09/2029',
     launchDate: '25/09/2026',
-    status: 'Breve Lançamento',
+    status: 'Lançamento',
     bedroomsMin: 1,
     bedroomsMax: 2,
     areaMin: 25,
@@ -100,7 +110,7 @@ export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
     bathroomsMin: 1,
     bathroomsMax: 2,
     totalUnits: 571,
-    updatedAt: '2026-09-11',
+    updatedAt: '2026-09-25',
     oruloUrl: 'https://www.orulo.com.br/buildings/85509',
     heroPhoto: '/lancamentos-manuais/elev-saude/fachada.webp',
     // Galeria completa (auditoria 2026-09) — usuário notou 1 foto duplicada
@@ -147,10 +157,15 @@ export const LANCAMENTOS_MANUAIS: LancamentoManual[] = [
     // site, mas essa é de um empreendimento parecido e vizinho na lista de
     // "similares" (Elev Ipiranga), não deste aqui. 25m²: unidade-suíte (o
     // único dormitório é a própria suíte, sem cômodo "quarto" separado).
+    //
+    // Tabela de lançamento de 25/09/2026 (valores "a partir de", só preço de
+    // venda — o valor de avaliação da tabela NÃO é exibido). A planta de 25m²
+    // tem dois enquadramentos: HIS 2 (274 unid.) e R2V (74 unid.).
     typologies: [
-      { type: 'Apartamento', bedrooms: 1, area: 25, bathrooms: 1, suites: 1, description: '1 suíte com varanda', programs: ['HIS 2', 'R2V'] },
-      { type: 'Apartamento', bedrooms: 2, area: 34, bathrooms: 1, suites: 0, description: '2 dorms. com varanda', programs: ['R2V'] },
-      { type: 'Apartamento', bedrooms: 2, area: 37, bathrooms: 2, suites: 1, description: '2 dorms com suíte e varanda', programs: ['R2V'] },
+      { type: 'Apartamento', bedrooms: 1, area: 25, bathrooms: 1, suites: 1, description: '1 suíte com varanda', programs: ['HIS 2'], priceFrom: 269000, units: 274 },
+      { type: 'Apartamento', bedrooms: 1, area: 25, bathrooms: 1, suites: 1, description: '1 suíte com varanda', programs: ['R2V'], priceFrom: 317000, units: 74 },
+      { type: 'Apartamento', bedrooms: 2, area: 34, bathrooms: 1, suites: 0, description: '2 dorms. com varanda', programs: ['R2V'], priceFrom: 346000, units: 153 },
+      { type: 'Apartamento', bedrooms: 2, area: 37, bathrooms: 2, suites: 1, description: '2 dorms com suíte e varanda', programs: ['R2V'], priceFrom: 420000, units: 70 },
     ],
     blueprints: [
       { name: 'Planta 01 — 25m² (1 suíte)', url: '/lancamentos-manuais/elev-saude/planta-25m2.webp', area: 25 },
@@ -187,7 +202,9 @@ export function lancamentoParaCatalogo(l: LancamentoManual): CatalogEntry {
     // — na prática já existem imóveis reais "breve lançamento" sem preço
     // (ver lib/filtro-breve-lancamento.ts), então null é o valor certo,
     // só não o tipo mais preciso que o resto do catálogo já usa.
-    min_price: null as unknown as number,
+    // "A partir de": só o menor preço; max_price fica vazio de propósito pra
+    // nenhuma tela mostrar "X até Y" (a tabela publica só o menor de cada tipologia).
+    min_price: precoAPartirDe(l) as unknown as number,
     max_price: null as unknown as number,
     bedrooms_min: l.bedroomsMin,
     bedrooms_max: l.bedroomsMax,
@@ -218,7 +235,7 @@ export function lancamentoParaCatalogo(l: LancamentoManual): CatalogEntry {
     property_types: ['Apartamento'],
     typology_ranges: [{
       type: 'Apartamento',
-      price_min: null, price_max: null,
+      price_min: precoAPartirDe(l), price_max: null,
       bedrooms_min: l.bedroomsMin, bedrooms_max: l.bedroomsMax,
       area_min: l.areaMin, area_max: l.areaMax,
     }],
@@ -244,7 +261,7 @@ export function lancamentoParaDetalhe(l: LancamentoManual) {
     // site oficial da incorporadora.
     product_logo: l.productLogo ?? null,
     developer_website: l.developerWebsite,
-    min_price: null,
+    min_price: precoAPartirDe(l),
     max_price: null,
     bedrooms_min: l.bedroomsMin,
     bedrooms_max: l.bedroomsMax,
@@ -275,7 +292,9 @@ export function lancamentoParaDetalhe(l: LancamentoManual) {
     blueprints: l.blueprints,
     amenities: l.amenities,
     typologies: l.typologies.map(t => ({
-      type: t.type,
+      // Enquadramento junto do nome (ex.: "Apartamento · HIS 2") — é o que
+      // diferencia as duas unidades de 25m² (HIS 2 x R2V) nos cards.
+      type: t.programs?.length ? `${t.type} · ${t.programs.join(' + ')}` : t.type,
       bedrooms: t.bedrooms,
       bathrooms: t.bathrooms,
       vagas: 0,
@@ -283,9 +302,9 @@ export function lancamentoParaDetalhe(l: LancamentoManual) {
       area: `${t.area}`,
       private_area: `${t.area}`,
       total_area: '',
-      price: 'Consultar',
+      price: t.priceFrom ? `A partir de ${t.priceFrom.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}` : 'Consultar',
       stock: null,
-      total_units: null,
+      total_units: t.units ?? null,
       photo: null,
       // Match exato pela área (cada planta tem a área certa cadastrada) —
       // antes usava .includes() no nome, frágil se o texto do nome mudasse.

@@ -5,7 +5,7 @@ import { HomeEngagement } from './HomeEngagement';
 import { getImoveisDestaque, getImoveisDestaqueLesteNorte, type ImovelDestaque } from '@/lib/imoveis-destaque';
 import { formatPlantaPreco } from '@/lib/calculos';
 import { getStatusCfg } from '@/lib/status';
-import { LANCAMENTOS_MANUAIS } from '@/lib/lancamentos-manuais';
+import { LANCAMENTOS_MANUAIS, precoAPartirDe } from '@/lib/lancamentos-manuais';
 
 // Sem isso a home fica presa no snapshot do catálogo do último deploy —
 // imóvel vendido, preço mudado ou erro de cadastro corrigido na Orulo só
@@ -100,7 +100,7 @@ const FEATURES = [
   },
 ];
 
-// ── Spotlight de breve lançamento cadastrado manualmente ──────────────────────
+// ── Spotlight de lançamento cadastrado manualmente ──────────────────────
 // Ver lib/lancamentos-manuais.ts: empreendimento confirmado direto no site da
 // incorporadora, mas que a integração da Orulo ainda não devolve pra essa
 // conta — cadastro manual pra não perder a fase de captação de interesse
@@ -131,7 +131,7 @@ function LancamentoManualSpotlight() {
               fontSize: '11px', fontWeight: '800', padding: '5px 12px', borderRadius: '99px',
               textTransform: 'uppercase', letterSpacing: '0.4px', boxShadow: '0 2px 10px rgba(234,88,12,.35)',
             }}>
-              🚀 Breve Lançamento
+              🚀 Lançamento
             </span>
           </div>
           <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '10px' }}>
@@ -150,18 +150,25 @@ function LancamentoManualSpotlight() {
                   </span>
                 )}
                 {Array.from(new Set(l.typologies.filter(t => t.programs?.length).map(t => t.programs!.join(' + ')))).map(label => {
-                  const areas = l.typologies.filter(t => t.programs?.join(' + ') === label).map(t => t.area);
+                  const doGrupo = l.typologies.filter(t => t.programs?.join(' + ') === label);
+                  const areas = doGrupo.map(t => t.area);
                   const min = Math.min(...areas), max = Math.max(...areas);
+                  const precos = doGrupo.map(t => t.priceFrom).filter((p): p is number => !!p);
                   return (
                     <span key={label} style={{ background: '#eff6ff', color: '#1d4ed8', fontSize: '12px', fontWeight: '800', padding: '5px 12px', borderRadius: '99px', border: '1px solid #bfdbfe' }}>
-                      {min === max ? `${min}m²` : `${min}–${max}m²`} · {label}
+                      {min === max ? `${min}m²` : `${min}–${max}m²`} · {label}{precos.length > 0 ? ` · a partir de ${Math.min(...precos).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}` : ''}
                     </span>
                   );
                 })}
               </div>
             )}
+            {precoAPartirDe(l) && (
+              <p style={{ color: 'var(--text)', fontSize: '15px', fontWeight: '800', margin: 0 }}>
+                A partir de {precoAPartirDe(l)!.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+              </p>
+            )}
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
-              🚀 Lançamento previsto: {l.launchDate} · Preço ainda não divulgado — garanta sua posição na fila antes de todo mundo.
+              🚀 Lançamento: {l.launchDate} · Entrega prevista: {l.deliveryDate}
             </p>
             <span className="btn-primary" style={{ display: 'inline-flex', width: 'fit-content', marginTop: '6px', fontSize: '14px', padding: '10px 22px' }}>
               Conhecer o lançamento →
