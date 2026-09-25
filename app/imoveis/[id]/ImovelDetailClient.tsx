@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
+import { usePersistedState, temEstadoGuardado } from '@/lib/persistir-estado';
 import Link from 'next/link';
 import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, taxaNominalDeEfetiva, parcelaPrice, calcularSeguros, TAXA_SBPE_ANUAL, COMPROMETIMENTO_SBPE, TAXA_SFI_ANUAL, TETO_SFH, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
 import { SITE_CONFIG } from '@/lib/schema';
@@ -863,20 +864,25 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   const est = valorRef > 0 && !isBreveLancamento ? calcEstimate(valorRef, isComercial) : null;
 
   // Simulator state
-  const [expanded, setExpanded] = useState(false);
-  const [renda, setRenda]   = useState('');
-  const [entrada, setEntrada] = useState('');
-  const [fgts, setFgts]     = useState('');
-  const [prazo, setPrazo]   = useState('30');
-  const [idade, setIdade]   = useState('35');
-  const [naPlanta, setNaPlanta] = useState(isNaPlanta(imovel.status || ''));
-  const [resultado, setResultado] = useState<ReturnType<typeof simular> | null>(null);
+  // O que a pessoa preencheu aqui (e o resultado) fica guardado na aba — sair da
+  // ficha e voltar devolve o card exatamente como estava (ver lib/persistir-estado.ts).
+  const [expanded, setExpanded] = usePersistedState('fin:expanded', false);
+  const [renda, setRenda]   = usePersistedState('fin:renda', '');
+  const [entrada, setEntrada] = usePersistedState('fin:entrada', '');
+  const [fgts, setFgts]     = usePersistedState('fin:fgts', '');
+  const [prazo, setPrazo]   = usePersistedState('fin:prazo', '30');
+  const [idade, setIdade]   = usePersistedState('fin:idade', '35');
+  const [naPlanta, setNaPlanta] = usePersistedState('fin:naPlanta', isNaPlanta(imovel.status || ''));
+  const [resultado, setResultado] = usePersistedState<ReturnType<typeof simular> | null>('fin:resultado', null);
   const [poder, setPoder]   = useState<ReturnType<typeof descobrir> | null>(null);
   const [erro, setErro]     = useState('');
   const [ctxLoaded, setCtxLoaded] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Já preencheu este card antes → o que a pessoa digitou aqui vale mais que o
+    // contexto do simulador geral (não sobrescreve).
+    if (temEstadoGuardado('fin:renda')) return;
     try {
       // fc_sim_context (rica, com idade/prazo) tem prioridade sobre
       // joao_sim_context (legada, só renda/fgts/entrada) — antes a ordem

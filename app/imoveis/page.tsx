@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useMemo, useCallback, Suspense, useDeferredValue } from 'react';
+import { usePersistedState } from '@/lib/persistir-estado';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -270,46 +271,46 @@ function ImoveisContent() {
 
   // Responsive state
   const [isMobile, setIsMobile] = useState(false);
-  const [mobileView, setMobileView] = useState<'list' | 'map'>('list');
+  const [mobileView, setMobileView] = usePersistedState<'list' | 'map'>('mobileView', 'list');
 
-  const [filterStatus,   setFilterStatus]   = useState(searchParams.get('status') || '');
-  const [filterFinality, setFilterFinality] = useState(searchParams.get('tipo') || '');
-  const [filterTipologia, setFilterTipologia] = useState(searchParams.get('tipologia') || '');
-  const [filterMin,      setFilterMin]      = useState(Number(searchParams.get('min') || 0));
-  const [filterMax,      setFilterMax]      = useState(Number(searchParams.get('max') || 0));
-  const [filterBedrooms, setFilterBedrooms] = useState(Number(searchParams.get('bedrooms_min') || 0));
-  const [filterVagas,    setFilterVagas]    = useState(0);
-  const [filterBaths,    setFilterBaths]    = useState(0);
-  const [filterAreaMin,  setFilterAreaMin]  = useState(0);
-  const [filterAreaMax,  setFilterAreaMax]  = useState(0);
+  const [filterStatus,   setFilterStatus]   = usePersistedState('filterStatus', searchParams.get('status') || '');
+  const [filterFinality, setFilterFinality] = usePersistedState('filterFinality', searchParams.get('tipo') || '');
+  const [filterTipologia, setFilterTipologia] = usePersistedState('filterTipologia', searchParams.get('tipologia') || '');
+  const [filterMin,      setFilterMin]      = usePersistedState('filterMin', Number(searchParams.get('min') || 0));
+  const [filterMax,      setFilterMax]      = usePersistedState('filterMax', Number(searchParams.get('max') || 0));
+  const [filterBedrooms, setFilterBedrooms] = usePersistedState('filterBedrooms', Number(searchParams.get('bedrooms_min') || 0));
+  const [filterVagas,    setFilterVagas]    = usePersistedState('filterVagas', 0);
+  const [filterBaths,    setFilterBaths]    = usePersistedState('filterBaths', 0);
+  const [filterAreaMin,  setFilterAreaMin]  = usePersistedState('filterAreaMin', 0);
+  const [filterAreaMax,  setFilterAreaMax]  = usePersistedState('filterAreaMax', 0);
 
   // Localização buscada (texto commitado — filtra cards + mapa)
   // "q" é o campo de busca livre da própria página; "neighborhood" é o param que os links
   // vindos do simulador usam para pré-aplicar o bairro escolhido — os dois caem no mesmo filtro.
-  const [activeLocation, setActiveLocation] = useState(searchParams.get('q') || searchParams.get('neighborhood') || '');
+  const [activeLocation, setActiveLocation] = usePersistedState('activeLocation', searchParams.get('q') || searchParams.get('neighborhood') || '');
 
   // Modo de busca — Local (bairro/rua, padrão) vs Imóvel (nome do
   // empreendimento) vs Empresa (nome da construtora/incorporadora). Os dois
   // últimos não restringem por cidade: quem busca "Helbor" pode não saber em
   // qual cidade o empreendimento fica, então busca no catálogo inteiro.
-  const [searchMode, setSearchMode] = useState<'local' | 'imovel' | 'empresa'>('local');
+  const [searchMode, setSearchMode] = usePersistedState<'local' | 'imovel' | 'empresa'>('searchMode', 'local');
 
   // Quando a busca por Imóvel/Empresa dá resultado em mais de uma cidade
   // (ex.: "Cyrela" tem obras em Porto Alegre E em São Paulo), pede pra
   // pessoa escolher a região antes de filtrar/enquadrar o mapa — sem isso,
   // o mapa mostrava tudo junto misturado, o que não ajuda ninguém.
-  const [cidadeResultado, setCidadeResultado] = useState<string | null>(null);
+  const [cidadeResultado, setCidadeResultado] = usePersistedState<string | null>('cidadeResultado', null);
 
   // Cidade escolhida para a busca por bairro — sempre um valor concreto (nunca
   // "todas"), pra que o bairro digitado/selecionado só possa casar com imóveis
   // dessa cidade. Ver CIDADES_BUSCA acima.
-  const [searchCity, setSearchCity] = useState(searchParams.get('city') || 'São Paulo');
+  const [searchCity, setSearchCity] = usePersistedState('searchCity', searchParams.get('city') || 'São Paulo');
   // Marca que a pessoa escolheu uma cidade pra navegar (sem precisar também
   // escolher um bairro específico) — sem isso, trocar de cidade no seletor não
   // filtrava nada sozinho, obrigando um segundo passo (escolher bairro) que a
   // maioria dos portais não exige. Some quando um bairro é buscado (activeLocation
   // assume o filtro mais específico) ou quando a cidade é limpa.
-  const [cidadeSemBairro, setCidadeSemBairro] = useState(false);
+  const [cidadeSemBairro, setCidadeSemBairro] = usePersistedState('cidadeSemBairro', false);
 
   // ── Padrão por região (geo por IP, sem pedir permissão do navegador) ───────
   // Só entra em jogo em uma visita "fria" — sem nenhum filtro/busca já na URL —
@@ -338,12 +339,12 @@ function ImoveisContent() {
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const [search, setSearch] = useState(searchParams.get('q') || searchParams.get('neighborhood') || '');
+  const [search, setSearch] = usePersistedState('search', searchParams.get('q') || searchParams.get('neighborhood') || '');
   const [geocoding, setGeocoding] = useState(false);
-  const [minInput, setMinInput] = useState('');
-  const [maxInput, setMaxInput] = useState('');
-  const [areaMinInput, setAreaMinInput] = useState('');
-  const [areaMaxInput, setAreaMaxInput] = useState('');
+  const [minInput, setMinInput] = usePersistedState('minInput', '');
+  const [maxInput, setMaxInput] = usePersistedState('maxInput', '');
+  const [areaMinInput, setAreaMinInput] = usePersistedState('areaMinInput', '');
+  const [areaMaxInput, setAreaMaxInput] = usePersistedState('areaMaxInput', '');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 

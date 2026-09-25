@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo, Suspense } from 'react';
+import { usePersistedState } from '@/lib/persistir-estado';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -113,14 +114,13 @@ function LinhaTabela({ m, i }: { m: MesHistoricoTR; i: number }) {
 function HistoricoTRContent() {
   const params = useSearchParams();
 
-  const [valorInput, setValorInput] = useState(() => {
-    const pv = params.get('pv');
-    return pv ? Number(pv).toLocaleString('pt-BR') : '350.000';
-  });
-  const [taxaInput, setTaxaInput] = useState(() => params.get('taxa') || '10,92');
-  const [prazoInput, setPrazoInput] = useState(() => params.get('prazo') || '360');
-  const [calculado, setCalculado] = useState(false);
-  const [resultado, setResultado] = useState<ReturnType<typeof simularHistoricoTR> | null>(null);
+  // Valores e resultado ficam guardados na aba: sair e voltar devolve a tela como estava.
+  const pvUrl = params.get('pv');
+  const [valorInput, setValorInput] = usePersistedState('valorInput', pvUrl ? Number(pvUrl).toLocaleString('pt-BR') : '350.000');
+  const [taxaInput, setTaxaInput] = usePersistedState('taxaInput', params.get('taxa') || '10,92');
+  const [prazoInput, setPrazoInput] = usePersistedState('prazoInput', params.get('prazo') || '360');
+  const [calculado, setCalculado] = usePersistedState('calculado', false);
+  const [resultado, setResultado] = usePersistedState<ReturnType<typeof simularHistoricoTR> | null>('resultado', null);
 
   function calcular() {
     const pv    = parseMoeda(valorInput);

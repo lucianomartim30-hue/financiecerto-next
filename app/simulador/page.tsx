@@ -11,6 +11,7 @@ import {
 } from '@/lib/calculos';
 import BuscaImoveisInteligente from '@/components/BuscaImoveisInteligente';
 import { CIDADES_BUSCA } from '@/lib/localizacao';
+import { usePersistedState } from '@/lib/persistir-estado';
 import { HisHmpHint } from '@/components/HisHmpHint';
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { webApplication, breadcrumb, faqPage, SITE_CONFIG } from '@/lib/schema';
@@ -404,16 +405,20 @@ const E0: Estado = {
 // ─── Wrapper para useSearchParams (requer Suspense no App Router) ─────────────
 function SimuladorInner() {
   const searchParams = useSearchParams();
-  const [etapa, setEtapa] = useState(0);
-  const [e, setE] = useState<Estado>(E0);
-  const [perfil, setPerfil] = useState<ResultadoDescobrir | null>(null);
-  const [sim, setSim] = useState<ResultadoSimulacao | null>(null);
+  // Tudo que a pessoa preencheu e o resultado ficam guardados na aba (ver
+  // lib/persistir-estado.ts): sair do simulador e voltar — pela seta, pelo menu ou
+  // por link — devolve a tela exatamente como estava. Recomeçar é só pelo botão
+  // "Fazer nova simulação".
+  const [etapa, setEtapa] = usePersistedState('etapa', 0);
+  const [e, setE] = usePersistedState<Estado>('e', E0);
+  const [perfil, setPerfil] = usePersistedState<ResultadoDescobrir | null>('perfil', null);
+  const [sim, setSim] = usePersistedState<ResultadoSimulacao | null>('sim', null);
   // Qual painel o usuário quer ver na revelação: mcmv | sbpe | sfi
-  const [painelAtivo, setPainelAtivo] = useState<'mcmv' | 'sbpe' | 'sfi'>('mcmv');
-  const [tipoImovel,  setTipoImovel]  = useState<'residencial' | 'comercial'>('residencial');
+  const [painelAtivo, setPainelAtivo] = usePersistedState<'mcmv' | 'sbpe' | 'sfi'>('painelAtivo', 'mcmv');
+  const [tipoImovel,  setTipoImovel]  = usePersistedState<'residencial' | 'comercial'>('tipoImovel', 'residencial');
   // "Como o banco calcula" vem fechado por padrão — parágrafo técnico denso
   // não deve competir visualmente com os números do resultado.
-  const [mostrarCalculo, setMostrarCalculo] = useState(false);
+  const [mostrarCalculo, setMostrarCalculo] = usePersistedState('mostrarCalculo', false);
   // Evita duplicar `simulation_start` no GA4 quando o usuário volta pro passo 0
   // (botão "voltar" ou "reiniciar") e avança de novo — sem isso, cada reinício
   // vira um novo "início de simulação" artificial nos relatórios.
@@ -421,10 +426,14 @@ function SimuladorInner() {
 
   // Toda simulação concluída fica salva automaticamente — não só quando a
   // pessoa pede pra receber por e-mail (ver "Minhas simulações" em /conta).
-  const ultimoSimSalvo = useRef<ResultadoSimulacao | null>(null);
+  // A assinatura fica guardada junto com o resto: ao voltar pra cá e restaurar a
+  // simulação, ela não é gravada de novo em "Minhas simulações".
+  const [simSalvaAssinatura, setSimSalvaAssinatura] = usePersistedState('simSalvaAssinatura', '');
   useEffect(() => {
-    if (!sim || sim === ultimoSimSalvo.current) return;
-    ultimoSimSalvo.current = sim;
+    if (!sim) return;
+    const assinatura = JSON.stringify(sim);
+    if (assinatura === simSalvaAssinatura) return;
+    setSimSalvaAssinatura(assinatura);
     const modalidade = sim.isMCMV ? (sim.faixa ? `${sim.faixa.label} MCMV` : 'MCMV') : sim.isSFI ? 'SFI' : 'SBPE (SFH)';
     fetch('/api/simulacoes', {
       method: 'POST',
@@ -440,6 +449,7 @@ function SimuladorInner() {
         comprometimento:  sim.comprometimento,
       }),
     }).catch(() => { /* ignore */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sim]);
 
   // Imóvel veio com status não identificado (ver lib/status.ts) — o cálculo
@@ -1219,6 +1229,9 @@ function SimuladorInner() {
         </div>
         <button onClick={voltar} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: 13, cursor: 'pointer', padding: 0, fontFamily: 'inherit', display: 'block', textAlign: 'center', width: '100%' }}>
           ← Ajustar dados
+        </button>
+        <button onClick={() => { setEtapa(0); setE(E0); setPerfil(null); setSim(null); window.scrollTo({ top: 0 }); }} style={{ background: 'none', border: 'none', color: 'var(--text-faint)', fontSize: 13, cursor: 'pointer', padding: 0, marginTop: 12, fontFamily: 'inherit', display: 'block', textAlign: 'center', width: '100%', textDecoration: 'underline' }}>
+          Fazer nova simulação
         </button>
       </Etapa>
     );

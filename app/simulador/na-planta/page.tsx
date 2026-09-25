@@ -14,6 +14,7 @@ import { HisHmpHint } from '@/components/HisHmpHint';
 import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
 import { getPrimeiraOrigem, buildConversao } from '@/lib/atribuicao';
 import { FAQ_NA_PLANTA } from './faq-data';
+import { usePersistedState, useRecomecarPagina } from '@/lib/persistir-estado';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -376,7 +377,7 @@ function NaPlantaContent() {
   const imovelNameUrl = sp.get('imovelName') || undefined;
 
   // Renda
-  const [rendaRaw, setRendaRaw] = useState('');
+  const [rendaRaw, setRendaRaw] = usePersistedState('rendaRaw', '');
   const rendaDigitada = p(rendaRaw);
   const renda = rendaUrl > 0 ? rendaUrl : rendaDigitada;
 
@@ -384,17 +385,17 @@ function NaPlantaContent() {
   // era fixo no código antes desta correção), mas agora ajustáveis. Sem
   // isso, o prazo real informado no simulador geral era descartado ao vir
   // pra cá, e o teto de 80 anos e 6 meses da Caixa nunca era aplicado aqui.
-  const [idadeRaw, setIdadeRaw] = useState('35');
+  const [idadeRaw, setIdadeRaw] = usePersistedState('idadeRaw', '35');
   const idade = Number(idadeRaw) || 35;
-  const [prazoAnosRaw, setPrazoAnosRaw] = useState('35');
+  const [prazoAnosRaw, setPrazoAnosRaw] = usePersistedState('prazoAnosRaw', '35');
   const prazoAnosDesejado = Number(prazoAnosRaw) || 35;
 
   // Cotista do FGTS há 3+ anos — muda a taxa MCMV (Portaria 333/2026 distingue
   // cotista/não-cotista em quase todas as faixas). Antes sempre assumia "sim".
-  const [cotista, setCotista] = useState(true);
+  const [cotista, setCotista] = usePersistedState('cotista', true);
 
   // Tipo de imóvel
-  const [tipoImovel, setTipoImovel] = useState<'residencial' | 'comercial'>('residencial');
+  const [tipoImovel, setTipoImovel] = usePersistedState<'residencial' | 'comercial'>('tipoImovel', 'residencial');
   // VALIDAÇÃO: Comercial não é elegível a MCMV/FGTS/subsídio (benefícios exclusivos de habitação)
   const isComercial = tipoImovel === 'comercial';
 
@@ -405,30 +406,31 @@ function NaPlantaContent() {
   }, []);
 
   // Estágio — vindo da página do imóvel (status real do empreendimento), se houver
-  const [estagio, setEstagio] = useState<Estagio>(
+  const [estagio, setEstagio] = usePersistedState<Estagio>(
+    'estagio',
     estagioUrl === 'obras' || estagioUrl === 'pronto' ? estagioUrl : 'lancamento',
   );
-  const [siopiPctRaw, setSiopiPctRaw] = useState<string>('15');
-
-  useEffect(() => {
-    if (estagio === 'lancamento') setSiopiPctRaw('15');
-    else if (estagio === 'obras') setSiopiPctRaw('50');
-  }, [estagio]);
+  const [siopiPctRaw, setSiopiPctRaw] = usePersistedState<string>('siopiPctRaw', estagioUrl === 'obras' ? '50' : '15');
+  function mudarEstagio(novoEstagio: Estagio) {
+    setEstagio(novoEstagio);
+    if (novoEstagio === 'lancamento') setSiopiPctRaw('15');
+    else if (novoEstagio === 'obras') setSiopiPctRaw('50');
+  }
 
   const siopiInicial = estagio === 'pronto'
     ? 1.0
     : Math.min(1, Math.max(0, Number(siopiPctRaw.replace(',', '.') || '0') / 100));
 
   // Valor do imóvel — pré-preenchido quando vindo da página do imóvel
-  const [valorRaw, setValorRaw] = useState(() => valorUrl > 0 ? fi(String(valorUrl)) : '');
+  const [valorRaw, setValorRaw] = usePersistedState('valorRaw', valorUrl > 0 ? fi(String(valorUrl)) : '');
   const valor = p(valorRaw);
 
   // ── Recursos para o financiamento (separados do fluxo à construtora) ─────────
   // FGTS agora é dois campos: saldo (informativo) e quanto o usuário pretende
   // considerar nesta simulação — não presumimos mais uso de 100% do saldo.
-  const [fgtsSaldoRaw, setFgtsSaldoRaw] = useState(() => fgtsUrl > 0 ? fi(String(fgtsUrl)) : '');
+  const [fgtsSaldoRaw, setFgtsSaldoRaw] = usePersistedState('fgtsSaldoRaw', fgtsUrl > 0 ? fi(String(fgtsUrl)) : '');
   const fgtsSaldo = p(fgtsSaldoRaw);
-  const [fgtsConsideradoRaw, setFgtsConsideradoRaw] = useState(() => fgtsUrl > 0 ? fi(String(fgtsUrl)) : '');
+  const [fgtsConsideradoRaw, setFgtsConsideradoRaw] = usePersistedState('fgtsConsideradoRaw', fgtsUrl > 0 ? fi(String(fgtsUrl)) : '');
   const fgtsConsiderado = p(fgtsConsideradoRaw);
   const fgts = fgtsConsiderado;
   // FGTS não pode ser usado em imóvel comercial — mesma regra do simulador principal
@@ -437,34 +439,34 @@ function NaPlantaContent() {
   // Quanto a pessoa pretende usar de entrada/recursos próprios (modelo top-down) —
   // os campos abaixo (ato/sinais/mensais/anuais/chaves) são a distribuição real
   // desse valor, nunca o contrário.
-  const [entradaPlanejadaRaw, setEntradaPlanejadaRaw] = useState('');
+  const [entradaPlanejadaRaw, setEntradaPlanejadaRaw] = usePersistedState('entradaPlanejadaRaw', '');
   const entradaPlanejada = p(entradaPlanejadaRaw);
 
   // ── Fluxo de pagamento à construtora ─────────────────────────────────────────
   // 1. Ato (pagamento na assinatura — recursos próprios do comprador)
-  const [atoRaw, setAtoRaw]         = useState('');
+  const [atoRaw, setAtoRaw]         = usePersistedState('atoRaw', '');
   const ato = p(atoRaw);
 
   // 3. Sinais / iniciais (primeiros meses após o ato)
-  const [iniciaisRaw, setIniciaisRaw] = useState('');
-  const [qtdIniciais, setQtdIniciais] = useState(2);
+  const [iniciaisRaw, setIniciaisRaw] = usePersistedState('iniciaisRaw', '');
+  const [qtdIniciais, setQtdIniciais] = usePersistedState('qtdIniciais', 2);
   const iniciaisUnit = p(iniciaisRaw);
   const iniciais = iniciaisUnit * qtdIniciais;
 
   // 4. Parcelas mensais durante a obra
-  const [mensalRaw, setMensalRaw]   = useState('');
-  const [qtdMensais, setQtdMensais] = useState(36);
+  const [mensalRaw, setMensalRaw]   = usePersistedState('mensalRaw', '');
+  const [qtdMensais, setQtdMensais] = usePersistedState('qtdMensais', 36);
   const mensalUnit = p(mensalRaw);
   const totalMensais = mensalUnit * qtdMensais;
 
   // 5. Anuais / reforços (normalmente dezembro)
-  const [anuaisRaw, setAnuaisRaw]   = useState('');
-  const [qtdAnuais, setQtdAnuais]   = useState(2);
+  const [anuaisRaw, setAnuaisRaw]   = usePersistedState('anuaisRaw', '');
+  const [qtdAnuais, setQtdAnuais]   = usePersistedState('qtdAnuais', 2);
   const anuaisUnit = p(anuaisRaw);
   const totalAnuais = anuaisUnit * qtdAnuais;
 
   // 6. Parcela nas chaves (opcional)
-  const [unicaRaw, setUnicaRaw]     = useState('');
+  const [unicaRaw, setUnicaRaw]     = usePersistedState('unicaRaw', '');
   const unica = p(unicaRaw);
 
   // ── Cálculos ──────────────────────────────────────────────────────────────────
@@ -576,6 +578,8 @@ function NaPlantaContent() {
 
   // Dispara simulation_start uma única vez, quando os dados mínimos aparecem
   // (seja por digitação ou por vir pré-preenchido da página do imóvel).
+  const recomecar = useRecomecarPagina();
+  const preencheu = !!(valorRaw || atoRaw || mensalRaw || iniciaisRaw || anuaisRaw || unicaRaw || entradaPlanejadaRaw || rendaRaw);
   const inicioDisparado = useRef(false);
   useEffect(() => {
     if (temDados && !inicioDisparado.current) {
@@ -638,7 +642,7 @@ function NaPlantaContent() {
   // simulação em "minha área". Como este formulário recalcula a cada tecla (não
   // é um wizard por etapas), o envio é debounçado — só grava quando os valores
   // param de mudar por um instante, pra não gerar uma gravação por caractere digitado.
-  const ultimoNaPlantaSalvo = useRef<string>('');
+  const [ultimoNaPlantaSalvo, setUltimoNaPlantaSalvo] = usePersistedState('ultimoNaPlantaSalvo', '');
   useEffect(() => {
     if (!valido) return;
     const modalidade = isMCMV ? (faixaEfetiva ? `${faixaEfetiva.label} MCMV` : 'MCMV') : 'SBPE (SFH)';
@@ -654,9 +658,9 @@ function NaPlantaContent() {
       comprometimento:  renda > 0 ? Math.round(((parcela / renda) * 100) * 10) / 10 : 0,
     };
     const assinatura = JSON.stringify(payload);
-    if (assinatura === ultimoNaPlantaSalvo.current) return;
+    if (assinatura === ultimoNaPlantaSalvo) return;
     const timer = setTimeout(() => {
-      ultimoNaPlantaSalvo.current = assinatura;
+      setUltimoNaPlantaSalvo(assinatura);
       fetch('/api/simulacoes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -664,7 +668,8 @@ function NaPlantaContent() {
       }).catch(() => { /* ignore */ });
     }, 1500);
     return () => clearTimeout(timer);
-  }, [valido, isMCMV, faixaEfetiva, valor, valorAFinanciar, parcelaFin, seguros.total, taxa, renda]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valido, isMCMV, faixaEfetiva, valor, valorAFinanciar, parcelaFin, seguros.total, taxa, renda, ultimoNaPlantaSalvo]);
 
   // ── Configuração dos estágios ─────────────────────────────────────────────────
   const estagioConfig: Record<Estagio, { label: string; desc: string; color: string; aviso?: string }> = {
@@ -718,6 +723,14 @@ function NaPlantaContent() {
 
       {/* ── Content ─────────────────────────────────────────────────────── */}
       <div className="fc-content-np" style={{ maxWidth: '680px', margin: '-40px auto 0', padding: '0 16px 80px', position: 'relative', zIndex: 1 }}>
+
+        {preencheu && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
+            <button type="button" onClick={recomecar} style={{ background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'inherit' }}>
+              ↺ Fazer nova simulação
+            </button>
+          </div>
+        )}
 
         {/* ── CARD 1: Dados do imóvel ───────────────────────────────────── */}
         <div className="fc-card-inner" style={{ background: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border)', padding: '32px 28px', boxShadow: '0 4px 40px rgba(0,0,0,.10)', marginBottom: '16px' }}>
@@ -795,7 +808,7 @@ function NaPlantaContent() {
             <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '14px' }}>Estágio do empreendimento</p>
             <div className="fc-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
               {(Object.entries(estagioConfig) as [Estagio, typeof estagioConfig[Estagio]][]).map(([key, cfg]) => (
-                <button key={key} onClick={() => setEstagio(key)} style={{ padding: '12px 8px', borderRadius: '12px', cursor: 'pointer', border: `2px solid ${estagio === key ? cfg.color : 'var(--border)'}`, background: estagio === key ? cfg.color + '12' : 'var(--bg)', textAlign: 'center', transition: 'all 0.15s' }}>
+                <button key={key} onClick={() => mudarEstagio(key)} style={{ padding: '12px 8px', borderRadius: '12px', cursor: 'pointer', border: `2px solid ${estagio === key ? cfg.color : 'var(--border)'}`, background: estagio === key ? cfg.color + '12' : 'var(--bg)', textAlign: 'center', transition: 'all 0.15s' }}>
                   <p style={{ fontSize: '12px', fontWeight: '700', color: estagio === key ? cfg.color : 'var(--text)', marginBottom: '2px' }}>{cfg.label}</p>
                   <p style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{cfg.desc}</p>
                 </button>

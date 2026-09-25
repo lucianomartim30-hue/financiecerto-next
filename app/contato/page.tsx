@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePersistedState } from '@/lib/persistir-estado';
 
 const ASSUNTOS = [
   'Dúvida sobre financiamento',
@@ -11,7 +12,8 @@ const ASSUNTOS = [
 ];
 
 export default function ContatoPage() {
-  const [form, setForm] = useState({
+  // Rascunho guardado na aba: sair da página e voltar não apaga o que foi digitado.
+  const [form, setForm] = usePersistedState('form', {
     nome: '', email: '', telefone: '', assunto: '', mensagem: '', lgpd: false,
   });
   const [status, setStatus] = useState<'idle' | 'sending' | 'ok' | 'error'>('idle');

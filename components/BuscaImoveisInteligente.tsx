@@ -12,7 +12,8 @@
  *     Mostra mensagem explicando a realidade do mercado + alternativas.
  */
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { usePersistedState } from '@/lib/persistir-estado';
 import Link from 'next/link';
 import { formatBRL, formatPlantaPreco } from '@/lib/calculos';
 import { lookupSPCoords, haversineKm } from '@/lib/sp-neighborhoods';
@@ -112,12 +113,19 @@ export default function BuscaImoveisInteligente({
   /** Faixa/modalidade já calculada pelo simulador (ex.: "Faixa 2 MCMV", "SBPE (SFH)") — mostrada como contexto, sem alterar a busca. */
   faixaLabel?: string;
 }) {
-  const [cidade,  setCidade]  = useState(cidadeInicial && CIDADES_BUSCA.includes(cidadeInicial) ? cidadeInicial : 'São Paulo');
-  const [quartos, setQuartos] = useState<number | null>(null);
-  const [vagas,   setVagas]   = useState<number | null>(null);
-  const [bairro,  setBairro]  = useState('');
+  // Escolhas da pessoa (cidade, quartos, vagas, bairro) ficam guardadas na aba: ao
+  // voltar de um imóvel aberto a partir daqui, a busca reaparece do mesmo jeito.
+  // O nome do campo carrega a cidade do simulador e o tipo (planta/pronto): uma
+  // nova simulação com outra cidade não herda a busca antiga.
+  const ns = `busca-${cidadeInicial ?? ''}-${naPlanta ? 'planta' : 'pronto'}`;
+  const [cidade,  setCidade]  = usePersistedState(`${ns}:cidade`, cidadeInicial && CIDADES_BUSCA.includes(cidadeInicial) ? cidadeInicial : 'São Paulo');
+  const [quartos, setQuartos] = usePersistedState<number | null>(`${ns}:quartos`, null);
+  const [vagas,   setVagas]   = usePersistedState<number | null>(`${ns}:vagas`, null);
+  const [bairro,  setBairro]  = usePersistedState(`${ns}:bairro`, '');
+  const [jaBuscou, setJaBuscou] = usePersistedState(`${ns}:jaBuscou`, false);
   const [loading, setLoading] = useState(false);
   const [buscado, setBuscado] = useState(false);
+  const buscouNestaVisita = useRef(false);
 
   // Coordenadas de bairro só existem pra São Paulo (lib/sp-neighborhoods) — em
   // outras cidades, a expansão de busca (Busca 2) ainda funciona, mas sem
@@ -138,6 +146,7 @@ export default function BuscaImoveisInteligente({
 
   async function buscar() {
     if (!quartos) return;
+    buscouNestaVisita.current = true;
     import('@/lib/gtag').then(m => m.trackBuscaEmpreendimentos({ quartos: quartos ?? undefined, bairro: bairro || undefined }));
     setLoading(true);
     setBuscado(false);
@@ -229,6 +238,14 @@ export default function BuscaImoveisInteligente({
       setLoading(false);
     }
   }
+
+  // Guarda que já houve busca e, ao voltar pra esta tela com escolhas restauradas,
+  // refaz a busca sozinho (resultados frescos, coerentes com o valor atual).
+  useEffect(() => { if (buscado) setJaBuscou(true); }, [buscado, setJaBuscou]);
+  useEffect(() => {
+    if (jaBuscou && quartos && !buscado && !buscouNestaVisita.current) buscar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jaBuscou, quartos]);
 
   const bairroDesejado = bairro.trim();
   const encontrouNoBairro = buscado && resultados.length > 0 && alternativas.length === 0;

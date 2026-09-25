@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { usePersistedState } from '@/lib/persistir-estado';
 import Link from 'next/link';
 import type { ImovelConstrutora } from '@/lib/construtoras-catalogo';
 import { getStatusCfg } from '@/lib/status';
@@ -12,8 +13,9 @@ function faixa(min: number | null, max: number | null, sufixo: string): string |
   return max && max !== min ? `${min}–${max} ${sufixo}` : `${min} ${sufixo}`;
 }
 export default function ConstrutoraContent({ nome, imoveis, cidades }: { nome: string; imoveis: ImovelConstrutora[]; cidades: string[] }) {
-  const [cidade, setCidade] = useState('');
-  const [ordem, setOrdem] = useState<'relevancia' | 'menor-preco' | 'maior-preco'>('relevancia');
+  // Filtros guardados na aba: abrir um imóvel e voltar mantém a cidade e a ordem escolhidas.
+  const [cidade, setCidade] = usePersistedState('cidade', '');
+  const [ordem, setOrdem] = usePersistedState<'relevancia' | 'menor-preco' | 'maior-preco'>('ordem', 'relevancia');
   const [limite, setLimite] = useState(12);
 
   const filtrados = useMemo(() => {
