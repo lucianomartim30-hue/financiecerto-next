@@ -90,6 +90,8 @@ export interface Lead {
   // Cookie fc_vid do navegador (ver middleware.ts) — permite reconhecer o mesmo
   // visitante em contatos/visitas futuras sem exigir login (ver visitantes-kv.ts).
   visitorId?: string | null;
+  // Código curto que também vai na mensagem de WhatsApp (ver lib/wa-ref.ts) — liga o clique à conversa.
+  ref?: string | null;
 }
 
 const KV_LEADS_KEY = 'leads:list';
@@ -129,6 +131,7 @@ export async function kvAddLead(
     conversao?: LeadConversao | null;
     contato?: LeadContato | null;
     visitorId?: string | null;
+    ref?: string | null;
   },
 ): Promise<Lead | null> {
   const kv = await getKv();

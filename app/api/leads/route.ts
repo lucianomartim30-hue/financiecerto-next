@@ -4,9 +4,10 @@
  *                    na página do imóvel — sem autenticação, é só um registro).
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { Resend } from 'resend';
 import { kvGetLeads, kvAddLead, type LeadSimulacao, type LeadCenarioProposta, type LeadAtribuicao, type LeadConversao, type LeadContato } from '@/lib/leads-kv';
+import { enviarLeadParaHubSpot } from '@/lib/hubspot';
 import { kvGetVisitante, kvIdentificarVisitante } from '@/lib/visitantes-kv';
 import { sessionToken } from '../admin-auth/route';
 
@@ -130,7 +131,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { imovelId, imovelName, bairro, cidade, preco, oruloUrl, simulacao, cenarioProposta, favoritosCount, favoritosIds, atribuicao, conversao, contato } = body ?? {};
+    const { imovelId, imovelName, bairro, cidade, preco, oruloUrl, simulacao, cenarioProposta, favoritosCount, favoritosIds, atribuicao, conversao, contato, ref } = body ?? {};
 
     if (!imovelId || !imovelName) {
       return NextResponse.json({ error: 'Dados incompletos.' }, { status: 400 });
@@ -209,6 +210,8 @@ export async function POST(req: NextRequest) {
         : null;
 
     const visitorId = req.cookies.get('fc_vid')?.value || null;
+    // Só letras/números, curto — vem do navegador e vai parar na mensagem e no HubSpot.
+    const refValido = typeof ref === 'string' && /^[A-Za-z0-9]{3,8}$/.test(ref) ? ref.toUpperCase() : null;
 
     const lead = await kvAddLead({
       imovelId:   String(imovelId),
@@ -225,6 +228,7 @@ export async function POST(req: NextRequest) {
       conversao:       conversaoValida,
       contato:         contatoValido,
       visitorId,
+      ref:             refValido,
     });
 
     if (!lead) {
@@ -250,6 +254,10 @@ export async function POST(req: NextRequest) {
         contato:    contatoValido,
       }).catch(() => { /* nunca deve travar a resposta ao usuário */ });
     }
+
+    // CRM (HubSpot): roda depois da resposta — `after` mantém a função viva até
+    // terminar, sem atrasar o clique de quem está no site. Sem token, não faz nada.
+    after(() => enviarLeadParaHubSpot(lead));
 
     return NextResponse.json({ ok: true, lead });
   } catch {

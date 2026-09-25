@@ -322,7 +322,7 @@ export default function AdminLeadsPage() {
           <div key={lead.id} style={{ background: 'var(--bg-card)', border: '1.5px solid var(--border)', borderRadius: '14px', padding: '16px 18px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: '200px' }}>
-                <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: '2px' }}>{lead.imovelName}</p>
+                <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text)', marginBottom: '2px' }}>{lead.imovelName}{lead.ref && <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '700', color: 'var(--text-faint)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '6px', padding: '2px 7px' }}>ref {lead.ref}</span>}</p>
                 <p style={{ fontSize: '12px', color: 'var(--text-faint)' }}>
                   📍 {[lead.bairro, lead.cidade].filter(Boolean).join(' · ')}
                   {lead.preco ? ` · ${formatBRL(lead.preco)}` : ''}

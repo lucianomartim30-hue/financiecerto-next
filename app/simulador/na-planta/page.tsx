@@ -15,6 +15,7 @@ import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
 import { getPrimeiraOrigem, buildConversao } from '@/lib/atribuicao';
 import { FAQ_NA_PLANTA } from './faq-data';
 import { usePersistedState, useRecomecarPagina } from '@/lib/persistir-estado';
+import { refDoLead, aplicarRefNoLink } from '@/lib/wa-ref';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -84,7 +85,7 @@ function CTAConsultorCenario({
   const idLead = imovelId || 'simulacao-na-planta';
   const nomeLead = imovelName || `Simulação na planta — ${formatBRL(valor)}`;
 
-  async function registrarLeadCenario() {
+  async function registrarLeadCenario(ref: string) {
     // O link continua clicável depois do 1º envio (só mostra uma confirmação
     // por baixo) — sem essa trava, clicar de novo cria um lead duplicado.
     if (enviado) return;
@@ -112,6 +113,7 @@ function CTAConsultorCenario({
           favoritosIds: getFavoritoIds(),
           atribuicao,
           conversao,
+          ref,
         }),
       });
       if (res.ok) {
@@ -125,9 +127,11 @@ function CTAConsultorCenario({
     setEnviado(true);
   }
 
-  function onClickWhatsapp() {
+  function onClickWhatsapp(ev: React.MouseEvent<HTMLAnchorElement>) {
+    const ref = refDoLead(`na-planta-cenario:${idLead}`);
+    aplicarRefNoLink(ev.currentTarget, ref);
     import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: idLead, imovel: nomeLead, status: 'na planta', posicao: 'outras', pagina: '/simulador/na-planta' }));
-    registrarLeadCenario();
+    registrarLeadCenario(ref);
   }
 
   // Só existe página real de imóvel quando há um imovelId de catálogo de
@@ -173,7 +177,7 @@ function CTAFalarDireto({ imovelId, imovelName }: { imovelId: string; imovelName
   const [enviado, setEnviado] = useState(false);
   const nomeLead = imovelName || imovelId;
 
-  async function registrar() {
+  async function registrar(ref: string) {
     if (enviado) return;
     setEnviado(true);
     const atribuicao = getPrimeiraOrigem();
@@ -188,7 +192,7 @@ function CTAFalarDireto({ imovelId, imovelName }: { imovelId: string; imovelName
           bairro: '', cidade: '', preco: null, oruloUrl: null,
           favoritosCount: getFavoritosCount(),
           favoritosIds: getFavoritoIds(),
-          atribuicao, conversao,
+          atribuicao, conversao, ref,
         }),
       });
       if (res.ok) {
@@ -201,9 +205,11 @@ function CTAFalarDireto({ imovelId, imovelName }: { imovelId: string; imovelName
     } catch { /* fire-and-forget */ }
   }
 
-  function onClickWhatsapp() {
+  function onClickWhatsapp(ev: React.MouseEvent<HTMLAnchorElement>) {
+    const ref = refDoLead(`na-planta-direto:${imovelId}`);
+    aplicarRefNoLink(ev.currentTarget, ref);
     import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId, imovel: nomeLead, status: 'na planta', posicao: 'outras', pagina: '/simulador/na-planta' }));
-    registrar();
+    registrar(ref);
   }
 
   const urlImovel = `${SITE_CONFIG.domain}/imoveis/${imovelId}`;

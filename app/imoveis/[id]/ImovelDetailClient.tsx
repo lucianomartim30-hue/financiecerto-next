@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, type CSSProperties } from 'react';
 import { usePersistedState, temEstadoGuardado } from '@/lib/persistir-estado';
+import { refDoLead, aplicarRefNoLink } from '@/lib/wa-ref';
 import Link from 'next/link';
 import { formatBRL, formatPlantaPreco, simular, descobrir, FAIXAS_MCMV, BANCOS_SBPE, taxaNominalDeEfetiva, parcelaPrice, calcularSeguros, TAXA_SBPE_ANUAL, COMPROMETIMENTO_SBPE, TAXA_SFI_ANUAL, TETO_SFH, taxaEfetivaMCMV, mesAnoAtual, type FaixaMCMV } from '@/lib/calculos';
 import { SITE_CONFIG } from '@/lib/schema';
@@ -150,6 +151,7 @@ const leadsJaRegistrados = new Set<string>();
 async function registrarLead(
   imovel: ImovelDetalhe | null,
   posicao: 'topo' | 'sidebar' | 'topo-visita' | 'sidebar-visita',
+  ref: string,
 ): Promise<void> {
   if (!imovel) return;
 
@@ -189,6 +191,7 @@ async function registrarLead(
         favoritosIds,
         atribuicao,
         conversao,
+        ref,
       }),
     });
     if (res.ok) {
@@ -1321,18 +1324,20 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
           <>
             {atendeVisita && (
               <a href={`https://wa.me/5511933661403?text=${waMsgVisita}`} target="_blank" rel="noopener noreferrer"
-                onClick={() => {
+                onClick={(ev) => {
+                  const ref = refDoLead(`${imovel?.id}:sidebar-visita`); aplicarRefNoLink(ev.currentTarget, ref);
                   import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'sidebar-visita', pagina: '/imoveis/[id]' }));
-                  registrarLead(imovel, 'sidebar-visita');
+                  registrarLead(imovel, 'sidebar-visita', ref);
                 }}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '10px' }}>
                 <span>📅</span> Agendar visita
               </a>
             )}
             <a href={`https://wa.me/5511933661403?text=${waMsg}`} target="_blank" rel="noopener noreferrer"
-              onClick={() => {
+              onClick={(ev) => {
+                const ref = refDoLead(`${imovel?.id}:sidebar`); aplicarRefNoLink(ev.currentTarget, ref);
                 import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'sidebar', pagina: '/imoveis/[id]' }));
-                registrarLead(imovel, 'sidebar');
+                registrarLead(imovel, 'sidebar', ref);
               }}
               style={atendeVisita
                 ? { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', background: 'transparent', color: 'var(--text-muted)', border: '1.5px solid var(--border)', borderRadius: '12px', padding: '11px', fontSize: '13px', fontWeight: '700', textDecoration: 'none', marginTop: '8px' }
@@ -2222,18 +2227,20 @@ export default function ImovelDetailClient({ id }: { id: string }) {
               <>
                 {atendeVisitaTopo && (
                   <a href={`https://wa.me/5511933661403?text=${waMsgTopoVisita}`} target="_blank" rel="noopener noreferrer"
-                    onClick={() => {
+                    onClick={(ev) => {
+                      const ref = refDoLead(`${imovel?.id}:topo-visita`); aplicarRefNoLink(ev.currentTarget, ref);
                       import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'topo-visita', pagina: '/imoveis/[id]' }));
-                      registrarLead(imovel, 'topo-visita');
+                      registrarLead(imovel, 'topo-visita', ref);
                     }}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: '#25D366', color: '#fff', border: 'none', borderRadius: '12px', padding: '12px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                     <span>📅</span> Agendar visita
                   </a>
                 )}
                 <a href={`https://wa.me/5511933661403?text=${waMsgTopo}`} target="_blank" rel="noopener noreferrer"
-                  onClick={() => {
+                  onClick={(ev) => {
+                    const ref = refDoLead(`${imovel?.id}:topo`); aplicarRefNoLink(ev.currentTarget, ref);
                     import('@/lib/gtag').then(m => m.trackWhatsappClick({ imovelId: imovel?.id, imovel: imovel?.name, bairro: imovel?.neighborhood, status: imovel?.status, posicao: 'topo', pagina: '/imoveis/[id]' }));
-                    registrarLead(imovel, 'topo');
+                    registrarLead(imovel, 'topo', ref);
                   }}
                   style={atendeVisitaTopo
                     ? { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexShrink: 0, background: 'transparent', color: '#fff', border: '1.5px solid rgba(255,255,255,.4)', borderRadius: '12px', padding: '11px 20px', fontSize: '14px', fontWeight: '700', textDecoration: 'none', whiteSpace: 'nowrap' }
