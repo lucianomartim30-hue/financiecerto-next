@@ -195,7 +195,10 @@ export function simularHistoricoTR(
   taxaAnualPct: number,
   prazoMeses: number,
 ): ResultadoHistoricoTR {
-  const taxaMensal = (1 + taxaAnualPct / 100) ** (1 / 12) - 1;
+  // Convenção da Caixa (mesma de parcelaPrice/parcelaSAC): taxa mensal = taxa NOMINAL ÷ 12. A conta
+  // composta (1+i)^(1/12)-1 tratava a nominal como efetiva e subestimava os juros em ~5% (10,92% → 0,867%/mês
+  // em vez de 0,91%) — a página da TR divergia do resto do simulador.
+  const taxaMensal = taxaAnualPct / 100 / 12;
   const amort = pv / prazoMeses; // amortização mensal fixa — SAC
 
   let saldoComTR = pv;

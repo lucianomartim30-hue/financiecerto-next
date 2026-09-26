@@ -149,7 +149,7 @@ function HistoricoTRContent() {
     const taxa  = parseFloat(taxaInput.replace(',', '.')) || 10.92;
     const prazo = parseInt(prazoInput) || 360;
     const trRef = TR_HISTORICO_36M[TR_HISTORICO_36M.length - 1]; // mês mais recente da série
-    const taxaMensal     = (1 + taxa / 100) ** (1 / 12) - 1;
+    const taxaMensal     = taxa / 100 / 12; // nominal ÷ 12 (convenção da Caixa, igual ao motor)
     const correcao       = pv * (trRef.tr / 100);
     const saldoCorrigido = pv + correcao;
     const juros          = saldoCorrigido * taxaMensal;

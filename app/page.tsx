@@ -57,7 +57,7 @@ const FEATURES = [
   {
     icon: '🏠',
     title: 'Imóveis Minha Casa Minha Vida',
-    desc: 'Mais de 150 mil unidades dentro do teto do MCMV, da Faixa 1 à Faixa 4.',
+    desc: 'Mais de 100 mil unidades dentro do teto do MCMV, da Faixa 1 à Faixa 4.',
     color: '#dcfce7',
     textColor: '#16a34a',
     href: '/imoveis/minha-casa-minha-vida',
