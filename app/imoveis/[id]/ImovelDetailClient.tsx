@@ -9,6 +9,7 @@ import { SITE_CONFIG } from '@/lib/schema';
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { getStatusCfg, isNaPlanta } from '@/lib/status';
 import { buildSimuladorLink } from '@/lib/simulador-link';
+import { pareceNaoResidencial } from '@/lib/finalidade-nr';
 import { bairroPath } from '@/lib/locations';
 import FavoritoButton from '@/components/FavoritoButton';
 import { getFavoritosCount, getFavoritoIds } from '@/lib/favoritos';
@@ -868,9 +869,14 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   // trata unidades "NR" corretamente mesmo quando a Orulo manda finality cru
   // "Residencial" por engano — ver lib/orulo-api.ts). Sem finality_norm
   // (resposta antiga em cache), cai no fallback tolerante a caixa no campo cru.
-  const isComercial = imovel.finality_norm
-    ? imovel.finality_norm === 'comercial'
-    : (imovel.finality || '').toLowerCase().includes('comercial');
+  // Também checa o nome da TIPOLOGIA selecionada ("Simular esta planta"):
+  // um mesmo empreendimento pode ter tipologias residenciais e NR misturadas
+  // (não é só o caso de empreendimento inteiro, como o Mirad) — ver
+  // memória financiecerto-itbi-siopi-sicaq-tac-corrigidos.
+  const isComercial =
+    imovel.finality_norm === 'comercial' ||
+    (!imovel.finality_norm && (imovel.finality || '').toLowerCase().includes('comercial')) ||
+    pareceNaoResidencial(tipologiaLabel);
   const est = valorRef > 0 && !isBreveLancamento ? calcEstimate(valorRef, isComercial) : null;
 
   // Simulator state
@@ -1252,8 +1258,11 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
               const maxFiltro = poderTotal > 0 ? poderTotal : Math.round(valorRef * 1.25);
               const naPlantaImovel = isNaPlanta(imovel.status || '');
               const ctaLink = `/imoveis?min=${minFiltro}&max=${maxFiltro}${naPlantaImovel ? '&status=na planta' : ''}`;
+              // isComercial já inclui a checagem da tipologia selecionada (não só do
+              // imóvel inteiro) — usa o mesmo resultado aqui pra travar o simulador
+              // de destino também quando SÓ a planta clicada é NR.
               const simuladorLink = buildSimuladorLink(
-                { id: imovel.id, name: imovel.name, min_price: valorRef || imovel.min_price, max_price: imovel.max_price, status: imovel.status, finality_norm: imovel.finality_norm },
+                { id: imovel.id, name: imovel.name, min_price: valorRef || imovel.min_price, max_price: imovel.max_price, status: imovel.status, finality_norm: isComercial ? 'comercial' : imovel.finality_norm },
                 { renda: parseMoeda(renda), entrada: en, fgts: fg },
               );
               return (
@@ -1521,7 +1530,11 @@ function SecaoCaracteristicas({ imovel }: { imovel: ImovelDetalhe }) {
 function SecaoEmpreendimento({ imovel }: { imovel: ImovelDetalhe }) {
   const metaItems = [
     imovel.status        ? { icon: '📊', label: 'Estágio',             value: getStatus(imovel.status, imovel.min_price).label } : null,
-    imovel.finality      ? { icon: '🏠', label: 'Finalidade',          value: imovel.finality               } : null,
+    // Mostra a finalidade JÁ CORRIGIDA (finality_norm) quando disponível, não o
+    // campo cru da Orulo — ela pode vir "Residencial" errado numa unidade NR
+    // (ver lib/orulo-api.ts). Sem isso, o card contradizia o painel financeiro
+    // ao lado (que já usa finality_norm e mostra só SBPE pra essas unidades).
+    imovel.finality      ? { icon: '🏠', label: 'Finalidade',          value: imovel.finality_norm === 'comercial' ? 'Comercial (NR)' : imovel.finality } : null,
     imovel.total_units   ? { icon: '🏢', label: 'Total de unidades',   value: String(imovel.total_units)    } : null,
     (imovel.stock !== null && imovel.stock !== undefined)
                          ? { icon: '🔑', label: 'Disponíveis',         value: String(imovel.stock)          } : null,

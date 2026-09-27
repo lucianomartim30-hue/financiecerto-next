@@ -7,6 +7,7 @@
 import { lookupSPCoords } from '@/lib/sp-neighborhoods';
 import { normalizeStatus } from '@/lib/status';
 import { isSeedBanner } from '@/lib/fotos-ocultas-kv';
+import { pareceNaoResidencial } from '@/lib/finalidade-nr';
 export { normalizeStatus };
 
 // Extrai o id numérico da foto a partir da URL do CDN da Orulo — mesmo
@@ -63,29 +64,13 @@ export function normalizeFinality(raw: string): string {
 }
 
 /**
- * Infere a finalidade pelo nome do empreendimento quando a API Orulo
- * não retorna o campo finality.
- * Usa palavras-chave inequivocamente comerciais para evitar falsos
- * positivos em imóveis residenciais.
+ * Infere a finalidade pelo nome do empreendimento (e, quando dado, da
+ * construtora) usando palavras-chave inequivocamente comerciais/NR —
+ * ver lib/finalidade-nr.ts (a mesma lógica também roda no client, na
+ * ficha do imóvel, pra checar o nome da TIPOLOGIA/planta selecionada).
  */
 export function inferFinalityFromName(name: string, developer = ''): string {
-  const t = `${name} ${developer}`
-    .toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '');
-  if (
-    t.includes('sala comercial') || t.includes('salas comerciais') ||
-    t.includes('sala de escritorio') || t.includes('salas de escritorio') ||
-    t.includes('escritorio') ||
-    /\bloja\b/.test(t) || /\blojas\b/.test(t) ||
-    /\boffice\b/.test(t) ||
-    t.includes('centro empresarial') || t.includes('centro comercial') ||
-    t.includes('torre comercial') || t.includes('torres comerciais') ||
-    t.includes('nao residencial') ||
-    /\bnr\b/.test(t) ||
-    t.includes('salas nr') ||
-    t.includes('laje corporativa') || t.includes('corporate')
-  ) return 'comercial';
-  return '';
+  return pareceNaoResidencial(name, developer) ? 'comercial' : '';
 }
 
 
