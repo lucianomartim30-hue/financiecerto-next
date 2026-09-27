@@ -229,7 +229,7 @@ export const ARTIGOS: Artigo[] = [
             ],
           },
           { tipo: 'p', texto: 'As Faixas 1 e 2 têm taxa em **degraus por renda**: na Faixa 2, quem ganha até R$ 3.500 paga 5,50% a.a., até R$ 4.000 paga 6,00% e até R$ 5.000 paga 7,00% (taxas nominais, sem redutor). Nas Faixas 1, 2 e 3, ser cotista do FGTS (ter pelo menos 3 anos de contribuição) reduz 0,50 ponto percentual em cada degrau; a Faixa 4 tem taxa única (10,00% nominal). Fonte: tabela de financiamento da Caixa, abr/2026.' },
-          { tipo: 'destaque', texto: 'O subsídio é decrescente: quanto menor a renda, maior o desconto no preço do imóvel — até R$ 55.000 para renda até R$ 1.900 (com dependente), caindo até cerca de R$ 2.100 em R$ 4.000; acima disso a tabela da Caixa não contempla subsídio. Quem não tem dependente recebe cerca de 30% do valor. Ele nunca é devolvido — é abatido direto do valor financiado. A partir da Faixa 3, não há mais subsídio, só taxa reduzida em relação ao SBPE.' },
+          { tipo: 'destaque', texto: 'O subsídio é decrescente: quanto menor a renda, maior o desconto no preço do imóvel — até R$ 55.000 para renda até R$ 1.900 (com dependente), caindo até cerca de R$ 2.100 em R$ 4.000; acima disso a tabela da Caixa não contempla subsídio. Quem não tem dependente recebe cerca de 30% do valor. É abatido direto do valor financiado — mas não é um presente incondicional: se o imóvel for vendido ou o financiamento for quitado antecipadamente dentro dos primeiros 5 anos de contrato, o subsídio deve ser devolvido de forma proporcional. A partir da Faixa 3, não há mais subsídio, só taxa reduzida em relação ao SBPE.' },
         ],
       },
       {
@@ -426,7 +426,7 @@ export const ARTIGOS: Artigo[] = [
             '**4. Obra em andamento:** a Caixa libera recursos à construtora por medição de avanço físico. Cerca de 30 dias após a assinatura do contrato de financiamento, chega a primeira fatura de juros de evolução, e o comprador continua pagando mensalmente sobre o saldo já liberado.',
             '**5. Habite-se:** a prefeitura atesta que a construção terminou. O financiamento sai do regime de evolução e entra no regime normal — parcelas completas, com amortização.',
           ] },
-          { tipo: 'destaque', texto: 'O acompanhamento de todo esse processo — medições, repasses, situação do comprador — fica registrado no SICAQ, sistema interno da Caixa. Construtoras costumam informar o andamento, mas vale acompanhar.' },
+          { tipo: 'destaque', texto: 'O acompanhamento da obra — medições, repasses à construtora — fica registrado no SIOPI, sistema interno da Caixa (o SICAQ é usado antes disso, na etapa de análise de crédito). Construtoras costumam informar o andamento, mas vale acompanhar.' },
           { tipo: 'p', texto: 'A análise do SICAQ continua válida para a Caixa entre a aprovação e a assinatura do contrato de financiamento. Mas se a Caixa demorar mais de 2 meses para chamar o comprador para essa assinatura, pode ser que peça algum documento ou comprovante de renda atualizado antes de seguir.' },
         ],
       },
@@ -520,20 +520,21 @@ export const ARTIGOS: Artigo[] = [
       {
         titulo: 'ITBI: a isenção que pouca gente usa',
         blocos: [
-          { tipo: 'p', texto: 'Em São Paulo capital, o ITBI é 3% sobre o maior valor entre o preço da transação e o valor venal de referência da prefeitura. Mas existem duas isenções importantes:' },
+    { tipo: 'p', texto: 'Em São Paulo capital, o ITBI é 3% sobre o maior valor entre o preço da transação e o valor venal de referência da prefeitura. Mas existem duas reduções importantes — e elas funcionam de jeitos diferentes, não são a mesma coisa:' },
           { tipo: 'lista', itens: [
-            '**Financiamento pelo SFH:** a parte financiada do imóvel, até R$ 636.612,50, é isenta de ITBI. O imposto incide só sobre a entrada paga com recursos próprios (e sobre o que exceder esse teto, se houver).',
-            '**MCMV / primeiro imóvel:** isenção total de ITBI para compras dentro do limite definido pela prefeitura — R$ 245.527,77 a partir de 01/01/2026.',
+            '**Financiamento pelo SFH, PAR, HIS ou consórcio (imóvel até R$ 725.808,00 em 2026):** não é isenção — é **alíquota reduzida a 0,5%** sobre a parcela financiada, até um teto de **R$ 120.968,00** (2026). O que passar desse teto, mais a parte não financiada (a entrada), paga a alíquota cheia de 3%.',
+            '**MCMV / primeiro imóvel:** essa sim é isenção total de ITBI, para compras dentro do limite definido pela prefeitura — R$ 245.527,77 a partir de 01/01/2026.',
           ] },
           { tipo: 'p', texto: 'Exemplo: imóvel de R$ 300.000 financiado pelo SBPE (dentro do SFH), com entrada de R$ 60.000 e R$ 240.000 financiados.' },
           { tipo: 'tabela',
-            cabecalho: ['', 'Sem a isenção SFH', 'Com a isenção SFH'],
+            cabecalho: ['', 'Sem a redução SFH', 'Com a redução SFH'],
             linhas: [
-              ['Base do ITBI', 'R$ 300.000 (valor total)', 'R$ 60.000 (só a entrada)'],
-              ['ITBI a pagar (3%)', 'R$ 9.000', 'R$ 1.800'],
+              ['Base tributada a 0,5%', '—', 'R$ 120.968,00 (teto do financiado)'],
+              ['Base tributada a 3%', 'R$ 300.000 (valor total)', 'R$ 179.032,00 (resto: entrada + excedente do financiado)'],
+              ['ITBI a pagar', 'R$ 9.000,00', 'R$ 604,84 + R$ 5.370,96 = R$ 5.975,80'],
             ],
           },
-          { tipo: 'destaque', texto: 'Nesse exemplo, a isenção do SFH economiza R$ 7.200 de ITBI. Como a parte financiada (R$ 240.000) fica abaixo do teto de R$ 636.612,50, ela não entra na base de cálculo do imposto — só a entrada paga do próprio bolso é taxada.' },
+          { tipo: 'destaque', texto: 'Nesse exemplo, a redução do SFH economiza R$ 3.024,20 de ITBI — bem menos do que uma isenção total, mas real. Ela não zera o imposto sobre a parte financiada: só troca a alíquota de 3% para 0,5% até o teto de R$ 120.968,00. Acima disso (e sobre a entrada), continua em 3%. Fonte: cálculo do ITBI da Prefeitura de São Paulo, valores de 2026.' },
         ],
       },
       {
@@ -559,10 +560,10 @@ export const ARTIGOS: Artigo[] = [
             cabecalho: ['Item', 'Valor'],
             linhas: [
               ['Entrada', 'R$ 60.000'],
-              ['ITBI (com isenção SFH)', 'R$ 1.800'],
+              ['ITBI (com redução SFH)', 'R$ 5.975,80'],
               ['Registro de imóveis (~0,8%)', 'R$ 2.400'],
               ['Despachante (estimado)', 'R$ 2.000'],
-              ['Total a separar, fora a entrada', 'R$ 6.200 (≈ 2,1% do imóvel)'],
+              ['Total a separar, fora a entrada', 'R$ 10.375,80 (≈ 3,5% do imóvel)'],
             ],
           },
         ],
@@ -570,7 +571,7 @@ export const ARTIGOS: Artigo[] = [
     ],
     faq: [
       { pergunta: 'O ITBI é sempre 3% em São Paulo?',
-        resposta: 'A alíquota é 3%, mas a base de cálculo pode ser reduzida por isenções: no financiamento SFH, a parte financiada até R$ 636.612,50 não entra na conta; no MCMV/primeiro imóvel, há isenção total até R$ 245.527,77 (valor de 2026).' },
+        resposta: 'A alíquota padrão é 3%, mas há duas reduções: no financiamento SFH/PAR/HIS (imóvel até R$ 725.808,00), a parcela financiada paga só 0,5% até um teto de R$ 120.968,00 — o resto (entrada + excedente) continua em 3%; no MCMV/primeiro imóvel, há isenção total até R$ 245.527,77 (valores de 2026).' },
       { pergunta: 'Preciso pagar escritura se o imóvel for financiado?',
         resposta: 'Geralmente não. O próprio contrato de financiamento com alienação fiduciária tem força de escritura pública. A escritura no Cartório de Notas só é necessária em compras à vista.' },
       { pergunta: 'Quando a análise de crédito é feita no MCMV comparado ao imóvel pronto?',
@@ -582,7 +583,7 @@ export const ARTIGOS: Artigo[] = [
     ],
     fatosChaveParaJoao: [
       'Custos de aquisição além do imóvel: ITBI (3% em SP, com isenções), Registro de Imóveis (0,5-1%), Escritura (só se à vista), despachante (R$1.000-3.000 opcional). Total típico: 2-5% do valor do imóvel.',
-      'ISENÇÃO IMPORTANTE: no financiamento SFH, a parte financiada até R$636.612,50 é isenta de ITBI — o imposto incide só sobre a entrada paga em dinheiro.',
+      'REDUÇÃO NO ITBI (não é isenção total): no financiamento SFH/PAR/HIS, para imóvel até R$725.808,00, a parcela financiada paga alíquota reduzida de 0,5% até um teto de R$120.968,00 — o restante (entrada + o que exceder esse teto) paga a alíquota cheia de 3%.',
       'ISENÇÃO MCMV: compra de primeiro imóvel dentro do limite de R$245.527,77 (2026) é isenta de ITBI integralmente.',
       'Exemplo: imóvel R$300k, entrada R$60k, financiado R$240k (SFH) → ITBI incide só sobre os R$60k de entrada = R$1.800 (em vez de R$9.000 sem a isenção).',
       'Quem financia normalmente NÃO paga escritura separada — o contrato com alienação fiduciária já tem força de escritura pública.',

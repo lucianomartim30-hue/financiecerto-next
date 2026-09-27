@@ -242,7 +242,7 @@ Mais de 4.000 empreendimentos de incorporadoras (base Orulo), com fotos reais, f
 Conteúdo educativo em 5 capítulos:
 1. Modalidades (MCMV Faixas 1–4, SBPE/SFH/SFI, SAC vs Price)
 2. Imóvel na Planta (crédito associativo, juros de evolução, fluxo da construtora: ato/mensais/reforços/chaves)
-3. Processo de Compra (SICAQ/análise de crédito SEMPRE antes do contrato e do sinal → contrato → obra → habite-se; custos de aquisição: ITBI ~3% em SP, isento até R$636.612,50 financiado via SFH e isento total no MCMV/1º imóvel até R$245.527,77; cartório ≈1%)
+3. Processo de Compra (SICAQ/análise de crédito SEMPRE antes do contrato e do sinal → contrato → obra → habite-se; custos de aquisição: ITBI ~3% em SP, reduzido a 0,5% (até teto de R$120.968,00) na parte financiada via SFH/PAR/HIS e isento total no MCMV/1º imóvel até R$245.527,77; cartório ≈1%)
 4. Documentação (CLT: holerite + FGTS; Autônomo: IR + DECORE + extratos; MEI: CNPJ + DASN)
 5. FGTS no Financiamento (entrada, amortização, FGTS Futuro para Faixas 1–2)
 
@@ -440,7 +440,7 @@ Exemplo de como interpretar o resultado para o usuário:
 - Todas as faixas MCMV podem usar SAC OU Price — o comprador escolhe. SAC = custo total menor; Price = parcela inicial menor (a mais procurada por quem precisa caber no orçamento).
 - Cotista FGTS faz diferença nas Faixas 1, 2 e 3 (taxa reduzida em 0,5 p.p.). Faixa 4: taxa igual para todos (10,00% nominal).
 - FGTS Futuro: permite antecipar depósitos futuros para reduzir parcela — ideal para CLT Faixa 1 e 2
-- Subsídio não é devolvido — funciona como desconto direto no preço do imóvel
+- Subsídio funciona como desconto direto no preço do imóvel, mas deve ser devolvido proporcionalmente se o imóvel for vendido ou o financiamento quitado antecipadamente nos primeiros 5 anos de contrato
 - Prazo máximo: 35 anos (420 meses)
 - Operado principalmente pela Caixa Econômica Federal
 
@@ -512,10 +512,10 @@ NUNCA diga "sinal/entrada" como se fosse um único pagamento. O correto é "ato"
 - FGTS Futuro (MCMV Faixas 1-2): compromete depósitos futuros para reduzir parcela mensal desde o início
 
 **Custos envolvidos na compra**
-- ITBI: imposto municipal. Em São Paulo capital é 3% sobre o maior valor entre transação e valor venal de referência. DUAS isenções importantes: (1) financiamento via SFH — a parte FINANCIADA até R$636.612,50 é ISENTA de ITBI, o imposto incide só sobre a entrada paga em dinheiro (e sobre o que exceder esse teto); (2) MCMV/primeiro imóvel — isenção TOTAL de ITBI até R$245.527,77 (limite da prefeitura de SP, 2026). Varia por cidade. NUNCA diga "0,5%" — isso está errado, é isenção total na parte financiada, não uma alíquota reduzida.
+- ITBI: imposto municipal. Em São Paulo capital é 3% sobre o maior valor entre transação e valor venal de referência. DUAS reduções importantes, que NÃO são a mesma coisa: (1) financiamento via SFH/PAR/HIS/consórcio, para imóvel até R$725.808,00 — a parte FINANCIADA paga alíquota REDUZIDA de 0,5% até um teto de R$120.968,00 (2026); o que exceder esse teto, mais a entrada, paga a alíquota cheia de 3% — isso NÃO é isenção total, é redução de alíquota; (2) MCMV/primeiro imóvel — essa sim é isenção TOTAL de ITBI, até R$245.527,77 (limite da prefeitura de SP, 2026). Varia por cidade.
 - Registro no cartório (CRI): ≈ 1% do valor do imóvel (varia por estado)
 - Avaliação do banco: taxa cobrada pelo banco para avaliar o imóvel (≈ R$ 500–3.000)
-- TAC: taxa de abertura de crédito (nem todos os bancos cobram)
+- TAC (Taxa de Abertura de Crédito): proibida por lei para pessoa física desde 2008 (Resolução CMN 3.518/2007, Súmula 565 do STJ) — não confundir com a Taxa de Administração de Contrato (≈R$25/mês, cobrada na parcela, essa sim legal)
 - MIP: seguro de vida obrigatório — varia MUITO com a idade: ~0,008%/mês aos 35 anos, ~0,019% aos 45, ~0,03% aos 50, chegando a ~0,9% acima de 80 (sobre o saldo devedor). O simulador calcula pela idade real.
 - DFI: seguro do imóvel obrigatório (0,0093% do saldo devedor/mês)
 - CET (Custo Efetivo Total): taxa que inclui tudo — use para comparar propostas entre bancos
@@ -686,7 +686,7 @@ Amortização: parte da parcela que reduz o saldo devedor (o resto é juro)
 Saldo Devedor: quanto ainda se deve ao banco; corrigido mensalmente pela TR
 MIP: seguro de vida obrigatório no financiamento — cobre morte/invalidez do devedor
 DFI (DFC): seguro obrigatório do imóvel contra danos físicos e incêndio
-ITBI: imposto municipal — SP capital 3%; ISENTO na parte financiada via SFH até R$636.612,50 (paga-se só sobre a entrada); ISENTO TOTAL no MCMV/1º imóvel até R$245.527,77 (2026)
+ITBI: imposto municipal — SP capital 3%; REDUZIDO a 0,5% (até teto de R$120.968,00) na parte financiada via SFH/PAR/HIS (imóvel até R$725.808,00) — o resto paga 3%; ISENTO TOTAL no MCMV/1º imóvel até R$245.527,77 (2026)
 TAC: Taxa de Administração de Contrato — R$ 25/mês (Caixa); cobrada mensalmente na parcela
 Registro de Imóvel: averbação do contrato no Cartório de Registro de Imóveis (≈1% do valor)
 Habite-se: certidão emitida pela prefeitura que autoriza a ocupação após conclusão da obra
@@ -695,7 +695,7 @@ SICAQ: sistema da Caixa que faz a pré-análise de crédito no MCMV antes da obr
 Alienação Fiduciária: garantia do financiamento — o imóvel fica em nome do banco até quitação
 FGTS: Fundo de Garantia do Tempo de Serviço — pode ser usado na entrada ou amortização
 FGTS Futuro: antecipa depósitos futuros do FGTS para reduzir parcelas — disponível para Faixas 1 e 2
-Subsídio MCMV: desconto do governo no valor do imóvel — até R$ 55k para Faixas 1 e 2; não é devolvido
+Subsídio MCMV: desconto do governo no valor do imóvel — até R$ 55k para Faixas 1 e 2; deve ser devolvido proporcionalmente se vender ou quitar o financiamento nos primeiros 5 anos
 Evolução de Obra: liberação progressiva do crédito pela Caixa conforme o avanço físico da construção
 SIOPI: sistema da Caixa que registra as medições de avanço de obra e libera verbas à construtora
 Juros Evolutivos: juros pagos ao banco durante a obra sobre o saldo já liberado — crescem mensalmente

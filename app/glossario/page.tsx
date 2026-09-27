@@ -140,13 +140,13 @@ const TERMS: Term[] = [
     term: 'ITBI',
     category: 'seguros',
     short: 'Imposto de Transmissão de Bens Imóveis — cobrado na compra do imóvel.',
-    full: 'Imposto municipal cobrado na transferência de propriedade do imóvel. Em São Paulo capital, a alíquota é 3% sobre o maior valor entre o valor venal de referência e o valor da transação. Duas isenções importantes em SP: na parte financiada via SFH, até R$ 636.612,50, o ITBI não incide (paga-se só sobre a entrada); no MCMV/primeiro imóvel, há isenção total até R$ 245.527,77 (valor de 2026). A regra varia por município. O pagamento do ITBI é requisito para registrar o imóvel em cartório.',
+    full: 'Imposto municipal cobrado na transferência de propriedade do imóvel. Em São Paulo capital, a alíquota é 3% sobre o maior valor entre o valor venal de referência e o valor da transação. Duas reduções importantes em SP, que não são a mesma coisa: na parte financiada via SFH/PAR/HIS (imóvel até R$ 725.808,00), a alíquota cai para 0,5% até um teto de R$ 120.968,00 — o que passar do teto, mais a entrada, continua em 3%; no MCMV/primeiro imóvel, há isenção total até R$ 245.527,77 (valor de 2026). A regra varia por município. O pagamento do ITBI é requisito para registrar o imóvel em cartório.',
   },
   {
     term: 'TAC',
     category: 'seguros',
-    short: 'Taxa de Abertura de Crédito — tarifa cobrada pela análise do financiamento.',
-    full: 'Tarifa cobrada pelo banco para cobrir os custos administrativos de análise e liberação do crédito imobiliário. Pode ser paga à vista ou incorporada ao financiamento. Alguns bancos isentam a TAC como estratégia comercial. Faz parte do CET e deve ser considerada na comparação entre propostas.',
+    short: 'Taxa de Abertura de Crédito — proibida por lei para pessoa física desde 2008.',
+    full: 'Tarifa de Abertura de Crédito. É proibida por lei para pessoa física desde 2008 (Resolução CMN nº 3.518/2007 do Banco Central, reforçada pela Súmula 565 do STJ) — nenhum banco pode cobrá-la em financiamento imobiliário para pessoa física. Se aparecer cobrada em alguma proposta, é irregular e pode ser contestada junto ao banco ou ao Procon.',
   },
   {
     term: 'Registro de Imóvel',
@@ -177,8 +177,8 @@ const TERMS: Term[] = [
   {
     term: 'SICAQ',
     category: 'documentos',
-    short: 'Sistema de Informações do Crédito Associativo — cadastro da Caixa Econômica Federal.',
-    full: 'Sistema da Caixa Econômica Federal que centraliza as informações do contrato de crédito associativo: cronograma de obra, repasses, vistorias e situação financeira do comprador. O acompanhamento via SICAQ permite verificar se os repasses à construtora estão dentro do cronograma e se há inconsistências que possam travar o financiamento.',
+    short: 'Sistema Caixa Aqui — usado pelos correspondentes bancários para a pré-análise de crédito.',
+    full: 'SICAQ significa Sistema Caixa Aqui. É o sistema usado pelos correspondentes bancários credenciados (rede Caixa Aqui) para dar entrada e acompanhar a pré-análise de crédito do comprador — a etapa que verifica renda, restrições e capacidade de pagamento antes da proposta seguir para a Caixa. A pré-aprovação obtida no SICAQ tem validade de 6 meses para a assinatura do contrato.',
   },
   {
     term: 'Alienação Fiduciária',
@@ -203,8 +203,8 @@ const TERMS: Term[] = [
   {
     term: 'Subsídio MCMV',
     category: 'fgts',
-    short: 'Desconto no preço do imóvel pago pelo governo — não é devolvido.',
-    full: 'O subsídio é um benefício não reembolsável concedido pelo governo federal aos compradores do MCMV. Funciona como um desconto no valor do imóvel: o comprador financia apenas o restante. O valor máximo varia por faixa de renda, município e valor do imóvel. Na Faixa 1, o subsídio pode chegar a R$ 55.000; na Faixa 2, também até R$ 55.000 (decrescente conforme renda e valor do imóvel). O subsídio é concedido uma única vez por família.',
+    short: 'Desconto no preço do imóvel pago pelo governo — pode ter que ser devolvido se vender ou quitar cedo.',
+    full: 'O subsídio é um benefício concedido pelo governo federal aos compradores do MCMV. Funciona como um desconto no valor do imóvel: o comprador financia apenas o restante. O valor máximo varia por faixa de renda, município e valor do imóvel. Na Faixa 1, o subsídio pode chegar a R$ 55.000; na Faixa 2, também até R$ 55.000 (decrescente conforme renda e valor do imóvel). O subsídio é concedido uma única vez por família. Ele não é incondicional: se o imóvel for vendido ou o financiamento for quitado antecipadamente dentro dos primeiros 5 anos de contrato, o valor do subsídio deve ser devolvido de forma proporcional.',
   },
 
   /* ── Imóvel na Planta ─────────────────────────────────────────── */
@@ -217,14 +217,14 @@ const TERMS: Term[] = [
   {
     term: 'SIOPI',
     category: 'planta',
-    short: 'Curva padrão de avanço físico de obras residenciais usada pela Caixa Econômica Federal.',
-    full: 'O SIOPI (Sistema de Orçamento e Planejamento de Obras da CEF) define a curva típica de evolução física de empreendimentos habitacionais. A CEF usa essa curva para calcular o ritmo de liberação de recursos ao longo da obra. A curva é "S-shaped": começo e fim mais lentos, aceleração no meio. Em simulações, permite estimar os juros de evolução mensais antes mesmo do início da obra.',
+    short: 'Sistema de Operações Imobiliárias da Caixa — usado pela construtora para acompanhar a obra financiada.',
+    full: 'O SIOPI (Sistema de Operações Imobiliárias) é o sistema da Caixa pelo qual a construtora mantém atualizada a documentação e o andamento físico da obra durante o crédito associativo/apoio à produção. É com base nas informações lançadas no SIOPI que a Caixa libera os repasses (medições) à construtora ao longo da obra — atraso ou inconsistência no sistema pode travar o repasse. Em simulações, o percentual de evolução da obra usado para calcular os juros mensais parte dessa mesma lógica de acompanhamento.',
   },
   {
     term: 'Cronograma Físico-Financeiro',
     category: 'planta',
     short: 'Documento que detalha o avanço da obra e os repasses financeiros.',
-    full: 'Documento obrigatório do crédito associativo que discrimina, mês a mês, o percentual de obra previsto e o valor de repasse correspondente. A Caixa Econômica Federal realiza vistorias periódicas para validar se o avanço físico real coincide com o previsto. Atrasos na obra podem travar repasses, e o comprador deve acompanhar isso via SICAQ.',
+    full: 'Documento obrigatório do crédito associativo que discrimina, mês a mês, o percentual de obra previsto e o valor de repasse correspondente. A Caixa Econômica Federal realiza vistorias periódicas para validar se o avanço físico real coincide com o previsto. Atrasos na obra podem travar repasses, e o acompanhamento fica registrado no SIOPI.',
   },
   {
     term: 'Interveniente Quitante',
