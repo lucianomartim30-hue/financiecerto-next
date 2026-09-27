@@ -495,9 +495,9 @@ export const ARTIGOS: Artigo[] = [
     titulo: 'Quanto Custa Comprar um Imóvel Financiado: ITBI, Cartório e Taxas',
     tituloSEO: 'Quanto Custa Comprar Imóvel Financiado: ITBI e Cartório (2026)',
     metaDescription:
-      'Veja quanto custa comprar um imóvel financiado além do preço: ITBI (com isenções no SFH e MCMV), registro, despachante. Exemplo real calculado, passo a passo.',
+      'Veja quanto custa comprar um imóvel financiado além do preço: ITBI (com redução no SFH e isenção no MCMV), registro, despachante. Exemplo real calculado, passo a passo.',
     resumo:
-      'Comprar um imóvel financiado não custa só o valor da entrada — tem também ITBI, registro em cartório e outras taxas que entram na conta antes de você receber as chaves. Aqui você vê quanto cada uma pesa, com um exemplo real calculado, e uma isenção de ITBI que pouca gente usa: financiar pelo SFH reduz bastante esse imposto.',
+      'Comprar um imóvel financiado não custa só o valor da entrada — tem também ITBI, registro em cartório e outras taxas que entram na conta antes de você receber as chaves. Aqui você vê quanto cada uma pesa, com um exemplo real calculado, e uma redução de ITBI que pouca gente usa: financiar pelo SFH baixa a alíquota nessa parte do imposto.',
     publicado: '2026-06-17',
     atualizado: '2026-06-17',
     leituraMin: 8,
@@ -509,7 +509,7 @@ export const ARTIGOS: Artigo[] = [
           { tipo: 'tabela',
             cabecalho: ['Custo', 'Quem cobra', 'Valor típico'],
             linhas: [
-              ['ITBI', 'Prefeitura', '3% em São Paulo (com isenções — veja abaixo)'],
+              ['ITBI', 'Prefeitura', '3% em São Paulo (com reduções — veja abaixo)'],
               ['Registro de Imóveis', 'Cartório de Registro', '0,5% a 1% do valor do imóvel'],
               ['Escritura pública', 'Cartório de Notas', 'Só se NÃO financiado (veja abaixo)'],
               ['Despachante / correspondente', 'Profissional terceirizado', 'R$ 1.000 a R$ 3.000 (opcional)'],
@@ -518,7 +518,7 @@ export const ARTIGOS: Artigo[] = [
         ],
       },
       {
-        titulo: 'ITBI: a isenção que pouca gente usa',
+        titulo: 'ITBI: a redução que pouca gente usa',
         blocos: [
     { tipo: 'p', texto: 'Em São Paulo capital, o ITBI é 3% sobre o maior valor entre o preço da transação e o valor venal de referência da prefeitura. Mas existem duas reduções importantes — e elas funcionam de jeitos diferentes, não são a mesma coisa:' },
           { tipo: 'lista', itens: [
@@ -582,10 +582,10 @@ export const ARTIGOS: Artigo[] = [
         resposta: 'Não. Esses custos são pagos à parte, geralmente antes ou no fechamento da compra — não entram no valor financiado pelo banco.' },
     ],
     fatosChaveParaJoao: [
-      'Custos de aquisição além do imóvel: ITBI (3% em SP, com isenções), Registro de Imóveis (0,5-1%), Escritura (só se à vista), despachante (R$1.000-3.000 opcional). Total típico: 2-5% do valor do imóvel.',
+      'Custos de aquisição além do imóvel: ITBI (3% em SP, com redução no SFH e isenção no MCMV), Registro de Imóveis (0,5-1%), Escritura (só se à vista), despachante (R$1.000-3.000 opcional). Total típico: 2-5% do valor do imóvel.',
       'REDUÇÃO NO ITBI (não é isenção total): no financiamento SFH/PAR/HIS, para imóvel até R$725.808,00, a parcela financiada paga alíquota reduzida de 0,5% até um teto de R$120.968,00 — o restante (entrada + o que exceder esse teto) paga a alíquota cheia de 3%.',
       'ISENÇÃO MCMV: compra de primeiro imóvel dentro do limite de R$245.527,77 (2026) é isenta de ITBI integralmente.',
-      'Exemplo: imóvel R$300k, entrada R$60k, financiado R$240k (SFH) → ITBI incide só sobre os R$60k de entrada = R$1.800 (em vez de R$9.000 sem a isenção).',
+      'Exemplo: imóvel R$300k, entrada R$60k, financiado R$240k (SFH) → 0,5% sobre R$120.968 (teto) + 3% sobre os R$179.032 restantes (excedente do financiado + entrada) = R$5.975,80 (em vez de R$9.000 sem a redução).',
       'Quem financia normalmente NÃO paga escritura separada — o contrato com alienação fiduciária já tem força de escritura pública.',
       'Análise de crédito: no MCMV/planta é via SICAQ, antes da assinatura. Em imóvel pronto/revenda, é quando a proposta chega ao banco, já com preço negociado.',
     ],
