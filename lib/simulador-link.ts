@@ -21,6 +21,8 @@ export interface SimuladorLinkImovel {
   min_price?: number | null;
   max_price?: number | null;
   status?: string | null;
+  /** 'comercial' trava o simulador de destino em SFI — nunca deixa simular como residencial (unidade NR). */
+  finality_norm?: string | null;
 }
 
 /** Contexto financeiro já conhecido do usuário (ex: sessionStorage `fc_sim_context`/`joao_sim_context`). */
@@ -48,6 +50,10 @@ export function buildSimuladorLink(imovel: SimuladorLinkImovel, ctx?: SimuladorL
   const statusNorm = normalizeStatus(imovel.status || '');
   const naPlanta = statusNorm === 'na planta' || statusNorm === 'em obras';
   const desconhecido = statusNorm === 'unknown';
+  // Unidade NR/comercial: o simulador de destino não pode oferecer a opção de
+  // simular como residencial (não é elegível a MCMV/FGTS/SBPE, só SFI) — ver
+  // memória financiecerto-itbi-siopi-sicaq-tac-corrigidos.
+  const comercial = imovel.finality_norm === 'comercial';
 
   if (naPlanta) {
     const params = new URLSearchParams();
@@ -59,6 +65,7 @@ export function buildSimuladorLink(imovel: SimuladorLinkImovel, ctx?: SimuladorL
     if (ctx?.mcmv)   params.set('mcmv',  String(n(ctx.mcmv)));
     if (ctx?.sbpe)   params.set('sbpe',  String(n(ctx.sbpe)));
     if (ctx?.fgts)   params.set('fgts',  String(n(ctx.fgts)));
+    if (comercial)   params.set('tipo', 'comercial');
     return `/simulador/na-planta?${params.toString()}`;
   }
 
@@ -74,6 +81,7 @@ export function buildSimuladorLink(imovel: SimuladorLinkImovel, ctx?: SimuladorL
   if (ctx?.idade)   params.set('idade', String(n(ctx.idade)));
   params.set('naPlanta', 'false');
   if (desconhecido) params.set('statusDesconhecido', '1');
+  if (comercial)     params.set('tipo', 'comercial');
   const qs = params.toString();
   return qs ? `/simulador?${qs}` : '/simulador';
 }

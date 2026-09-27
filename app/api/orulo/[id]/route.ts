@@ -6,6 +6,7 @@ import { kvGetPromocoes, kvGetPromocoesAdmin } from '@/lib/promocoes-kv';
 import { kvGetOruloEndUserToken } from '@/lib/orulo-enduser-kv';
 import { getPlantasManuais, getExcluirBlueprintsOrulo } from '@/lib/plantas-manuais';
 import { getLancamentoManual, lancamentoParaDetalhe } from '@/lib/lancamentos-manuais';
+import { normalizeFinality, inferFinalityFromName } from '@/lib/orulo-api';
 import { sessionToken } from '../../admin-auth/route';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
@@ -74,6 +75,7 @@ async function fallbackFromCache(id: string) {
       number_of_towers: null,
       virtual_tour: null,
       finality: cached.finality || null,
+      finality_norm: cached.finality_norm || null,
       description: '',
       photos: comFotosExtras(id, cached.photo ? [cached.photo] : []),
       blueprints: [],
@@ -479,6 +481,17 @@ export async function GET(
       ? null
       : buildingTotalUnitsRaw;
 
+    // Mesma prioridade do nome sobre o campo `finality` da Orulo usada em
+    // lib/orulo-api.ts (normalizeBuilding) — unidade "NR" no nome nunca pode
+    // virar residencial no site, mesmo que a Orulo mande finality "Residencial".
+    const finality_norm = (() => {
+      const byName = inferFinalityFromName((b.name as string) || '', developer);
+      if (byName === 'comercial') return 'comercial';
+      const norm = normalizeFinality((b.finality as string) || '');
+      if (norm === 'residencial' || norm === 'comercial') return norm;
+      return byName || norm;
+    })();
+
     return NextResponse.json({
       id: String(b.id),
       name: (b.name as string) || 'Empreendimento',
@@ -510,7 +523,8 @@ export async function GET(
       number_of_floors: (b.number_of_floors as number) ?? null,
       number_of_towers: (b.number_of_towers as number) ?? null,
       virtual_tour:     (b.virtual_tour     as string) || null,
-      finality:         (b.finality         as string) || null,   // Residencial / Comercial
+      finality:         (b.finality         as string) || null,   // Residencial / Comercial (bruto da Orulo — pode estar errado)
+      finality_norm,
       description: (b.description as string) || '',
       photos: comFotosExtras(id, photosVisiveis),
       blueprints: blueprintsFiltrados,

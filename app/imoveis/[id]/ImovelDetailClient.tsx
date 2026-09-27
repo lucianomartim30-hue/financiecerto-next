@@ -73,6 +73,8 @@ interface ImovelDetalhe {
   number_of_towers: number | null;
   virtual_tour: string | null;
   finality: string | null;
+  /** Finalidade já normalizada e corrigida pelo nome (unidade "NR" nunca vira residencial) — ver lib/orulo-api.ts. */
+  finality_norm?: string | null;
   description: string;
   photos: string[];
   blueprints: Blueprint[];
@@ -862,8 +864,13 @@ function LeadFormInteresse({ imovel, posicao, dark }: { imovel: ImovelDetalhe; p
 function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: ImovelDetalhe; valorOverride?: number; tipologiaLabel?: string }) {
   const isBreveLancamento = !imovel.min_price || imovel.min_price < 100;
   const valorRef = valorOverride ?? (imovel.min_price ?? imovel.max_price ?? 0);
-  // MCMV/FGTS não se aplicam a imóvel comercial (finality vem cru da Orulo — checagem tolerante a caixa)
-  const isComercial = (imovel.finality || '').toLowerCase().includes('comercial');
+  // MCMV/FGTS não se aplicam a imóvel comercial. Prioriza finality_norm (já
+  // trata unidades "NR" corretamente mesmo quando a Orulo manda finality cru
+  // "Residencial" por engano — ver lib/orulo-api.ts). Sem finality_norm
+  // (resposta antiga em cache), cai no fallback tolerante a caixa no campo cru.
+  const isComercial = imovel.finality_norm
+    ? imovel.finality_norm === 'comercial'
+    : (imovel.finality || '').toLowerCase().includes('comercial');
   const est = valorRef > 0 && !isBreveLancamento ? calcEstimate(valorRef, isComercial) : null;
 
   // Simulator state
@@ -1246,7 +1253,7 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
               const naPlantaImovel = isNaPlanta(imovel.status || '');
               const ctaLink = `/imoveis?min=${minFiltro}&max=${maxFiltro}${naPlantaImovel ? '&status=na planta' : ''}`;
               const simuladorLink = buildSimuladorLink(
-                { id: imovel.id, name: imovel.name, min_price: valorRef || imovel.min_price, max_price: imovel.max_price, status: imovel.status },
+                { id: imovel.id, name: imovel.name, min_price: valorRef || imovel.min_price, max_price: imovel.max_price, status: imovel.status, finality_norm: imovel.finality_norm },
                 { renda: parseMoeda(renda), entrada: en, fgts: fg },
               );
               return (

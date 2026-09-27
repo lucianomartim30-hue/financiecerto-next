@@ -456,6 +456,11 @@ function SimuladorInner() {
   // abaixo assume "pronto" como fallback seguro, mas o usuário precisa saber
   // que isso não foi confirmado, já que muda o resultado (não há fluxo de obra).
   const statusDesconhecido = searchParams.get('statusDesconhecido') === '1';
+  // Unidade NR/comercial identificada na ficha do imóvel (lib/simulador-link.ts)
+  // — trava o tipo aqui, não deixa a pessoa simular como residencial uma
+  // unidade que não é elegível a MCMV/FGTS. Ver
+  // memória financiecerto-itbi-siopi-sicaq-tac-corrigidos.
+  const tipoTravado = searchParams.get('tipo') === 'comercial';
 
   // Lê URL params vindos da página do imóvel e vai direto ao resultado
   useEffect(() => {
@@ -465,6 +470,7 @@ function SimuladorInner() {
     const prazoStr       = searchParams.get('prazo');
     const naPlantaStr    = searchParams.get('naPlanta');
     const idadeStr       = searchParams.get('idade');
+    const tipoDoImovel: 'residencial' | 'comercial' = searchParams.get('tipo') === 'comercial' ? 'comercial' : 'residencial';
 
     if (!valorImovelStr) return; // sem imóvel de referência, fluxo normal do wizard
 
@@ -474,6 +480,7 @@ function SimuladorInner() {
     const prazoNum    = Number(prazoStr) || 35;
     const naPlanta    = naPlantaStr === 'true';
     const idadeNum    = Number(idadeStr) || 35;
+    setTipoImovel(tipoDoImovel);
 
     if (!inicioDisparado.current) {
       inicioDisparado.current = true;
@@ -512,10 +519,10 @@ function SimuladorInner() {
     setE(novoEstado);
 
     // Calcula perfil mínimo para mostrar painel
-    const p = descobrir(rendaNum, 0, entradaNum, prazoNum, idadeNum, false);
+    const p = descobrir(rendaNum, 0, entradaNum, prazoNum, idadeNum, false, true, false, 0, false, tipoDoImovel);
     setPerfil(p);
     if (p.mcmv.elegivel) setPainelAtivo('mcmv');
-    else setPainelAtivo('sbpe');
+    else setPainelAtivo(tipoDoImovel === 'comercial' ? 'sfi' : 'sbpe');
 
     // Calcula simulação e pula direto para o resultado
     const resultado = simular({
@@ -527,6 +534,7 @@ function SimuladorInner() {
       naPlanta,
       prazoObraAnos:     naPlanta ? 3 : 0,
       idadeProponente:   idadeNum,
+      tipoImovel:        tipoDoImovel,
     });
     setSim(resultado);
     setEtapa(7); // pula direto para o resultado completo
@@ -1208,13 +1216,18 @@ function SimuladorInner() {
               { val: 'residencial' as const, icon: '🏠', label: 'Residencial' },
               { val: 'comercial'   as const, icon: '🏢', label: 'Comercial' },
             ]).map(({ val, icon, label }) => (
-              <button key={val} onClick={() => setTipoImovel(val)}
-                style={{ flex: 1, padding: '12px 8px', borderRadius: 12, cursor: 'pointer', border: `2px solid ${tipoImovel === val ? 'var(--primary)' : 'var(--border)'}`, background: tipoImovel === val ? 'rgba(37,99,235,.08)' : 'var(--bg-card)', textAlign: 'center', transition: 'all .15s', fontFamily: 'inherit' }}>
+              <button key={val} onClick={() => !tipoTravado && setTipoImovel(val)} disabled={tipoTravado}
+                style={{ flex: 1, padding: '12px 8px', borderRadius: 12, cursor: tipoTravado ? 'not-allowed' : 'pointer', opacity: tipoTravado && tipoImovel !== val ? 0.4 : 1, border: `2px solid ${tipoImovel === val ? 'var(--primary)' : 'var(--border)'}`, background: tipoImovel === val ? 'rgba(37,99,235,.08)' : 'var(--bg-card)', textAlign: 'center', transition: 'all .15s', fontFamily: 'inherit' }}>
                 <div style={{ fontSize: 18, marginBottom: 3 }}>{icon}</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: tipoImovel === val ? 'var(--primary)' : 'var(--text-muted)' }}>{label}</div>
               </button>
             ))}
           </div>
+          {tipoTravado && (
+            <div style={{ background: '#FAEEDA', border: '1px solid #f3d9a8', borderRadius: 10, padding: '10px 14px', marginTop: 12 }}>
+              <p style={{ fontSize: 12, color: '#633806' }}>⚠️ Essa unidade é <strong>NR (Não Residencial)</strong> nesse empreendimento — por isso o tipo veio travado em Comercial. MCMV, FGTS e subsídio habitacional não se aplicam.</p>
+            </div>
+          )}
         </div>
 
         {/* CTAs */}

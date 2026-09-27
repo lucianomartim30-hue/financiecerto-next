@@ -381,6 +381,11 @@ function NaPlantaContent() {
   const estagioUrl  = sp.get('estagio');
   const imovelIdUrl   = sp.get('imovelId')   || undefined;
   const imovelNameUrl = sp.get('imovelName') || undefined;
+  // Unidade NR/comercial identificada na ficha do imóvel (lib/simulador-link.ts)
+  // — trava o tipo aqui, não deixa a pessoa escolher "residencial" pra uma
+  // unidade que não é elegível a MCMV/FGTS/SBPE. Ver
+  // memória financiecerto-itbi-siopi-sicaq-tac-corrigidos.
+  const tipoTravado = sp.get('tipo') === 'comercial';
 
   // Renda
   const [rendaRaw, setRendaRaw] = usePersistedState('rendaRaw', '');
@@ -403,7 +408,13 @@ function NaPlantaContent() {
   // Tipo de imóvel
   const [tipoImovel, setTipoImovel] = usePersistedState<'residencial' | 'comercial'>('tipoImovel', 'residencial');
   // VALIDAÇÃO: Comercial não é elegível a MCMV/FGTS/subsídio (benefícios exclusivos de habitação)
-  const isComercial = tipoImovel === 'comercial';
+  const isComercial = tipoTravado || tipoImovel === 'comercial';
+
+  // Se a ficha do imóvel já identificou a unidade como NR/comercial, força o
+  // tipo aqui mesmo que a sessão tivesse "residencial" guardado de antes.
+  useEffect(() => {
+    if (tipoTravado && tipoImovel !== 'comercial') setTipoImovel('comercial');
+  }, [tipoTravado, tipoImovel, setTipoImovel]);
 
   // Título já vem do metadata do layout.tsx (SSR) — mantém document.title em
   // sincronia só por garantia em relatórios de GA que leem esse valor no client.
@@ -835,14 +846,19 @@ function NaPlantaContent() {
                 { val: 'residencial' as const, icon: '🏠', label: 'Residencial' },
                 { val: 'comercial'   as const, icon: '🏢', label: 'Comercial' },
               ]).map(({ val, icon, label }) => (
-                <button key={val} onClick={() => setTipoImovel(val)}
-                  style={{ flex: 1, padding: '12px 8px', borderRadius: '12px', cursor: 'pointer', border: `2px solid ${tipoImovel === val ? 'var(--primary)' : 'var(--border)'}`, background: tipoImovel === val ? 'rgba(37,99,235,.08)' : 'var(--bg)', textAlign: 'center', transition: 'all 0.15s' }}>
+                <button key={val} onClick={() => !tipoTravado && setTipoImovel(val)} disabled={tipoTravado}
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: '12px', cursor: tipoTravado ? 'not-allowed' : 'pointer', opacity: tipoTravado && tipoImovel !== val ? 0.4 : 1, border: `2px solid ${tipoImovel === val ? 'var(--primary)' : 'var(--border)'}`, background: tipoImovel === val ? 'rgba(37,99,235,.08)' : 'var(--bg)', textAlign: 'center', transition: 'all 0.15s' }}>
                   <p style={{ fontSize: '18px', marginBottom: '3px' }}>{icon}</p>
                   <p style={{ fontSize: '12px', fontWeight: '700', color: tipoImovel === val ? 'var(--primary)' : 'var(--text-muted)' }}>{label}</p>
                 </button>
               ))}
             </div>
-            {isComercial && (
+            {tipoTravado && (
+              <div style={{ background: '#FAEEDA', border: '1px solid #f3d9a8', borderRadius: '10px', padding: '10px 14px', marginTop: '12px' }}>
+                <p style={{ fontSize: '12px', color: '#633806' }}>⚠️ Essa unidade é <strong>NR (Não Residencial)</strong> nesse empreendimento — por isso o tipo veio travado em Comercial. MCMV, FGTS e subsídio habitacional não se aplicam. Apenas financiamento SBPE está disponível.</p>
+              </div>
+            )}
+            {!tipoTravado && isComercial && (
               <div style={{ background: '#FAEEDA', border: '1px solid #f3d9a8', borderRadius: '10px', padding: '10px 14px', marginTop: '12px' }}>
                 <p style={{ fontSize: '12px', color: '#633806' }}>⚠️ Imóvel <strong>comercial</strong>: MCMV, FGTS e subsídio habitacional não se aplicam. Apenas financiamento SBPE está disponível.</p>
               </div>

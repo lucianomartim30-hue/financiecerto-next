@@ -224,6 +224,18 @@ export function normalizeBuilding(b: Record<string, unknown>) {
       ''
     ),
     finality_norm: (() => {
+      // O nome tem prioridade quando sinaliza claramente NR/comercial: a Orulo
+      // já confirmou casos (ex.: "Mirad - NR") em que o campo `finality` vem
+      // "Residencial" mesmo o próprio nome do empreendimento marcando a unidade
+      // como NR (Não Residencial) — nesses casos o campo da API está errado, e
+      // uma unidade NR nunca pode entrar no site como residencial (não é
+      // elegível a MCMV/FGTS/SBPE, só SFI). Ver memória
+      // financiecerto-itbi-siopi-sicaq-tac-corrigidos / auditoria 2026-09.
+      const name      = (b.name      as string) || '';
+      const developer = (b.developer as Record<string,string>|null)?.name || (b.developer_name as string) || '';
+      const byName = inferFinalityFromName(name, developer);
+      if (byName === 'comercial') return 'comercial';
+
       const raw =
         (b.finality      as string) ||
         (b.finality_type as string) ||
@@ -233,9 +245,7 @@ export function normalizeBuilding(b: Record<string, unknown>) {
       const norm = normalizeFinality(raw);
       if (norm === 'residencial' || norm === 'comercial') return norm;
       // Último recurso: inferir pelo nome quando a API não informa
-      const name      = (b.name      as string) || '';
-      const developer = (b.developer as Record<string,string>|null)?.name || (b.developer_name as string) || '';
-      return inferFinalityFromName(name, developer);
+      return byName;
     })(),
     updated_at:    (b.updated_at as string) || null,
     stock:         (b.stock as number) ?? null,   // unidades disponíveis (total do empreendimento)
