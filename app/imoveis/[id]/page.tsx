@@ -17,6 +17,7 @@ import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
 import { getToken, fetchBuildingDetail } from '@/lib/orulo-api';
 import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
 import { getLancamentoManual, lancamentoParaCatalogo } from '@/lib/lancamentos-manuais';
+import { precoManualMin, limparNomeSeLancado } from '@/lib/precos-manuais';
 import ImovelDetailClient from './ImovelDetailClient';
 
 const BASE = 'https://www.financiecerto.com.br';
@@ -37,15 +38,25 @@ const getBuildingData = cache(async (id: string): Promise<CatalogEntry | null> =
   const lancamentoManual = getLancamentoManual(id);
   if (lancamentoManual) return lancamentoParaCatalogo(lancamentoManual);
 
+  // Preço manual por planta (ver lib/precos-manuais.ts): tabela de lançamento
+  // real já existe mas a Orulo ainda não sincronizou — sem isso o <title>/
+  // meta description continuavam mostrando "Breve Lançamento"/preço sentinela
+  // mesmo com a ficha em si já corrigida (auditoria 2026-09).
+  const aplicarPrecoManual = (b: CatalogEntry): CatalogEntry => {
+    const preco = precoManualMin(b.id);
+    return preco ? { ...b, min_price: preco, name: limparNomeSeLancado(b.id, b.name) } : b;
+  };
+
   try {
     const catalog = await kvGetCatalog();
     const cached = catalog?.find(b => b.id === id);
-    if (cached) return cached;
+    if (cached) return aplicarPrecoManual(cached);
   } catch { /* segue para o fallback ao vivo */ }
 
   try {
     const token = await getToken();
-    return await fetchBuildingDetail(token, id);
+    const live = await fetchBuildingDetail(token, id);
+    return live ? aplicarPrecoManual(live) : null;
   } catch {
     return null;
   }
