@@ -7,7 +7,7 @@ import { kvGetOruloEndUserToken } from '@/lib/orulo-enduser-kv';
 import { getPlantasManuais, getExcluirBlueprintsOrulo } from '@/lib/plantas-manuais';
 import { getLancamentoManual, lancamentoParaDetalhe } from '@/lib/lancamentos-manuais';
 import { normalizeFinality, inferFinalityFromName } from '@/lib/orulo-api';
-import { precoManualMin, precoManualPorArea, limparNomeSeLancado } from '@/lib/precos-manuais';
+import { precoManualMin, plantaManualPorArea, limparNomeSeLancado } from '@/lib/precos-manuais';
 import { sessionToken } from '../../admin-auth/route';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
@@ -409,10 +409,12 @@ export async function GET(
       // Tipologias não têm imagens embutidas — photo fica null
       const price = (t.discount_price ?? t.original_price ?? t.price ?? null) as number | null;
       const areaNum = Number(t.private_area ?? t.area ?? NaN);
-      // Preço manual por planta (ver lib/precos-manuais.ts) tem prioridade sobre
-      // o que a Orulo manda — cobre lançamento com tabela real já publicada
-      // mas ainda não sincronizada (Orulo manda preço sentinela/nulo).
-      const precoManual = precoManualPorArea(id, areaNum);
+      // Preço/unidades manuais por planta (ver lib/precos-manuais.ts) têm
+      // prioridade sobre o que a Orulo manda — cobre lançamento com tabela
+      // real já publicada mas ainda não sincronizada (Orulo manda preço
+      // sentinela/nulo e "1 disponível / 1 total" de placeholder).
+      const plantaManual = plantaManualPorArea(id, areaNum);
+      const precoManual = plantaManual?.priceFrom ?? null;
       return {
         type: (t.type ?? t.name ?? `${t.bedrooms ?? '?'} dorms`) as string,
         bedrooms:  (t.bedrooms ?? t.rooms ?? null) as number | null,
@@ -431,8 +433,12 @@ export async function GET(
         price: precoManual
           ? `A partir de R$ ${precoManual.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
           : (price && price >= 100 ? `R$ ${price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : 'Consultar'),
-        stock:        (t.stock ?? null) as number | null,   // unidades disponíveis
-        total_units:  (t.total_units ?? null) as number | null,
+        // Unidades manuais são o TOTAL construído da planta (ficha técnica da
+        // construtora) — não sabemos quantas já foram vendidas, então
+        // "disponíveis" (stock) fica null em vez de repetir o "1" placeholder
+        // da Orulo, que ficaria contraditório ao lado do total real.
+        stock:        plantaManual?.units ? null : (t.stock ?? null) as number | null,
+        total_units:  plantaManual?.units ?? ((t.total_units ?? null) as number | null),
         photo:        null as string | null,
         blueprint:    null as string | null,
       };
