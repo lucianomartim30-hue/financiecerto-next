@@ -43,14 +43,28 @@ export const maxDuration = 60;
 
 // ── Auto-trigger: dispara sync em background quando catálogo está incompleto ──
 // Garante que o catálogo se reconstrói sozinho sem intervenção manual.
-let _lastAutoSync = 0; // timestamp do último disparo (evita avalanche — por instância)
+let _lastAutoSync = 0; // timestamp da última TENTATIVA (evita avalanche — por instância)
+let _lastKvError  = 0; // timestamp do último erro de KV (cota, indisponibilidade etc.)
 // Rate limit da Orulo: ~400 req/hora. Debounce de 60 min garante cota recuperada.
-const AUTO_SYNC_DEBOUNCE_MS = 60 * 60 * 1000; // 60 minutos
+const AUTO_SYNC_DEBOUNCE_MS = 60 * 60 * 1000;      // 60 minutos — catálogo incompleto, KV saudável
+// Se o próprio KV está com erro (ex.: cota de requisições excedida), insistir
+// a cada request só piora — cada tentativa é mais uma consulta num banco já
+// saturado. Incidente real 2026-09-29: o catálogo ficou incompleto por um
+// tempo, e cada visita ao site tentava relançar o sync porque essa função só
+// marcava `_lastAutoSync` DEPOIS de kvGetMeta() responder — se kvGetMeta()
+// lançava erro (KV fora do ar), a marca nunca era gravada e a próxima
+// request tentava de novo, sem limite. Isso ajudou a esgotar a cota do
+// Upstash. Agora a tentativa é marcada ANTES da chamada ao KV, e um erro
+// aciona um recuo bem mais longo (6h) — não plano de tentar de novo por request.
+const KV_ERROR_BACKOFF_MS   = 6 * 60 * 60 * 1000;  // 6 horas — erro do próprio KV
 
 async function maybeAutoSync(req: NextRequest): Promise<void> {
   const now = Date.now();
-  // Debounce em memória (evita múltiplos disparos na mesma instância quente)
   if (now - _lastAutoSync < AUTO_SYNC_DEBOUNCE_MS) return;
+  if (now - _lastKvError  < KV_ERROR_BACKOFF_MS)   return;
+  // Marca a tentativa já aqui — mesmo que a chamada ao KV abaixo falhe, essa
+  // instância não tenta de novo antes do debounce normal.
+  _lastAutoSync = now;
   try {
     const meta = await kvGetMeta();
     if (meta?.is_complete) return; // catálogo ok, nada a fazer
@@ -59,13 +73,17 @@ async function maybeAutoSync(req: NextRequest): Promise<void> {
       const lastSync = new Date(meta.last_chunk_at).getTime();
       if (now - lastSync < AUTO_SYNC_DEBOUNCE_MS) return;
     }
-    _lastAutoSync = now;
     const syncSecret = process.env.ORULO_SYNC_SECRET ?? '';
     const syncUrl = new URL('/api/orulo/sync', req.url);
     if (syncSecret) syncUrl.searchParams.set('secret', syncSecret);
     fetch(syncUrl.toString(), { signal: AbortSignal.timeout(2000) }).catch(() => {});
     console.log('[auto-sync] catálogo incompleto — sync disparado em background (last:', meta?.last_chunk_at, ')');
-  } catch { /* silencioso */ }
+  } catch (e) {
+    // KV indisponível (cota excedida, timeout etc.) — recuo longo, não
+    // insiste a cada request enquanto o banco estiver assim.
+    _lastKvError = now;
+    console.warn('[auto-sync] KV indisponível, recuando por 6h:', e instanceof Error ? e.message : e);
+  }
 }
 
 const ORULO_BASE = 'https://www.orulo.com.br';
