@@ -247,6 +247,20 @@ export function lancamentoParaCatalogo(l: LancamentoManual): CatalogEntry {
 
 export const CATALOGO_LANCAMENTOS_MANUAIS: CatalogEntry[] = LANCAMENTOS_MANUAIS.map(lancamentoParaCatalogo);
 
+/**
+ * Junta o catálogo da Orulo com os lançamentos manuais, sem duplicar quando o
+ * id coincide (ex.: Oásis Santa Cruz existe na Orulo como "Breve Lançamento"
+ * com a tabela de preços ainda não publicada lá — o cadastro manual usa o
+ * MESMO id numérico pra substituir esse registro incompleto pelo dado real,
+ * mantendo a mesma URL /imoveis/<id> que já pode estar em leads/links).
+ * Sempre usar isto em vez de `[...cachedOrulo, ...CATALOGO_LANCAMENTOS_MANUAIS]`
+ * cru — o spread duplicava o card quando os dois catálogos tinham o mesmo id.
+ */
+export function catalogoComManuais(base: CatalogEntry[]): CatalogEntry[] {
+  const idsManuais = new Set(CATALOGO_LANCAMENTOS_MANUAIS.map(m => m.id));
+  return [...base.filter(b => !idsManuais.has(b.id)), ...CATALOGO_LANCAMENTOS_MANUAIS];
+}
+
 // ── Projeção pro formato de detalhe (ficha do imóvel, GET /api/orulo/[id]) ───
 // Mesmo formato de campos que a rota devolve pra um imóvel real da Orulo —
 // ImovelDetailClient.tsx consome os dois sem distinção.

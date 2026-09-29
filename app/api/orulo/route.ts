@@ -32,8 +32,9 @@ import { filterLotesForaSP } from '@/lib/filtro-lotes-fora-sp';
 import { kvGetCatalog, kvGetMeta } from '@/lib/orulo-kv';
 import { kvGetTodasPromocoesPublicas } from '@/lib/promocoes-kv';
 import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
-import { CATALOGO_LANCAMENTOS_MANUAIS } from '@/lib/lancamentos-manuais';
+import { catalogoComManuais } from '@/lib/lancamentos-manuais';
 import { FOTOS_EXTRAS_MANUAIS } from '@/lib/fotos-extras-manuais';
+import { precoManualMin, limparNomeSeLancado } from '@/lib/precos-manuais';
 
 // O fallback ao vivo (cache KV vazio/frio) pode varrer o estado inteiro em lotes
 // pequenos e pausados — mais lento que os 10s padrão da Vercel, mas evita
@@ -236,10 +237,12 @@ export async function GET(req: NextRequest) {
     const cachedOrulo = await kvGetCatalog();
     // Capa dos cards também usa a arte manual quando existir (ver
     // lib/fotos-extras-manuais.ts) — a foto da Orulo pode ser só um logo.
-    const cached = (cachedOrulo
-      ? [...cachedOrulo, ...CATALOGO_LANCAMENTOS_MANUAIS]
-      : CATALOGO_LANCAMENTOS_MANUAIS
-    ).map(b => FOTOS_EXTRAS_MANUAIS[b.id]?.[0] ? { ...b, photo: FOTOS_EXTRAS_MANUAIS[b.id][0] } : b);
+    // Preço manual (ver lib/precos-manuais.ts): lançamento com tabela real já
+    // publicada mas ainda não sincronizada pela Orulo (fica com o preço
+    // sentinela/nulo de "Breve Lançamento" no card).
+    const cached = catalogoComManuais(cachedOrulo ?? [])
+      .map(b => FOTOS_EXTRAS_MANUAIS[b.id]?.[0] ? { ...b, photo: FOTOS_EXTRAS_MANUAIS[b.id][0] } : b)
+      .map(b => precoManualMin(b.id) ? { ...b, min_price: precoManualMin(b.id)!, name: limparNomeSeLancado(b.id, b.name) } : b);
 
     // Lookup direto por IDs (ex: "vistos recentemente" no detalhe do imóvel) —
     // evita baixar o catálogo inteiro (alguns MB) só pra resolver 6 IDs;

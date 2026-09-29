@@ -5,7 +5,8 @@ import { construtoraToSlug, nomePublicoConstrutora } from '@/lib/construtora-nom
 import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
 import { LOGOS_MANUAIS } from '@/lib/construtora-logos-manuais';
 import { kvGetTodasPromocoesPublicas, type Promocao } from '@/lib/promocoes-kv';
-import { CATALOGO_LANCAMENTOS_MANUAIS } from '@/lib/lancamentos-manuais';
+import { catalogoComManuais } from '@/lib/lancamentos-manuais';
+import { precoManualMin, limparNomeSeLancado } from '@/lib/precos-manuais';
 
 export const MIN_IMOVEIS_CONSTRUTORA_INDEXAVEL = 3;
 
@@ -179,7 +180,8 @@ export async function getConstrutoras(): Promise<GrupoConstrutora[]> {
   // Empreendimentos cadastrados manualmente (ver lib/lancamentos-manuais.ts)
   // entram no agrupamento por construtora igual a qualquer imóvel da Orulo —
   // sem isso o Elev Saúde não aparecia dentro de /construtoras/trisul.
-  const catalogo = [...((await kvGetCatalog()) ?? []), ...CATALOGO_LANCAMENTOS_MANUAIS];
+  const catalogo = catalogoComManuais((await kvGetCatalog()) ?? [])
+    .map(b => precoManualMin(b.id) ? { ...b, min_price: precoManualMin(b.id)!, name: limparNomeSeLancado(b.id, b.name) } : b);
   const promocoes = await kvGetTodasPromocoesPublicas();
   const comPromo: CatalogEntryComPromo[] = Object.keys(promocoes).length === 0
     ? catalogo

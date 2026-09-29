@@ -7,6 +7,7 @@ import { kvGetOruloEndUserToken } from '@/lib/orulo-enduser-kv';
 import { getPlantasManuais, getExcluirBlueprintsOrulo } from '@/lib/plantas-manuais';
 import { getLancamentoManual, lancamentoParaDetalhe } from '@/lib/lancamentos-manuais';
 import { normalizeFinality, inferFinalityFromName } from '@/lib/orulo-api';
+import { precoManualMin, precoManualPorArea, limparNomeSeLancado } from '@/lib/precos-manuais';
 import { sessionToken } from '../../admin-auth/route';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
@@ -40,11 +41,14 @@ async function fallbackFromCache(id: string) {
     const promocoes = await kvGetPromocoes(id);
     return {
       id: cached.id,
-      name: cached.name,
+      name: limparNomeSeLancado(id, cached.name),
       developer: cached.developer,
       developer_logo: null,
       developer_website: null,
-      min_price: cached.min_price,
+      // Preço manual (ver lib/precos-manuais.ts) tem prioridade: cobre o caso
+      // de uma tabela de lançamento real já existir mas a Orulo ainda não ter
+      // sincronizado (fica com o preço sentinela/nulo de "Breve Lançamento").
+      min_price: precoManualMin(id) ?? cached.min_price,
       max_price: cached.max_price,
       bedrooms_min: cached.bedrooms_min,
       bedrooms_max: cached.bedrooms_max,
@@ -404,6 +408,11 @@ export async function GET(
     const typologies = ((b.typologies ?? b.apartments ?? []) as Record<string, unknown>[]).map((t) => {
       // Tipologias não têm imagens embutidas — photo fica null
       const price = (t.discount_price ?? t.original_price ?? t.price ?? null) as number | null;
+      const areaNum = Number(t.private_area ?? t.area ?? NaN);
+      // Preço manual por planta (ver lib/precos-manuais.ts) tem prioridade sobre
+      // o que a Orulo manda — cobre lançamento com tabela real já publicada
+      // mas ainda não sincronizada (Orulo manda preço sentinela/nulo).
+      const precoManual = precoManualPorArea(id, areaNum);
       return {
         type: (t.type ?? t.name ?? `${t.bedrooms ?? '?'} dorms`) as string,
         bedrooms:  (t.bedrooms ?? t.rooms ?? null) as number | null,
@@ -419,7 +428,9 @@ export async function GET(
         // price sentinela (0.1, 1.05...) da Orulo pra "sem tabela publicada
         // ainda" arredondava pra "R$ 0" — mesma classe de bug do min_price
         // do card (ver lib/calculos.ts formatPlantaPreco).
-        price:        price && price >= 100 ? `R$ ${price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : 'Consultar',
+        price: precoManual
+          ? `A partir de R$ ${precoManual.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
+          : (price && price >= 100 ? `R$ ${price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : 'Consultar'),
         stock:        (t.stock ?? null) as number | null,   // unidades disponíveis
         total_units:  (t.total_units ?? null) as number | null,
         photo:        null as string | null,
@@ -494,11 +505,11 @@ export async function GET(
 
     return NextResponse.json({
       id: String(b.id),
-      name: (b.name as string) || 'Empreendimento',
+      name: limparNomeSeLancado(id, (b.name as string) || 'Empreendimento'),
       developer,
       developer_logo,
       developer_website,
-      min_price: (b.min_price as number) ?? null,
+      min_price: precoManualMin(id) ?? (b.min_price as number) ?? null,
       max_price: (b.max_price as number) ?? null,
       bedrooms_min:  (b.min_bedrooms  as number) ?? null,
       bedrooms_max:  (b.max_bedrooms  as number) ?? null,
