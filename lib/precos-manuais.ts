@@ -15,24 +15,30 @@ export interface PrecoManualPlanta {
   area: number;
   /** Menor valor de venda ("a partir de") encontrado na tabela pra essa planta. */
   priceFrom: number;
-  /** Unidades dessa planta no empreendimento (ficha técnica da construtora). */
+  /** Total de unidades dessa planta no empreendimento (contagem por final na tabela de preços/mapa de disponibilidade). */
   units?: number;
+  /** Unidades ainda disponíveis (verde no mapa de disponibilidade da construtora) — sem isso, mostra só o total. */
+  disponiveis?: number;
 }
 
 export const PRECOS_MANUAIS: Record<string, PrecoManualPlanta[]> = {
-  // Oásis Santa Cruz by Diálogo (id 83507) — tabela de pré-lançamento
-  // set/2026, recebida diretamente da construtora. Menor "Valor Total do
-  // Negócio" de cada planta já cadastrada na Orulo. Unidades: ficha técnica
-  // de treinamento da construtora (set/2026).
+  // Oásis Santa Cruz by Diálogo (id 83507) — tabela de pré-lançamento set/2026
+  // (JD House/Diálogo). Preço = menor "Valor Total do Negócio" de cada planta.
+  // Unidades/disponíveis = contagem célula a célula no mapa de disponibilidade
+  // (verde = livre) cruzado com os "finais" de cada planta na própria tabela
+  // de preços, 2026-09-28. Os finais 3 e 12 mudam de produto por andar: até o
+  // 6º andar são o studio de 26,27m² (tabela: "Finais 3 e 12 (STD-26,27m²) 3º
+  // ao 5º Pav + unid 603"), só viram o apto de 44,99m² a partir do 8º andar —
+  // o 7º andar não tem linha própria na tabela; tratado aqui como studio
+  // (mesmo grupo do 6º) por ser o lado mais próximo do texto explícito.
   '83507': [
-    // 1 dorm 32m²: a ficha técnica junta "26m² a 32m² — studios e 1 suíte" numa
-    // única faixa HIS de 105 unidades (studios de 26-28m² + esta de 32m²) — não
-    // dá pra isolar só a de 32m² nesse material; usamos o total da faixa.
-    { area: 32, priceFrom: 358000, units: 105 },  // Planta 01 — 1 dorm 32m² (finais 4/5/6/11, 4º-8º pav — 32,40m²)
-    { area: 45, priceFrom: 505000, units: 77 },   // Planta 01 — 2 dorms 45m² (final 12, 8º-12º pav — 44,99m²) — HMP
-    { area: 59, priceFrom: 775000, units: 89 },   // Planta 03 — 2 dorms 59m² (finais 1/14, 3º-4º pav — 59,16m²) — Residencial
-    { area: 69, priceFrom: 845000, units: 112 },  // Planta 04 — 2 dorms 69m² (finais 7/8, 3º pav — 69,86m²) — Residencial
-    { area: 97, priceFrom: 1173000, units: 110 }, // Planta 05 — 3 dorms 97m² (final 1, 3º pav — 97,52m²) — Residencial (43 c/2 vagas + 67 c/1 vaga)
+    // 1 dorm 32m² + studios (26,27-27,97m²): a ficha técnica junta essa faixa
+    // toda como "26m² a 32m²" — usamos o mesmo agrupamento aqui.
+    { area: 32, priceFrom: 358000, units: 110, disponiveis: 68 },  // Planta 01 — 1 dorm 32m² (finais 4/5/6/11) + studios (finais 2/13 todos andares, 3/12 até o 7º andar)
+    { area: 45, priceFrom: 505000, units: 82, disponiveis: 64 },   // Planta 01 — 2 dorms 45m² (finais 7/10 todos andares + 3/12 do 8º andar em diante — 44,99/45,01m²) — HMP
+    { area: 59, priceFrom: 775000, units: 91, disponiveis: 74 },   // Planta 03 — 2 dorms 59m² (finais 1/14 — 59,16m² + 8/9 — 59,45m²) — Residencial
+    { area: 69, priceFrom: 845000, units: 112, disponiveis: 97 },  // Planta 04 — 2 dorms 69m² (Torre 2, finais 3/4/7/8 — 69,86m²) — Residencial
+    { area: 97, priceFrom: 1173000, units: 112, disponiveis: 93 }, // Planta 05 — 3 dorms 97m² (Torre 2, finais 1/2/5/6, sem a cobertura do 31º andar — 97,52m²) — Residencial
   ],
 };
 

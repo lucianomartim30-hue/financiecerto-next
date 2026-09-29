@@ -433,11 +433,10 @@ export async function GET(
         price: precoManual
           ? `A partir de R$ ${precoManual.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
           : (price && price >= 100 ? `R$ ${price.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}` : 'Consultar'),
-        // Unidades manuais são o TOTAL construído da planta (ficha técnica da
-        // construtora) — não sabemos quantas já foram vendidas, então
-        // "disponíveis" (stock) fica null em vez de repetir o "1" placeholder
-        // da Orulo, que ficaria contraditório ao lado do total real.
-        stock:        plantaManual?.units ? null : (t.stock ?? null) as number | null,
+        // Unidades/disponíveis manuais (ver lib/precos-manuais.ts) — contagem
+        // real no mapa de disponibilidade da construtora, não o "1/1"
+        // placeholder da Orulo.
+        stock:        plantaManual?.units ? (plantaManual.disponiveis ?? null) : (t.stock ?? null) as number | null,
         total_units:  plantaManual?.units ?? ((t.total_units ?? null) as number | null),
         photo:        null as string | null,
         blueprint:    null as string | null,
