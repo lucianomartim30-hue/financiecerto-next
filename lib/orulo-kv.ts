@@ -127,15 +127,58 @@ export async function kvSetCatalog(buildings: CatalogEntry[]): Promise<void> {
   // Apagar chave legada (se existir) para evitar confusão
   await kvDel(KV_CATALOG_KEY);
 
+  // Esta instância já passa a servir a versão nova sem reler do KV.
+  _catalogMem = { at: Date.now(), data: buildings };
+
   console.log(`[kv] catalog saved: ${buildings.length} buildings in ${chunks.length} chunks`);
 }
 
-export async function kvGetCatalog(): Promise<CatalogEntry[] | null> {
+// ── Cache em memória do catálogo (por instância) ─────────────────────────────
+// Cada leitura do catálogo custava 1 + N comandos no Upstash (contagem + N
+// chunks), e ela acontece em quase toda página (imóvel, bairro, construtoras,
+// sitemap, /api/orulo). Com robôs de busca varrendo milhares de URLs, isso
+// passou de 1 milhão de comandos/mês e estourou o Free Tier (incidente
+// 29/09/2026). O catálogo só muda no sync diário e em webhooks pontuais —
+// servir uma cópia de até 5 min por instância (Fluid compute reaproveita
+// instâncias) corta as leituras em ordens de grandeza sem efeito visível.
+// Quem GRAVA (sync, upsert, remoção) lê com { fresh: true } para nunca
+// partir de uma cópia velha e perder alterações.
+const CATALOG_MEM_TTL_MS = 5 * 60 * 1000;
+let _catalogMem: { at: number; data: CatalogEntry[] } | null = null;
+let _catalogInFlight: Promise<CatalogEntry[] | null> | null = null;
+
+export async function kvGetCatalog(opts: { fresh?: boolean } = {}): Promise<CatalogEntry[] | null> {
+  if (!opts.fresh && _catalogMem && Date.now() - _catalogMem.at < CATALOG_MEM_TTL_MS) {
+    return _catalogMem.data;
+  }
+  // Várias requisições simultâneas numa instância fria compartilham uma única leitura.
+  if (!opts.fresh && _catalogInFlight) return _catalogInFlight;
+  const leitura = kvReadCatalog().then(data => {
+    if (data && data.length > 0) _catalogMem = { at: Date.now(), data };
+    return data;
+  });
+  if (!opts.fresh) {
+    _catalogInFlight = leitura;
+    leitura.finally(() => { _catalogInFlight = null; });
+  }
+  return leitura;
+}
+
+async function kvReadCatalog(): Promise<CatalogEntry[] | null> {
   const count = await kvGet<number>(KV_CATALOG_COUNT_KEY);
 
   // Novo formato: chunks
   if (count && count > 0) {
-    const lerTodos = () => Promise.all(Array.from({ length: count }, (_, i) => kvGet<CatalogEntry[]>(kvChunkKey(i))));
+    // MGET: todos os chunks em 1 comando (antes eram N GETs separados).
+    const lerTodos = async (): Promise<(CatalogEntry[] | null)[]> => {
+      const kv = await getKv();
+      if (!kv) return Array(count).fill(null);
+      try {
+        return (await kv.mget(...Array.from({ length: count }, (_, i) => kvChunkKey(i)))) as (CatalogEntry[] | null)[];
+      } catch {
+        return Array(count).fill(null);
+      }
+    };
     let chunks = await lerTodos();
     // Falha momentânea de leitura do KV parecia "chunk faltando" — e quem gravava
     // depois a partir dessa leitura vazia apagava o catálogo. Tenta de novo antes.
@@ -190,6 +233,7 @@ export async function kvSetMeta(meta: SyncMeta): Promise<void> {
 // ── Reset completo ────────────────────────────────────────────────────────────
 
 export async function kvResetSync(): Promise<void> {
+  _catalogMem = null;
   // Apagar todos os chunks
   const count = await kvGet<number>(KV_CATALOG_COUNT_KEY) ?? 0;
   const chunkDels = Array.from({ length: count }, (_, i) => kvDel(kvChunkKey(i)));
@@ -243,7 +287,7 @@ export async function kvUpsertBuilding(building: CatalogEntry): Promise<boolean>
   const token = await kvAcquireCatalogLock(30, 8000);
   if (!token) { console.warn('[kv] upsert ignorado: catálogo em atualização (o sync recupera)'); return false; }
   try {
-    const catalog = await kvGetCatalog();
+    const catalog = await kvGetCatalog({ fresh: true });
     // NUNCA partir de lista vazia: gravar só este imóvel apagava o catálogo inteiro.
     if (!catalog) { console.warn('[kv] upsert ignorado: catálogo ilegível — não sobrescrevo'); return false; }
     const idx = catalog.findIndex(b => b.id === building.id);
@@ -260,7 +304,7 @@ export async function kvRemoveBuilding(id: string): Promise<boolean> {
   const token = await kvAcquireCatalogLock(30, 8000);
   if (!token) { console.warn('[kv] remoção ignorada: catálogo em atualização (o sync recupera)'); return false; }
   try {
-    const catalog = await kvGetCatalog();
+    const catalog = await kvGetCatalog({ fresh: true });
     if (!catalog) return false;
     const filtered = catalog.filter(b => b.id !== id);
     if (filtered.length < catalog.length) await kvSetCatalog(filtered);
