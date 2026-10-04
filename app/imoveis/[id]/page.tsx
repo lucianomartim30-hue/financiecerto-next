@@ -19,6 +19,7 @@ import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
 import { getLancamentoManual, lancamentoParaCatalogo } from '@/lib/lancamentos-manuais';
 import { precoManualMin, limparNomeSeLancado } from '@/lib/precos-manuais';
 import ImovelDetailClient from './ImovelDetailClient';
+import ImovelResumoSEO from './ImovelResumoSEO';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -251,8 +252,9 @@ export default async function ImovelPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
 
-      {/* UI interativa (client component) */}
-      <ImovelDetailClient id={id} />
+      {/* UI interativa (client component). O resumo vai no HTML inicial pro Google
+          (sem ele a página chegava com só "Carregando imóvel..." = soft 404). */}
+      <ImovelDetailClient id={id} fallback={<ImovelResumoSEO b={b} />} />
     </>
   );
 }

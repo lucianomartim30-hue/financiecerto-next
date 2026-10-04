@@ -1881,7 +1881,7 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 // ─────────────────────────────────────────────────────────────────────────────
 // Client Component
 // ─────────────────────────────────────────────────────────────────────────────
-export default function ImovelDetailClient({ id }: { id: string }) {
+export default function ImovelDetailClient({ id, fallback }: { id: string; fallback?: React.ReactNode }) {
   const [imovel, setImovel] = useState<ImovelDetalhe | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
@@ -1963,20 +1963,28 @@ export default function ImovelDetailClient({ id }: { id: string }) {
     })();
   }, [id]);
 
+  // `fallback` é o resumo renderizado no servidor (ImovelResumoSEO): já está no HTML
+  // inicial pro Google e serve de conteúdo enquanto os dados completos chegam.
   if (loading) return (
-    <div style={{ padding: '120px 24px', textAlign: 'center' }}>
-      <div style={{ width: '48px', height: '48px', border: '4px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-      <p style={{ color: 'var(--text-muted)' }}>Carregando imóvel...</p>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
+    <>
+      {fallback}
+      <div style={{ padding: fallback ? '24px 24px 48px' : '120px 24px', textAlign: 'center' }}>
+        <div style={{ width: '36px', height: '36px', border: '4px solid var(--border)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+        <p style={{ color: 'var(--text-muted)' }}>Carregando detalhes do imóvel...</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </>
   );
 
   if (erro || !imovel) return (
-    <div style={{ padding: '80px 24px', textAlign: 'center' }}>
-      <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏚️</div>
-      <p style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>{erro}</p>
-      <Link href="/imoveis" style={{ color: 'var(--primary)', fontWeight: '600' }}>← Voltar para imóveis</Link>
-    </div>
+    <>
+      <div style={{ padding: '80px 24px', textAlign: 'center' }}>
+        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏚️</div>
+        <p style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>{erro}</p>
+        <Link href="/imoveis" style={{ color: 'var(--primary)', fontWeight: '600' }}>← Voltar para imóveis</Link>
+      </div>
+      {fallback}
+    </>
   );
 
   const urlImovelTopo = `${SITE_CONFIG.domain}/imoveis/${imovel.id}`;
