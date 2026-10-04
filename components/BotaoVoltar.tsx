@@ -35,8 +35,14 @@ export default function BotaoVoltar() {
   const router = useRouter();
   const pathname = usePathname();
   const [avancar, setAvancar] = useState(false);
+  // No servidor o pathname não chega como "/" nem na Home (o HTML sai sempre com as
+  // duas setas). Se a 1ª renderização no navegador já escondesse o "voltar" na Home,
+  // não bateria com o HTML do servidor: o React acusava erro de hidratação (#418) e
+  // refazia a página inteira no cliente. Por isso a regra da Home só vale depois de montar.
+  const [montado, setMontado] = useState(false);
 
   useEffect(() => {
+    setMontado(true);
     instalarRastreioDeHistorico();
     const atualizar = () => setAvancar(podeAvancar());
     atualizar();
@@ -47,7 +53,7 @@ export default function BotaoVoltar() {
   // Rota mudou por navegação normal (push) → não há mais "à frente".
   useEffect(() => { setAvancar(podeAvancar()); }, [pathname]);
 
-  const naHome = pathname === '/';
+  const naHome = montado && pathname === '/';
   // Na Home só aparece o avançar (e só quando existe); nas demais, os dois.
   if (naHome && !avancar) return null;
 
