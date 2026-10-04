@@ -170,6 +170,8 @@ export default function AdminLeadsPage() {
   const [aba, setAba] = useState<'leads' | 'rastreio'>('leads');
   const [rastreio, setRastreio] = useState<DadosRastreio | null>(null);
   const [carregandoRastreio, setCarregandoRastreio] = useState(false);
+  const [erroRastreio, setErroRastreio] = useState('');
+  const [tentativaRastreio, setTentativaRastreio] = useState(0);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -195,16 +197,27 @@ export default function AdminLeadsPage() {
       .catch(() => {});
   }, [authed]);
 
-  // Carrega o rastreio só quando a aba é aberta pela primeira vez.
+  // Carrega o rastreio quando a aba é aberta (e de novo só se o usuário pedir).
+  // Antes o efeito dependia de `carregandoRastreio`: qualquer falha da chamada
+  // virava um laço infinito de tentativas ("Carregando…" pra sempre) batendo no
+  // banco a cada volta. Agora é uma tentativa, com mensagem e botão de repetir.
   useEffect(() => {
-    if (aba !== 'rastreio' || rastreio || carregandoRastreio) return;
+    if (aba !== 'rastreio' || rastreio) return;
+    let cancelado = false;
     setCarregandoRastreio(true);
+    setErroRastreio('');
     fetch('/api/admin/rastreio')
-      .then(r => r.json())
-      .then(setRastreio)
-      .catch(() => {})
-      .finally(() => setCarregandoRastreio(false));
-  }, [aba, rastreio, carregandoRastreio]);
+      .then(async r => {
+        if (r.status === 401) throw new Error('Sessão expirada — recarregue a página e entre de novo.');
+        if (!r.ok) throw new Error(`O servidor respondeu com erro ${r.status}.`);
+        return r.json();
+      })
+      .then(d => { if (!cancelado) setRastreio(d); })
+      .catch(e => { if (!cancelado) setErroRastreio(e instanceof Error ? e.message : 'Não foi possível carregar o rastreio.'); })
+      .finally(() => { if (!cancelado) setCarregandoRastreio(false); });
+    return () => { cancelado = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aba, tentativaRastreio]);
 
   async function atualizarStatus(id: string, status: LeadStatus) {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l)); // otimista
@@ -276,6 +289,17 @@ export default function AdminLeadsPage() {
             Quem navegou no site nos últimos 60 dias sem nunca ter clicado no WhatsApp ou preenchido um formulário — ainda não é um lead formal, mas o comportamento já indica intenção. Identificado só por um id de navegador, sem nome nem contato.
           </p>
           {carregandoRastreio && !rastreio && <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Carregando…</p>}
+          {erroRastreio && !rastreio && (
+            <div style={{ fontSize: '13px', color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
+              <p style={{ margin: '0 0 8px' }}>Não foi possível carregar o rastreio. {erroRastreio}</p>
+              <button
+                onClick={() => setTentativaRastreio(n => n + 1)}
+                style={{ padding: '6px 14px', borderRadius: '8px', border: '1.5px solid #b91c1c', background: '#fff', color: '#b91c1c', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}
+              >
+                Tentar novamente
+              </button>
+            </div>
+          )}
           {rastreio && rastreio.total === 0 && (
             <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Nenhum visitante anônimo registrado ainda.</p>
           )}
