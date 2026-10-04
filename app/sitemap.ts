@@ -7,7 +7,7 @@
 
 import { MetadataRoute } from 'next';
 import { kvGetCatalogOuErro, CatalogoIndisponivelError } from '@/lib/orulo-kv';
-import { neighborhoodToSlug } from '@/lib/locations';
+import { neighborhoodToSlug, slugToLocation } from '@/lib/locations';
 import { getArtigos } from '@/lib/artigos';
 import { REGIONS } from '@/lib/regions';
 import { ZONA_SUL_OESTE, normalize } from '@/lib/imoveis-destaque';
@@ -106,6 +106,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       for (const b of catalog) {
         if (!b.neighborhood || !b.state) continue;
         const slug = neighborhoodToSlug(b.neighborhood, b.state);
+        // Só estados com página de bairro (SP/PR, ver STATE_CITY em lib/locations.ts):
+        // listar SC/RS/RJ aqui anunciava ~158 URLs que respondem 404.
+        if (!slugToLocation(slug).city) continue;
         if (!slugsSeen.has(slug)) {
           slugsSeen.add(slug);
           bairroPages.push({
