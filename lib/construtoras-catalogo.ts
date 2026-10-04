@@ -2,7 +2,7 @@ import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 import { filterBreveLancamento, temPrecoReal } from '@/lib/filtro-breve-lancamento';
 import { filterLotesForaSP } from '@/lib/filtro-lotes-fora-sp';
 import { construtoraToSlug, nomePublicoConstrutora } from '@/lib/construtora-nomes';
-import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
+import { kvGetCatalogOuErro, type CatalogEntry } from '@/lib/orulo-kv';
 import { LOGOS_MANUAIS } from '@/lib/construtora-logos-manuais';
 import { kvGetTodasPromocoesPublicas, type Promocao } from '@/lib/promocoes-kv';
 import { catalogoComManuais } from '@/lib/lancamentos-manuais';
@@ -180,7 +180,9 @@ export async function getConstrutoras(): Promise<GrupoConstrutora[]> {
   // Empreendimentos cadastrados manualmente (ver lib/lancamentos-manuais.ts)
   // entram no agrupamento por construtora igual a qualquer imóvel da Orulo —
   // sem isso o Elev Saúde não aparecia dentro de /construtoras/trisul.
-  const catalogo = catalogoComManuais((await kvGetCatalog()) ?? [])
+  // KV fora → lança erro (página 5xx) em vez de lista vazia, que virava 404 pra
+  // construtora válida em /construtoras/[slug].
+  const catalogo = catalogoComManuais(await kvGetCatalogOuErro())
     .map(b => precoManualMin(b.id) ? { ...b, min_price: precoManualMin(b.id)!, name: limparNomeSeLancado(b.id, b.name) } : b);
   const promocoes = await kvGetTodasPromocoesPublicas();
   const comPromo: CatalogEntryComPromo[] = Object.keys(promocoes).length === 0

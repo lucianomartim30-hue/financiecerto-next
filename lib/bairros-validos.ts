@@ -16,7 +16,7 @@
  * liberados no site como SC/RJ/RS que sobreviveram de sitemaps antigos).
  */
 import { cache } from 'react';
-import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
+import { kvGetCatalogOuErro, type CatalogEntry } from '@/lib/orulo-kv';
 import { catalogoComManuais } from '@/lib/lancamentos-manuais';
 import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 import { filterBreveLancamento } from '@/lib/filtro-breve-lancamento';
@@ -29,8 +29,10 @@ import { neighborhoodToSlug } from '@/lib/locations';
  * lançamento" sem tabela publicada, sem lotes fora de SP.
  */
 export async function catalogoPublicoParaBairros(): Promise<CatalogEntry[]> {
-  const kvCatalog = await kvGetCatalog();
-  let catalog: CatalogEntry[] = catalogoComManuais(kvCatalog ?? []);
+  // Se o KV não responder, lança erro (a página/sitemap viram 5xx) em vez de tratar
+  // como "nenhum bairro tem imóvel" e devolver 404 pra bairro válido.
+  const kvCatalog = await kvGetCatalogOuErro();
+  let catalog: CatalogEntry[] = catalogoComManuais(kvCatalog);
   catalog = catalog.filter(b => CIDADES_LIBERADAS.has((b.city || '').toLowerCase().trim()));
   catalog = catalog.filter(b => b.seo_status !== 'suspected_missing' && b.seo_status !== 'removed_confirmed');
   catalog = filterBreveLancamento(catalog);

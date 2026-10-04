@@ -341,6 +341,18 @@ export async function fetchBuildingDetail(
   token: string,
   id: string | number,
 ): Promise<NormalizedBuilding | null> {
+  return (await fetchBuildingDetailOutcome(token, id)).building;
+}
+
+/**
+ * Igual a fetchBuildingDetail, mas diz POR QUE veio vazio: `naoExiste` só é true
+ * quando a Orulo respondeu 404/410 (imóvel realmente removido). Rate limit (429),
+ * 5xx, timeout e erro de rede ficam com `naoExiste: false` — falha temporária.
+ */
+export async function fetchBuildingDetailOutcome(
+  token: string,
+  id: string | number,
+): Promise<{ building: NormalizedBuilding | null; naoExiste: boolean }> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const resp = await fetch(
@@ -354,21 +366,24 @@ export async function fetchBuildingDetail(
           continue;
         }
         _logErr(429);
-        return null;
+        return { building: null, naoExiste: false };
       }
-      if (!resp.ok) { _logErr(resp.status); return null; }
+      if (!resp.ok) {
+        _logErr(resp.status);
+        return { building: null, naoExiste: resp.status === 404 || resp.status === 410 };
+      }
       const data = await resp.json() as Record<string, unknown>;
-      return normalizeBuilding(data);
+      return { building: normalizeBuilding(data), naoExiste: false };
     } catch {
       // timeout ou erro de rede — tenta mais uma vez com pequeno delay
       if (attempt < 2) {
         await new Promise(r => setTimeout(r, 500));
         continue;
       }
-      return null;
+      return { building: null, naoExiste: false };
     }
   }
-  return null;
+  return { building: null, naoExiste: false };
 }
 
 // ── Busca em lote paralela ────────────────────────────────────────────────────

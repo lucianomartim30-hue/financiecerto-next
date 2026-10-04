@@ -6,7 +6,7 @@
  */
 
 import { MetadataRoute } from 'next';
-import { kvGetCatalog } from '@/lib/orulo-kv';
+import { kvGetCatalogOuErro, CatalogoIndisponivelError } from '@/lib/orulo-kv';
 import { neighborhoodToSlug } from '@/lib/locations';
 import { getArtigos } from '@/lib/artigos';
 import { REGIONS } from '@/lib/regions';
@@ -68,11 +68,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const bairroPages: MetadataRoute.Sitemap = [];
   let construtoraPages: MetadataRoute.Sitemap = [];
   try {
-    const kvCatalog = await kvGetCatalog();
+    const kvCatalog = await kvGetCatalogOuErro();
     // Empreendimentos cadastrados manualmente (ver lib/lancamentos-manuais.ts)
     // entram no sitemap pelas mesmas regras de qualquer imóvel — inclusive o
     // filtro de conteúdo indexável logo abaixo.
-    const rawCatalog = catalogoComManuais(kvCatalog ?? []);
+    const rawCatalog = catalogoComManuais(kvCatalog);
     if (rawCatalog) {
       construtoraPages = agruparConstrutoras(rawCatalog)
         .filter(construtora => construtora.indexavel)
@@ -117,8 +117,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }
       }
     }
-  } catch {
-    // KV indisponível — retorna só as páginas estáticas
+  } catch (e) {
+    // KV fora do ar: responde 5xx em vez de um sitemap encolhido (só estáticas) —
+    // o Google mantém a última cópia boa e tenta de novo, sem achar que milhares
+    // de imóveis/bairros sumiram do site.
+    if (e instanceof CatalogoIndisponivelError) throw e;
   }
 
   return [...staticPages, ...regionPages, ...artigoPages, ...construtoraPages, ...buildingPages, ...bairroPages];

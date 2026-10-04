@@ -14,7 +14,7 @@ import type { Metadata } from 'next';
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
-import { getToken, fetchBuildingDetail } from '@/lib/orulo-api';
+import { getToken, fetchBuildingDetailOutcome } from '@/lib/orulo-api';
 import { temPrecoReal } from '@/lib/filtro-breve-lancamento';
 import { getLancamentoManual, lancamentoParaCatalogo } from '@/lib/lancamentos-manuais';
 import { precoManualMin, limparNomeSeLancado } from '@/lib/precos-manuais';
@@ -32,11 +32,17 @@ function fmtBRL(v: number | null | undefined): string {
 // sync, ver lib/orulo-kv.ts). Só cai pro fallback ao vivo quando o id nunca
 // esteve no catálogo (imóvel genuinamente novo, sync ainda não pegou) — não é
 // consultado a cada acesso, só nesse caso raro de cache miss total.
-const getBuildingData = cache(async (id: string): Promise<CatalogEntry | null> => {
+// `temporario: true` = não deu pra confirmar nem que existe nem que não existe
+// (KV fora + Orulo com 429/5xx/timeout). Nesse caso a página NÃO pode devolver
+// 404 — pro Google, 404 num imóvel válido é motivo pra tirá-lo do índice.
+// Só `naoExiste` confirmado pela Orulo (404/410) vira 404 de verdade.
+type BuscaImovel = { b: CatalogEntry | null; temporario: boolean };
+
+const getBuildingData = cache(async (id: string): Promise<BuscaImovel> => {
   // Empreendimento cadastrado manualmente (ver lib/lancamentos-manuais.ts) —
   // nunca está no KV nem na Orulo pra essa integração, então intercepta antes.
   const lancamentoManual = getLancamentoManual(id);
-  if (lancamentoManual) return lancamentoParaCatalogo(lancamentoManual);
+  if (lancamentoManual) return { b: lancamentoParaCatalogo(lancamentoManual), temporario: false };
 
   // Preço manual por planta (ver lib/precos-manuais.ts): tabela de lançamento
   // real já existe mas a Orulo ainda não sincronizou — sem isso o <title>/
@@ -50,15 +56,16 @@ const getBuildingData = cache(async (id: string): Promise<CatalogEntry | null> =
   try {
     const catalog = await kvGetCatalog();
     const cached = catalog?.find(b => b.id === id);
-    if (cached) return aplicarPrecoManual(cached);
+    if (cached) return { b: aplicarPrecoManual(cached), temporario: false };
   } catch { /* segue para o fallback ao vivo */ }
 
   try {
     const token = await getToken();
-    const live = await fetchBuildingDetail(token, id);
-    return live ? aplicarPrecoManual(live) : null;
+    const { building, naoExiste } = await fetchBuildingDetailOutcome(token, id);
+    if (building) return { b: aplicarPrecoManual(building), temporario: false };
+    return { b: null, temporario: !naoExiste };
   } catch {
-    return null;
+    return { b: null, temporario: true };
   }
 });
 
@@ -68,7 +75,7 @@ export async function generateMetadata(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Metadata> {
   const { id } = await params;
-  const b = await getBuildingData(id);
+  const { b } = await getBuildingData(id);
 
   if (!b) {
     return {
@@ -153,9 +160,16 @@ export default async function ImovelPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const b = await getBuildingData(id);
+  const { b, temporario } = await getBuildingData(id);
 
-  // Imóvel não existe mais em lugar nenhum (nem KV, nem Orulo ao vivo) — 404 real,
+  // Falha temporária de leitura (KV fora + Orulo limitando/caindo): erro 5xx, que o
+  // Google trata como "tente depois" — nunca 404, que derruba imóvel válido do índice.
+  if (!b && temporario) {
+    console.error(`[imovel ${id}] catálogo e Orulo indisponíveis — respondendo 5xx em vez de 404`);
+    throw new Error(`Imóvel ${id}: dados temporariamente indisponíveis`);
+  }
+
+  // Imóvel não existe mais em lugar nenhum (Orulo confirmou 404) — 404 real,
   // não uma página "vazia" com 200 OK (isso é o que gera soft-404 no Google).
   if (!b) notFound();
 

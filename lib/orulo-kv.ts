@@ -164,6 +164,27 @@ export async function kvGetCatalog(opts: { fresh?: boolean } = {}): Promise<Cata
   return leitura;
 }
 
+export class CatalogoIndisponivelError extends Error {
+  constructor() {
+    super('Catálogo indisponível no KV (falha temporária de leitura)');
+    this.name = 'CatalogoIndisponivelError';
+  }
+}
+
+/**
+ * Para páginas que decidem 404 a partir do catálogo: "não consegui ler" nunca pode
+ * virar "não existe". Com KV configurado, leitura nula/vazia lança erro (a página
+ * responde 5xx, que o Google trata como temporário) em vez de cair em lista vazia
+ * e devolver 404 pra imóvel/bairro/construtora válidos. Sem KV (dev local), mantém [].
+ */
+export async function kvGetCatalogOuErro(): Promise<CatalogEntry[]> {
+  const kvConfigurado = !!(process.env.KV_REST_API_URL || process.env.KV_URL);
+  if (!kvConfigurado) return [];
+  const catalogo = await kvGetCatalog();
+  if (!catalogo || catalogo.length === 0) throw new CatalogoIndisponivelError();
+  return catalogo;
+}
+
 async function kvReadCatalog(): Promise<CatalogEntry[] | null> {
   const count = await kvGet<number>(KV_CATALOG_COUNT_KEY);
 
