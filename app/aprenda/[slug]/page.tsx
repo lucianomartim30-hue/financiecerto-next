@@ -131,7 +131,9 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
       url,
       title: artigo.titulo,
       description: artigo.metaDescription,
-      questions: artigo.faq,
+      // faqPage espera { name, answer }; os artigos guardam { pergunta, resposta } —
+      // sem este mapeamento o JSON-LD saía com as perguntas sem texto nenhum.
+      questions: artigo.faq.map(f => ({ name: f.pergunta, answer: f.resposta })),
     }),
     breadcrumb([
       { name: 'Início', url: BASE },
