@@ -3,6 +3,8 @@ import { slugToLocation } from "@/lib/locations";
 import { SITE_CONFIG } from "@/lib/schema";
 import { bairroSlugsValidos } from "@/lib/bairros-validos";
 import BairroContent from "./BairroContent";
+import { ListaImoveisSEO } from "@/components/ListaImoveisSEO";
+import { imoveisDoBairro } from "@/lib/imoveis-listagem-seo";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -45,5 +47,16 @@ export default async function BairroPage({
   // continua 200 — só bairro sem nenhum imóvel vira 404 de verdade.
   const slugsValidos = await bairroSlugsValidos();
   if (!slugsValidos.has(slug)) notFound();
-  return <BairroContent location={loc} searchParams={sp} />;
+  const imoveis = await imoveisDoBairro(slug);
+  return (
+    <>
+      <BairroContent location={loc} searchParams={sp} />
+      {/* Lista no HTML inicial: a vitrine acima é client-side e chegava vazia pro Google. */}
+      <ListaImoveisSEO
+        titulo={`Empreendimentos à venda em ${loc.neighborhood}`}
+        intro={`Veja os ${imoveis.length > 1 ? `${imoveis.length} empreendimentos` : 'empreendimento'} à venda em ${loc.neighborhood}, ${loc.city}, do menor para o maior preço. Abra cada um para ver tipologias, valores e simular o financiamento com a sua renda.`}
+        imoveis={imoveis}
+      />
+    </>
+  );
 }

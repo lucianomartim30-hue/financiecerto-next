@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { slugToRegion, REGIONS } from "@/lib/regions";
 import { SITE_CONFIG } from "@/lib/schema";
 import RegiaoContent from "./RegiaoContent";
+import { ListaImoveisSEO } from "@/components/ListaImoveisSEO";
+import { imoveisDaRegiao } from "@/lib/imoveis-listagem-seo";
 
 export function generateStaticParams() {
   return REGIONS.map(r => ({ slug: r.slug }));
@@ -51,5 +53,18 @@ export default async function RegiaoPage({
   const sp = await searchParams;
   const region = slugToRegion(slug);
   if (!region) notFound();
-  return <RegiaoContent region={region} searchParams={sp} />;
+  const imoveis = await imoveisDaRegiao(region);
+  const isZona = region.neighborhoods.length > 0 && region.name !== region.city;
+  const place = isZona ? `${region.name} de ${region.city}` : region.name;
+  return (
+    <>
+      <RegiaoContent region={region} searchParams={sp} />
+      {/* Lista no HTML inicial: a vitrine acima é client-side e chegava vazia pro Google. */}
+      <ListaImoveisSEO
+        titulo={`Empreendimentos à venda ${region.article} ${place}`}
+        intro={`Alguns dos empreendimentos à venda ${region.article} ${place}, do menor para o maior preço. Abra cada um para ver tipologias, valores e simular o financiamento com a sua renda.`}
+        imoveis={imoveis}
+      />
+    </>
+  );
 }
