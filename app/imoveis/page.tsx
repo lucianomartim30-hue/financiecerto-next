@@ -11,6 +11,11 @@ export default async function ImoveisPage() {
   const [bairros, construtoras] = await Promise.all([bairrosMaisImoveis(), construtorasMaisImoveis()]);
   return (
     <>
+      {/* H1 real pro Google e leitores de tela, visualmente oculto (o cabeçalho
+          visual da vitrine é busca/filtros, não título de página). */}
+      <h1 style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>
+        Imóveis e empreendimentos à venda com simulação de financiamento
+      </h1>
       <ImoveisClientPage />
       <ListaHubsSEO
         titulo="Imóveis à venda por bairro"

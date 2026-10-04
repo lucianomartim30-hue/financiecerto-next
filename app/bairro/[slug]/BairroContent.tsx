@@ -86,7 +86,7 @@ function CardImovel({ imovel: b }: { imovel: Imovel }) {
       <div style={{ height: '178px', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
         {b.photo && !imgErr ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={b.photo} alt={b.name} onError={() => setImgErr(true)}
+          <img src={b.photo} alt={b.name} loading="lazy" decoding="async" onError={() => setImgErr(true)}
             style={{ width: '100%', height: '100%', objectFit: 'cover',
               transform: hover ? 'scale(1.05)' : 'scale(1)',
               transition: 'transform 0.4s cubic-bezier(.4,0,.2,1)' }} />

@@ -210,7 +210,7 @@ function DestaqueSection({
               <Link key={im.id} href={`/imoveis/${im.id}`} className="card card-hover" style={{ overflow: 'hidden', textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ position: 'relative', width: '100%', paddingTop: '62%', background: '#0f2744' }}>
                   {im.photo && (
-                    <img src={im.photo} alt={im.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={im.photo} alt={im.name} loading="lazy" decoding="async" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                   )}
                   <span style={{ position: 'absolute', top: '7px', left: '7px', background: cfg.cor, color: '#fff', fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                     {cfg.label}
@@ -485,7 +485,7 @@ export default async function Home() {
                     overflow: 'hidden',
                   }}>
                     {f.title === 'Consultor João'
-                      ? <img src="/avatar-joao.png" alt="João" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <img src="/avatar-joao.png" alt="João" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : f.icon}
                   </div>
                   <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px', color: 'var(--text)' }}>
@@ -551,7 +551,7 @@ export default async function Home() {
               }}>
                 <div style={{ fontSize: '28px', marginBottom: '14px', width: '40px', height: '40px', borderRadius: '10px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {item.title === 'IA contextual'
-                    ? <img src="/avatar-joao.png" alt="João" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <img src="/avatar-joao.png" alt="João" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : item.icon}
                 </div>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '8px' }}>{item.title}</h3>

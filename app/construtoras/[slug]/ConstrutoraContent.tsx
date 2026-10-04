@@ -60,7 +60,7 @@ export default function ConstrutoraContent({ nome, imoveis, cidades }: { nome: s
               <article style={{ height: '100%', overflow: 'hidden', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '13px', boxShadow: '0 2px 10px rgba(15,23,42,.04)' }}>
                 <div style={{ height: '160px', background: '#e2e8f0', position: 'relative', overflow: 'hidden' }}>
                   {imovel.photo
-                    ? <img src={imovel.photo} alt={`${imovel.name}, imóvel da ${nome}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    ? <img src={imovel.photo} alt={`${imovel.name}, imóvel da ${nome}`} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={e => { const t = e.currentTarget; t.style.display = 'none'; const p = t.parentElement; if (p) { p.style.display = 'flex'; p.style.alignItems = 'center'; p.style.justifyContent = 'center'; p.innerHTML = '<span style="font-size:34px">🏢</span>'; } }} />
                     : <div style={{ height: '100%', display: 'grid', placeItems: 'center', fontSize: '34px' }}>🏢</div>}
                   <span style={{ position: 'absolute', left: '9px', top: '9px', borderRadius: '6px', padding: '4px 7px', color: '#fff', background: status.cor, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }}>{status.label || 'Disponível'}</span>

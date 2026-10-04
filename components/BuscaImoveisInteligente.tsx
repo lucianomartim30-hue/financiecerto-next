@@ -80,7 +80,7 @@ function CardImovel({ im }: { im: ImovelCard }) {
     >
       <div style={{ height: 120, background: '#E2E8F0', position: 'relative', overflow: 'hidden' }}>
         {im.photo
-          ? <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <img src={im.photo} alt={im.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>🏢</div>
         }
       </div>

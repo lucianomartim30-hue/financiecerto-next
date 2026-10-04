@@ -103,7 +103,7 @@ export default function FavoritosContent() {
                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden' }}>
                   <div style={{ width: '100%', height: '130px', background: '#E2E8F0', position: 'relative', overflow: 'hidden' }}>
                     {im.photo
-                      ? <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <img src={im.photo} alt={im.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#94a3b8' }}>🏢</div>
                     }
                     <span style={{ position: 'absolute', top: '7px', left: '7px', background: sc.cor, color: '#fff', fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '6px', textTransform: 'uppercase' }}>

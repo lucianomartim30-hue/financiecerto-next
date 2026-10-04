@@ -1380,7 +1380,7 @@ function SecaoTipologias({ typologies, onSimular }: { typologies: Tipologia[]; o
           <div key={i} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', transition: 'box-shadow 0.2s' }}>
             {t.photo && (
               <img
-                src={t.photo} alt={t.type}
+                src={t.photo} alt={t.type} loading="lazy" decoding="async"
                 style={{ width: '100%', height: '140px', objectFit: 'cover' }}
                 onError={e => { e.currentTarget.style.display = 'none'; }}
               />
@@ -1690,7 +1690,7 @@ function SecaoVistosRecentemente({ currentId }: { currentId: string }) {
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden', textDecoration: 'none', display: 'block', flex: '0 0 180px' }}>
               <div style={{ height: '100px', background: '#E2E8F0', position: 'relative', overflow: 'hidden' }}>
                 {im.photo ? (
-                  <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  <img src={im.photo} alt={im.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={e => { e.currentTarget.style.display = 'none'; }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>🏢</div>
@@ -1824,7 +1824,7 @@ function SecaoRelacionados({
               <div style={{ height: '140px', background: '#E2E8F0', position: 'relative', overflow: 'hidden' }}>
                 {im.photo ? (
                   <img
-                    src={im.photo} alt={im.name}
+                    src={im.photo} alt={im.name} loading="lazy" decoding="async"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     onError={e => {
                       e.currentTarget.style.display = 'none';

@@ -142,7 +142,7 @@ function ImovelCard({ im, tipologiaAtiva }: { im: Imovel; tipologiaAtiva?: strin
       >
         <div style={{ width: '100%', height: '120px', background: '#E2E8F0', position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
           {im.photo
-            ? <img src={im.photo} alt={im.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            ? <img src={im.photo} alt={im.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 onError={e => { const t = e.currentTarget; t.style.display = 'none'; const p = t.parentElement; if (p) { p.style.display = 'flex'; p.style.alignItems = 'center'; p.style.justifyContent = 'center'; p.innerHTML = '<span style="font-size:28px;color:#94a3b8">🏢</span>'; } }} />
             : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#94a3b8' }}>🏢</div>
           }
@@ -953,12 +953,8 @@ function ImoveisContent() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: `calc(100vh - var(--header-h))`, background: 'var(--bg)', overflow: 'hidden' }}>
 
-      {/* H1 real pro Google e leitores de tela — o catálogo não tinha nenhum
-          (o cabeçalho visual é busca/filtros, não título de página).
-          Visualmente oculto pra não interferir no layout (auditoria 2026-09). */}
-      <h1 style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>
-        Imóveis e empreendimentos à venda com simulação de financiamento
-      </h1>
+      {/* O <h1> da vitrine fica em app/imoveis/page.tsx (servidor): aqui só chegava
+          depois do JavaScript, e o Google recebia a página sem título. */}
 
       {/* ── Modal de busca full-screen (mobile) ─────────────────────────────── */}
       {showMobileSearch && (

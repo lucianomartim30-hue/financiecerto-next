@@ -73,7 +73,7 @@ export default function ConstrutorasList({ construtoras }: { construtoras: Const
                     </span>
                   )}
                   {construtora.logo ? (
-                    <img src={construtora.logo} alt={`Logo da construtora ${construtora.nome}`}
+                    <img src={construtora.logo} alt={`Logo da construtora ${construtora.nome}`} loading="lazy" decoding="async"
                       style={{ width: nivel?.logoSize ?? '52px', height: nivel?.logoSize ?? '52px', borderRadius: '10px', objectFit: 'contain', background: 'var(--bg)', border: '1px solid var(--border)' }} />
                   ) : (
                     <div aria-hidden style={{ width: nivel?.logoSize ?? '52px', height: nivel?.logoSize ?? '52px', borderRadius: '10px', display: 'grid', placeItems: 'center', fontSize: '20px', border: '1px dashed var(--border)', color: 'var(--text-faint)' }}>🏢</div>
