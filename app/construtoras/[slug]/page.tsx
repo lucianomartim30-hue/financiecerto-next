@@ -6,6 +6,7 @@ import SchemaMarkup from '@/components/SchemaMarkup';
 import { getConstrutora } from '@/lib/construtoras-catalogo';
 import { breadcrumb, searchResultsPage, SITE_CONFIG } from '@/lib/schema';
 import ConstrutoraContent from './ConstrutoraContent';
+import ResumoConstrutora from './ResumoConstrutora';
 
 export const revalidate = 3600;
 
@@ -82,6 +83,8 @@ export default async function ConstrutoraPage({ params }: { params: Promise<{ sl
             {construtora.cidades.slice(0, 4).map(cidade => <span key={cidade} style={{ padding: '6px 10px', borderRadius: '999px', border: '1px solid var(--border)', color: 'var(--text-muted)', fontSize: '12px' }}>{cidade}</span>)}
           </div>
         </header>
+
+        <ResumoConstrutora construtora={construtora} />
 
         <ConstrutoraContent nome={construtora.nome} imoveis={construtora.imoveis} cidades={construtora.cidades} />
 
