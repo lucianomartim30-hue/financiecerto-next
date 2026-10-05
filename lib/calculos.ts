@@ -122,13 +122,12 @@ export const TR_MENSAL        = 0.17;
 export const TETO_MCMV     = 350000;
 export const TAXA_MCMV_ANUAL = 7.91; // fallback F3 médio cotista/sem-FGTS (7,66+8,16)/2
 
-// ─── TR histórica — últimos 36 meses (Out/2023 → Set/2026) ───────────────────
-// Fonte: Banco Central do Brasil — Série 226 | Atualizado: Set/2026
+// ─── TR histórica — últimos 36 meses (Nov/2023 → Out/2026) ───────────────────
+// Fonte: Banco Central do Brasil — Série 226 | Atualizado: Out/2026
 // Valor de cada mês = entrada diária publicada no 1º dia útil do mês (não a
 // entrada especial "1º ao último dia do mesmo mês" que a série também traz —
 // ver scripts/update-tr.js para o motivo dessa escolha).
 export const TR_HISTORICO_36M: { label: string; tr: number }[] = [
-  { label: 'Out/23', tr: 0.1056 },
   { label: 'Nov/23', tr: 0.0775 },
   { label: 'Dez/23', tr: 0.0690 },
   { label: 'Jan/24', tr: 0.0875 },
@@ -163,7 +162,8 @@ export const TR_HISTORICO_36M: { label: string; tr: number }[] = [
   { label: 'Jun/26', tr: 0.1709 },
   { label: 'Jul/26', tr: 0.1729 },
   { label: 'Ago/26', tr: 0.1693 },
-  { label: 'Set/26', tr: 0.1690 }
+  { label: 'Set/26', tr: 0.1690 },
+  { label: 'Out/26', tr: 0.1616 }
 ];
 
 export interface MesHistoricoTR {
