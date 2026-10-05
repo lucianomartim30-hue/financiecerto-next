@@ -14,6 +14,7 @@
  */
 
 import type { NormalizedBuilding, OruloIdEntry } from './orulo-api';
+import { ocultarPrecosScpLista } from './scp-sem-preco';
 
 // ── Ciclo de vida SEO de cada imóvel no catálogo ────────────────────────────
 // Calculado pelo sync (app/api/orulo/sync/route.ts), nunca por uma requisição
@@ -147,7 +148,18 @@ const CATALOG_MEM_TTL_MS = 5 * 60 * 1000;
 let _catalogMem: { at: number; data: CatalogEntry[] } | null = null;
 let _catalogInFlight: Promise<CatalogEntry[] | null> | null = null;
 
+/**
+ * Leitura pública do catálogo. Leituras normais passam por ocultarPrecosScpLista
+ * (lib/scp-sem-preco.ts): empreendimentos vendidos só sob consulta (SCP) nunca
+ * exibem preço em nenhuma página. Leituras `fresh: true` (sync, upsert, remoção)
+ * recebem os dados crus — senão o preço ocultado seria gravado de volta no banco.
+ */
 export async function kvGetCatalog(opts: { fresh?: boolean } = {}): Promise<CatalogEntry[] | null> {
+  const lista = await kvGetCatalogBruto(opts);
+  return opts.fresh ? lista : ocultarPrecosScpLista(lista);
+}
+
+async function kvGetCatalogBruto(opts: { fresh?: boolean } = {}): Promise<CatalogEntry[] | null> {
   if (!opts.fresh && _catalogMem && Date.now() - _catalogMem.at < CATALOG_MEM_TTL_MS) {
     return _catalogMem.data;
   }

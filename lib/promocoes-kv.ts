@@ -31,6 +31,8 @@ export interface Promocao {
   criadoEm: string;         // ISO datetime
 }
 
+import { scpSemPreco } from './scp-sem-preco';
+
 const KV_KEY = 'promocoes:map'; // { [buildingId]: Promocao[] }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -73,6 +75,9 @@ export type PromocaoPublica = Promocao;
 
 /** Promoções ativas (não vencidas) de um empreendimento — usado pelo site público. */
 export async function kvGetPromocoes(buildingId: string): Promise<PromocaoPublica[]> {
+  // Vendido só sob consulta (SCP): as promoções ficam guardadas pro admin, mas o
+  // site público nunca mostra os valores (ver lib/scp-sem-preco.ts).
+  if (scpSemPreco(buildingId)) return [];
   const mapa = await getMapa();
   return (mapa[buildingId] ?? []).filter(estaValida);
 }
@@ -86,6 +91,7 @@ export async function kvGetTodasPromocoesAtivas(): Promise<Record<string, Promoc
   const mapa = await getMapa();
   const ativo: Record<string, Promocao[]> = {};
   for (const [buildingId, promos] of Object.entries(mapa)) {
+    if (scpSemPreco(buildingId)) continue;
     const validas = promos.filter(estaValida);
     if (validas.length > 0) ativo[buildingId] = validas;
   }

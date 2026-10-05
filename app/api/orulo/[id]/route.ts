@@ -9,9 +9,29 @@ import { getLancamentoManual, lancamentoParaDetalhe } from '@/lib/lancamentos-ma
 import { normalizeFinality, inferFinalityFromName } from '@/lib/orulo-api';
 import { precoManualMin, plantaManualPorArea, limparNomeSeLancado } from '@/lib/precos-manuais';
 import { sessionToken } from '../../admin-auth/route';
+import { scpSemPreco, AVISO_SCP_SEM_PRECO } from '@/lib/scp-sem-preco';
 
 const ORULO_BASE = 'https://www.orulo.com.br';
 const ADMIN_COOKIE = 'admin_leads_session';
+
+/**
+ * Empreendimento vendido só sob consulta (SCP, ver lib/scp-sem-preco.ts): tira
+ * todo valor da resposta (preço do empreendimento, das tipologias, promoções e
+ * campanha da Órulo) e manda o aviso que a ficha exibe no lugar.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ocultarPrecosScp<T extends Record<string, any>>(id: string, d: T): T {
+  if (!scpSemPreco(id)) return d;
+  return {
+    ...d,
+    min_price: null,
+    max_price: null,
+    typologies: ((d.typologies ?? []) as Array<Record<string, unknown>>).map(t => ({ ...t, price: 'Consultar' })),
+    promocoes: [],
+    campanhaOrulo: null,
+    scp_aviso: AVISO_SCP_SEM_PRECO,
+  };
+}
 
 function isAdmin(req: NextRequest): boolean {
   const configured = process.env.ADMIN_LEADS_PASSWORD;
@@ -298,7 +318,7 @@ export async function GET(
 
     if (resp.status === 404) {
       const fallback = await fallbackFromCache(id);
-      if (fallback) return NextResponse.json(fallback);
+      if (fallback) return NextResponse.json(ocultarPrecosScp(id, fallback));
       return NextResponse.json({ error: 'Imóvel não encontrado.' }, { status: 404 });
     }
     if (!resp.ok) throw new Error(`Órulo building/${id} error ${resp.status}`);
@@ -508,7 +528,7 @@ export async function GET(
       return byName || norm;
     })();
 
-    return NextResponse.json({
+    return NextResponse.json(ocultarPrecosScp(id, {
       id: String(b.id),
       name: limparNomeSeLancado(id, (b.name as string) || 'Empreendimento'),
       developer,
@@ -554,7 +574,7 @@ export async function GET(
       admin_fotos: admin
         ? photos.map(url => ({ url, id: extrairIdDaUrl(url), oculta: !!extrairIdDaUrl(url) && ocultas.has(extrairIdDaUrl(url) as string) }))
         : undefined,
-    });
+    }));
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -562,7 +582,7 @@ export async function GET(
     // Erro transitório (rede, timeout, rate-limit) — tenta servir do cache
     // antes de mostrar erro; melhor um dado levemente desatualizado do que nada.
     const fallback = await fallbackFromCache(id);
-    if (fallback) return NextResponse.json(fallback);
+    if (fallback) return NextResponse.json(ocultarPrecosScp(id, fallback));
     return NextResponse.json({ error: 'Erro ao buscar imóvel.' }, { status: 500 });
   }
 }

@@ -15,6 +15,7 @@ import { getStatusCfg } from '@/lib/status';
 import { construtoraToSlug, nomePublicoConstrutora } from '@/lib/construtora-nomes';
 import { neighborhoodToSlug, slugToLocation } from '@/lib/locations';
 import { catalogoPublicoParaBairros, bairroSlugsValidos } from '@/lib/bairros-validos';
+import { scpSemPreco, AVISO_SCP_SEM_PRECO } from '@/lib/scp-sem-preco';
 
 function brl(v: number): string {
   return 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
@@ -101,7 +102,8 @@ export default async function ImovelResumoSEO({ b }: { b: CatalogEntry }) {
   const { doBairro, daConstrutora, bairroSlug } = await relacionados(b);
   const construtora = nomePublicoConstrutora(b.developer);
   const slugConstrutora = construtoraToSlug(b.developer);
-  const preco = precoDe(b);
+  const scp = scpSemPreco(b.id);
+  const preco = scp ? null : precoDe(b);
   const status = getStatusCfg(b.status, b.min_price).label;
   const entrega = dataEntrega(b.delivery_date);
   const quartos = faixa(b.bedrooms_min, b.bedrooms_max, 'quarto', 'quartos');
@@ -123,6 +125,7 @@ export default async function ImovelResumoSEO({ b }: { b: CatalogEntry }) {
   if (banheiros) fatos.push(['Banheiros', banheiros]);
   if (vagas) fatos.push(['Vagas', vagas]);
   if (b.stock != null && b.stock > 0) fatos.push(['Unidades disponíveis', String(b.stock)]);
+  if (scp) fatos.push(['Modalidade', 'Pré-lançamento via SCP, valores sob consulta']);
   if (preco) fatos.push(['Preço', `a partir de ${brl(preco)}${b.bedrooms_max != null && b.bedrooms_max !== b.bedrooms_min ? ' (unidade menor)' : ''}`]);
 
   return (
@@ -151,10 +154,10 @@ export default async function ImovelResumoSEO({ b }: { b: CatalogEntry }) {
       <p style={{ color: 'var(--text)', lineHeight: 1.65, margin: '0 0 18px', maxWidth: '760px' }}>
         {`${b.name} é um empreendimento${construtora ? ` da ${construtora}` : ''}${local ? ` em ${local}${b.state ? `, ${b.state}` : ''}` : ''}.`}
         {quartos || area ? ` Reúne unidades${quartos ? ` de ${quartos}` : ''}${area ? `${quartos ? ',' : ''} com ${area}` : ''}.` : ''}
-        {preco ? ` Os preços partem de ${brl(preco)}.` : ' O preço ainda está sob consulta.'}
-        {status ? ` Estágio atual: ${status.toLowerCase()}${entrega ? `, com entrega prevista para ${entrega}` : ''}.` : ''}
+        {scp ? ` ${AVISO_SCP_SEM_PRECO}` : preco ? ` Os preços partem de ${brl(preco)}.` : ' O preço ainda está sob consulta.'}
+        {!scp && status ? ` Estágio atual: ${status.toLowerCase()}${entrega ? `, com entrega prevista para ${entrega}` : ''}.` : ''}
         {naoResidencial ? ' Unidade não residencial (NR): o financiamento é feito apenas pela modalidade SFI, sem MCMV, FGTS ou SBPE.' : ''}
-        {' Simule o financiamento com a sua renda e veja se você tem perfil para comprar este imóvel.'}
+        {scp ? '' : ' Simule o financiamento com a sua renda e veja se você tem perfil para comprar este imóvel.'}
       </p>
 
       {fatos.length > 0 && (
@@ -201,13 +204,23 @@ export default async function ImovelResumoSEO({ b }: { b: CatalogEntry }) {
       )}
 
       <section aria-label="Próximos passos" style={{ ...caixa, marginBottom: '16px' }}>
-        <h2 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 10px', color: 'var(--text)' }}>Simule e compare</h2>
+        <h2 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 10px', color: 'var(--text)' }}>
+          {scp ? 'Pré-lançamento no modelo SCP' : 'Simule e compare'}
+        </h2>
         <p style={{ margin: '0 0 12px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          Descubra a parcela, a entrada e a modalidade de financiamento (MCMV, SBPE ou SFI) compatíveis com a sua renda antes de falar com a construtora.
+          {scp
+            ? AVISO_SCP_SEM_PRECO
+            : 'Descubra a parcela, a entrada e a modalidade de financiamento (MCMV, SBPE ou SFI) compatíveis com a sua renda antes de falar com a construtora.'}
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 18px', fontWeight: 600 }}>
-          <Link href="/simulador" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Simular financiamento</Link>
-          <Link href="/simulador/na-planta" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Simular compra na planta</Link>
+          {scp ? (
+            <Link href="/aprenda/scp-sociedade-conta-participacao-imobiliaria" style={{ color: 'var(--primary)', textDecoration: 'none' }}>O que é SCP?</Link>
+          ) : (
+            <>
+              <Link href="/simulador" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Simular financiamento</Link>
+              <Link href="/simulador/na-planta" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Simular compra na planta</Link>
+            </>
+          )}
           {slugConstrutora && (
             <Link href={`/construtoras/${slugConstrutora}`} style={{ color: 'var(--primary)', textDecoration: 'none' }}>
               Mais imóveis da {construtora}

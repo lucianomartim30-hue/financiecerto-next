@@ -107,6 +107,8 @@ interface ImovelDetalhe {
     descontoMax: number | null;
     validade: string | null;
   } | null;
+  /** Empreendimento vendido só sob consulta (SCP): sem preço nenhum, com este aviso no lugar (ver lib/scp-sem-preco.ts). */
+  scp_aviso?: string | null;
 }
 interface RelatedImovel {
   id: string;
@@ -1009,14 +1011,16 @@ function BlocoFinanceiro({ imovel, valorOverride, tipologiaLabel }: { imovel: Im
   // "fora do financiamento bancário tradicional" que já está em cada card de
   // promoção. Sem cálculo nenhum aqui, só o aviso.
   const temPromoSCP = !!imovel.promocoes?.some(p => p.investidorSCP);
-  if (temPromoSCP) {
+  if (temPromoSCP || imovel.scp_aviso) {
     return (
       <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(0,0,0,.08)' }}>
         <div style={{ padding: '20px', background: 'linear-gradient(135deg, #0f172a, #1e3a5f)' }}>
           <span style={{ fontSize: '11px', fontWeight: '800', color: 'rgba(255,255,255,.5)', textTransform: 'uppercase', letterSpacing: '1.5px' }}>FinancieCerto</span>
           <p style={{ fontSize: '14px', fontWeight: '700', color: '#fff', margin: '6px 0 10px' }}>Análise Financeira Instantânea</p>
           <p style={{ fontSize: '13px', color: 'rgba(255,255,255,.8)', lineHeight: 1.6 }}>
-            📈 Cota de investidor via SCP — pagamento direto com a construtora, fora do financiamento bancário tradicional (SBPE/MCMV). Consulte a forma de pagamento de cada tipologia acima.
+            {imovel.scp_aviso
+              ? `📈 ${imovel.scp_aviso}`
+              : '📈 Cota de investidor via SCP — pagamento direto com a construtora, fora do financiamento bancário tradicional (SBPE/MCMV). Consulte a forma de pagamento de cada tipologia acima.'}
           </p>
         </div>
       </div>
@@ -2165,6 +2169,19 @@ export default function ImovelDetailClient({ id, fallback }: { id: string; fallb
                 <span style={{ fontSize: '12px', color: 'var(--text-faint)' }}>Válido até {imovel.campanhaOrulo.validade}</span>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Vendido só sob consulta (SCP, ver lib/scp-sem-preco.ts) ────────── */}
+      {imovel.scp_aviso && (
+        <div style={{ maxWidth: '1100px', margin: '16px auto 0', padding: '0 24px' }}>
+          <div style={{ background: 'rgba(124,58,237,.06)', border: '1.5px solid rgba(124,58,237,.3)', borderRadius: '14px', padding: '16px 18px' }}>
+            <p style={{ fontSize: '14px', fontWeight: '800', color: '#6d28d9', margin: '0 0 6px' }}>📈 Pré-lançamento no modelo SCP</p>
+            <p style={{ fontSize: '13.5px', color: 'var(--text)', lineHeight: 1.6, margin: '0 0 8px' }}>{imovel.scp_aviso}</p>
+            <Link href="/aprenda/scp-sociedade-conta-participacao-imobiliaria" style={{ fontSize: '12.5px', fontWeight: '700', color: '#6d28d9', textDecoration: 'none' }}>
+              ℹ️ O que é SCP?
+            </Link>
           </div>
         </div>
       )}

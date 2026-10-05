@@ -20,6 +20,7 @@ import { getLancamentoManual, lancamentoParaCatalogo } from '@/lib/lancamentos-m
 import { precoManualMin, limparNomeSeLancado } from '@/lib/precos-manuais';
 import ImovelDetailClient from './ImovelDetailClient';
 import ImovelResumoSEO from './ImovelResumoSEO';
+import { ocultarPrecoCatalogo, scpSemPreco, AVISO_SCP_CURTO } from '@/lib/scp-sem-preco';
 
 const BASE = 'https://www.financiecerto.com.br';
 
@@ -63,7 +64,7 @@ const getBuildingData = cache(async (id: string): Promise<BuscaImovel> => {
   try {
     const token = await getToken();
     const { building, naoExiste } = await fetchBuildingDetailOutcome(token, id);
-    if (building) return { b: aplicarPrecoManual(building), temporario: false };
+    if (building) return { b: aplicarPrecoManual(ocultarPrecoCatalogo(building)), temporario: false };
     return { b: null, temporario: !naoExiste };
   } catch {
     return { b: null, temporario: true };
@@ -121,7 +122,10 @@ export async function generateMetadata(
   const descParts = [
     `${b.name} da ${b.developer} em ${b.neighborhood}, ${b.city}`,
     [bedroomStr, areaStr, priceStr].filter(Boolean).join(', '),
-    'Simule o financiamento e descubra se você tem perfil para comprar este imóvel.',
+    // SCP sem preço: não há financiamento nem valor pra simular — o texto fala do modelo.
+    scpSemPreco(b.id)
+      ? AVISO_SCP_CURTO.replace(/\.$/, '')
+      : 'Simule o financiamento e descubra se você tem perfil para comprar este imóvel.',
   ].filter(Boolean);
   const description = descParts.join('. ');
 

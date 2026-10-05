@@ -35,6 +35,7 @@ import { CIDADES_LIBERADAS } from '@/lib/cidades-liberadas';
 import { catalogoComManuais } from '@/lib/lancamentos-manuais';
 import { FOTOS_EXTRAS_MANUAIS } from '@/lib/fotos-extras-manuais';
 import { precoManualMin, limparNomeSeLancado } from '@/lib/precos-manuais';
+import { ocultarPrecoCatalogo } from '@/lib/scp-sem-preco';
 
 // O fallback ao vivo (cache KV vazio/frio) pode varrer o estado inteiro em lotes
 // pequenos e pausados — mais lento que os 10s padrão da Vercel, mas evita
@@ -363,7 +364,7 @@ export async function GET(req: NextRequest) {
     if (neighborhood || (neighborhoods && neighborhoods.length > 0) || (cities && cities.length > 0) || returnAll) {
       // Busca completa multi-página
       const liveBuildings = await fetchLiveCatalog(token, cityTarget);
-      let all = applyFilters(liveBuildings, { neighborhood, neighborhoods, cities, propertyTypes, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q });
+      let all = applyFilters(liveBuildings.map(ocultarPrecoCatalogo), { neighborhood, neighborhoods, cities, propertyTypes, minPrice, maxPrice, bedroomsMin, bedroomsMax, status: statusReq, q });
       const uniqueNeighborhoods = [...new Set(all.map(b => b.neighborhood).filter(Boolean))].sort();
 
       if (returnAll) {
@@ -409,7 +410,7 @@ export async function GET(req: NextRequest) {
 
     const raw     = await resp.json();
     const rawList = (raw.buildings ?? raw.data ?? raw.results ?? []) as Record<string, unknown>[];
-    let   buildings = rawList.map(normalizeBuilding);
+    let   buildings = rawList.map(normalizeBuilding).map(ocultarPrecoCatalogo);
 
     if (statusReq) {
       buildings = buildings.filter(b => b.status_norm === statusReq);
