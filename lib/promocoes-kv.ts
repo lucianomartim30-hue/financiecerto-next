@@ -73,13 +73,27 @@ function estaValida(p: Promocao): boolean {
 
 export type PromocaoPublica = Promocao;
 
+/**
+ * Chave geral das promoções no site público. Em false (decisão de 06/10/2026:
+ * as promoções ativas não geraram resultado), o site mostra só o preço de
+ * tabela e as condições são passadas no WhatsApp/visita. Nada é apagado — as
+ * promoções continuam guardadas e visíveis no admin; pra reativar, basta true.
+ * Cotas de investidor SCP (investidorSCP) não são promoção de preço, são outro
+ * modelo de venda, e continuam aparecendo.
+ */
+export const PROMOCOES_PUBLICAS_ATIVAS = false;
+
+function visivelNoSite(p: Promocao): boolean {
+  return estaValida(p) && (PROMOCOES_PUBLICAS_ATIVAS || p.investidorSCP === true);
+}
+
 /** Promoções ativas (não vencidas) de um empreendimento — usado pelo site público. */
 export async function kvGetPromocoes(buildingId: string): Promise<PromocaoPublica[]> {
   // Vendido só sob consulta (SCP): as promoções ficam guardadas pro admin, mas o
   // site público nunca mostra os valores (ver lib/scp-sem-preco.ts).
   if (scpSemPreco(buildingId)) return [];
   const mapa = await getMapa();
-  return (mapa[buildingId] ?? []).filter(estaValida);
+  return (mapa[buildingId] ?? []).filter(visivelNoSite);
 }
 
 /**
@@ -92,7 +106,7 @@ export async function kvGetTodasPromocoesAtivas(): Promise<Record<string, Promoc
   const ativo: Record<string, Promocao[]> = {};
   for (const [buildingId, promos] of Object.entries(mapa)) {
     if (scpSemPreco(buildingId)) continue;
-    const validas = promos.filter(estaValida);
+    const validas = promos.filter(visivelNoSite);
     if (validas.length > 0) ativo[buildingId] = validas;
   }
   return ativo;

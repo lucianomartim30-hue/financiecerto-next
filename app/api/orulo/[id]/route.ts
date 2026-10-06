@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { kvGetCatalog } from '@/lib/orulo-kv';
 import { kvGetFotosOcultas } from '@/lib/fotos-ocultas-kv';
 import { comFotosExtras } from '@/lib/fotos-extras-manuais';
-import { kvGetPromocoes, kvGetPromocoesAdmin } from '@/lib/promocoes-kv';
+import { kvGetPromocoes, kvGetPromocoesAdmin, PROMOCOES_PUBLICAS_ATIVAS } from '@/lib/promocoes-kv';
 import { kvGetOruloEndUserToken } from '@/lib/orulo-enduser-kv';
 import { getPlantasManuais, getExcluirBlueprintsOrulo } from '@/lib/plantas-manuais';
 import { getLancamentoManual, lancamentoParaDetalhe } from '@/lib/lancamentos-manuais';
@@ -136,6 +136,8 @@ function parseDataOrulo(data: string): Date | null {
  * Sem token de usuário final conectado (/admin/orulo), retorna null sem erro.
  */
 async function fetchCampanhaOrulo(id: string): Promise<CampanhaOrulo | null> {
+  // Promoções desligadas no site público (ver PROMOCOES_PUBLICAS_ATIVAS).
+  if (!PROMOCOES_PUBLICAS_ATIVAS) return null;
   try {
     const endUser = await kvGetOruloEndUserToken();
     if (!endUser) return null;
