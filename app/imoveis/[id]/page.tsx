@@ -12,6 +12,7 @@
 
 import type { Metadata } from 'next';
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import { kvGetCatalog, type CatalogEntry } from '@/lib/orulo-kv';
 import { getToken, fetchBuildingDetailOutcome } from '@/lib/orulo-api';
@@ -23,6 +24,10 @@ import ImovelResumoSEO from './ImovelResumoSEO';
 import { ocultarPrecoCatalogo, scpSemPreco, AVISO_SCP_CURTO } from '@/lib/scp-sem-preco';
 
 const BASE = 'https://www.financiecerto.com.br';
+
+// Ficha servida do cache da Vercel e refeita no máximo a cada 30 min (ISR) — antes era
+// renderizada do zero a cada visita (ver buscarNoCatalogoOuOrulo abaixo).
+export const revalidate = 1800;
 
 function fmtBRL(v: number | null | undefined): string {
   if (!v) return '';
@@ -56,20 +61,35 @@ const getBuildingData = cache(async (id: string): Promise<BuscaImovel> => {
   };
 
   try {
-    const catalog = await kvGetCatalog();
-    const cached = catalog?.find(b => b.id === id);
-    if (cached) return { b: aplicarPrecoManual(cached), temporario: false };
-  } catch { /* segue para o fallback ao vivo */ }
-
-  try {
-    const token = await getToken();
-    const { building, naoExiste } = await fetchBuildingDetailOutcome(token, id);
-    if (building) return { b: aplicarPrecoManual(ocultarPrecoCatalogo(building)), temporario: false };
-    return { b: null, temporario: !naoExiste };
+    const { b } = await buscarNoCatalogoOuOrulo(id);
+    return { b: b ? aplicarPrecoManual(b) : null, temporario: false };
   } catch {
     return { b: null, temporario: true };
   }
 });
+
+// Cache de 30 min por imóvel (Data Cache da Vercel). Sem ele a ficha lia o catálogo
+// inteiro na KV a cada visita — de gente ou de robô — e esse era o maior gasto de CPU
+// do site (≈65% do processamento, que no plano gratuito tem teto de 4 h/mês).
+// Falha temporária (KV fora + Órulo 429/5xx) LANÇA erro: o unstable_cache não guarda
+// exceção, então um tropeço momentâneo nunca vira 404 nem fica preso no cache.
+const buscarNoCatalogoOuOrulo = unstable_cache(
+  async (id: string): Promise<{ b: CatalogEntry | null }> => {
+    try {
+      const catalog = await kvGetCatalog();
+      const cached = catalog?.find(b => b.id === id);
+      if (cached) return { b: cached };
+    } catch { /* segue para o fallback ao vivo */ }
+
+    const token = await getToken();
+    const { building, naoExiste } = await fetchBuildingDetailOutcome(token, id);
+    if (building) return { b: ocultarPrecoCatalogo(building) };
+    if (naoExiste) return { b: null };
+    throw new Error(`Imóvel ${id}: não foi possível confirmar se existe`);
+  },
+  ['imovel-ficha-v1'],
+  { revalidate: 1800 },
+);
 
 // ── generateMetadata ─────────────────────────────────────────────────────────
 
