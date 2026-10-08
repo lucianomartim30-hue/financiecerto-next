@@ -29,6 +29,13 @@ const BASE = 'https://www.financiecerto.com.br';
 // renderizada do zero a cada visita (ver buscarNoCatalogoOuOrulo abaixo).
 export const revalidate = 1800;
 
+// Sem generateStaticParams, uma rota dinâmica ([id]) NUNCA entra no cache da Vercel,
+// mesmo com `revalidate` (o build marca "ƒ"). Lista vazia = nenhuma ficha é gerada no
+// build, mas cada uma, na 1ª visita, é gerada e guardada (ISR sob demanda).
+export function generateStaticParams() {
+  return [];
+}
+
 function fmtBRL(v: number | null | undefined): string {
   if (!v) return '';
   return 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });

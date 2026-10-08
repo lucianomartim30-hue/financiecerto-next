@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import SchemaMarkup from '@/components/SchemaMarkup';
 import { getConstrutora } from '@/lib/construtoras-catalogo';
 import { breadcrumb, searchResultsPage, SITE_CONFIG } from '@/lib/schema';
@@ -10,7 +11,20 @@ import ResumoConstrutora from './ResumoConstrutora';
 
 export const revalidate = 3600;
 
-const carregarConstrutora = cache((slug: string) => getConstrutora(slug));
+// Sem generateStaticParams a rota [slug] nunca vai pro cache da Vercel (o build marca
+// "ƒ"), mesmo com revalidate — cada visita, de gente ou robô, renderizava do zero.
+export function generateStaticParams() {
+  return [];
+}
+
+// A leitura da KV não pode ficar solta no render (fetch no-store tira a página do
+// cache). Em unstable_cache a falha LANÇA (kvGetCatalogOuErro) e não é guardada.
+const construtoraEmCache = unstable_cache(
+  (slug: string) => getConstrutora(slug),
+  ['construtora-pagina-v1'],
+  { revalidate: 3600 },
+);
+const carregarConstrutora = cache((slug: string) => construtoraEmCache(slug));
 
 function descricao(nome: string, quantidade: number, cidades: string[]): string {
   const local = cidades.length ? ` em ${cidades.slice(0, 3).join(', ')}` : '';
