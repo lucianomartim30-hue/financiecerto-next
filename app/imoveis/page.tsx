@@ -17,16 +17,25 @@ export default async function ImoveisPage() {
         Imóveis e empreendimentos à venda com simulação de financiamento
       </h1>
       <ImoveisClientPage />
-      <ListaHubsSEO
-        titulo="Imóveis à venda por bairro"
-        intro="Explore os bairros com mais empreendimentos à venda. Em cada um você vê os imóveis, os valores e simula o financiamento."
-        links={bairros}
-      />
-      <ListaHubsSEO
-        titulo="Imóveis por construtora"
-        intro="Veja os empreendimentos das construtoras e incorporadoras com mais lançamentos no catálogo."
-        links={construtoras}
-      />
+      {/* Navegação por bairro/construtora: fica no HTML (caminho de rastreamento pro Google
+          e leitores de tela) mas NÃO aparece na tela — o portal é a vitrine mapa+cartões
+          em tela cheia, e essas listas abaixo dela quebravam o visual (pedido do dono,
+          09/10/2026). Mesma técnica "visualmente oculto" do h1 acima. */}
+      <nav
+        aria-label="Imóveis por bairro e por construtora"
+        style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
+      >
+        <ListaHubsSEO
+          titulo="Imóveis à venda por bairro"
+          intro="Explore os bairros com mais empreendimentos à venda. Em cada um você vê os imóveis, os valores e simula o financiamento."
+          links={bairros}
+        />
+        <ListaHubsSEO
+          titulo="Imóveis por construtora"
+          intro="Veja os empreendimentos das construtoras e incorporadoras com mais lançamentos no catálogo."
+          links={construtoras}
+        />
+      </nav>
     </>
   );
 }
