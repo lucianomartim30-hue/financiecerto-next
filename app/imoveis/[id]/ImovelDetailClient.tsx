@@ -1889,6 +1889,7 @@ export default function ImovelDetailClient({ id, fallback }: { id: string; fallb
   const [imovel, setImovel] = useState<ImovelDetalhe | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
+  const [falhaTemporaria, setFalhaTemporaria] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mostrarInfoSCP, setMostrarInfoSCP] = useState(false);
   const [bpLightbox, setBpLightbox] = useState<Blueprint | null>(null);
@@ -1912,8 +1913,18 @@ export default function ImovelDetailClient({ id, fallback }: { id: string; fallb
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/api/orulo/${id}`);
-        if (!res.ok) throw new Error('Não encontrado');
+        // Falha momentânea (lentidão, 429/5xx, rede) NÃO é "imóvel não encontrado": tenta
+        // 3 vezes com espera crescente. Só o 404 confirmado pela API vira "não encontrado".
+        let res: Response | null = null;
+        for (let n = 0; n < 3; n++) {
+          try { res = await fetch(`/api/orulo/${id}`); } catch { res = null; }
+          if (res && (res.ok || res.status === 404)) break;
+          await new Promise(r => setTimeout(r, 1200 * (n + 1)));
+        }
+        if (!res || !res.ok) {
+          setFalhaTemporaria(!res || res.status !== 404);
+          throw new Error('Falha ao carregar');
+        }
         const data: ImovelDetalhe = await res.json();
         // A Orulo usa min_price=0.1 como sentinela de "Breve Lançamento sem tabela
         // publicada" — sem isso, a UI (e o cálculo de simulação) tratam 0.1 como
@@ -1983,8 +1994,18 @@ export default function ImovelDetailClient({ id, fallback }: { id: string; fallb
   if (erro || !imovel) return (
     <>
       <div style={{ padding: '80px 24px', textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏚️</div>
-        <p style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>{erro}</p>
+        <div style={{ fontSize: '48px', marginBottom: '12px' }}>{falhaTemporaria ? '⏳' : '🏚️'}</div>
+        <p style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>
+          {falhaTemporaria ? 'Não conseguimos carregar este imóvel agora.' : erro}
+        </p>
+        {falhaTemporaria && (
+          <button
+            onClick={() => window.location.reload()}
+            style={{ display: 'block', margin: '0 auto 14px', padding: '10px 22px', borderRadius: '10px', border: 'none', background: 'var(--primary)', color: '#fff', fontWeight: '700', cursor: 'pointer' }}
+          >
+            Tentar novamente
+          </button>
+        )}
         <Link href="/imoveis" style={{ color: 'var(--primary)', fontWeight: '600' }}>← Voltar para imóveis</Link>
       </div>
       {fallback}
