@@ -576,7 +576,12 @@ export async function GET(
       admin_fotos: admin
         ? photos.map(url => ({ url, id: extrairIdDaUrl(url), oculta: !!extrairIdDaUrl(url) && ocultas.has(extrairIdDaUrl(url) as string) }))
         : undefined,
-    }));
+    }), {
+      // Sem isso cada abertura de ficha refazia 3-4 chamadas à Órulo (1-3 s) e gastava
+      // CPU da Vercel. 5 min de cache no CDN (+ 1 h servindo o antigo enquanto atualiza);
+      // resposta do admin (com fotos ocultas) nunca é compartilhada.
+      headers: { 'Cache-Control': admin ? 'private, no-store' : 'public, s-maxage=300, stale-while-revalidate=3600' },
+    });
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Erro desconhecido';
