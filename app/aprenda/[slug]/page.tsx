@@ -40,7 +40,7 @@ export async function generateMetadata(
       modifiedTime: artigo.atualizado,
       images: [
         {
-          url: `${BASE}/og-artigo.png`,
+          url: `${BASE}/icons/icon-512.png`,
           width: 1200,
           height: 630,
           alt: artigo.titulo,
@@ -121,7 +121,7 @@ export default async function ArtigoPage({ params }: { params: Promise<{ slug: s
       url,
       title: artigo.titulo,
       description: artigo.metaDescription,
-      imageUrl: `${BASE}/og-artigo.png`,
+      imageUrl: `${BASE}/icons/icon-512.png`,
       publishedDate: artigo.publicado,
       modifiedDate: artigo.atualizado,
       keywords: artigo.keyword,
