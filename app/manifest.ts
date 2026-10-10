@@ -37,7 +37,6 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/icons/screenshot-mobile.png',
         sizes: '390x844',
         type: 'image/png',
-        // @ts-expect-error — form_factor é válido mas ainda não tipado no Next.js
         form_factor: 'narrow',
         label: 'FinancieCerto — Simulador de Financiamento',
       },

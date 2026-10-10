@@ -79,7 +79,7 @@ async function getKv(): Promise<any | null> {
 async function kvGet<T>(key: string): Promise<T | null> {
   const kv = await getKv();
   if (!kv) return null;
-  try { return await kv.get<T>(key); } catch { return null; }
+  try { return (await kv.get(key)) as T | null; } catch { return null; }
 }
 
 async function kvSet(key: string, value: unknown, ex?: number): Promise<void> {

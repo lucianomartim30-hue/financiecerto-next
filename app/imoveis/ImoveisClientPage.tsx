@@ -264,10 +264,9 @@ function ImoveisContent() {
   const [loadError, setLoadError] = useState(false);
   const [displayCount, setDisplayCount] = useState(12);
 
-  // Título próprio (analytics) — sem isso, herda o título da home e some nos relatórios do GA
-  useEffect(() => {
-    document.title = 'Imóveis Compatíveis | FinancieCerto';
-  }, []);
+  // (O título vem do metadata do servidor — app/imoveis/layout.tsx. Antes este componente
+  // o trocava para "Imóveis Compatíveis" no cliente, e o mesmo portal aparecia com dois
+  // títulos no Analytics conforme o jeito de chegar: link direto × menu do site.)
 
   // Responsive state
   const [isMobile, setIsMobile] = useState(false);

@@ -27,6 +27,9 @@ function num(v: number): string {
 
 function faixa(min: number | null | undefined, max: number | null | undefined, unidade: string, plural = unidade): string | null {
   if (min == null) return null;
+  // Loja/sala vem da Órulo com 0 quartos — "0 quartos" no título e no resumo é lixo, não dado.
+  if (min === 0 && (max == null || max <= 0)) return null;
+  if (min === 0 && unidade === 'quarto') return `studio a ${num(max as number)} ${plural}`;
   if (max != null && max !== min) return `${num(min)} a ${num(max)} ${plural}`;
   return `${num(min)} ${min === 1 ? unidade : plural}`;
 }

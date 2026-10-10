@@ -36,6 +36,14 @@ export function generateStaticParams() {
   return [];
 }
 
+function textoQuartos(min: number | null | undefined, max: number | null | undefined): string | null {
+  if (min == null) return null;
+  if (min === 0 && (max == null || max <= 0)) return null;
+  if (min === 0) return `studio a ${max} quarto${max === 1 ? '' : 's'}`;
+  if (max && max !== min) return `${min} a ${max} quartos`;
+  return `${min} quarto${min !== 1 ? 's' : ''}`;
+}
+
 function fmtBRL(v: number | null | undefined): string {
   if (!v) return '';
   return 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
@@ -115,12 +123,8 @@ export async function generateMetadata(
   }
 
   // ── Partes textuais ──
-  const bedroomStr =
-    b.bedrooms_min != null
-      ? b.bedrooms_max && b.bedrooms_max !== b.bedrooms_min
-        ? `${b.bedrooms_min} a ${b.bedrooms_max} quartos`
-        : `${b.bedrooms_min} quarto${b.bedrooms_min !== 1 ? 's' : ''}`
-      : null;
+  // Loja/sala vem da Órulo com 0 quartos: não entra no título ("Camino… - Lojas — 0 quartos").
+  const bedroomStr = textoQuartos(b.bedrooms_min, b.bedrooms_max);
 
   const areaStr =
     b.area_min
@@ -214,9 +218,7 @@ export default async function ImovelPage({
         description: [
           `${b.name} da ${b.developer}`,
           `em ${b.neighborhood}, ${b.city}`,
-          b.bedrooms_min != null
-            ? `${b.bedrooms_min}${b.bedrooms_max && b.bedrooms_max !== b.bedrooms_min ? `–${b.bedrooms_max}` : ''} quartos`
-            : null,
+          textoQuartos(b.bedrooms_min, b.bedrooms_max),
           b.area_min ? `${b.area_min}${b.area_max && b.area_max !== b.area_min ? `–${b.area_max}` : ''} m²` : null,
         ]
           .filter(Boolean)
@@ -247,7 +249,7 @@ export default async function ImovelPage({
           addressRegion: b.state,
           addressCountry: 'BR',
         },
-        ...(b.bedrooms_min != null && { numberOfRooms: b.bedrooms_min }),
+        ...(b.bedrooms_min != null && b.bedrooms_min > 0 && { numberOfRooms: b.bedrooms_min }),
         ...(b.area_min && {
           floorSize: {
             '@type': 'QuantitativeValue',
