@@ -978,7 +978,7 @@ function SimuladorInner() {
                 v: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? formatBRL(subsidioEstimado) : (painelAtivo === 'sfi' ? 'Não permitido' : formatBRL(perfil.fgts)),
                 d: painelAtivo === 'mcmv' && subsidioEstimado > 0 ? 'Confirme na Caixa Econômica Federal' : painelAtivo === 'sfi' ? 'SFI não usa FGTS' : 'Já incluído no poder de compra acima',
               },
-              { emoji: '🏷️', cor: '#57534e', bg: '#f5f5f4', l: 'Modalidade', v: painelAtivo === 'sbpe' ? 'SFH / SBPE' : dados.label, d: painelAtivo === 'sbpe' ? 'SBPE opera dentro do SFH' : painelAtivo === 'sfi' ? 'Paralelo ao SFH, sem teto' : 'Subsídio CEF' },
+              { emoji: '🏷️', cor: '#57534e', bg: '#f5f5f4', l: 'Modalidade', v: painelAtivo === 'sbpe' ? 'SFH / SBPE' : dados.label, d: painelAtivo === 'sbpe' ? 'SBPE opera dentro do SFH' : painelAtivo === 'sfi' ? 'Paralelo ao SFH, sem teto' : subsidioEstimado > 0 ? 'Subsídio CEF' : 'Juros reduzidos, sem subsídio' },
             ].map(({ emoji, cor, bg, l, v, d }) => (
               <div key={l} style={{ padding: 14, background: bg, border: `1px solid ${cor}33`, borderRadius: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>

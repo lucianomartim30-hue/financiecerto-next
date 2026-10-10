@@ -421,7 +421,7 @@ export function calcSubsidioEstimado(
 // ─── Capacidade de financiamento com seguros ─────────────────────────────────
 // CORRIGIDO: Iteração convergente para encontrar cap onde:
 //   parcelaPrice(cap, taxa, prazo) + seguros(cap)/prazo ≤ pmMax
-function capacidadeComSeguros(
+export function capacidadeComSeguros(
   rendaBruta: number,
   taxaAnual: number,
   prazoMeses: number,

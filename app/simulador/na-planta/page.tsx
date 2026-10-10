@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  formatBRL, parcelaPrice, calcularSeguros,
-  TAXA_SBPE_ANUAL, detectarFaixaMCMV, motivoSBPE, calcSubsidioEstimado,
+  formatBRL, parcelaPrice, calcularSeguros, capacidadeComSeguros,
+  TAXA_SBPE_ANUAL, COMPROMETIMENTO_SBPE, detectarFaixaMCMV, motivoSBPE, calcSubsidioEstimado,
   LTV_SBPE_PRICE, taxaEfetivaMCMV, prazoMaximoMeses, type FaixaMCMV,
 } from '@/lib/calculos';
 import { SITE_CONFIG } from '@/lib/schema';
@@ -397,7 +397,9 @@ function NaPlantaContent() {
   // isso, o prazo real informado no simulador geral era descartado ao vir
   // pra cá, e o teto de 80 anos e 6 meses da Caixa nunca era aplicado aqui.
   const [idadeRaw, setIdadeRaw] = usePersistedState('idadeRaw', '35');
-  const idade = Number(idadeRaw) || 35;
+  // Limitada a 18–80: o campo é texto livre e um valor absurdo (ex.: "3530")
+  // derrubava o prazo e o seguro sem nenhum aviso.
+  const idade = Math.min(80, Math.max(18, Number(idadeRaw) || 35));
   const [prazoAnosRaw, setPrazoAnosRaw] = usePersistedState('prazoAnosRaw', '35');
   const prazoAnosDesejado = Number(prazoAnosRaw) || 35;
 
@@ -508,8 +510,16 @@ function NaPlantaContent() {
   // Caixa aplicado pela idade) — mesma regra de descobrir()/simular().
   const prazoMeses = prazoMaximoMeses(prazoAnosDesejado, idade);
 
-  const maxFinPerfil = isMCMV ? maxFinMcmv : maxFinSbpe;
-  const ltvPct       = isMCMV ? (faixaEfetiva?.ltvMax ?? 0.80) : LTV_SBPE_PRICE; // SBPE Price: 70% (consistente com simulador principal)
+  // Capacidade pela renda, com a idade e o prazo desta tela — mesma conta de
+  // descobrir(). Antes só valia o que vinha na URL do simulador principal: quem
+  // abria esta página direto tinha a capacidade limitada só pelo LTV, e a tela
+  // mostrava parcela acima de 30% da renda como se coubesse no perfil.
+  const comprometimentoMax = isMCMV ? 0.30 : COMPROMETIMENTO_SBPE;
+  const capacidadeRenda = renda > 0
+    ? Math.floor(capacidadeComSeguros(renda, taxa, prazoMeses, comprometimentoMax, idade))
+    : 0;
+  const maxFinPerfil = capacidadeRenda > 0 ? capacidadeRenda : (isMCMV ? maxFinMcmv : maxFinSbpe);
+  const ltvPct      = isMCMV ? (faixaEfetiva?.ltvMax ?? 0.80) : LTV_SBPE_PRICE; // SBPE Price: 70% (consistente com simulador principal)
   const maxFinBanco  = valor > 0
     ? (maxFinPerfil > 0 ? Math.min(maxFinPerfil, Math.round(valor * ltvPct)) : Math.round(valor * ltvPct))
     : 0;
@@ -568,7 +578,7 @@ function NaPlantaContent() {
   //   Seguros FIXOS no valor total financiado durante toda a obra — NÃO proporcionais ao liberado.
   //   MIP R$50,86 + DFI R$24,85 + TX ADM R$25,00 = R$100,71/mês constante (36 meses de obra).
   //   Encargo real: mês 1 R$480,96 → mês 36 R$1.738,85 → pós-entrega R$1.966,27
-  const seguros      = calcularSeguros(valorAFinanciar);                       // seguros FIXOS no valor a financiar (obra + pós-entrega)
+  const seguros      = calcularSeguros(valorAFinanciar, idade);                // seguros FIXOS no valor a financiar (obra + pós-entrega); MIP pela idade informada
   const parcelaFin   = parcelaPrice(valorAFinanciar, taxa, prazoMeses);
   const jurosEvo1    = isMCMV && valorAFinanciar > 0 && siopiInicial > 0     // encargo inicial: juros sobre valor liberado + seguros fixos totais
     ? calcJurosEvo(valorAFinanciar, taxa, siopiInicial) + seguros.total
@@ -577,7 +587,7 @@ function NaPlantaContent() {
     ? calcJurosEvo(valorAFinanciar, taxa, 1.0) + seguros.total
     : 0;
   const jurosEvoMedio = isMCMV && valorAFinanciar > 0                         // encargo médio da obra (coef 0,655 = fração média liberada)
-    ? Math.round(parcelaFin * 0.655 + seguros.total)
+    ? Math.min(jurosEvoPico, Math.round(parcelaFin * 0.655 + seguros.total)) // em prazo curto a parcela passa dos juros: a média nunca pode superar o pico
     : 0;
 
   // Regra dos 30%
@@ -980,7 +990,7 @@ function NaPlantaContent() {
                 • ITBI: ~3% do valor em São Paulo = <strong>{formatBRL(Math.round(valor * 0.03))}</strong><br />
                 • Registro em cartório: ~1% do valor = <strong>{formatBRL(Math.round(valor * 0.01))}</strong><br />
                 • Total estimado: <strong>{formatBRL(Math.round(valor * 0.04))}</strong><br /><br />
-                <strong>No MCMV, há isenção de ITBI para o primeiro imóvel dentro do limite da prefeitura (R$ 245.527,77 em SP/2026) e isenção parcial pela parte financiada via SFH.</strong> Além disso, algumas construtoras isentam o comprador de ITBI e/ou registro como promoção de vendas — mais comum em lançamentos na planta. Consulte a construtora onde você vai comprar para saber se essa condição está disponível.
+                <strong>No MCMV, há isenção de ITBI para o primeiro imóvel dentro do limite da prefeitura (R$ 245.527,77 em SP/2026). Acima disso, a parte financiada via SFH paga alíquota reduzida de 0,5% até R$ 120.968; o restante paga os 3%.</strong> Além disso, algumas construtoras isentam o comprador de ITBI e/ou registro como promoção de vendas — mais comum em lançamentos na planta. Consulte a construtora onde você vai comprar para saber se essa condição está disponível.
               </div>
             )}
 
@@ -1158,10 +1168,10 @@ function NaPlantaContent() {
                             💡 Como o banco calcula o financiamento
                           </strong>
                           <br />
-                          O banco avalia o <strong>encargo mensal completo</strong> — não o valor bruto liberado. O encargo inclui <strong>A+J + MIP + DFI + tarifa</strong> e não pode ultrapassar <strong>30% da renda bruta</strong> (Res. CMN 4.676/2018).
+                          O banco avalia o <strong>encargo mensal completo</strong> — não o valor bruto liberado. O encargo inclui <strong>A+J + MIP + DFI + tarifa</strong> e não pode ultrapassar <strong>{Math.round(comprometimentoMax * 100)}% da renda bruta</strong>{isMCMV ? ' (Res. CMN 4.676/2018)' : ' no SBPE da Caixa'}.
                           <br /><br />
-                          Renda <strong>{formatBRL(renda)}/mês</strong> × 30% = <strong>{formatBRL(Math.round(renda * 0.30))}/mês</strong> de encargo máximo.
-                          {' '}À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em 35 anos (incluindo seguros), a <strong>capacidade estimada pelo seu perfil</strong> é de até <strong>{formatBRL(capacidadeEstimada)}</strong> (LTV {Math.round(ltvPct * 100)}% do imóvel) — não é uma aprovação bancária real.{isMCMV ? ' Na prática, a Caixa avalia o imóvel acima do preço de venda — o financiamento pode cobrir mais de 80% do valor pago à construtora.' : ''}
+                          Renda <strong>{formatBRL(renda)}/mês</strong> × {Math.round(comprometimentoMax * 100)}% = <strong>{formatBRL(Math.round(renda * comprometimentoMax))}/mês</strong> de encargo máximo.
+                          {' '}À taxa de <strong>{taxa.toFixed(2).replace('.', ',')}% a.a.</strong> em {Math.round(prazoMeses / 12)} anos (incluindo seguros), a <strong>capacidade estimada pelo seu perfil</strong> é de até <strong>{formatBRL(capacidadeEstimada)}</strong> ({capacidadeEstimada < Math.round(valor * ltvPct) ? 'limitada pela renda' : `LTV ${Math.round(ltvPct * 100)}% do imóvel`}) — não é uma aprovação bancária real.{isMCMV ? ' Na prática, a Caixa avalia o imóvel acima do preço de venda — o financiamento pode cobrir mais de 80% do valor pago à construtora.' : ''}
                           {(fgtsUsado > 0 || totalContribuicao > 0) && (
                             <span> Com {[fgtsUsado > 0 ? `FGTS de ${formatBRL(fgtsUsado)}` : null, subsidioEstimado > 0 ? `subsídio de ${formatBRL(subsidioEstimado)}` : null, totalConstrutora > 0 ? `pagamentos à construtora de ${formatBRL(totalConstrutora)}` : null].filter(Boolean).join(' + ')}, a <strong>necessidade de financiamento</strong> fica em <strong>{formatBRL(necessidadeFinanciamento)}</strong>{diferencaRecursos > 0 ? `, R$ ${formatBRL(diferencaRecursos).replace('R$', '').trim()} acima da capacidade estimada` : ''}.</span>
                           )}
