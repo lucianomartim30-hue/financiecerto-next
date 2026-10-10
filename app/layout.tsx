@@ -76,6 +76,14 @@ export default function RootLayout({
         />
         <Script id="google-analytics" strategy="beforeInteractive">
           {`
+            // Acesso interno (dono/testes): com o cookie fc_interno o GA não envia nada.
+            // O cookie vem do login do /admin; ?fc_interno=1 liga e ?fc_interno=0 desliga à mão.
+            try {
+              var p = new URLSearchParams(location.search).get('fc_interno');
+              if (p === '1') document.cookie = 'fc_interno=1; path=/; max-age=31536000; samesite=lax';
+              if (p === '0') document.cookie = 'fc_interno=; path=/; max-age=0';
+              if (/(?:^|; )fc_interno=1/.test(document.cookie)) window['ga-disable-G-5FCF1KE9XP'] = true;
+            } catch (e) {}
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
