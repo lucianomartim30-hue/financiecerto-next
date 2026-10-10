@@ -25,9 +25,9 @@ import { ocultarPrecoCatalogo, scpSemPreco, AVISO_SCP_CURTO } from '@/lib/scp-se
 
 const BASE = 'https://www.financiecerto.com.br';
 
-// Ficha servida do cache da Vercel e refeita no máximo a cada 30 min (ISR) — antes era
+// Ficha servida do cache da Vercel e refeita no máximo a cada 6 h (ISR) — antes era
 // renderizada do zero a cada visita (ver buscarNoCatalogoOuOrulo abaixo).
-export const revalidate = 1800;
+export const revalidate = 21600; // 6 h — robôs revisitam milhares de fichas; cada refação gasta CPU do plano Hobby
 
 // Sem generateStaticParams, uma rota dinâmica ([id]) NUNCA entra no cache da Vercel,
 // mesmo com `revalidate` (o build marca "ƒ"). Lista vazia = nenhuma ficha é gerada no
@@ -83,7 +83,7 @@ const getBuildingData = cache(async (id: string): Promise<BuscaImovel> => {
   }
 });
 
-// Cache de 30 min por imóvel (Data Cache da Vercel). Sem ele a ficha lia o catálogo
+// Cache de 6 h por imóvel (Data Cache da Vercel). Sem ele a ficha lia o catálogo
 // inteiro na KV a cada visita — de gente ou de robô — e esse era o maior gasto de CPU
 // do site (≈65% do processamento, que no plano gratuito tem teto de 4 h/mês).
 // Falha temporária (KV fora + Órulo 429/5xx) LANÇA erro: o unstable_cache não guarda
@@ -103,7 +103,7 @@ const buscarNoCatalogoOuOrulo = unstable_cache(
     throw new Error(`Imóvel ${id}: não foi possível confirmar se existe`);
   },
   ['imovel-ficha-v1'],
-  { revalidate: 1800 },
+  { revalidate: 21600 },
 );
 
 // ── generateMetadata ─────────────────────────────────────────────────────────

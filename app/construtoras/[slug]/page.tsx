@@ -9,7 +9,7 @@ import { breadcrumb, searchResultsPage, SITE_CONFIG } from '@/lib/schema';
 import ConstrutoraContent from './ConstrutoraContent';
 import ResumoConstrutora from './ResumoConstrutora';
 
-export const revalidate = 3600;
+export const revalidate = 21600; // 6 h (ver app/imoveis/[id]/page.tsx)
 
 // Sem generateStaticParams a rota [slug] nunca vai pro cache da Vercel (o build marca
 // "ƒ"), mesmo com revalidate — cada visita, de gente ou robô, renderizava do zero.
@@ -22,7 +22,7 @@ export function generateStaticParams() {
 const construtoraEmCache = unstable_cache(
   (slug: string) => getConstrutora(slug),
   ['construtora-pagina-v1'],
-  { revalidate: 3600 },
+  { revalidate: 21600 },
 );
 const carregarConstrutora = cache((slug: string) => construtoraEmCache(slug));
 
